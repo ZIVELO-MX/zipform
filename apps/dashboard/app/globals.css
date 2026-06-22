@@ -424,6 +424,9 @@ button {
 .metric-card span {
   color: var(--ink-muted);
   font-size: 0.86rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .metric-card strong {
@@ -482,6 +485,10 @@ button {
   font-size: 0.74rem;
   font-weight: 850;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .app-card strong {
@@ -495,6 +502,8 @@ button {
 .not-found p {
   color: var(--ink-muted);
   line-height: 1.55;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .card-link {
@@ -518,6 +527,9 @@ button {
   border-radius: 14px;
   background: rgba(245, 244, 240, 0.9);
   padding: 11px 12px;
+  min-width: 0;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .text-link {

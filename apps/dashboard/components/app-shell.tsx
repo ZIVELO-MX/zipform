@@ -264,17 +264,21 @@ function DesktopSidebar({
 
       <div className="p-2">
         {collapsed ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            type="button"
-            aria-label="Expandir barra"
-            title="Cmd+B"
-            onClick={onToggleCollapsed}
-            className="mb-2"
-          >
-            <PanelLeftOpen size={18} />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                aria-label="Expandir barra"
+                onClick={onToggleCollapsed}
+                className="mx-auto mb-2"
+              >
+                <PanelLeftOpen size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="right">Expandir barra</TooltipContent>
+          </Tooltip>
         ) : null}
         <ProfileDropdown collapsed={collapsed} user={user} />
       </div>
@@ -429,7 +433,7 @@ function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed: boole
               <>
                 <span className="min-w-0 flex-1">
                   <strong className="block truncate text-sm">{user.username}</strong>
-                  <span className="block truncate text-xs font-semibold text-carbon/55">{user.email}</span>
+                  <span className="block truncate text-[0.7rem] font-semibold text-carbon/55">{user.email}</span>
                 </span>
                 <MoreHorizontal size={18} className="shrink-0 text-carbon/55" />
               </>
@@ -442,7 +446,7 @@ function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed: boole
               <UserAvatar user={user} initials={initials} large />
               <div className="min-w-0">
                 <p className="m-0 truncate text-sm font-black">{user.username}</p>
-                <p className="m-0 truncate text-xs normal-case text-carbon/55">{user.email}</p>
+                <p className="m-0 truncate text-[0.7rem] normal-case text-carbon/55">{user.email}</p>
               </div>
             </div>
           </DropdownMenuLabel>
