@@ -205,7 +205,7 @@ function DesktopSidebar({
         </nav>
       </div>
 
-      <div className="border-t border-carbon/10 p-2">
+      <div className="p-2">
         {collapsed ? (
           <Button
             variant="ghost"
@@ -354,9 +354,8 @@ function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed: boole
           <button
             type="button"
             className={cn(
-              "flex min-h-12 w-full items-center gap-3 rounded-[12px] border border-carbon/10 bg-ivory/70 p-2 text-left transition-colors hover:bg-ivory focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zivelo",
-              collapsed && "justify-center border-0 bg-transparent p-0",
-              mobile && "bg-ivory"
+              "flex min-h-12 w-full items-center gap-3 rounded-[12px] border border-transparent p-2 text-left transition-colors hover:border-carbon/10 hover:bg-carbon/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zivelo",
+              collapsed && "justify-center border-0 p-0 hover:bg-transparent"
             )}
           >
             <UserAvatar user={user} initials={initials} />
