@@ -1,0 +1,15 @@
+{
+  "name": "zipform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev": "pnpm --filter @zipform/dashboard dev",
+    "build": "pnpm --filter @zipform/dashboard build",
+    "lint": "pnpm --filter @zipform/dashboard lint",
+    "typecheck": "pnpm --filter @zipform/dashboard typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}
