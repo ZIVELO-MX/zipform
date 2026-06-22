@@ -44,7 +44,7 @@ import {
   TooltipTrigger,
   cn
 } from "@zipform/ui";
-import { type ComponentType, type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ComponentType, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 type AppShellProps = {
   children: ReactNode;
@@ -58,6 +58,10 @@ type NavItem = {
 };
 
 const SIDEBAR_STATE_KEY = "dashboard-sidebar-state";
+const SIDEBAR_WIDTH_KEY = "dashboard-sidebar-width";
+const SIDEBAR_MIN_WIDTH = 220;
+const SIDEBAR_MAX_WIDTH = 500;
+const SIDEBAR_DEFAULT_WIDTH = 284;
 
 const navItems: NavItem[] = [
   { label: "Panel", href: "/", icon: Home },
@@ -79,14 +83,31 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT_WIDTH);
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STATE_KEY) === "collapsed");
+
+    const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    if (storedWidth) {
+      const parsed = parseInt(storedWidth, 10);
+      if (!isNaN(parsed)) {
+        const clamped = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, parsed));
+        setSidebarWidth(clamped);
+        document.documentElement.style.setProperty("--sidebar-expanded", `${clamped}px`);
+      }
+    }
   }, []);
 
   useEffect(() => {
     window.localStorage.setItem(SIDEBAR_STATE_KEY, collapsed ? "collapsed" : "expanded");
   }, [collapsed]);
+
+  const handleResize = useCallback((width: number) => {
+    const clamped = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, width));
+    setSidebarWidth(clamped);
+    window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(clamped));
+  }, []);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -131,6 +152,8 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
         collapsed={collapsed}
         pathname={pathname}
         user={user}
+        sidebarWidth={sidebarWidth}
+        onResize={handleResize}
         onToggleCollapsed={() => setCollapsed((current) => !current)}
       />
 
@@ -163,15 +186,49 @@ function DesktopSidebar({
   collapsed,
   pathname,
   user,
+  sidebarWidth,
+  onResize,
   onToggleCollapsed
 }: {
   collapsed: boolean;
   pathname: string;
   user: UserProfile;
+  sidebarWidth: number;
+  onResize: (width: number) => void;
   onToggleCollapsed: () => void;
 }) {
+  const handleResizeStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      const startWidth = sidebarWidth;
+
+      function handleMove(ev: MouseEvent) {
+        const delta = startX - ev.clientX;
+        const newWidth = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, startWidth - delta));
+        document.documentElement.style.setProperty("--sidebar-expanded", `${newWidth}px`);
+      }
+
+      function handleUp() {
+        const current = parseInt(document.documentElement.style.getPropertyValue("--sidebar-expanded"), 10);
+        if (!isNaN(current)) {
+          onResize(current);
+        }
+        window.removeEventListener("mousemove", handleMove);
+        window.removeEventListener("mouseup", handleUp);
+      }
+
+      window.addEventListener("mousemove", handleMove);
+      window.addEventListener("mouseup", handleUp);
+    },
+    [sidebarWidth, onResize]
+  );
+
   return (
-    <aside className="sticky top-0 hidden h-dvh border-r border-carbon/10 bg-paper md:flex md:flex-col" aria-label="Navegación principal">
+    <aside
+      className="relative sticky top-0 hidden h-dvh bg-paper md:flex md:flex-col"
+      aria-label="Navegación principal"
+    >
       <div className="flex h-16 items-center gap-2 border-b border-carbon/10 px-3">
         <Link
           href="/"
@@ -221,6 +278,15 @@ function DesktopSidebar({
         ) : null}
         <ProfileDropdown collapsed={collapsed} user={user} />
       </div>
+
+      {!collapsed ? (
+        <div
+          className="absolute inset-y-0 right-0 z-20 w-4 translate-x-1/2 cursor-col-resize after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] after:bg-transparent hover:after:bg-carbon/10 active:after:bg-carbon/20"
+          onMouseDown={handleResizeStart}
+          role="separator"
+          aria-label="Redimensionar barra lateral"
+        />
+      ) : null}
     </aside>
   );
 }
