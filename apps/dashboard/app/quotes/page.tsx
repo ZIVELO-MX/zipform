@@ -8,16 +8,16 @@ export default async function QuotesPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Application Section"
-        title="Quotes"
-        description="A platform section for the existing quote product. Business functionality is intentionally not implemented in this dashboard phase."
+        eyebrow="Sección de aplicación"
+        title="Cotizaciones"
+        description="Sección de plataforma para el producto de cotizaciones existente. La funcionalidad de negocio no está implementada en esta fase del dashboard."
       />
       <EmptyModule
         icon={<FileText size={28} />}
-        title="Quotes integration placeholder"
+        title="Integración de Cotizaciones pendiente"
         description={
           app?.description ??
-          "Quotes will connect to the shared platform after the current product workflow is audited."
+          "Cotizaciones se conectará a la plataforma compartida después de auditar el flujo de trabajo actual del producto."
         }
       />
     </div>

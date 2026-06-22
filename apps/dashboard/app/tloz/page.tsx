@@ -1,4 +1,4 @@
-import { Map } from "lucide-react";
+import { Sword } from "lucide-react";
 import { EmptyModule, PageHeader } from "../../components/app-shell";
 import { dataClient } from "../../lib/data";
 
@@ -8,14 +8,14 @@ export default async function TlozPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Application Section"
+        eyebrow="Sección de aplicación"
         title="TLOZ"
-        description="The dashboard exposes platform support for TLOZ without defining missions, gameplay, workflows, or product behavior."
+        description="El dashboard expone soporte de plataforma para TLOZ sin definir misiones, jugabilidad, flujos de trabajo ni comportamiento del producto."
       />
       <EmptyModule
-        icon={<Map size={28} />}
-        title="TLOZ platform entry"
-        description={app?.description ?? "TLOZ product logic belongs to its dedicated roadmap and implementation process."}
+        icon={<Sword size={28} />}
+        title="Entrada de plataforma TLOZ"
+        description={app?.description ?? "La lógica del producto TLOZ pertenece a su propio roadmap y proceso de implementación."}
       />
     </div>
   );

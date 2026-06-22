@@ -5,16 +5,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Zipform",
-  description: "Internal Zivelo platform dashboard"
+  description: "Dashboard interno de la plataforma Zivelo"
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [apps, user] = await Promise.all([dataClient.apps.list(), dataClient.user.getCurrent()]);
+  const user = await dataClient.user.getCurrent();
 
   return (
-    <html lang="en">
+    <html lang="es">
       <body>
-        <AppShell apps={apps} user={user}>
+        <AppShell user={user}>
           {children}
         </AppShell>
       </body>

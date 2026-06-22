@@ -5,14 +5,14 @@ export default function SettingsPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="Platform"
-        title="Settings"
-        description="Account, workspace, and platform options will connect here once authentication and permissions exist."
+        eyebrow="Plataforma"
+        title="Configuración"
+        description="Las opciones de cuenta, espacio de trabajo y plataforma se conectarán cuando existan autenticación y permisos."
       />
       <EmptyModule
         icon={<Settings size={28} />}
-        title="Settings placeholder"
-        description="The UI is present so navigation, profile actions, and future account controls have a stable destination."
+        title="Configuración pendiente"
+        description="La UI está presente para que la navegación, las acciones de perfil y los futuros controles de cuenta tengan un destino estable."
       />
     </div>
   );
