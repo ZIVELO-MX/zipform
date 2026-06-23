@@ -153,7 +153,7 @@ const roadmap: RoadmapSnapshot = {
 const currentUser: UserProfile = {
   id: "benji",
   name: "Benji Rodriguez",
-  username: "benji",
+  username: "Benji",
   email: "benjamin.rodriguez@zivelo.dev",
   role: "Platform Owner",
   avatarUrl:

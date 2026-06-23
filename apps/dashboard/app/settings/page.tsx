@@ -1,5 +1,5 @@
 import { Settings } from "lucide-react";
-import { EmptyModule, PageHeader } from "../../components/app-shell";
+import { EmptyModule, PageHeader } from "@zipform/ui";
 
 export default function SettingsPage() {
   return (

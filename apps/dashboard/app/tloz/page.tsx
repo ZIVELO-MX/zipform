@@ -1,5 +1,5 @@
 import { Sword } from "lucide-react";
-import { EmptyModule, PageHeader } from "../../components/app-shell";
+import { EmptyModule, PageHeader } from "@zipform/ui";
 import { dataClient } from "../../lib/data";
 
 export default async function TlozPage() {

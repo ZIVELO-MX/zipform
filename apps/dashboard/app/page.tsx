@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Database, LockKeyhole, Sparkles } from "lucide-react";
 import { dataClient } from "../lib/data";
-import { PageHeader } from "../components/app-shell";
+import { PageHeader } from "@zipform/ui";
 
 export default async function DashboardPage() {
   const [apps, metrics] = await Promise.all([
