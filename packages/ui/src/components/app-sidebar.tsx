@@ -131,10 +131,7 @@ export function DesktopSidebar({
       </div>
 
       <div
-        className={cn(
-          "flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 py-3 transition-opacity duration-200",
-          collapsed && "pointer-events-none opacity-0"
-        )}
+        className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 py-3"
       >
         <nav className="grid gap-1" aria-label="Principal">
           {items.map((item) => (
@@ -145,21 +142,22 @@ export function DesktopSidebar({
 
       <div className={cn("border-t border-carbon/10 p-2 transition-opacity duration-200", collapsed && "border-transparent")}>
         {collapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                type="button"
-                aria-label="Expandir barra"
-                onClick={onToggleCollapsed}
-                className="mx-auto mb-2"
-              >
-                <PanelLeftOpen size={18} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Expandir barra</TooltipContent>
-          </Tooltip>
+          <div className="mb-3 flex justify-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  aria-label="Expandir barra"
+                  onClick={onToggleCollapsed}
+                >
+                  <PanelLeftOpen size={18} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Expandir barra</TooltipContent>
+            </Tooltip>
+          </div>
         ) : null}
         <ProfileDropdown collapsed={collapsed} user={user} />
       </div>
