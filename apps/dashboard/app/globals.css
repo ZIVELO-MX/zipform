@@ -1,23 +1,8 @@
+@import "../../../packages/ui/src/tokens.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-:root {
-  --zivelo-red: #d72228;
-  --carbon: #1d1d1b;
-  --off-white: #f5f4f0;
-  --warm-stone: #c8b99a;
-  --tint-red: #f5e0e1;
-  --paper: #fffdf8;
-  --ink-muted: #6f6a5f;
-  --line: rgba(29, 29, 27, 0.12);
-  --shadow-soft: 0 24px 70px rgba(29, 29, 27, 0.13);
-  --sidebar-expanded: 16rem;
-  --sidebar-collapsed: 4rem;
-  --font-body:
-    "Aptos", "Segoe UI Variable", "SF Pro Rounded", "SF Pro Display", ui-rounded, ui-sans-serif, system-ui,
-    sans-serif;
-}
 
 * {
   box-sizing: border-box;
