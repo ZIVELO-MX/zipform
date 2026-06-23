@@ -19,14 +19,18 @@ type AppShellProps = {
   user: UserProfile;
 };
 
-const SIDEBAR_STATE_KEY = "dashboard-sidebar-state";
-const SIDEBAR_WIDTH_KEY = "dashboard-sidebar-width";
+const SIDEBAR_STATE_KEY = "zipform-sidebar-state";
+const SIDEBAR_WIDTH_KEY = "zipform-sidebar-width";
 
-const navItems: NavItem[] = [
-  { label: "Panel", href: "/", icon: Home },
-  { label: "Cotizaciones", href: "/quotes", icon: FileText },
-  { label: "TLOZ", href: "/tloz", icon: Sword },
-];
+function getEnabledApps(): NavItem[] {
+  return [
+    { label: "Panel", href: "/", icon: Home },
+    { label: "Cotizaciones", href: "/quotes", icon: FileText },
+    { label: "TLOZ", href: "/tloz", icon: Sword },
+  ];
+}
+
+const navItems = getEnabledApps();
 
 export function AppShell({ children, user }: AppShellProps) {
   return (
@@ -122,7 +126,9 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
       <MobileBottomNav pathname={pathname} user={user} items={navItems} onOpenMenu={() => setMobileMenuOpen(true)} />
       <MobileMenuPanel
         open={mobileMenuOpen}
+        pathname={pathname}
         user={user}
+        items={navItems}
         onClose={() => setMobileMenuOpen(false)}
       />
 

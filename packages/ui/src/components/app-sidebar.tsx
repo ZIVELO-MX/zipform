@@ -262,11 +262,15 @@ export function MobileBottomNav({
 
 export function MobileMenuPanel({
   open,
+  pathname,
   user,
+  items,
   onClose
 }: {
   open: boolean;
+  pathname: string;
   user: SidebarUser;
+  items: NavItem[];
   onClose: () => void;
 }) {
   return (
@@ -293,7 +297,29 @@ export function MobileMenuPanel({
           </Button>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5">
+        <nav className="flex-1 overflow-y-auto px-4 py-5" aria-label="Navegación">
+          {items.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(pathname, item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={cn(
+                  "flex min-h-12 items-center gap-3 rounded-[12px] px-3 text-sm font-bold text-carbon/70 transition-colors hover:bg-carbon/5 hover:text-carbon",
+                  active && "bg-carbon text-white hover:bg-carbon hover:text-white"
+                )}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon size={20} className="shrink-0" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="border-t border-carbon/10 px-4 py-4">
           <ProfileDropdown collapsed={false} user={user} mobile />
         </div>
       </div>

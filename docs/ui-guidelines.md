@@ -16,7 +16,7 @@ This monorepo enforces a strict separation:
 
 Example — the sidebar flow:
 1. `packages/ui/src/components/app-sidebar.tsx` — defines `DesktopSidebar`, `SidebarLink`, `ProfileDropdown`, `MobileBottomNav`, `MobileMenuPanel` as generic, data-agnostic components.
-2. `apps/dashboard/components/app-shell.tsx` — imports them from `@zipform/ui`, manages `collapsed`/`sidebarWidth` state in `localStorage`, passes actual `navItems` and `user` data.
+2. `apps/dashboard/components/app-shell.tsx` — imports them from `@zipform/ui`, manages `collapsed`/`sidebarWidth` state in `localStorage`, calls `getEnabledApps()` to resolve navigation items, and passes actual `navItems` and `user` data.
 3. `apps/dashboard/app/layout.tsx` — renders `<AppShell>`.
 
 ## 1. Design tokens
@@ -61,8 +61,25 @@ pnpm dlx shadcn@latest add <component-name> -c packages/ui
 
 - **Always import from `@zipform/ui`**, never from relative paths into `packages/ui/`.
 - Keep orchestration logic (state, effects, localStorage, data fetching) in `apps/*/components/`, not in `packages/ui/`.
+- **localStorage key naming**: Use platform-level keys with the `zipform-` prefix (e.g., `zipform-sidebar-state`, `zipform-sidebar-width`) rather than app-specific prefixes. This ensures persistence survives app renames and is shared across applications.
 - Pages in `apps/*/app/` import from `apps/*/components/` (or directly from `@zipform/ui` for simple cases) and should primarily compose components rather than contain significant presentational markup. Simple pages may remain concise without introducing unnecessary wrappers.
 - If an orchestration wrapper would be trivial, prefer importing directly from `@zipform/ui` in the page.
+
+### Mobile top bar
+
+If the mobile header (top bar with hamburger + title + spacer) grows in complexity, extract it into `packages/ui/src/components/mobile-top-bar.tsx`:
+
+```tsx
+export function MobileTopBar({ title, menuOpen, onToggleMenu }: MobileTopBarProps) {
+  return (
+    <div className="fixed inset-x-0 top-0 z-20 flex h-12 items-center border-b border-carbon/10 bg-paper/90 backdrop-blur md:hidden">
+      ...
+    </div>
+  );
+}
+```
+
+This keeps the shell clean and makes the pattern reusable across applications.
 
 ## 6. Motion as part of the design system
 
@@ -113,12 +130,30 @@ export type AppRegistration = {
 
 ### Assembly
 
-The platform shell (`apps/shell/app/layout.tsx` or equivalent) imports available registrations and passes them to the sidebar:
+The platform shell (`apps/shell/components/app-shell.tsx` or equivalent) resolves navigation from registrations:
 
 ```ts
+import type { AppRegistration } from "@zipform/ui";
 import { register as quotes } from "@zipform/quotes/app/register";
 
-const navItems = [quotes, tloz, finance].map(toNavItem);
+function getEnabledApps(): NavItem[] {
+  // In the future, this could read dynamically from a registry:
+  // return [quotes, tloz, finance].map(toNavItem);
+  return [
+    { label: "Panel", href: "/", icon: Home },
+    { label: "Cotizaciones", href: "/quotes", icon: FileText },
+  ];
+}
+```
+
+The shell passes the result down to sidebar components:
+
+```tsx
+const navItems = getEnabledApps();
+
+<DesktopSidebar collapsed={collapsed} items={navItems} ... />
+<MobileBottomNav items={navItems} ... />
+<MobileMenuPanel items={navItems} pathname={pathname} ... />
 ```
 
 This enables future dashboard navigation, discovery, and module management without hardcoded application definitions.
