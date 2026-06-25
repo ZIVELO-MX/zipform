@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  ::selection{background:rgba(215,34,40,0.18)}
+  @keyframes nowpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.72)}}
+  .scrl::-webkit-scrollbar{width:9px;height:9px}
+  .scrl::-webkit-scrollbar-thumb{background:rgba(29,29,27,0.16);border-radius:999px}
+  .scrl::-webkit-scrollbar-thumb:hover{background:rgba(29,29,27,0.28)}
+  .scrl::-webkit-scrollbar-track{background:transparent}
+  .nav:hover{background:rgba(215,34,40,0.05);outline:1px solid rgba(215,34,40,0.28);outline-offset:-1px}
+  .pbtn:hover{border-color:#D72228;color:#D72228}
+  .nbtn:hover{box-shadow:0 12px 28px rgba(215,34,40,0.26);transform:translateY(-1px)}
+  .lrow:hover{outline:1px solid rgba(215,34,40,0.30);outline-offset:-1px;background:rgba(215,34,40,0.035);position:relative;z-index:1}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#FAFAF9;font-family:'Inter',system-ui,sans-serif;color:#1D1D1B;-webkit-font-smoothing:antialiased;font-size:14px">
+
+  <dc-import name="TLOZ Sidebar" active="lista" hint-size="248px,100%"></dc-import>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+    <header style="position:sticky;top:0;z-index:20;background:rgba(250,250,249,0.82);backdrop-filter:blur(10px);border-bottom:1px solid rgba(29,29,27,0.08);padding:12px 26px;display:flex;align-items:center;gap:18px">
+      <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:#6B6B6B;font-weight:500;flex-shrink:0"><span style="color:#1D1D1B;font-weight:600">Zivelo</span><span style="color:#cfcfcd">›</span><span>Temporada 1</span><span style="color:#cfcfcd">›</span><span style="color:#1D1D1B;font-weight:600">Lista</span></div>
+      <div style="flex:1;max-width:440px;margin:0 auto;position:relative">
+        <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9a9a98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="Buscar missions, proyectos, quest items…" style="width:100%;height:40px;padding:0 64px 0 38px;border-radius:11px;border:1px solid rgba(29,29,27,0.10);background:#fff;font-family:inherit;font-size:13.5px;color:#1D1D1B;outline:none">
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;gap:3px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98"><kbd style="background:#F5F5F5;border:1px solid rgba(29,29,27,0.10);border-radius:5px;padding:1px 5px">⌘</kbd><kbd style="background:#F5F5F5;border:1px solid rgba(29,29,27,0.10);border-radius:5px;padding:1px 5px">K</kbd></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <button class="pbtn" style="width:38px;height:38px;border-radius:999px;border:1px solid rgba(29,29,27,0.10);background:#fff;color:#454543;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s ease;position:relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span style="position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:999px;background:#D72228;border:1.5px solid #fff"></span></button>
+        <button class="nbtn" style="height:40px;padding:0 16px;border-radius:999px;border:none;background:#D72228;color:#fff;font-family:inherit;font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:7px;cursor:pointer;box-shadow:0 10px 22px rgba(215,34,40,0.20);transition:all .2s ease"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva Mission</button>
+      </div>
+    </header>
+
+    <div style="flex-shrink:0;padding:18px 26px 14px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div><h1 style="margin:0;font-size:21px;font-weight:700;letter-spacing:-0.02em">Lista</h1><p style="margin:4px 0 0;color:#6B6B6B;font-size:13px">Todas las missions · agrupadas por estado</p></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="pbtn" style="height:34px;padding:0 13px;border-radius:999px;border:1px solid rgba(29,29,27,0.10);background:#fff;color:#454543;font-family:inherit;font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:all .2s ease"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M6 12h12M10 18h4"/></svg>Agrupar: Estado<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+        <button class="pbtn" style="height:34px;padding:0 13px;border-radius:999px;border:1px solid rgba(29,29,27,0.10);background:#fff;color:#454543;font-family:inherit;font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:all .2s ease"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Filtros</button>
+      </div>
+    </div>
+
+    <div class="scrl" style="flex:1;overflow:auto;padding:4px 26px 48px">
+      <div style="max-width:1180px;margin:0 auto">
+
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;padding:0 16px 9px;font-size:10.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#9a9a98">
+          <span>Mission</span><span>Proyecto</span><span>Owner</span><span>Progreso</span><span style="text-align:right">Vence</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:9px;padding:13px 16px 9px"><span style="width:9px;height:9px;border-radius:999px;background:#1E8E5A;animation:nowpulse 1.8s ease-in-out infinite"></span><span style="font-weight:700;font-size:13px">Now</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:1px 8px;font-weight:500">4</span></div>
+        <div style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;overflow:hidden">
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid rgba(29,29,27,0.06)">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Login Stability</span><span style="font-size:9.5px;font-weight:700;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:2px 7px;flex-shrink:0">Basic</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#2D6CDF"></span>Auth</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#2D6CDF;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">DC</span><span style="font-size:12px;color:#454543">Diego</span></span>
+            <span style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:6px;background:#F0EFED;border-radius:999px;overflow:hidden"><span style="display:block;width:60%;height:100%;background:#D72228"></span></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98">60%</span></span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#B91C22;font-weight:500;text-align:right">28 jun</span>
+          </a>
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid rgba(29,29,27,0.06)">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Join Flow Completion</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#C0397A"></span>Join Flow</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">MR</span><span style="font-size:12px;color:#454543">Mariana</span></span>
+            <span style="display:flex;align-items:center;gap:8px"><span style="flex:1;height:6px;background:#F0EFED;border-radius:999px;overflow:hidden"><span style="display:block;width:35%;height:100%;background:#D72228"></span></span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98">35%</span></span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">2 jul</span>
+          </a>
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid rgba(29,29,27,0.06)">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#F2EAFE;color:#5A2EA6;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6" fill="currentColor" stroke="none"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Investigate WhatsApp Auth</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#2D6CDF"></span>Auth</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#2D6CDF;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">DC</span><span style="font-size:12px;color:#454543">Diego</span></span>
+            <span style="font-size:11.5px;color:#9a9a98">Conclusión pendiente</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">—</span>
+          </a>
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#E6F4EA;color:#1E6B3C;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Bug triage semanal</span><span style="font-size:9.5px;font-weight:600;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:2px 7px;flex-shrink:0">Recurrente</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#D72228"></span>Zivelo</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">MR</span><span style="font-size:12px;color:#454543">Mariana</span></span>
+            <span style="font-size:11.5px;color:#9a9a98">Sin checklist</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">Cada lun</span>
+          </a>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:9px;padding:20px 16px 9px"><span style="width:9px;height:9px;border-radius:999px;background:#3A47B5"></span><span style="font-weight:700;font-size:13px">Next</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:1px 8px;font-weight:500">4</span></div>
+        <div style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;overflow:hidden">
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid rgba(29,29,27,0.06)">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Wallet Integration</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#1E8E5A"></span>Wallets</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#7A4ED9;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">SF</span><span style="font-size:12px;color:#454543">Sofía</span></span>
+            <span style="font-size:11.5px;color:#9a9a98">No iniciada</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">Ep. II</span>
+          </a>
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid rgba(29,29,27,0.06)">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#EEF2FF;color:#3A47B5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Landing Page</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#D72228"></span>Zivelo</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">MR</span><span style="font-size:12px;color:#454543">Mariana</span></span>
+            <span style="font-size:11.5px;color:#9a9a98">No iniciada</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">—</span>
+          </a>
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid rgba(29,29,27,0.06)">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Rewards Engine</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#E0A100"></span>Rewards</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#1E8E5A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">TM</span><span style="font-size:12px;color:#454543">Tomás</span></span>
+            <span style="font-size:11.5px;color:#9a9a98">No iniciada</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">Ep. II</span>
+          </a>
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">MVP Release</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:600;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:2px 7px;flex-shrink:0"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bloq. · 2</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#D72228"></span>Zivelo</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#1E8E5A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">TM</span><span style="font-size:12px;color:#454543">Tomás</span></span>
+            <span style="font-size:11.5px;color:#B91C22;font-weight:500">Bloqueada</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">Ep. II</span>
+          </a>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:9px;padding:20px 16px 9px"><span style="width:9px;height:9px;border-radius:999px;background:#9a9a98"></span><span style="font-weight:700;font-size:13px">Later</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:1px 8px;font-weight:500">3</span></div>
+        <div style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;overflow:hidden">
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid rgba(29,29,27,0.06)">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#F2EAFE;color:#5A2EA6;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6" fill="currentColor" stroke="none"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Validate Multi-currency</span><span style="font-size:9.5px;font-weight:600;color:#5A2EA6;background:#F2EAFE;border-radius:999px;padding:2px 7px;flex-shrink:0">Idea</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#1E8E5A"></span>Wallets</span>
+            <span style="font-size:12px;color:#9a9a98">Sin asignar</span>
+            <span style="font-size:11.5px;color:#9a9a98">—</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">—</span>
+          </a>
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit;border-bottom:1px solid rgba(29,29,27,0.06)">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#EEF2FF;color:#3A47B5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Referral Program</span><span style="font-size:9.5px;font-weight:600;color:#5A2EA6;background:#F2EAFE;border-radius:999px;padding:2px 7px;flex-shrink:0">Idea</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#D72228"></span>Zivelo</span>
+            <span style="display:inline-flex;align-items:center;gap:7px"><span style="width:22px;height:22px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">MR</span><span style="font-size:12px;color:#454543">Mariana</span></span>
+            <span style="font-size:11.5px;color:#9a9a98">—</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">—</span>
+          </a>
+          <a href="TLOZ Mission Detail.dc.html" class="lrow" style="display:grid;grid-template-columns:minmax(0,1fr) 130px 110px 132px 96px;gap:14px;align-items:center;padding:13px 16px;text-decoration:none;color:inherit">
+            <span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:24px;height:24px;border-radius:7px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span><span style="font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">WhatsApp Login</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:600;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:2px 7px;flex-shrink:0"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bloq.</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#2D6CDF"></span>Auth</span>
+            <span style="font-size:12px;color:#9a9a98">Sin asignar</span>
+            <span style="font-size:11.5px;color:#9a9a98">Depende exploración</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9a9a98;font-weight:500;text-align:right">—</span>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

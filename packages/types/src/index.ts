@@ -45,3 +45,130 @@ export type PlatformMetric = {
   value: string;
   tone: "good" | "warning" | "neutral";
 };
+
+export type TlozEntityStatus = "planned" | "active" | "completed" | "blocked" | "archived";
+
+export type TlozMissionType =
+  | "main_quest"
+  | "side_quest"
+  | "farming_quest"
+  | "exploration_quest";
+
+export type TlozMissionStatus = "now" | "next" | "later" | "completed" | "blocked";
+
+export type TlozResourceType = "link" | "document" | "image" | "file" | "note";
+
+export type TlozUserMissionSlot = "active_quest" | "support_quest";
+
+export type TlozSeason = {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  status: TlozEntityStatus;
+  startDate: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TlozEpisode = {
+  id: string;
+  seasonId: string;
+  name: string;
+  romanNumber: string;
+  description: string;
+  status: TlozEntityStatus;
+  startDate: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TlozProject = {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  status: TlozEntityStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TlozMission = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  type: TlozMissionType;
+  status: TlozMissionStatus;
+  conclusion?: string;
+  ownerId: string;
+  projectId: string;
+  seasonId?: string;
+  episodeId?: string;
+  dueDate?: string;
+  startDate?: string;
+  completedAt?: string;
+  blockedReason?: string;
+  progress: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TlozMissionDependency = {
+  id: string;
+  missionId: string;
+  dependsOnMissionId: string;
+  createdAt: string;
+};
+
+export type TlozQuestItem = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  status: TlozEntityStatus;
+  acquiredAt?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TlozMissionQuestItem = {
+  id: string;
+  missionId: string;
+  questItemId: string;
+  required: boolean;
+  createdAt: string;
+};
+
+export type TlozChecklistItem = {
+  id: string;
+  missionId: string;
+  title: string;
+  completed: boolean;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TlozResource = {
+  id: string;
+  missionId: string;
+  type: TlozResourceType;
+  title: string;
+  url?: string;
+  fileId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TlozUserMissionState = {
+  id: string;
+  userId: string;
+  missionId: string;
+  slot: TlozUserMissionSlot;
+  createdAt: string;
+  updatedAt: string;
+};
