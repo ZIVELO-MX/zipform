@@ -47,6 +47,11 @@ export type NavItem = {
   icon: ComponentType<{ className?: string; size?: number }>;
 };
 
+export type NavSection = {
+  label?: string;
+  items: NavItem[];
+};
+
 export const SIDEBAR_MIN_WIDTH = 220;
 export const SIDEBAR_MAX_WIDTH = 500;
 export const SIDEBAR_DEFAULT_WIDTH = 284;
@@ -61,6 +66,8 @@ export function DesktopSidebar({
   pathname,
   user,
   items,
+  sections,
+  contextItem,
   sidebarWidth,
   onResize,
   onToggleCollapsed
@@ -69,6 +76,8 @@ export function DesktopSidebar({
   pathname: string;
   user: SidebarUser;
   items: NavItem[];
+  sections?: NavSection[];
+  contextItem?: NavItem;
   sidebarWidth: number;
   onResize: (width: number) => void;
   onToggleCollapsed: () => void;
@@ -114,8 +123,8 @@ export function DesktopSidebar({
           Z
         </Link>
         <div className={cn("min-w-0 flex-1 transition-opacity duration-200", collapsed && "pointer-events-none opacity-0")}>
-          <p className="m-0 truncate text-sm font-black">Zipform</p>
-          <p className="m-0 truncate text-xs font-semibold text-carbon/55">Plataforma Zivelo</p>
+          <p className="m-0 truncate text-sm font-semibold">Zipform</p>
+          <p className="m-0 truncate text-xs font-normal text-carbon/55">Plataforma Zivelo</p>
         </div>
         <Button
           variant="ghost"
@@ -133,9 +142,23 @@ export function DesktopSidebar({
       <div
         className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 py-3"
       >
-        <nav className="grid gap-1" aria-label="Principal">
-          {items.map((item) => (
-            <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={collapsed} />
+        <nav className="grid gap-4" aria-label="Principal">
+          {contextItem ? (
+            <div className="grid gap-2 border-b border-carbon/10 pb-3">
+              <SidebarLink item={contextItem} active={false} collapsed={collapsed} subtle />
+            </div>
+          ) : null}
+          {(sections ?? [{ items }]).map((section, sectionIndex) => (
+            <div className="grid gap-1" key={section.label ?? sectionIndex}>
+              {section.label && !collapsed ? (
+                <p className="m-0 px-3 pb-1 text-[0.68rem] font-medium uppercase tracking-0 text-carbon/40">
+                  {section.label}
+                </p>
+              ) : null}
+              {section.items.map((item) => (
+                <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={collapsed} />
+              ))}
+            </div>
           ))}
         </nav>
       </div>
@@ -177,13 +200,24 @@ export function DesktopSidebar({
   );
 }
 
-export function SidebarLink({ item, active, collapsed }: { item: NavItem; active: boolean; collapsed: boolean }) {
+export function SidebarLink({
+  item,
+  active,
+  collapsed,
+  subtle = false
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  subtle?: boolean;
+}) {
   const Icon = item.icon;
   const link = (
     <Link
       href={item.href}
       className={cn(
-        "flex min-h-10 items-center gap-3 rounded-[10px] px-3 text-sm font-bold text-carbon/70 transition-colors hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zivelo",
+        "flex min-h-10 items-center gap-3 rounded-[10px] px-3 text-sm font-medium text-carbon/70 transition-colors hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zivelo",
+        subtle && "text-carbon/55",
         active && "bg-carbon text-white shadow-[0_12px_26px_rgba(29,29,27,0.14)] hover:bg-carbon hover:text-white",
         collapsed && "justify-center px-0"
       )}
@@ -235,7 +269,7 @@ export function MobileBottomNav({
             key={item.href}
             href={item.href}
             className={cn(
-              "grid min-h-14 place-items-center gap-1 rounded-[10px] text-[0.72rem] font-black text-carbon/60",
+              "grid min-h-14 place-items-center gap-1 rounded-[10px] text-[0.72rem] font-medium text-carbon/60",
               active && "bg-carbon text-white"
             )}
             aria-current={active ? "page" : undefined}
@@ -251,9 +285,9 @@ export function MobileBottomNav({
         onClick={onOpenMenu}
         aria-label="Abrir perfil"
       >
-        <Avatar className="size-7 rounded-[8px]">
+        <Avatar className="size-7 rounded-full">
           <AvatarImage src={user.avatarUrl} alt="" />
-          <AvatarFallback className="rounded-[8px] bg-carbon text-[0.6rem] font-black text-white">{initials}</AvatarFallback>
+          <AvatarFallback className="rounded-full bg-carbon text-[0.6rem] font-medium text-white">{initials}</AvatarFallback>
         </Avatar>
       </button>
     </nav>
@@ -265,12 +299,16 @@ export function MobileMenuPanel({
   pathname,
   user,
   items,
+  sections,
+  contextItem,
   onClose
 }: {
   open: boolean;
   pathname: string;
   user: SidebarUser;
   items: NavItem[];
+  sections?: NavSection[];
+  contextItem?: NavItem;
   onClose: () => void;
 }) {
   return (
@@ -288,8 +326,8 @@ export function MobileMenuPanel({
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-[12px] bg-zivelo text-lg font-black text-white">Z</span>
             <div>
-              <p className="m-0 text-sm font-black">Zipform</p>
-              <p className="m-0 text-xs font-semibold text-carbon/55">Plataforma Zivelo</p>
+              <p className="m-0 text-sm font-semibold">Zipform</p>
+              <p className="m-0 text-xs font-normal text-carbon/55">Plataforma Zivelo</p>
             </div>
           </div>
           <Button variant="ghost" size="icon" type="button" aria-label="Cerrar menú" onClick={onClose}>
@@ -298,25 +336,19 @@ export function MobileMenuPanel({
         </header>
 
         <nav className="flex-1 overflow-y-auto px-4 py-5" aria-label="Navegación">
-          {items.map((item) => {
-            const Icon = item.icon;
-            const active = isActive(pathname, item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className={cn(
-                  "flex min-h-12 items-center gap-3 rounded-[12px] px-3 text-sm font-bold text-carbon/70 transition-colors hover:bg-carbon/5 hover:text-carbon",
-                  active && "bg-carbon text-white hover:bg-carbon hover:text-white"
-                )}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon size={20} className="shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
+          {contextItem ? <MobileNavLink item={contextItem} active={false} onClose={onClose} subtle /> : null}
+          {(sections ?? [{ items }]).map((section, sectionIndex) => (
+            <div className="mt-4 grid gap-1" key={section.label ?? sectionIndex}>
+              {section.label ? (
+                <p className="m-0 px-3 pb-1 text-[0.68rem] font-medium uppercase tracking-0 text-carbon/40">
+                  {section.label}
+                </p>
+              ) : null}
+              {section.items.map((item) => (
+                <MobileNavLink key={item.href} item={item} active={isActive(pathname, item.href)} onClose={onClose} />
+              ))}
+            </div>
+          ))}
         </nav>
 
         <div className="border-t border-carbon/10 px-4 py-4">
@@ -324,6 +356,36 @@ export function MobileMenuPanel({
         </div>
       </div>
     </div>
+  );
+}
+
+function MobileNavLink({
+  item,
+  active,
+  onClose,
+  subtle = false
+}: {
+  item: NavItem;
+  active: boolean;
+  onClose: () => void;
+  subtle?: boolean;
+}) {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onClose}
+      className={cn(
+        "flex min-h-12 items-center gap-3 rounded-[12px] px-3 text-sm font-medium text-carbon/70 transition-colors hover:bg-carbon/5 hover:text-carbon",
+        subtle && "text-carbon/55",
+        active && "bg-carbon text-white hover:bg-carbon hover:text-white"
+      )}
+      aria-current={active ? "page" : undefined}
+    >
+      <Icon size={20} className="shrink-0" />
+      {item.label}
+    </Link>
   );
 }
 
@@ -351,7 +413,7 @@ export function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed
               <>
                 <span className="min-w-0 flex-1">
                   <strong className="block truncate text-sm">{user.username}</strong>
-                  <span className="block truncate text-[0.7rem] font-semibold text-carbon/55">{user.email}</span>
+                  <span className="block truncate text-[0.7rem] font-normal text-carbon/55">{user.email}</span>
                 </span>
                 <MoreHorizontal size={18} className="shrink-0 text-carbon/55" />
               </>
@@ -363,8 +425,8 @@ export function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed
             <div className="flex items-center gap-3">
               <UserAvatar user={user} initials={initials} large />
               <div className="min-w-0">
-                <span className="block truncate text-sm font-black">{user.username}</span>
-                <span className="block truncate text-[0.7rem] font-semibold text-carbon/55">{user.email}</span>
+                <span className="block truncate text-sm font-semibold">{user.username}</span>
+                <span className="block truncate text-[0.7rem] font-normal text-carbon/55">{user.email}</span>
               </div>
             </div>
           </DropdownMenuLabel>
@@ -403,7 +465,7 @@ export function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed
 
 export function UserAvatar({ user, initials, large = false }: { user: SidebarUser; initials: string; large?: boolean }) {
   return (
-    <Avatar className={cn(large ? "size-11 rounded-[14px]" : "size-10 rounded-[12px]")}>
+    <Avatar className={cn(large ? "size-11 rounded-full" : "size-10 rounded-full")}>
       <AvatarImage src={user.avatarUrl} alt="" />
       <AvatarFallback>{initials}</AvatarFallback>
     </Avatar>

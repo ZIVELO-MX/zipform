@@ -1,6 +1,21 @@
 "use client";
 
-import { FileText, Home, Menu, Sword, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Boxes,
+  CalendarDays,
+  FileText,
+  FolderKanban,
+  Home,
+  KanbanSquare,
+  LayoutDashboard,
+  List,
+  Menu,
+  PackageOpen,
+  Sword,
+  Table2,
+  X
+} from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { UserProfile } from "@zipform/types";
 import {
@@ -9,8 +24,8 @@ import {
   MobileBottomNav,
   MobileMenuPanel,
   NavItem,
+  NavSection,
   TooltipProvider,
-  cn,
 } from "@zipform/ui";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
@@ -32,6 +47,31 @@ function getEnabledApps(): NavItem[] {
 
 const navItems = getEnabledApps();
 
+const tlozContextItem: NavItem = { label: "TLOZ", href: "/", icon: ArrowLeft };
+
+const tlozSections: NavSection[] = [
+  {
+    items: [
+      { label: "Dashboard", href: "/tloz", icon: LayoutDashboard },
+      { label: "Board", href: "/tloz/board", icon: KanbanSquare },
+      { label: "Lista", href: "/tloz/list", icon: List },
+      { label: "Tabla", href: "/tloz/table", icon: Table2 },
+      { label: "Calendario", href: "/tloz/calendar", icon: CalendarDays }
+    ]
+  },
+  {
+    label: "Sistema",
+    items: [
+      { label: "Quest Items", href: "/tloz#quest-items", icon: PackageOpen },
+      { label: "Recursos", href: "/tloz#resources", icon: Boxes }
+    ]
+  },
+  {
+    label: "Proyectos",
+    items: [{ label: "Proyectos", href: "/tloz#projects", icon: FolderKanban }]
+  }
+];
+
 export function AppShell({ children, user }: AppShellProps) {
   return (
     <TooltipProvider delayDuration={180}>
@@ -44,6 +84,7 @@ export function AppShell({ children, user }: AppShellProps) {
 
 function DashboardLayoutClient({ children, user }: AppShellProps) {
   const pathname = usePathname();
+  const isTloz = pathname === "/tloz" || pathname.startsWith("/tloz/");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(284);
@@ -116,6 +157,8 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
         pathname={pathname}
         user={user}
         items={navItems}
+        sections={isTloz ? tlozSections : undefined}
+        contextItem={isTloz ? tlozContextItem : undefined}
         sidebarWidth={sidebarWidth}
         onResize={handleResize}
         onToggleCollapsed={() => setCollapsed((current) => !current)}
@@ -129,6 +172,8 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
         pathname={pathname}
         user={user}
         items={navItems}
+        sections={isTloz ? tlozSections : undefined}
+        contextItem={isTloz ? tlozContextItem : undefined}
         onClose={() => setMobileMenuOpen(false)}
       />
 

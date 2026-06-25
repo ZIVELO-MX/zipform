@@ -40,7 +40,7 @@ const apps: AppModule[] = [
     name: "TLOZ",
     shortName: "TLOZ",
     description:
-      "The Legend of Zivelo platform entry. This dashboard only exposes platform support and does not implement TLOZ product logic.",
+      "The Legend of Zivelo module for Missions, Quest Items, board, list, table, calendar, and Mission detail workflows.",
     href: "/tloz",
     status: "enabled",
     versionTarget: "1.0",
@@ -110,7 +110,7 @@ const roadmap: RoadmapSnapshot = {
       lane: "NEXT",
       category: "TLOZ",
       app: "TLOZ",
-      label: "Support TLOZ with navigation, shared UI, auth, and deployment foundations",
+      label: "Replace TLOZ mock repositories with persistence, permissions, and global search",
       dependsOn: ["auth-foundation"]
     },
     {
@@ -150,7 +150,7 @@ const roadmap: RoadmapSnapshot = {
   ]
 };
 
-const currentUser: UserProfile = {
+export const currentUser: UserProfile = {
   id: "benji",
   name: "Benji Rodriguez",
   username: "Benji",

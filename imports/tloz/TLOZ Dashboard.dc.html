@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  ::selection{background:rgba(215,34,40,0.18)}
+  @keyframes pop-in{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}
+  @keyframes fade-in{from{opacity:0}to{opacity:1}}
+  @keyframes nowpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.72)}}
+  .scrl::-webkit-scrollbar{width:9px;height:9px}
+  .scrl::-webkit-scrollbar-thumb{background:rgba(29,29,27,0.16);border-radius:999px}
+  .scrl::-webkit-scrollbar-thumb:hover{background:rgba(29,29,27,0.28)}
+  .scrl::-webkit-scrollbar-track{background:transparent}
+  .nav:hover{background:rgba(215,34,40,0.05);outline:1px solid rgba(215,34,40,0.28);outline-offset:-1px}
+  .row:hover{outline:1px solid rgba(215,34,40,0.30);outline-offset:-1px;background:rgba(215,34,40,0.04)}
+  .card:hover{transform:translateY(-2px);box-shadow:0 18px 40px rgba(29,29,27,0.10);border-color:rgba(215,34,40,0.30)}
+  .qi:hover{outline:1px solid rgba(215,34,40,0.30);outline-offset:-1px}
+  .pbtn:hover{border-color:#D72228;color:#D72228}
+  .nbtn:hover{box-shadow:0 12px 28px rgba(215,34,40,0.26);transform:translateY(-1px)}
+</style>
+</helmet>
+<div style="display:flex;min-height:100vh;background:#FAFAF9;font-family:'Inter',system-ui,sans-serif;color:#1D1D1B;-webkit-font-smoothing:antialiased;font-size:14px">
+
+  <dc-import name="TLOZ Sidebar" active="dashboard" hint-size="248px,100%"></dc-import>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+
+    <header style="position:sticky;top:0;z-index:20;background:rgba(250,250,249,0.82);backdrop-filter:blur(10px);border-bottom:1px solid rgba(29,29,27,0.08);padding:12px 26px;display:flex;align-items:center;gap:18px">
+      <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:#6B6B6B;font-weight:500;flex-shrink:0">
+        <span style="color:#1D1D1B;font-weight:600">Zivelo</span>
+        <span style="color:#cfcfcd">›</span>
+        <span style="color:#1D1D1B;font-weight:600">Dashboard</span>
+      </div>
+      <div style="flex:1;max-width:440px;margin:0 auto;position:relative">
+        <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9a9a98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="Buscar missions, proyectos, quest items…" style="width:100%;height:40px;padding:0 64px 0 38px;border-radius:11px;border:1px solid rgba(29,29,27,0.10);background:#fff;font-family:inherit;font-size:13.5px;color:#1D1D1B;outline:none">
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;gap:3px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98">
+          <kbd style="background:#F5F5F5;border:1px solid rgba(29,29,27,0.10);border-radius:5px;padding:1px 5px">⌘</kbd>
+          <kbd style="background:#F5F5F5;border:1px solid rgba(29,29,27,0.10);border-radius:5px;padding:1px 5px">K</kbd>
+        </span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <button class="pbtn" style="width:38px;height:38px;border-radius:999px;border:1px solid rgba(29,29,27,0.10);background:#fff;color:#454543;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s ease;position:relative">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span style="position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:999px;background:#D72228;border:1.5px solid #fff"></span>
+        </button>
+        <button class="nbtn" style="height:40px;padding:0 16px;border-radius:999px;border:none;background:#D72228;color:#fff;font-family:inherit;font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:7px;cursor:pointer;box-shadow:0 10px 22px rgba(215,34,40,0.20);transition:all .2s ease">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nueva Mission
+        </button>
+      </div>
+    </header>
+
+    <div class="scrl" style="flex:1;overflow:auto;padding:24px 26px 48px">
+      <div style="max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:26px">
+
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div>
+            <h1 style="margin:0;font-size:23px;font-weight:700;letter-spacing:-0.02em">Dashboard</h1>
+            <p style="margin:5px 0 0;color:#6B6B6B;font-size:13.5px">Visión general del equipo · trabajo activo en todos los proyectos · 4 personas</p>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="display:inline-flex;background:#F1F0EE;border-radius:999px;padding:3px;gap:2px">
+              <span style="padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:600;background:#fff;color:#1D1D1B;box-shadow:0 1px 2px rgba(29,29,27,0.07)">Todo el equipo</span>
+              <span style="padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:500;color:#6B6B6B;cursor:pointer">Solo yo</span>
+            </div>
+          </div>
+        </div>
+
+        <section>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:8px;height:8px;border-radius:999px;background:#1E8E5A;animation:nowpulse 1.8s ease-in-out infinite"></span>
+              <h2 style="margin:0;font-size:12.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#454543">En curso ahora · Mi foco</h2>
+            </div>
+            <span style="display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:#6B6B6B;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:999px;padding:5px 11px;font-weight:500">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D72228" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/></svg>
+              Límite de foco: <b style="color:#1D1D1B;font-weight:700">1 Quest + 1 Support</b> por persona
+            </span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.08fr 1fr;gap:16px">
+
+            <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:18px;padding:20px;position:relative;overflow:hidden;transition:all .22s ease;box-shadow:0 12px 30px rgba(29,29,27,0.05)">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:#D72228"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <span style="display:inline-flex;align-items:center;gap:6px;background:#FDECEC;color:#B91C22;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;letter-spacing:0.01em">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>
+                  Main Quest
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#1E8E5A">
+                  <span style="width:7px;height:7px;border-radius:999px;background:#1E8E5A;animation:nowpulse 1.8s ease-in-out infinite"></span> Now
+                </span>
+              </div>
+              <h3 style="margin:0 0 7px;font-size:19px;font-weight:700;letter-spacing:-0.01em">Login Stability</h3>
+              <p style="margin:0 0 16px;font-size:13.5px;color:#6B6B6B;line-height:1.5;text-wrap:pretty">Estabilizar el login y reducir errores de sesión en producción antes del release del MVP.</p>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#454543;background:#F5F5F5;border-radius:999px;padding:4px 10px;font-weight:500"><span style="width:7px;height:7px;border-radius:2px;background:#2D6CDF"></span>Auth</span>
+                <span style="font-size:12px;color:#6B6B6B;background:#F5F5F5;border-radius:999px;padding:4px 10px;font-weight:500">Episodio I</span>
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:4px 10px;font-weight:600">Kano · Basic</span>
+              </div>
+              <div style="margin-bottom:16px">
+                <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px">
+                  <span style="color:#6B6B6B;font-weight:500;display:inline-flex;align-items:center;gap:6px">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1E8E5A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    3 de 5 subtareas
+                  </span>
+                  <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:#1D1D1B">60%</span>
+                </div>
+                <div style="height:7px;background:#F0EFED;border-radius:999px;overflow:hidden">
+                  <div style="width:60%;height:100%;background:#D72228;border-radius:999px"></div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(29,29,27,0.07);padding-top:14px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="width:28px;height:28px;border-radius:999px;background:#2D6CDF;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">DC</div>
+                  <div style="line-height:1.1"><div style="font-size:12.5px;font-weight:600">Diego Carrillo</div><div style="font-size:11px;color:#9a9a98">Owner</div></div>
+                </div>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#B91C22;font-weight:600;background:#FDECEC;border-radius:999px;padding:5px 11px">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="17" rx="2"/><line x1="3" y1="9.5" x2="21" y2="9.5"/><line x1="8" y1="2.5" x2="8" y2="6.5"/></svg>
+                  Vence 28 jun
+                </span>
+              </div>
+            </div>
+
+            <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:18px;padding:20px;position:relative;overflow:hidden;transition:all .22s ease;box-shadow:0 12px 30px rgba(29,29,27,0.05)">
+              <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:#7A4ED9"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <span style="display:inline-flex;align-items:center;gap:6px;background:#F2EAFE;color:#5A2EA6;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6" fill="currentColor" stroke="none"/></svg>
+                  Exploration Quest
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#1E8E5A">
+                  <span style="width:7px;height:7px;border-radius:999px;background:#1E8E5A;animation:nowpulse 1.8s ease-in-out infinite"></span> Now
+                </span>
+              </div>
+              <h3 style="margin:0 0 7px;font-size:19px;font-weight:700;letter-spacing:-0.01em">Investigate WhatsApp Auth</h3>
+              <p style="margin:0 0 15px;font-size:13.5px;color:#6B6B6B;line-height:1.5;text-wrap:pretty">Validar si WhatsApp puede reemplazar el login por SMS para reducir fricción en el Join Flow.</p>
+              <div style="background:#FAFAF9;border:1px solid rgba(29,29,27,0.08);border-radius:13px;padding:12px 13px;margin-bottom:15px">
+                <div style="font-size:10.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#9a9a98;margin-bottom:9px">Toda exploración cierra con una conclusión</div>
+                <div style="display:flex;flex-wrap:wrap;gap:7px">
+                  <span class="qi" style="font-size:12px;font-weight:600;color:#1E6B3C;background:#E6F4EA;border:1px solid rgba(30,107,60,0.18);border-radius:999px;padding:5px 11px;cursor:pointer;transition:all .2s ease">Hacerlo</span>
+                  <span class="qi" style="font-size:12px;font-weight:500;color:#6B6B6B;background:#fff;border:1px solid rgba(29,29,27,0.12);border-radius:999px;padding:5px 11px;cursor:pointer;transition:all .2s ease">No hacerlo</span>
+                  <span class="qi" style="font-size:12px;font-weight:500;color:#6B6B6B;background:#fff;border:1px solid rgba(29,29,27,0.12);border-radius:999px;padding:5px 11px;cursor:pointer;transition:all .2s ease">Postergar</span>
+                  <span class="qi" style="font-size:12px;font-weight:500;color:#6B6B6B;background:#fff;border:1px solid rgba(29,29,27,0.12);border-radius:999px;padding:5px 11px;cursor:pointer;transition:all .2s ease">Explorar más</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(29,29,27,0.07);padding-top:14px">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <div style="width:28px;height:28px;border-radius:999px;background:#2D6CDF;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px">DC</div>
+                  <div style="line-height:1.1"><div style="font-size:12.5px;font-weight:600">Diego Carrillo</div><div style="font-size:11px;color:#9a9a98">Owner</div></div>
+                </div>
+                <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#6B6B6B;font-weight:500">
+                  <span style="width:7px;height:7px;border-radius:2px;background:#2D6CDF"></span> Auth
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
+            <h2 style="margin:0;font-size:12.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#454543;display:flex;align-items:center;gap:9px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#D72228"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>
+              Main Quests
+              <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98;background:#F1F0EE;border-radius:999px;padding:1px 8px;font-weight:500">3</span>
+            </h2>
+            <a style="font-size:12.5px;color:#D72228;font-weight:600;text-decoration:none;cursor:pointer">Ver todas →</a>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+
+            <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:16px;padding:17px;transition:all .22s ease">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span>
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#1E8E5A"><span style="width:6px;height:6px;border-radius:999px;background:#1E8E5A"></span>Now</span>
+              </div>
+              <h3 style="margin:0 0 10px;font-size:15px;font-weight:700;line-height:1.25">Login Stability</h3>
+              <div style="display:flex;gap:7px;margin-bottom:13px">
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#2D6CDF"></span>Auth</span>
+                <span style="font-size:11px;color:#bcbcba">·</span>
+                <span style="font-size:11px;color:#6B6B6B;font-weight:500">Ep. I</span>
+              </div>
+              <div style="height:6px;background:#F0EFED;border-radius:999px;overflow:hidden;margin-bottom:13px"><div style="width:60%;height:100%;background:#D72228"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="width:25px;height:25px;border-radius:999px;background:#2D6CDF;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px">DC</div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98">60%</span>
+              </div>
+            </div>
+
+            <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:16px;padding:17px;transition:all .22s ease">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span>
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#1E8E5A"><span style="width:6px;height:6px;border-radius:999px;background:#1E8E5A"></span>Now</span>
+              </div>
+              <h3 style="margin:0 0 10px;font-size:15px;font-weight:700;line-height:1.25">Join Flow Completion</h3>
+              <div style="display:flex;gap:7px;margin-bottom:13px">
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#C0397A"></span>Join Flow</span>
+                <span style="font-size:11px;color:#bcbcba">·</span>
+                <span style="font-size:11px;color:#6B6B6B;font-weight:500">Ep. I</span>
+              </div>
+              <div style="height:6px;background:#F0EFED;border-radius:999px;overflow:hidden;margin-bottom:13px"><div style="width:35%;height:100%;background:#D72228"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="width:25px;height:25px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px">MR</div>
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:#7A5A12;font-weight:600;background:#FFF4DE;border-radius:999px;padding:3px 8px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>1 item</span>
+              </div>
+            </div>
+
+            <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:16px;padding:17px;transition:all .22s ease">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                <span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span>
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:#3A47B5;background:#EEF2FF;border-radius:999px;padding:3px 8px">Next</span>
+              </div>
+              <h3 style="margin:0 0 10px;font-size:15px;font-weight:700;line-height:1.25">MVP Release</h3>
+              <div style="display:flex;gap:7px;margin-bottom:13px">
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#D72228"></span>Zivelo</span>
+                <span style="font-size:11px;color:#bcbcba">·</span>
+                <span style="font-size:11px;color:#6B6B6B;font-weight:500">Ep. II</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:7px;background:#FFF8F8;border:1px dashed rgba(215,34,40,0.28);border-radius:9px;padding:7px 9px;margin-bottom:13px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#B91C22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <span style="font-size:10.5px;color:#B91C22;font-weight:600">Bloqueada por 2 Quest Items</span>
+                <div style="margin-left:auto;display:flex">
+                  <span style="width:20px;height:20px;border-radius:999px;background:#FFF4DE;color:#7A5A12;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center" title="Approved Budget"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                  <span style="width:20px;height:20px;border-radius:999px;background:#FFF4DE;color:#7A5A12;border:1.5px solid #fff;margin-left:-7px;display:flex;align-items:center;justify-content:center" title="Signed Contract"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div style="width:25px;height:25px;border-radius:999px;background:#1E8E5A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px">TM</div>
+                <span style="font-size:11px;color:#9a9a98;font-weight:500">Esperando capacidad</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+          <div style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:16px;overflow:hidden">
+            <div style="padding:15px 17px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(29,29,27,0.07)">
+              <h2 style="margin:0;font-size:12.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#454543">Próximas · Next</h2>
+              <span style="font-size:11px;color:#6B6B6B">Validadas, esperando capacidad</span>
+            </div>
+            <div style="padding:6px">
+              <div class="row" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;cursor:pointer;transition:all .15s ease">
+                <span style="width:26px;height:26px;border-radius:8px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Wallet Integration</div><div style="font-size:11px;color:#9a9a98;display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:6px;height:6px;border-radius:2px;background:#1E8E5A"></span>Wallets · Ep. II</div></div>
+                <div style="width:24px;height:24px;border-radius:999px;background:#7A4ED9;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">SF</div>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;cursor:pointer;transition:all .15s ease">
+                <span style="width:26px;height:26px;border-radius:8px;background:#EEF2FF;color:#3A47B5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Landing Page</div><div style="font-size:11px;color:#9a9a98;display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:6px;height:6px;border-radius:2px;background:#D72228"></span>Zivelo · Side Quest</div></div>
+                <div style="width:24px;height:24px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">MR</div>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;cursor:pointer;transition:all .15s ease">
+                <span style="width:26px;height:26px;border-radius:8px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Rewards Engine</div><div style="font-size:11px;color:#9a9a98;display:flex;align-items:center;gap:5px;margin-top:2px"><span style="width:6px;height:6px;border-radius:2px;background:#E0A100"></span>Rewards · Ep. II</div></div>
+                <div style="width:24px;height:24px;border-radius:999px;background:#1E8E5A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">TM</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:16px;overflow:hidden">
+            <div style="padding:15px 17px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(29,29,27,0.07)">
+              <h2 style="margin:0;font-size:12.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#454543">Más adelante · Later</h2>
+              <span style="font-size:11px;color:#6B6B6B">Ideas · sin validar · bloqueadas</span>
+            </div>
+            <div style="padding:6px">
+              <div class="row" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;cursor:pointer;transition:all .15s ease">
+                <span style="width:26px;height:26px;border-radius:8px;background:#F2EAFE;color:#5A2EA6;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6" fill="currentColor" stroke="none"/></svg></span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Validate Multi-currency</div><div style="font-size:11px;color:#9a9a98;margin-top:2px">Exploration · idea</div></div>
+                <span style="font-size:10px;font-weight:600;color:#5A2EA6;background:#F2EAFE;border-radius:999px;padding:3px 9px">Idea</span>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;cursor:pointer;transition:all .15s ease">
+                <span style="width:26px;height:26px;border-radius:8px;background:#EEF2FF;color:#3A47B5;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Referral Program</div><div style="font-size:11px;color:#9a9a98;margin-top:2px">Side Quest · idea</div></div>
+                <span style="font-size:10px;font-weight:600;color:#5A2EA6;background:#F2EAFE;border-radius:999px;padding:3px 9px">Idea</span>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;cursor:pointer;transition:all .15s ease">
+                <span style="width:26px;height:26px;border-radius:8px;background:#FDECEC;color:#B91C22;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg></span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">WhatsApp Login</div><div style="font-size:11px;color:#9a9a98;margin-top:2px">Depende de la exploración activa</div></div>
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:3px 9px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bloqueada</span>
+              </div>
+              <div class="row" style="display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;cursor:pointer;transition:all .15s ease">
+                <span style="width:26px;height:26px;border-radius:8px;background:#E6F4EA;color:#1E6B3C;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg></span>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:600">Cleanup de logs legacy</div><div style="font-size:11px;color:#9a9a98;margin-top:2px">Farming Quest · mantenimiento</div></div>
+                <span style="font-size:10px;font-weight:600;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:3px 9px">Later</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
+              <h2 style="margin:0;font-size:12.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#454543">Proyectos</h2>
+              <a style="font-size:12.5px;color:#D72228;font-weight:600;text-decoration:none;cursor:pointer">Ver todos →</a>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:13px">
+              <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:15px;transition:all .22s ease">
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+                  <span style="width:9px;height:9px;border-radius:3px;background:#2D6CDF"></span>
+                  <span style="font-weight:700;font-size:14px">Auth</span>
+                  <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98">3/8</span>
+                </div>
+                <div style="height:6px;background:#F0EFED;border-radius:999px;overflow:hidden;margin-bottom:12px"><div style="width:38%;height:100%;background:#2D6CDF"></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div style="display:flex"><span style="width:22px;height:22px;border-radius:999px;background:#2D6CDF;color:#fff;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">DC</span><span style="width:22px;height:22px;border-radius:999px;background:#C0397A;color:#fff;border:1.5px solid #fff;margin-left:-7px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">MR</span></div>
+                  <span style="font-size:11px;color:#6B6B6B;font-weight:500">2 activas</span>
+                </div>
+              </div>
+              <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:15px;transition:all .22s ease">
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+                  <span style="width:9px;height:9px;border-radius:3px;background:#C0397A"></span>
+                  <span style="font-weight:700;font-size:14px">Join Flow</span>
+                  <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98">1/6</span>
+                </div>
+                <div style="height:6px;background:#F0EFED;border-radius:999px;overflow:hidden;margin-bottom:12px"><div style="width:17%;height:100%;background:#C0397A"></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div style="display:flex"><span style="width:22px;height:22px;border-radius:999px;background:#C0397A;color:#fff;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">MR</span></div>
+                  <span style="font-size:11px;color:#6B6B6B;font-weight:500">1 activa</span>
+                </div>
+              </div>
+              <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:15px;transition:all .22s ease">
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+                  <span style="width:9px;height:9px;border-radius:3px;background:#1E8E5A"></span>
+                  <span style="font-weight:700;font-size:14px">Wallets</span>
+                  <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98">0/5</span>
+                </div>
+                <div style="height:6px;background:#F0EFED;border-radius:999px;overflow:hidden;margin-bottom:12px"><div style="width:6%;height:100%;background:#1E8E5A"></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div style="display:flex"><span style="width:22px;height:22px;border-radius:999px;background:#7A4ED9;color:#fff;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">SF</span></div>
+                  <span style="font-size:11px;color:#6B6B6B;font-weight:500">1 en Next</span>
+                </div>
+              </div>
+              <div class="card" style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:15px;transition:all .22s ease">
+                <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+                  <span style="width:9px;height:9px;border-radius:3px;background:#E0A100"></span>
+                  <span style="font-weight:700;font-size:14px">Rewards</span>
+                  <span style="margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98">0/4</span>
+                </div>
+                <div style="height:6px;background:#F0EFED;border-radius:999px;overflow:hidden;margin-bottom:12px"><div style="width:4%;height:100%;background:#E0A100"></div></div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <div style="display:flex"><span style="width:22px;height:22px;border-radius:999px;background:#1E8E5A;color:#fff;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9px">TM</span></div>
+                  <span style="font-size:11px;color:#6B6B6B;font-weight:500">1 en Next</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div style="margin-bottom:13px"><h2 style="margin:0;font-size:12.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#454543">Actividad reciente</h2></div>
+            <div style="background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:16px;padding:6px">
+              <div style="display:flex;gap:11px;padding:11px 12px">
+                <div style="position:relative;flex-shrink:0"><span style="width:8px;height:8px;border-radius:999px;background:#1E8E5A;display:block;margin-top:5px"></span></div>
+                <div style="min-width:0"><div style="font-size:12.5px;line-height:1.45"><b style="font-weight:600">Tomás</b> completó el Quest Item <b style="font-weight:600;color:#1E6B3C">Purchased Domain</b></div><div style="font-size:10.5px;color:#9a9a98;margin-top:2px;font-family:'JetBrains Mono',monospace">hace 12 min</div></div>
+              </div>
+              <div style="display:flex;gap:11px;padding:11px 12px">
+                <div style="position:relative;flex-shrink:0"><span style="width:8px;height:8px;border-radius:999px;background:#D72228;display:block;margin-top:5px"></span></div>
+                <div style="min-width:0"><div style="font-size:12.5px;line-height:1.45"><b style="font-weight:600">Diego</b> movió <b style="font-weight:600">Login Stability</b> a <b style="font-weight:600">Now</b></div><div style="font-size:10.5px;color:#9a9a98;margin-top:2px;font-family:'JetBrains Mono',monospace">hace 1 h</div></div>
+              </div>
+              <div style="display:flex;gap:11px;padding:11px 12px">
+                <div style="position:relative;flex-shrink:0"><span style="width:8px;height:8px;border-radius:999px;background:#7A4ED9;display:block;margin-top:5px"></span></div>
+                <div style="min-width:0"><div style="font-size:12.5px;line-height:1.45"><b style="font-weight:600">Mariana</b> creó la Mission <b style="font-weight:600">Referral Program</b></div><div style="font-size:10.5px;color:#9a9a98;margin-top:2px;font-family:'JetBrains Mono',monospace">hace 3 h</div></div>
+              </div>
+              <div style="display:flex;gap:11px;padding:11px 12px">
+                <div style="position:relative;flex-shrink:0"><span style="width:8px;height:8px;border-radius:999px;background:#2D6CDF;display:block;margin-top:5px"></span></div>
+                <div style="min-width:0"><div style="font-size:12.5px;line-height:1.45">Owner de <b style="font-weight:600">Wallet Integration</b> cambió a <b style="font-weight:600">Sofía</b></div><div style="font-size:10.5px;color:#9a9a98;margin-top:2px;font-family:'JetBrains Mono',monospace">ayer</div></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:13px">
+            <h2 style="margin:0;font-size:12.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#454543;display:flex;align-items:center;gap:9px">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A5A12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Quest Items
+              <span style="font-size:11px;color:#6B6B6B;font-weight:500;text-transform:none;letter-spacing:0">desbloqueos reutilizables</span>
+            </h2>
+            <a style="font-size:12.5px;color:#D72228;font-weight:600;text-decoration:none;cursor:pointer">Gestionar →</a>
+          </div>
+          <div class="scrl" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:4px">
+            <div class="qi" style="flex:0 0 auto;min-width:180px;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;transition:all .2s ease">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="width:30px;height:30px;border-radius:9px;background:#E6F4EA;color:#1E6B3C;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span>
+                <span style="font-size:10px;font-weight:700;color:#1E6B3C;background:#E6F4EA;border-radius:999px;padding:3px 8px">Desbloqueado</span>
+              </div>
+              <div style="font-weight:600;font-size:13.5px;margin-bottom:3px">Apple Developer Account</div>
+              <div style="font-size:11px;color:#9a9a98">Desbloquea 2 missions</div>
+            </div>
+            <div class="qi" style="flex:0 0 auto;min-width:180px;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;transition:all .2s ease">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="width:30px;height:30px;border-radius:9px;background:#FFF4DE;color:#7A5A12;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <span style="font-size:10px;font-weight:700;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:3px 8px">Bloqueado</span>
+              </div>
+              <div style="font-weight:600;font-size:13.5px;margin-bottom:3px">Approved Budget</div>
+              <div style="font-size:11px;color:#9a9a98">Desbloquea 3 missions</div>
+            </div>
+            <div class="qi" style="flex:0 0 auto;min-width:180px;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;transition:all .2s ease">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="width:30px;height:30px;border-radius:9px;background:#FFF4DE;color:#7A5A12;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <span style="font-size:10px;font-weight:700;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:3px 8px">Bloqueado</span>
+              </div>
+              <div style="font-weight:600;font-size:13.5px;margin-bottom:3px">Signed Contract</div>
+              <div style="font-size:11px;color:#9a9a98">Desbloquea 1 mission</div>
+            </div>
+            <div class="qi" style="flex:0 0 auto;min-width:180px;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;transition:all .2s ease">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="width:30px;height:30px;border-radius:9px;background:#FFF4DE;color:#7A5A12;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <span style="font-size:10px;font-weight:700;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:3px 8px">Bloqueado</span>
+              </div>
+              <div style="font-weight:600;font-size:13.5px;margin-bottom:3px">Selected Provider</div>
+              <div style="font-size:11px;color:#9a9a98">Desbloquea 2 missions</div>
+            </div>
+            <div class="qi" style="flex:0 0 auto;min-width:180px;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;transition:all .2s ease">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <span style="width:30px;height:30px;border-radius:9px;background:#E6F4EA;color:#1E6B3C;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span>
+                <span style="font-size:10px;font-weight:700;color:#1E6B3C;background:#E6F4EA;border-radius:999px;padding:3px 8px">Desbloqueado</span>
+              </div>
+              <div style="font-weight:600;font-size:13.5px;margin-bottom:3px">Purchased Domain</div>
+              <div style="font-size:11px;color:#9a9a98">Desbloquea 1 mission</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

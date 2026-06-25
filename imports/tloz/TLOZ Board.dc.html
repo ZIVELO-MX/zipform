@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  ::selection{background:rgba(215,34,40,0.18)}
+  @keyframes nowpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.72)}}
+  .scrl::-webkit-scrollbar{width:9px;height:9px}
+  .scrl::-webkit-scrollbar-thumb{background:rgba(29,29,27,0.16);border-radius:999px}
+  .scrl::-webkit-scrollbar-thumb:hover{background:rgba(29,29,27,0.28)}
+  .scrl::-webkit-scrollbar-track{background:transparent}
+  .nav:hover{background:rgba(215,34,40,0.05);outline:1px solid rgba(215,34,40,0.28);outline-offset:-1px}
+  .kcard{transition:all .16s ease;cursor:grab}
+  .kcard:hover{outline:1px solid rgba(215,34,40,0.30);outline-offset:-1px;box-shadow:0 10px 24px rgba(29,29,27,0.08);transform:translateY(-1px)}
+  .pbtn:hover{border-color:#D72228;color:#D72228}
+  .nbtn:hover{box-shadow:0 12px 28px rgba(215,34,40,0.26);transform:translateY(-1px)}
+  .addc:hover{background:rgba(215,34,40,0.05);color:#D72228;border-color:rgba(215,34,40,0.30)}
+  .kcard.isdrag{opacity:.4}
+  .droplist.dropping{background:rgba(215,34,40,0.04);border-radius:12px;outline:1.5px dashed rgba(215,34,40,0.35);outline-offset:2px}
+</style>
+</helmet>
+<div style="display:flex;height:100vh;overflow:hidden;background:#FAFAF9;font-family:'Inter',system-ui,sans-serif;color:#1D1D1B;-webkit-font-smoothing:antialiased;font-size:14px">
+
+  <dc-import name="TLOZ Sidebar" active="board" hint-size="248px,100%"></dc-import>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+
+    <header style="flex-shrink:0;background:rgba(250,250,249,0.82);backdrop-filter:blur(10px);border-bottom:1px solid rgba(29,29,27,0.08);padding:12px 26px;display:flex;align-items:center;gap:18px">
+      <div style="display:flex;align-items:center;gap:7px;font-size:13px;color:#6B6B6B;font-weight:500;flex-shrink:0">
+        <span style="color:#1D1D1B;font-weight:600">Zivelo</span><span style="color:#cfcfcd">›</span><span>Temporada 1</span><span style="color:#cfcfcd">›</span><span style="color:#1D1D1B;font-weight:600">Board</span>
+      </div>
+      <div style="flex:1;max-width:440px;margin:0 auto;position:relative">
+        <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9a9a98" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input placeholder="Buscar missions, proyectos, quest items…" style="width:100%;height:40px;padding:0 64px 0 38px;border-radius:11px;border:1px solid rgba(29,29,27,0.10);background:#fff;font-family:inherit;font-size:13.5px;color:#1D1D1B;outline:none">
+        <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;gap:3px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#9a9a98"><kbd style="background:#F5F5F5;border:1px solid rgba(29,29,27,0.10);border-radius:5px;padding:1px 5px">⌘</kbd><kbd style="background:#F5F5F5;border:1px solid rgba(29,29,27,0.10);border-radius:5px;padding:1px 5px">K</kbd></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <button class="pbtn" style="width:38px;height:38px;border-radius:999px;border:1px solid rgba(29,29,27,0.10);background:#fff;color:#454543;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s ease;position:relative"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span style="position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:999px;background:#D72228;border:1.5px solid #fff"></span></button>
+        <button class="nbtn" style="height:40px;padding:0 16px;border-radius:999px;border:none;background:#D72228;color:#fff;font-family:inherit;font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:7px;cursor:pointer;box-shadow:0 10px 22px rgba(215,34,40,0.20);transition:all .2s ease"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva Mission</button>
+      </div>
+    </header>
+
+    <div style="flex-shrink:0;padding:16px 26px 14px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div><h1 style="margin:0;font-size:21px;font-weight:700;letter-spacing:-0.02em">Board</h1><p style="margin:4px 0 0;color:#6B6B6B;font-size:13px">Flujo de trabajo del equipo · agrupado por estado</p></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:inline-flex;background:#F1F0EE;border-radius:999px;padding:3px;gap:2px">
+          <span style="padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:600;background:#fff;color:#1D1D1B;box-shadow:0 1px 2px rgba(29,29,27,0.07)">Todo el equipo</span>
+          <span style="padding:6px 13px;border-radius:999px;font-size:12.5px;font-weight:500;color:#6B6B6B;cursor:pointer">Solo yo</span>
+        </div>
+        <button class="pbtn" style="height:34px;padding:0 13px;border-radius:999px;border:1px solid rgba(29,29,27,0.10);background:#fff;color:#454543;font-family:inherit;font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:all .2s ease"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>Filtros</button>
+        <button class="pbtn" style="height:34px;padding:0 13px;border-radius:999px;border:1px solid rgba(29,29,27,0.10);background:#fff;color:#454543;font-family:inherit;font-weight:600;font-size:12.5px;display:flex;align-items:center;gap:7px;cursor:pointer;transition:all .2s ease"><span style="width:7px;height:7px;border-radius:2px;background:#2D6CDF"></span>Episodio I<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></button>
+      </div>
+    </div>
+
+    <div class="scrl" style="flex:1;overflow:auto;padding:4px 26px 26px">
+      <div style="display:flex;gap:16px;align-items:flex-start;min-width:min-content;height:100%">
+
+        <div style="flex:0 0 296px;display:flex;flex-direction:column;max-height:100%">
+          <div style="display:flex;align-items:center;gap:9px;padding:4px 6px 12px">
+            <span style="width:9px;height:9px;border-radius:999px;background:#1E8E5A;animation:nowpulse 1.8s ease-in-out infinite"></span>
+            <span style="font-weight:700;font-size:13px;letter-spacing:0.02em">Now</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:1px 8px;font-weight:500">4</span>
+            <span style="margin-left:auto;font-size:14px;color:#bcbcba;cursor:pointer">+</span>
+          </div>
+          <div class="scrl droplist" style="display:flex;flex-direction:column;gap:11px;overflow:auto;padding:2px 2px 8px;min-height:60px">
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span><span style="font-size:10.5px;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:3px 8px;font-weight:600">Basic</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:11px">Login Stability</div>
+              <div style="height:6px;background:#F0EFED;border-radius:999px;overflow:hidden;margin-bottom:11px"><div style="width:60%;height:100%;background:#D72228"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#2D6CDF"></span>Auth</span><div style="display:flex;align-items:center;gap:8px"><span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#9a9a98">3/5</span><span style="width:23px;height:23px;border-radius:999px;background:#2D6CDF;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">DC</span></div></div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:11px">Join Flow Completion</div>
+              <div style="height:6px;background:#F0EFED;border-radius:999px;overflow:hidden;margin-bottom:11px"><div style="width:35%;height:100%;background:#D72228"></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#C0397A"></span>Join Flow</span><div style="display:flex;align-items:center;gap:8px"><span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:#7A5A12;font-weight:600;background:#FFF4DE;border-radius:999px;padding:2px 7px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>1</span><span style="width:23px;height:23px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">MR</span></div></div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#F2EAFE;color:#5A2EA6;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6" fill="currentColor" stroke="none"/></svg>Exploration</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:11px">Investigate WhatsApp Auth</div>
+              <div style="display:flex;gap:5px;margin-bottom:11px"><span style="font-size:10px;color:#6B6B6B;background:#F5F5F5;border-radius:999px;padding:3px 8px;font-weight:500">Conclusión pendiente</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#2D6CDF"></span>Auth</span><span style="width:23px;height:23px;border-radius:999px;background:#2D6CDF;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">DC</span></div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#E6F4EA;color:#1E6B3C;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Farming</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:11px">Bug triage semanal</div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#D72228"></span>Zivelo</span><span style="width:23px;height:23px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">MR</span></div>
+            </a>
+          </div>
+        </div>
+
+        <div style="flex:0 0 296px;display:flex;flex-direction:column;max-height:100%">
+          <div style="display:flex;align-items:center;gap:9px;padding:4px 6px 12px">
+            <span style="width:9px;height:9px;border-radius:999px;background:#3A47B5"></span>
+            <span style="font-weight:700;font-size:13px;letter-spacing:0.02em">Next</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:1px 8px;font-weight:500">4</span>
+            <span style="margin-left:auto;font-size:14px;color:#bcbcba;cursor:pointer">+</span>
+          </div>
+          <div class="scrl droplist" style="display:flex;flex-direction:column;gap:11px;overflow:auto;padding:2px 2px 8px;min-height:60px">
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:11px">Wallet Integration</div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#1E8E5A"></span>Wallets · Ep. II</span><span style="width:23px;height:23px;border-radius:999px;background:#7A4ED9;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">SF</span></div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#EEF2FF;color:#3A47B5;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Side</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:11px">Landing Page</div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#D72228"></span>Zivelo</span><span style="width:23px;height:23px;border-radius:999px;background:#C0397A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">MR</span></div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:11px">Rewards Engine</div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#E0A100"></span>Rewards · Ep. II</span><span style="width:23px;height:23px;border-radius:999px;background:#1E8E5A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">TM</span></div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:11px">MVP Release</div>
+              <div style="display:flex;align-items:center;gap:7px;background:#FFF8F8;border:1px dashed rgba(215,34,40,0.28);border-radius:9px;padding:6px 9px;margin-bottom:11px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#B91C22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span style="font-size:10px;color:#B91C22;font-weight:600">Bloqueada · 2 items</span><div style="margin-left:auto;display:flex"><span style="width:18px;height:18px;border-radius:999px;background:#FFF4DE;color:#7A5A12;border:1.5px solid #fff;display:flex;align-items:center;justify-content:center"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span><span style="width:18px;height:18px;border-radius:999px;background:#FFF4DE;color:#7A5A12;border:1.5px solid #fff;margin-left:-6px;display:flex;align-items:center;justify-content:center"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span></div></div>
+              <div style="display:flex;align-items:center;justify-content:space-between"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#6B6B6B;font-weight:500"><span style="width:6px;height:6px;border-radius:2px;background:#D72228"></span>Zivelo · Ep. II</span><span style="width:23px;height:23px;border-radius:999px;background:#1E8E5A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:9.5px">TM</span></div>
+            </a>
+          </div>
+        </div>
+
+        <div style="flex:0 0 296px;display:flex;flex-direction:column;max-height:100%">
+          <div style="display:flex;align-items:center;gap:9px;padding:4px 6px 12px">
+            <span style="width:9px;height:9px;border-radius:999px;background:#9a9a98"></span>
+            <span style="font-weight:700;font-size:13px;letter-spacing:0.02em">Later</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:1px 8px;font-weight:500">5</span>
+            <span style="margin-left:auto;font-size:14px;color:#bcbcba;cursor:pointer">+</span>
+          </div>
+          <div class="scrl droplist" style="display:flex;flex-direction:column;gap:11px;overflow:auto;padding:2px 2px 8px;min-height:60px">
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#F2EAFE;color:#5A2EA6;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polygon points="15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6" fill="currentColor" stroke="none"/></svg>Exploration</span><span style="font-size:10px;font-weight:600;color:#5A2EA6;background:#F2EAFE;border-radius:999px;padding:2px 8px">Idea</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3">Validate Multi-currency</div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#EEF2FF;color:#3A47B5;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Side</span><span style="font-size:10px;font-weight:600;color:#5A2EA6;background:#F2EAFE;border-radius:999px;padding:2px 8px">Idea</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3">Referral Program</div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;color:#7A5A12;background:#FFF4DE;border-radius:999px;padding:2px 8px"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bloq.</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;margin-bottom:6px">WhatsApp Login</div>
+              <div style="font-size:11px;color:#9a9a98">Depende de la exploración activa</div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#E6F4EA;color:#1E6B3C;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Farming</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3">Cleanup de logs legacy</div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid rgba(29,29,27,0.10);border-radius:14px;padding:14px;box-shadow:0 4px 14px rgba(29,29,27,0.04)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#EEF2FF;color:#3A47B5;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Side</span><span style="font-size:10px;font-weight:600;color:#5A2EA6;background:#F2EAFE;border-radius:999px;padding:2px 8px">Idea</span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3">Dark mode polish</div>
+            </a>
+          </div>
+        </div>
+
+        <div style="flex:0 0 296px;display:flex;flex-direction:column;max-height:100%">
+          <div style="display:flex;align-items:center;gap:9px;padding:4px 6px 12px">
+            <span style="width:9px;height:9px;border-radius:999px;background:#1E6B3C;display:flex;align-items:center;justify-content:center"></span>
+            <span style="font-weight:700;font-size:13px;letter-spacing:0.02em;color:#454543">Completed</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#6B6B6B;background:#F1F0EE;border-radius:999px;padding:1px 8px;font-weight:500">3</span>
+          </div>
+          <div class="scrl droplist" style="display:flex;flex-direction:column;gap:11px;overflow:auto;padding:2px 2px 8px;min-height:60px">
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#FBFBFA;border:1px solid rgba(29,29,27,0.08);border-radius:14px;padding:14px;opacity:.82">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#FDECEC;color:#B91C22;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z"/></svg>Main</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:#1E6B3C;font-weight:700;background:#E6F4EA;border-radius:999px;padding:2px 8px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;text-decoration:line-through;text-decoration-color:rgba(29,29,27,0.25)">Auth schema base</div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#FBFBFA;border:1px solid rgba(29,29,27,0.08);border-radius:14px;padding:14px;opacity:.82">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#E6F4EA;color:#1E6B3C;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Farming</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:#1E6B3C;font-weight:700;background:#E6F4EA;border-radius:999px;padding:2px 8px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;text-decoration:line-through;text-decoration-color:rgba(29,29,27,0.25)">Setup CI/CD</div>
+            </a>
+            <a href="TLOZ Mission Detail.dc.html" class="kcard" style="display:block;text-decoration:none;color:inherit;background:#FBFBFA;border:1px solid rgba(29,29,27,0.08);border-radius:14px;padding:14px;opacity:.82">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><span style="display:inline-flex;align-items:center;gap:5px;background:#EEF2FF;color:#3A47B5;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>Side</span><span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:#1E6B3C;font-weight:700;background:#E6F4EA;border-radius:999px;padding:2px 8px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span></div>
+              <div style="font-size:14px;font-weight:600;line-height:1.3;text-decoration:line-through;text-decoration-color:rgba(29,29,27,0.25)">Purchased Domain</div>
+            </a>
+          </div>
+        </div>
+
+        <button class="addc" style="flex:0 0 240px;align-self:flex-start;margin-top:30px;height:46px;background:transparent;border:1.5px dashed rgba(29,29,27,0.16);border-radius:14px;color:#9a9a98;font-family:inherit;font-weight:600;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;transition:all .2s ease"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Añadir columna</button>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    const lists = [...document.querySelectorAll('.droplist')];
+    if (!lists.length) return;
+    let dragged = null;
+
+    const updateCounts = () => {
+      lists.forEach(list => {
+        const col = list.parentElement;
+        if (!col) return;
+        const badge = col.querySelector('span[style*="F1F0EE"]');
+        if (badge) badge.textContent = list.querySelectorAll('.kcard').length;
+      });
+    };
+
+    const getAfter = (container, y) => {
+      const els = [...container.querySelectorAll('.kcard:not(.isdrag)')];
+      let closest = { offset: -Infinity, el: null };
+      for (const child of els) {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) closest = { offset, el: child };
+      }
+      return closest.el;
+    };
+
+    document.querySelectorAll('.kcard').forEach(card => {
+      card.setAttribute('draggable', 'true');
+      card.addEventListener('pointerdown', () => { card.dataset.didDrag = ''; });
+      card.addEventListener('dragstart', e => {
+        dragged = card;
+        card.dataset.didDrag = '1';
+        if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', ''); } catch (_) {} }
+        setTimeout(() => card.classList.add('isdrag'), 0);
+      });
+      card.addEventListener('dragend', () => {
+        card.classList.remove('isdrag');
+        lists.forEach(l => l.classList.remove('dropping'));
+        dragged = null;
+        updateCounts();
+      });
+      card.addEventListener('click', e => {
+        if (card.dataset.didDrag === '1') { e.preventDefault(); card.dataset.didDrag = ''; }
+      });
+    });
+
+    lists.forEach(list => {
+      list.addEventListener('dragover', e => {
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        list.classList.add('dropping');
+        if (!dragged) return;
+        const after = getAfter(list, e.clientY);
+        if (after == null) list.appendChild(dragged);
+        else list.insertBefore(dragged, after);
+      });
+      list.addEventListener('dragleave', e => {
+        if (!list.contains(e.relatedTarget)) list.classList.remove('dropping');
+      });
+      list.addEventListener('drop', e => {
+        e.preventDefault();
+        list.classList.remove('dropping');
+        updateCounts();
+      });
+    });
+  }
+}
+</script>
+</body>
+</html>
