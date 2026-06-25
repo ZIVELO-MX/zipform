@@ -87,11 +87,7 @@ export function MissionCard({ mission, compact = false }: { mission: TlozMission
             ))}
             <span className="tloz-dependency-copy">{dependencyLabel(mission)}</span>
           </div>
-        ) : (
-          <div className="tloz-dependency-row empty">
-            <span>{dependencyLabel(mission)}</span>
-          </div>
-        )}
+        ) : null}
         <Progress className="tloz-progress" value={mission.progress} />
         <div className="tloz-card-footer">
           <OwnerAvatar user={mission.owner} />

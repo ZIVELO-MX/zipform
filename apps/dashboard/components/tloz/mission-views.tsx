@@ -106,15 +106,12 @@ export function MissionTable({ missions }: { missions: TlozMissionRecord[] }) {
                 <TableCell>{missionStatusLabel[mission.status]}</TableCell>
                 <TableCell>{mission.project.name}</TableCell>
                 <TableCell>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Avatar className="size-6 rounded-full">
-                      <AvatarImage src={mission.owner.avatarUrl} alt="" />
-                      <AvatarFallback className="bg-carbon text-[0.55rem] font-medium text-white">
-                        {mission.owner.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-carbon/70">{mission.owner.username}</span>
-                  </span>
+                  <Avatar className="size-6 rounded-full">
+                    <AvatarImage src={mission.owner.avatarUrl} alt="" />
+                    <AvatarFallback className="bg-carbon text-[0.55rem] font-medium text-white">
+                      {mission.owner.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                 </TableCell>
                 <TableCell>{formatDate(mission.dueDate)}</TableCell>
                 <TableCell>
