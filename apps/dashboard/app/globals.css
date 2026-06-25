@@ -846,6 +846,11 @@ button {
 .tloz-mission-card {
   overflow: clip;
   border-inline-end: 3px solid var(--mission-tone);
+  box-shadow: rgba(29, 29, 27, 0.04) 0px 1px 2px 0px;
+  transition: box-shadow 0.2s ease;
+}
+
+.tloz-mission-card:hover {
   box-shadow:
     rgba(29, 29, 27, 0.04) 0px 1px 2px 0px,
     var(--mission-tone) 4px 4px 0 -2px;
