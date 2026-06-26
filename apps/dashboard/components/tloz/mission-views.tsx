@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import {
@@ -6,6 +8,9 @@ import {
   AvatarImage,
   Badge,
   Progress,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@zipform/types";
@@ -260,15 +265,19 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
         </Avatar>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           {blocked && (
-            <span
-              title={`${mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias`}
-              style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "10px", color: "#7A5A12", fontWeight: 600, background: "#FFF4DE", borderRadius: "999px", padding: "2px 7px" }}
-            >
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-              {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", fontSize: "10px", color: "#7A5A12", fontWeight: 600, background: "#FFF4DE", borderRadius: "999px", padding: "2px 7px" }}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="center">
+                {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias
+              </TooltipContent>
+            </Tooltip>
           )}
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "#9a9a98" }}>{mission.progress}%</span>
         </div>
@@ -708,15 +717,19 @@ export function MissionList({ missions, onSelect }: { missions: TlozMissionRecor
                         {mission.title}
                       </span>
                       {blocked && (
-                        <span
-                          title={`${mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias`}
-                          style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "9.5px", fontWeight: 600, color: "#7A5A12", background: "#FFF4DE", borderRadius: "999px", padding: "2px 7px", flexShrink: 0 }}
-                        >
-                          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                          </svg>
-                          {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
-                        </span>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "9.5px", fontWeight: 600, color: "#7A5A12", background: "#FFF4DE", borderRadius: "999px", padding: "2px 7px", flexShrink: 0 }}>
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
+                              {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" align="center">
+                            {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias
+                          </TooltipContent>
+                        </Tooltip>
                       )}
                     </span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#6B6B6B", fontWeight: 500 }}>
@@ -920,15 +933,19 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               {blocked && (
-                <span
-                  title={`${mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias`}
-                  style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#7A5A12", fontWeight: 600, background: "#FFF4DE", borderRadius: "999px", padding: "2px 7px" }}
-                >
-                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
-                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#7A5A12", fontWeight: 600, background: "#FFF4DE", borderRadius: "999px", padding: "2px 7px" }}>
+                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                      </svg>
+                      {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center">
+                    {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias
+                  </TooltipContent>
+                </Tooltip>
               )}
               <Avatar className="size-[23px] rounded-full">
                 <AvatarImage src={mission.owner.avatarUrl} alt="" />
