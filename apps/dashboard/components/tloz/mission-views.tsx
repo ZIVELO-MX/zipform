@@ -455,52 +455,57 @@ export function DashboardQuestItemsSection({ questItems }: { questItems: Array<{
       </div>
       <div className="tloz-scrl" style={{ display: "flex", gap: "12px", overflowX: "auto", paddingBottom: "4px" }}>
         {questItems.map((item) => (
-          <div
-            key={item.id}
-            className="tloz-qi-hover"
-            style={{
-              flex: "0 0 auto",
-              minWidth: "180px",
-              background: "#fff",
-              border: "1px solid rgba(29,29,27,0.10)",
-              borderRadius: "14px",
-              padding: "14px",
-              transition: "all .2s ease",
-              cursor: "pointer"
-            }}
-            title={item.name}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-              <span
+          <Tooltip key={item.id}>
+            <TooltipTrigger asChild>
+              <div
+                className="tloz-qi-hover"
                 style={{
-                  width: "30px",
-                  height: "30px",
-                  borderRadius: "9px",
-                  background: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
-                  color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
+                  flex: "0 0 auto",
+                  minWidth: "180px",
+                  background: "#fff",
+                  border: "1px solid rgba(29,29,27,0.10)",
+                  borderRadius: "14px",
+                  padding: "14px",
+                  transition: "all .2s ease",
+                  cursor: "pointer"
                 }}
               >
-                {item.icon.slice(0, 1)}
-              </span>
-              <span
-                style={{
-                  fontSize: "10px",
-                  fontWeight: 700,
-                  color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
-                  background: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
-                  borderRadius: "999px",
-                  padding: "3px 8px"
-                }}
-              >
-                {item.status === "completed" ? "Desbloqueado" : "Bloqueado"}
-              </span>
-            </div>
-            <div style={{ fontWeight: 600, fontSize: "13.5px", marginBottom: "3px" }}>{item.name}</div>
-            <div style={{ fontSize: "11px", color: "#9a9a98" }}>{item.description}</div>
-          </div>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                  <span
+                    style={{
+                      width: "30px",
+                      height: "30px",
+                      borderRadius: "9px",
+                      background: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
+                      color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    {item.icon.slice(0, 1)}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 700,
+                      color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
+                      background: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
+                      borderRadius: "999px",
+                      padding: "3px 8px"
+                    }}
+                  >
+                    {item.status === "completed" ? "Desbloqueado" : "Bloqueado"}
+                  </span>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: "13.5px", marginBottom: "3px" }}>{item.name}</div>
+                <div style={{ fontSize: "11px", color: "#9a9a98" }}>{item.description}</div>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="center">
+              {item.name}
+            </TooltipContent>
+          </Tooltip>
         ))}
       </div>
     </section>
@@ -819,33 +824,41 @@ export function MissionBoard({ missions, onSelect }: { missions: TlozMissionReco
         );
       })}
 
-      <button
-        className="tloz-addc"
-        style={{
-          flex: "0 0 240px",
-          alignSelf: "flex-start",
-          marginTop: "30px",
-          height: "46px",
-          background: "transparent",
-          border: "1.5px dashed rgba(29,29,27,0.16)",
-          borderRadius: "14px",
-          color: "#9a9a98",
-          fontFamily: "inherit",
-          fontWeight: 600,
-          fontSize: "13px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "7px",
-          cursor: "pointer",
-          transition: "all .2s ease"
-        }}
-        disabled
-        title="Pendiente: crear columna"
-      >
-        <Plus size={16} />
-        Añadir columna
-      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span tabIndex={0}>
+            <button
+              className="tloz-addc"
+              style={{
+                flex: "0 0 240px",
+                alignSelf: "flex-start",
+                marginTop: "30px",
+                height: "46px",
+                background: "transparent",
+                border: "1.5px dashed rgba(29,29,27,0.16)",
+                borderRadius: "14px",
+                color: "#9a9a98",
+                fontFamily: "inherit",
+                fontWeight: 600,
+                fontSize: "13px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "7px",
+                cursor: "pointer",
+                transition: "all .2s ease"
+              }}
+              disabled
+            >
+              <Plus size={16} />
+              Añadir columna
+            </button>
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="center">
+          Pendiente: crear columna
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 }
@@ -1005,26 +1018,34 @@ export function MissionDetailView({ mission }: { mission: import("../../lib/tloz
               <p className="eyebrow" style={{ color: tone }}>{missionTypeLabel[mission.type]}</p>
               <h3>{mission.title}</h3>
             </div>
-            <button
-              className="tloz-pbtn"
-              disabled
-              title="Pendiente: edición persistente"
-              style={{
-                height: "36px",
-                padding: "0 14px",
-                borderRadius: "999px",
-                border: "1px solid rgba(29,29,27,0.10)",
-                background: "#fff",
-                color: "#454543",
-                fontFamily: "inherit",
-                fontWeight: 600,
-                fontSize: "12.5px",
-                cursor: "pointer",
-                transition: "all .2s ease"
-              }}
-            >
-              Editar
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <button
+                    className="tloz-pbtn"
+                    disabled
+                    style={{
+                      height: "36px",
+                      padding: "0 14px",
+                      borderRadius: "999px",
+                      border: "1px solid rgba(29,29,27,0.10)",
+                      background: "#fff",
+                      color: "#454543",
+                      fontFamily: "inherit",
+                      fontWeight: 600,
+                      fontSize: "12.5px",
+                      cursor: "pointer",
+                      transition: "all .2s ease"
+                    }}
+                  >
+                    Editar
+                  </button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="center">
+                Pendiente: edición persistente
+              </TooltipContent>
+            </Tooltip>
           </div>
           <p style={{ color: "#6B6B6B", lineHeight: 1.6 }}>{mission.description}</p>
           <div className="tloz-detail-meta">

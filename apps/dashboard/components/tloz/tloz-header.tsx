@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { Bell, Plus, Search } from "lucide-react";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button } from "@zipform/ui";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, Tooltip, TooltipContent, TooltipTrigger } from "@zipform/ui";
 
 type TlozHeaderProps = {
   title: string;
@@ -110,32 +110,49 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
       )}
 
       <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
-        <button
-          className="tloz-pbtn"
-          style={{
-            width: "38px",
-            height: "38px",
-            borderRadius: "999px",
-            border: "1px solid rgba(29,29,27,0.10)",
-            background: "#fff",
-            color: "#454543",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer",
-            transition: "all .2s ease",
-            position: "relative"
-          }}
-          disabled
-          title="Pendiente: notificaciones"
-        >
-          <Bell size={18} />
-          <span style={{ position: "absolute", top: "7px", right: "8px", width: "7px", height: "7px", borderRadius: "999px", background: "#D72228", border: "1.5px solid #fff" }} />
-        </button>
-        <Button disabled title="Pendiente: crear Missions con persistencia" className="tloz-nbtn" style={{ height: "40px", padding: "0 16px", borderRadius: "999px", border: "none", background: "#D72228", color: "#fff", fontFamily: "inherit", fontWeight: 600, fontSize: "13.5px", display: "flex", alignItems: "center", gap: "7px", cursor: "pointer", boxShadow: "0 10px 22px rgba(215,34,40,0.20)", transition: "all .2s ease" }}>
-          <Plus size={16} />
-          Nueva Mission
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span tabIndex={0}>
+              <button
+                className="tloz-pbtn"
+                style={{
+                  width: "38px",
+                  height: "38px",
+                  borderRadius: "999px",
+                  border: "1px solid rgba(29,29,27,0.10)",
+                  background: "#fff",
+                  color: "#454543",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  transition: "all .2s ease",
+                  position: "relative"
+                }}
+                disabled
+              >
+                <Bell size={18} />
+                <span style={{ position: "absolute", top: "7px", right: "8px", width: "7px", height: "7px", borderRadius: "999px", background: "#D72228", border: "1.5px solid #fff" }} />
+              </button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="end">
+            Pendiente: notificaciones
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span tabIndex={0}>
+              <Button disabled className="tloz-nbtn" style={{ height: "40px", padding: "0 16px", borderRadius: "999px", border: "none", background: "#D72228", color: "#fff", fontFamily: "inherit", fontWeight: 600, fontSize: "13.5px", display: "flex", alignItems: "center", gap: "7px", cursor: "pointer", boxShadow: "0 10px 22px rgba(215,34,40,0.20)", transition: "all .2s ease" }}>
+                <Plus size={16} />
+                Nueva Mission
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="bottom" align="end">
+            Pendiente: crear Missions con persistencia
+          </TooltipContent>
+        </Tooltip>
       </div>
     </header>
   );

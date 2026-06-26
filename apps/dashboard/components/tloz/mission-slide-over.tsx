@@ -3,7 +3,7 @@
 import { useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ExternalLink, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Progress } from "@zipform/ui";
+import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Progress, Tooltip, TooltipContent, TooltipTrigger } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { formatDate, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
 
@@ -154,22 +154,22 @@ export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
               </h3>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {mission.questItems.map((item) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      padding: "10px 12px",
-                      background: "#fff",
-                      border: "1px solid rgba(29,29,27,0.10)",
-                      borderRadius: "11px",
-                      cursor: "pointer",
-                      transition: "all .2s ease"
-                    }}
-                    title={item.name}
-                    className="tloz-qi-hover"
-                  >
+                  <Tooltip key={item.id}>
+                    <TooltipTrigger asChild>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "10px 12px",
+                          background: "#fff",
+                          border: "1px solid rgba(29,29,27,0.10)",
+                          borderRadius: "11px",
+                          cursor: "pointer",
+                          transition: "all .2s ease"
+                        }}
+                        className="tloz-qi-hover"
+                      >
                     <span
                       style={{
                         width: "28px",
@@ -203,6 +203,11 @@ export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
                       {item.status === "completed" ? "Desbloqueado" : "Bloqueado"}
                     </span>
                   </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="center">
+                      {item.name}
+                    </TooltipContent>
+                  </Tooltip>
                 ))}
               </div>
             </div>
@@ -269,14 +274,22 @@ export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
               Ver detalle completo
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            style={{ height: "42px", borderRadius: "11px", fontWeight: 600, fontSize: "13.5px" }}
-            disabled
-            title="Pendiente: edición persistente"
-          >
-            Editar
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span tabIndex={0}>
+                <Button
+                  variant="outline"
+                  style={{ height: "42px", borderRadius: "11px", fontWeight: 600, fontSize: "13.5px" }}
+                  disabled
+                >
+                  Editar
+                </Button>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="center">
+              Pendiente: edición persistente
+            </TooltipContent>
+          </Tooltip>
         </div>
       </div>
     </>

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   CircleDot,
@@ -5,7 +7,7 @@ import {
   LucideIcon,
   Plus
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@zipform/ui";
+import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress, Tooltip, TooltipContent, TooltipTrigger } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@zipform/types";
 import { dependencyLabel, formatDate, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
@@ -48,17 +50,20 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
               </a>
             </CardTitle>
           </div>
-          <span
-            className="tloz-card-state"
-            title={blocked ? "Bloqueada por dependencias" : "Disponible para trabajar"}
-            style={{ cursor: "pointer" }}
-          >
-            {blocked ? (
-              <CheckCircle2 size={16} />
-            ) : (
-              <CircleDot size={16} />
-            )}
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="tloz-card-state" style={{ cursor: "pointer" }}>
+                {blocked ? (
+                  <CheckCircle2 size={16} />
+                ) : (
+                  <CircleDot size={16} />
+                )}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="center">
+              {blocked ? "Bloqueada por dependencias" : "Disponible para trabajar"}
+            </TooltipContent>
+          </Tooltip>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 pt-2">
@@ -70,14 +75,21 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
         {mission.dependencies.length > 0 ? (
           <div className="tloz-dependency-row">
             {mission.dependencies.slice(0, 3).map((dependency) => (
-              <span key={dependency.id} title={dependency.title} style={{ cursor: "pointer" }}>
-                <MissionIconAvatar
-                  icon={resolveMissionIcon(dependency.icon)}
-                  tone={missionTypeTone[dependency.type]}
-                  label={dependency.title}
-                  tiny
-                />
-              </span>
+              <Tooltip key={dependency.id}>
+                <TooltipTrigger asChild>
+                  <span style={{ cursor: "pointer" }}>
+                    <MissionIconAvatar
+                      icon={resolveMissionIcon(dependency.icon)}
+                      tone={missionTypeTone[dependency.type]}
+                      label={dependency.title}
+                      tiny
+                    />
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  {dependency.title}
+                </TooltipContent>
+              </Tooltip>
             ))}
             <span className="tloz-dependency-copy">{dependencyLabel(mission)}</span>
           </div>
@@ -109,9 +121,18 @@ export function ActiveMissionPanel({ label, mission }: { label: string; mission:
             <Button asChild size="sm">
               <Link href={`/tloz/missions/${mission.id}`}>Abrir detalle</Link>
             </Button>
-            <Button variant="outline" size="sm" disabled title="Pendiente: edición persistente">
-              Editar
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span tabIndex={0}>
+                  <Button variant="outline" size="sm" disabled>
+                    Editar
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="top" align="center">
+                Pendiente: edición persistente
+              </TooltipContent>
+            </Tooltip>
           </div>
         </>
       ) : (
@@ -169,20 +190,29 @@ export function QuestItemDots({ mission, max = MAX_VISIBLE_QUEST_ITEMS }: { miss
   return (
     <span className="tloz-quest-dots" aria-label={`${mission.questItems.length} Quest Items`}>
       {visible.map((item) => (
-        <span
-          key={item.id}
-          data-status={item.status}
-          title={item.name}
-          style={{ cursor: "pointer" }}
-        >
-          {item.icon.slice(0, 1)}
-        </span>
+        <Tooltip key={item.id}>
+          <TooltipTrigger asChild>
+            <span data-status={item.status} style={{ cursor: "pointer" }}>
+              {item.icon.slice(0, 1)}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="center">
+            {item.name}
+          </TooltipContent>
+        </Tooltip>
       ))}
       {remaining > 0 ? (
-        <span className="tloz-quest-overflow" title={`${remaining} más`}>
-          <Plus size={10} />
-          {remaining}
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="tloz-quest-overflow">
+              <Plus size={10} />
+              {remaining}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" align="center">
+            {remaining} más
+          </TooltipContent>
+        </Tooltip>
       ) : null}
     </span>
   );
