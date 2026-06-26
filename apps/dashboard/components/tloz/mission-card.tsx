@@ -5,14 +5,14 @@ import {
   LucideIcon,
   Plus
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress, Tooltip, TooltipContent, TooltipTrigger } from "@zipform/ui";
+import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@zipform/types";
 import { dependencyLabel, formatDate, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
 
 const MAX_VISIBLE_QUEST_ITEMS = 3;
 
-export function MissionCard({ mission, compact = false }: { mission: TlozMissionRecord; compact?: boolean }) {
+export function MissionCard({ mission, compact = false, onSelect }: { mission: TlozMissionRecord; compact?: boolean; onSelect?: (mission: TlozMissionRecord) => void }) {
   const blocked = mission.requiredQuestItems.some((item) => item.status !== "completed") || mission.dependencies.length > 0;
   const tone = missionTypeTone[mission.type];
   const Icon = resolveMissionIcon(mission.icon);
@@ -28,38 +28,37 @@ export function MissionCard({ mission, compact = false }: { mission: TlozMission
           <MissionIconAvatar icon={Icon} tone={tone} label={resolveIconLabel(mission.icon)} />
           <div className="min-w-0" style={{ flex: 1 }}>
             <div className="tloz-card-badges" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Badge style={{ backgroundColor: tone, color: "#fff" }}>
-                      {missionTypeLabel[mission.type]}
-                    </Badge>
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{missionTypeTone[mission.type]}</TooltipContent>
-              </Tooltip>
+              <Badge style={{ backgroundColor: tone, color: "#fff" }}>
+                {missionTypeLabel[mission.type]}
+              </Badge>
               <Badge variant="muted">{missionStatusLabel[mission.status]}</Badge>
             </div>
             <CardTitle className="mt-2">
-              <Link href={`/tloz/missions/${mission.id}`}>{mission.title}</Link>
+              <a
+                href={`/tloz/missions/${mission.id}`}
+                onClick={(e) => {
+                  if (onSelect) {
+                    e.preventDefault();
+                    onSelect(mission);
+                  }
+                }}
+                style={{ cursor: onSelect ? "pointer" : undefined }}
+              >
+                {mission.title}
+              </a>
             </CardTitle>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span>
-                {blocked ? (
-                  <span className="tloz-card-state" title="Bloqueada">
-                    <CheckCircle2 size={16} />
-                  </span>
-                ) : (
-                  <span className="tloz-card-state subtle" title="Disponible">
-                    <CircleDot size={16} />
-                  </span>
-                )}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent>{blocked ? "Bloqueada por dependencias" : "Disponible para trabajar"}</TooltipContent>
-          </Tooltip>
+          <span
+            className="tloz-card-state"
+            title={blocked ? "Bloqueada por dependencias" : "Disponible para trabajar"}
+            style={{ cursor: "pointer" }}
+          >
+            {blocked ? (
+              <CheckCircle2 size={16} />
+            ) : (
+              <CircleDot size={16} />
+            )}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 pt-2">
@@ -71,19 +70,14 @@ export function MissionCard({ mission, compact = false }: { mission: TlozMission
         {mission.dependencies.length > 0 ? (
           <div className="tloz-dependency-row">
             {mission.dependencies.slice(0, 3).map((dependency) => (
-              <Tooltip key={dependency.id}>
-                <TooltipTrigger asChild>
-                  <span>
-                    <MissionIconAvatar
-                      icon={resolveMissionIcon(dependency.icon)}
-                      tone={missionTypeTone[dependency.type]}
-                      label={dependency.title}
-                      tiny
-                    />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>{dependency.title}</TooltipContent>
-              </Tooltip>
+              <span key={dependency.id} title={dependency.title} style={{ cursor: "pointer" }}>
+                <MissionIconAvatar
+                  icon={resolveMissionIcon(dependency.icon)}
+                  tone={missionTypeTone[dependency.type]}
+                  label={dependency.title}
+                  tiny
+                />
+              </span>
             ))}
             <span className="tloz-dependency-copy">{dependencyLabel(mission)}</span>
           </div>
@@ -175,14 +169,14 @@ export function QuestItemDots({ mission, max = MAX_VISIBLE_QUEST_ITEMS }: { miss
   return (
     <span className="tloz-quest-dots" aria-label={`${mission.questItems.length} Quest Items`}>
       {visible.map((item) => (
-        <Tooltip key={item.id}>
-          <TooltipTrigger asChild>
-            <span data-status={item.status}>
-              {item.icon.slice(0, 1)}
-            </span>
-          </TooltipTrigger>
-          <TooltipContent>{item.name}</TooltipContent>
-        </Tooltip>
+        <span
+          key={item.id}
+          data-status={item.status}
+          title={item.name}
+          style={{ cursor: "pointer" }}
+        >
+          {item.icon.slice(0, 1)}
+        </span>
       ))}
       {remaining > 0 ? (
         <span className="tloz-quest-overflow" title={`${remaining} más`}>
@@ -193,4 +187,3 @@ export function QuestItemDots({ mission, max = MAX_VISIBLE_QUEST_ITEMS }: { miss
     </span>
   );
 }
-

@@ -1,5 +1,6 @@
 import { MissionTable } from "../../../components/tloz/mission-views";
 import { TlozFilters, TlozPageShell } from "../../../components/tloz/tloz-shell";
+import { TlozViewClient } from "../../../components/tloz/tloz-view-client";
 import { getTlozEpisodes, getTlozMissions, getTlozProjects, getTlozSeasons } from "../../../lib/tloz-data";
 
 export default async function TlozTablePage() {
@@ -11,9 +12,21 @@ export default async function TlozTablePage() {
   ]);
 
   return (
-    <TlozPageShell title="Tabla" description="Vista tabular para comparar Missions por tipo, proyecto, owner, fecha y progreso." currentView="Tabla">
-      <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
-      <MissionTable missions={missions} />
+    <TlozPageShell title="Tabla" currentView="Tabla" showSearch>
+      <div style={{ flexShrink: 0, padding: "18px 26px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+        <div>
+          <h1 style={{ margin: 0, fontSize: "21px", fontWeight: 700, letterSpacing: "-0.02em" }}>Tabla</h1>
+          <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: "13px" }}>{missions.length} missions · todas las propiedades</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
+        </div>
+      </div>
+      <div className="tloz-scrl" style={{ flex: 1, overflow: "auto", padding: "0 26px 26px" }}>
+        <TlozViewClient>
+          {(onSelect) => <MissionTable missions={missions} onSelect={onSelect} />}
+        </TlozViewClient>
+      </div>
     </TlozPageShell>
   );
 }

@@ -160,6 +160,16 @@ export const currentUser: UserProfile = {
     "https://i.pinimg.com/736x/2c/ed/94/2ced942397c59e2e4dd88aee36ce9b0b.jpg"
 };
 
+export const raulUser: UserProfile = {
+  id: "raul",
+  name: "Raúl Hernández",
+  username: "Raúl",
+  email: "raul.hernandez@zivelo.dev",
+  role: "Full Stack Developer",
+  avatarUrl:
+    "https://i.pinimg.com/736x/a1/8c/8b/a18c8b13eb8a48aa9cb4786ded38d591.jpg"
+};
+
 const metrics: PlatformMetric[] = [
   { label: "Current version", value: "0.1", tone: "good" },
   { label: "Target version", value: "1.0", tone: "neutral" },

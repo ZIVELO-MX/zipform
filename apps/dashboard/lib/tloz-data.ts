@@ -11,7 +11,7 @@ import type {
   TlozUserMissionState,
   UserProfile
 } from "@zipform/types";
-import { currentUser } from "@zipform/data";
+import { currentUser, raulUser } from "@zipform/data";
 
 export type TlozMissionRecord = TlozMission & {
   project: TlozProject;
@@ -31,10 +31,13 @@ export type TlozMissionDetail = TlozMissionRecord & {
 export type TlozDashboardSummary = {
   activeQuest: TlozMissionRecord | null;
   activeSupportQuest: TlozMissionRecord | null;
+  nowMissions: TlozMissionRecord[];
   mainQuests: TlozMissionRecord[];
   upcomingMissions: TlozMissionRecord[];
   futureMissions: TlozMissionRecord[];
   projects: Array<TlozProject & { totalMissions: number; nowMissions: number; completedMissions: number }>;
+  recentActivity: Array<{ user: string; action: string; target: string; time: string; dotColor: string }>;
+  questItems: TlozQuestItem[];
 };
 
 const now = "2026-06-24T16:00:00.000Z";
@@ -242,6 +245,55 @@ const missions: TlozMission[] = [
     updatedAt: now
   },
   {
+    id: "mission-wallet",
+    title: "Integrar Wallet API",
+    description: "Conectar con el proveedor de wallets para soporte multi-moneda en pagos.",
+    icon: "Copy",
+    type: "main_quest",
+    status: "now",
+    ownerId: "raul",
+    projectId: "project-core",
+    seasonId: "season-1",
+    episodeId: "episode-auth",
+    dueDate: "2026-07-05",
+    startDate: "2026-06-22",
+    progress: 45,
+    createdAt: "2026-06-21T15:00:00.000Z",
+    updatedAt: now
+  },
+  {
+    id: "mission-notifications",
+    title: "Diseñar sistema de notificaciones",
+    description: "Definir eventos, canales y preferencias de notificación para el equipo.",
+    icon: "History",
+    type: "exploration_quest",
+    status: "next",
+    ownerId: "raul",
+    projectId: "project-growth",
+    seasonId: "season-1",
+    episodeId: "episode-ops",
+    dueDate: "2026-07-20",
+    progress: 12,
+    createdAt: "2026-06-22T15:00:00.000Z",
+    updatedAt: now
+  },
+  {
+    id: "mission-login",
+    title: "Implementar login con Google",
+    description: "Agregar OAuth de Google como método de autenticación alternativo.",
+    icon: "Database",
+    type: "side_quest",
+    status: "later",
+    ownerId: "raul",
+    projectId: "project-core",
+    seasonId: "season-1",
+    episodeId: "episode-ops",
+    dueDate: "2026-08-01",
+    progress: 0,
+    createdAt: "2026-06-23T15:00:00.000Z",
+    updatedAt: now
+  },
+  {
     id: "mission-copy",
     title: "Cerrar lenguaje de primera versión",
     description: "Normalizar español de UI y conservar términos RPG en English.",
@@ -335,10 +387,18 @@ const userMissionStates: TlozUserMissionState[] = [
     slot: "support_quest",
     createdAt: now,
     updatedAt: now
+  },
+  {
+    id: "state-raul-active",
+    userId: "raul",
+    missionId: "mission-wallet",
+    slot: "active_quest",
+    createdAt: now,
+    updatedAt: now
   }
 ];
 
-const ownerMap: Record<string, UserProfile> = { [currentUser.id]: currentUser };
+const ownerMap: Record<string, UserProfile> = { [currentUser.id]: currentUser, [raulUser.id]: raulUser };
 
 function byId<T extends { id: string }>(items: T[], id?: string) {
   return id ? items.find((item) => item.id === id) : undefined;
@@ -384,12 +444,13 @@ function hydrateMissions() {
 
 export async function getTlozDashboardSummary(): Promise<TlozDashboardSummary> {
   const hydrated = hydrateMissions();
-  const activeQuestId = userMissionStates.find((state) => state.slot === "active_quest")?.missionId;
-  const activeSupportQuestId = userMissionStates.find((state) => state.slot === "support_quest")?.missionId;
+  const activeQuestId = userMissionStates.find((state) => state.slot === "active_quest" && state.userId === "benji")?.missionId;
+  const activeSupportQuestId = userMissionStates.find((state) => state.slot === "support_quest" && state.userId === "benji")?.missionId;
 
   return {
     activeQuest: hydrated.find((mission) => mission.id === activeQuestId) ?? null,
     activeSupportQuest: hydrated.find((mission) => mission.id === activeSupportQuestId) ?? null,
+    nowMissions: hydrated.filter((mission) => mission.status === "now"),
     mainQuests: hydrated.filter((mission) => mission.type === "main_quest" && mission.status !== "completed"),
     upcomingMissions: hydrated.filter((mission) => mission.status === "next"),
     futureMissions: hydrated.filter((mission) => mission.status === "later"),
@@ -401,7 +462,14 @@ export async function getTlozDashboardSummary(): Promise<TlozDashboardSummary> {
         nowMissions: projectMissions.filter((mission) => mission.status === "now").length,
         completedMissions: projectMissions.filter((mission) => mission.status === "completed").length
       };
-    })
+    }),
+    recentActivity: [
+      { user: "Raúl", action: "completó el Quest Item", target: "Selected Provider", time: "hace 12 min", dotColor: "#1E8E5A" },
+      { user: "Benji", action: "movió", target: "Publicar dashboard operativo de TLOZ", time: "hace 1 h", dotColor: "#D72228" },
+      { user: "Raúl", action: "creó la Mission", target: "Integrar Wallet API", time: "hace 3 h", dotColor: "#7A4ED9" },
+      { user: "Sistema", action: "Owner de", target: "Diseñar driver persistente de Missions", time: "ayer", dotColor: "#2D6CDF" }
+    ],
+    questItems
   };
 }
 

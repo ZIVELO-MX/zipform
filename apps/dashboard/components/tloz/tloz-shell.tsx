@@ -1,25 +1,15 @@
-import Link from "next/link";
-import { Plus, Search } from "lucide-react";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-  Button,
-  Input,
-  Select
-} from "@zipform/ui";
+import { Select } from "@zipform/ui";
 import type { TlozEpisode, TlozProject, TlozSeason } from "@zipform/types";
+import { TlozHeader } from "./tloz-header";
 
 type TlozPageShellProps = {
   title: string;
-  description: string;
+  description?: string;
   currentView?: string;
   children: React.ReactNode;
   detailLabel?: string;
   showSearch?: boolean;
+  showHeader?: boolean;
 };
 
 export function TlozPageShell({
@@ -28,62 +18,31 @@ export function TlozPageShell({
   currentView,
   detailLabel,
   showSearch = true,
+  showHeader = true,
   children
 }: TlozPageShellProps) {
-  const showBreadcrumbs = Boolean(detailLabel || (currentView && currentView !== "Dashboard"));
-
   return (
     <div className="page-stack tloz-page">
-      {showBreadcrumbs ? (
-        <Breadcrumb>
-          <BreadcrumbList className="text-carbon/60">
-            <BreadcrumbItem>
-              <BreadcrumbLink asChild>
-                <Link href="/tloz">TLOZ</Link>
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            {currentView && currentView !== "Dashboard" ? (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{currentView}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </>
-            ) : null}
-            {detailLabel ? (
-              <>
-                <BreadcrumbSeparator />
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{detailLabel}</BreadcrumbPage>
-                </BreadcrumbItem>
-              </>
-            ) : null}
-          </BreadcrumbList>
-        </Breadcrumb>
-      ) : null}
-
-      <section className="page-header tloz-header">
-        <div>
-          <p className="eyebrow">The Legend of Zivelo</p>
-          <h2>{title}</h2>
-          <p>{description}</p>
-        </div>
-        <div className="tloz-header-actions">
-          {showSearch ? (
-            <div className="tloz-header-search">
-              <Search size={16} />
-              <Input placeholder="Buscar missions, proyectos, quest items..." aria-label="Buscar en TLOZ" />
-              <kbd>⌘K</kbd>
-            </div>
-          ) : null}
-          <Button disabled title="Pendiente: crear Missions con persistencia">
-            <Plus size={16} />
-            Nueva Mission
-          </Button>
-        </div>
-      </section>
+      <TlozHeader
+        title={title}
+        currentView={currentView}
+        detailLabel={detailLabel}
+        showSearch={showSearch}
+        showHeader={showHeader}
+      />
 
       {children}
+    </div>
+  );
+}
+
+export function TlozSubpageHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div style={{ padding: "18px 26px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+      <div>
+        <h1 style={{ margin: 0, fontSize: "21px", fontWeight: 700, letterSpacing: "-0.02em" }}>{title}</h1>
+        <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: "13px" }}>{description}</p>
+      </div>
     </div>
   );
 }

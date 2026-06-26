@@ -1,5 +1,6 @@
 import { MissionBoard } from "../../../components/tloz/mission-views";
 import { TlozFilters, TlozPageShell } from "../../../components/tloz/tloz-shell";
+import { TlozViewClient } from "../../../components/tloz/tloz-view-client";
 import { getTlozEpisodes, getTlozMissions, getTlozProjects, getTlozSeasons } from "../../../lib/tloz-data";
 
 export default async function TlozBoardPage() {
@@ -11,9 +12,27 @@ export default async function TlozBoardPage() {
   ]);
 
   return (
-    <TlozPageShell title="Board" description="Missions agrupadas por Now, Next, Later y Completed." currentView="Board">
-      <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
-      <MissionBoard missions={missions} />
+    <TlozPageShell title="Board" currentView="Board" showSearch>
+      <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)" }}>
+        <div style={{ flexShrink: 0, padding: "16px 26px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: "21px", fontWeight: 700, letterSpacing: "-0.02em" }}>Board</h1>
+            <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: "13px" }}>Flujo de trabajo del equipo · agrupado por estado</p>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <div style={{ display: "inline-flex", background: "#F1F0EE", borderRadius: "999px", padding: "3px", gap: "2px" }}>
+              <span style={{ padding: "6px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 600, background: "#fff", color: "#1D1D1B", boxShadow: "0 1px 2px rgba(29,29,27,0.07)" }}>Todo el equipo</span>
+              <span style={{ padding: "6px 13px", borderRadius: "999px", fontSize: "12.5px", fontWeight: 500, color: "#6B6B6B", cursor: "pointer" }}>Solo yo</span>
+            </div>
+            <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
+          </div>
+        </div>
+        <div className="tloz-scrl" style={{ flex: 1, overflow: "auto", padding: "4px 26px 26px" }}>
+          <TlozViewClient>
+            {(onSelect) => <MissionBoard missions={missions} onSelect={onSelect} />}
+          </TlozViewClient>
+        </div>
+      </div>
     </TlozPageShell>
   );
 }
