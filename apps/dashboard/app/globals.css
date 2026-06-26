@@ -648,6 +648,12 @@ button {
   container-type: inline-size;
 }
 
+.tloz-page-full {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
 .tloz-header h2 {
   font-size: 1.65rem;
   line-height: 1.1;
@@ -1277,6 +1283,128 @@ button {
     opacity: 0.45;
     transform: scale(0.72);
   }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* --- TLOZ scrollbar --- */
+.tloz-scrl::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+.tloz-scrl::-webkit-scrollbar-thumb {
+  background: rgba(29, 29, 27, 0.16);
+  border-radius: 999px;
+}
+.tloz-scrl::-webkit-scrollbar-thumb:hover {
+  background: rgba(29, 29, 27, 0.28);
+}
+.tloz-scrl::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* --- TLOZ nav hover --- */
+.tloz-nav:hover {
+  background: rgba(215, 34, 40, 0.05);
+  outline: 1px solid rgba(215, 34, 40, 0.28);
+  outline-offset: -1px;
+}
+
+/* --- Dashboard row hover --- */
+.tloz-row-hover:hover {
+  outline: 1px solid rgba(215, 34, 40, 0.30);
+  outline-offset: -1px;
+  background: rgba(215, 34, 40, 0.04);
+}
+
+/* --- Card hover (dashboard cards) --- */
+.tloz-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(29, 29, 27, 0.10);
+  border-color: rgba(215, 34, 40, 0.30);
+}
+
+/* --- Quest item hover --- */
+.tloz-qi-hover:hover {
+  outline: 1px solid rgba(215, 34, 40, 0.30);
+  outline-offset: -1px;
+}
+
+/* --- Pill button hover --- */
+.tloz-pbtn:hover {
+  border-color: #D72228;
+  color: #D72228;
+}
+
+/* --- New button hover --- */
+.tloz-nbtn:hover {
+  box-shadow: 0 12px 28px rgba(215, 34, 40, 0.26);
+  transform: translateY(-1px);
+}
+
+/* --- Table row hover --- */
+.tloz-trow:hover {
+  background: rgba(215, 34, 40, 0.035);
+}
+.tloz-trow:hover td:first-child {
+  box-shadow: inset 3px 0 0 #D72228;
+}
+
+/* --- Table header sticky --- */
+.tloz-th {
+  position: sticky;
+  top: 0;
+  background: #F7F7F5;
+  z-index: 2;
+}
+
+/* --- List row hover --- */
+.tloz-lrow:hover {
+  outline: 1px solid rgba(215, 34, 40, 0.30);
+  outline-offset: -1px;
+  background: rgba(215, 34, 40, 0.035);
+  position: relative;
+  z-index: 1;
+}
+
+/* --- Board card hover --- */
+.tloz-kcard {
+  transition: all 0.16s ease;
+  cursor: grab;
+}
+.tloz-kcard:hover {
+  outline: 1px solid rgba(215, 34, 40, 0.30);
+  outline-offset: -1px;
+  box-shadow: 0 10px 24px rgba(29, 29, 27, 0.08);
+  transform: translateY(-1px);
+}
+.tloz-kcard.isdrag {
+  opacity: 0.4;
+}
+.tloz-droplist.dropping {
+  background: rgba(215, 34, 40, 0.04);
+  border-radius: 12px;
+  outline: 1.5px dashed rgba(215, 34, 40, 0.35);
+  outline-offset: 2px;
+}
+.tloz-addc:hover {
+  background: rgba(215, 34, 40, 0.05);
+  color: #D72228;
+  border-color: rgba(215, 34, 40, 0.30);
 }
 
 @media (max-width: 920px) {

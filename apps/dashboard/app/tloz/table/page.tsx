@@ -1,6 +1,6 @@
-import { MissionTable } from "../../../components/tloz/mission-views";
-import { TlozFilters, TlozPageShell } from "../../../components/tloz/tloz-shell";
+import { TlozFilters, TlozPageShell, TlozViewHeader } from "../../../components/tloz/tloz-shell";
 import { getTlozEpisodes, getTlozMissions, getTlozProjects, getTlozSeasons } from "../../../lib/tloz-data";
+import { TableClient } from "./table-client";
 
 export default async function TlozTablePage() {
   const [missions, projects, seasons, episodes] = await Promise.all([
@@ -11,9 +11,13 @@ export default async function TlozTablePage() {
   ]);
 
   return (
-    <TlozPageShell title="Tabla" description="Vista tabular para comparar Missions por tipo, proyecto, owner, fecha y progreso." currentView="Tabla">
-      <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
-      <MissionTable missions={missions} />
+    <TlozPageShell title="Tabla" currentView="Tabla" showSearch>
+      <TlozViewHeader title="Tabla" description={`${missions.length} missions · todas las propiedades`}>
+        <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
+      </TlozViewHeader>
+      <div className="tloz-scrl" style={{ flex: 1, overflow: "auto", padding: "0 26px 26px" }}>
+        <TableClient missions={missions} />
+      </div>
     </TlozPageShell>
   );
 }

@@ -1,6 +1,6 @@
-import { MissionCalendar } from "../../../components/tloz/mission-views";
-import { TlozFilters, TlozPageShell } from "../../../components/tloz/tloz-shell";
+import { TlozFilters, TlozPageShell, TlozViewHeader } from "../../../components/tloz/tloz-shell";
 import { getTlozEpisodes, getTlozMissions, getTlozProjects, getTlozSeasons } from "../../../lib/tloz-data";
+import { CalendarClient } from "./calendar-client";
 
 export default async function TlozCalendarPage() {
   const [missions, projects, seasons, episodes] = await Promise.all([
@@ -11,9 +11,13 @@ export default async function TlozCalendarPage() {
   ]);
 
   return (
-    <TlozPageShell title="Calendario" description="Solo muestra Missions mock que tienen due date." currentView="Calendario">
-      <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
-      <MissionCalendar missions={missions} />
+    <TlozPageShell title="Calendario" currentView="Calendario" showSearch>
+      <TlozViewHeader title="Calendario" description="Missions con fecha de vencimiento">
+        <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
+      </TlozViewHeader>
+      <div className="tloz-scrl" style={{ flex: 1, overflow: "auto", padding: "0 26px 26px" }}>
+        <CalendarClient missions={missions} />
+      </div>
     </TlozPageShell>
   );
 }

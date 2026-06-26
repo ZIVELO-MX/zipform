@@ -58,7 +58,10 @@ export const SIDEBAR_DEFAULT_WIDTH = 284;
 
 export function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+  const segments = href.split("/").filter(Boolean);
+  if (pathname === href) return true;
+  if (segments.length > 1 && pathname.startsWith(`${href}/`)) return true;
+  return false;
 }
 
 export function DesktopSidebar({
