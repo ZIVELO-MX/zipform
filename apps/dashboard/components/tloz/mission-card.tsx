@@ -7,7 +7,7 @@ import {
   LucideIcon,
   Plus
 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Card, CardContent, CardHeader, CardTitle, Progress, Tooltip, TooltipContent, TooltipTrigger } from "@zipform/ui";
+import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, MetricProgress, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@zipform/types";
 import { dependencyLabel, formatDate, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
@@ -30,9 +30,9 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
           <MissionIconAvatar icon={Icon} tone={tone} label={resolveIconLabel(mission.icon)} />
           <div className="min-w-0" style={{ flex: 1 }}>
             <div className="tloz-card-badges" style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-              <Badge style={{ backgroundColor: tone, color: "#fff" }}>
+              <ToneBadge tone={{ color: tone }}>
                 {missionTypeLabel[mission.type]}
-              </Badge>
+              </ToneBadge>
               <Badge variant="muted">{missionStatusLabel[mission.status]}</Badge>
             </div>
             <CardTitle className="mt-2">
@@ -94,7 +94,7 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
             <span className="tloz-dependency-copy">{dependencyLabel(mission)}</span>
           </div>
         ) : null}
-        <Progress className="tloz-progress" value={mission.progress} />
+        <MetricProgress className="tloz-progress" value={mission.progress} tone="#D72228" />
         <div className="tloz-card-footer">
           <OwnerAvatar user={mission.owner} />
         </div>
@@ -111,7 +111,7 @@ export function ActiveMissionPanel({ label, mission }: { label: string; mission:
           <p className="eyebrow">{label}</p>
           <h3>{mission?.title ?? "Sin Mission asignada"}</h3>
         </div>
-        {mission ? <Badge style={{ backgroundColor: missionTypeTone[mission.type], color: "#fff" }}>{missionTypeLabel[mission.type]}</Badge> : null}
+        {mission ? <ToneBadge tone={{ color: missionTypeTone[mission.type] }}>{missionTypeLabel[mission.type]}</ToneBadge> : null}
       </div>
       {mission ? (
         <>
@@ -163,22 +163,7 @@ export function MissionIconAvatar({
 }
 
 export function OwnerAvatar({ user }: { user: Pick<UserProfile, "name" | "username" | "avatarUrl"> }) {
-  const initials = user.name
-    .split(/[-_\s]/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  return (
-    <span className="tloz-owner">
-      <Avatar className="size-7 rounded-full">
-        <AvatarImage src={user.avatarUrl} alt="" />
-        <AvatarFallback className="bg-carbon text-[0.65rem] font-medium text-white">{initials}</AvatarFallback>
-      </Avatar>
-      <span>{user.username}</span>
-    </span>
-  );
+  return <UserAvatarLabel className="tloz-owner" name={user.name} label={user.username} imageUrl={user.avatarUrl} />;
 }
 
 export function QuestItemDots({ mission, max = MAX_VISIBLE_QUEST_ITEMS }: { mission: TlozMissionRecord; max?: number }) {

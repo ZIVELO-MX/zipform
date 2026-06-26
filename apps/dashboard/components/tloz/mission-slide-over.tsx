@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
 import Link from "next/link";
-import { ExternalLink, X } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button, Progress, Tooltip, TooltipContent, TooltipTrigger } from "@zipform/ui";
+import { ExternalLink } from "lucide-react";
+import {
+  Button,
+  MetricProgress,
+  SlideOver,
+  StatusPill,
+  ToneBadge,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  UserAvatarLabel,
+} from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
-import { formatDate, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
+import { formatDate, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 
 type MissionSlideOverProps = {
   mission: TlozMissionRecord | null;
@@ -13,275 +22,32 @@ type MissionSlideOverProps = {
 };
 
 export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose]
-  );
+  const open = Boolean(mission);
 
-  useEffect(() => {
-    if (mission) {
-      document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [mission, handleKeyDown]);
-
-  if (!mission) return null;
+  if (!mission) {
+    return <SlideOver open={false} title="Detalle de Mission" onOpenChange={(nextOpen) => !nextOpen && onClose()} />;
+  }
 
   const tone = missionTypeTone[mission.type];
   const Icon = resolveMissionIcon(mission.icon);
 
   return (
-    <>
-      <div
-        onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 40,
-          background: "rgba(29,29,27,0.50)",
-          animation: "fade-in 0.18s ease"
-        }}
-      />
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 50,
-          width: "min(520px, 100vw - 48px)",
-          background: "#FAFAF9",
-          borderLeft: "1px solid rgba(29,29,27,0.10)",
-          boxShadow: "-8px 0 32px rgba(29,29,27,0.10)",
-          display: "flex",
-          flexDirection: "column",
-          animation: "pop-in 0.2s ease"
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "18px 22px",
-            borderBottom: "1px solid rgba(29,29,27,0.08)",
-            flexShrink: 0
-          }}
-        >
-          <span style={{ fontSize: "14px", fontWeight: 700, color: "#454543", letterSpacing: "0.02em", textTransform: "uppercase" }}>
-            Detalle de Mission
-          </span>
-          <button
-            onClick={onClose}
-            style={{
-              width: "34px",
-              height: "34px",
-              borderRadius: "999px",
-              border: "1px solid rgba(29,29,27,0.10)",
-              background: "#fff",
-              color: "#454543",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "all .2s ease"
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="tloz-scrl" style={{ flex: 1, overflow: "auto", padding: "22px", display: "flex", flexDirection: "column", gap: "20px" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-              <Badge style={{ backgroundColor: tone, color: "#fff", display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: 700, padding: "4px 10px", borderRadius: "999px" }}>
-                <Icon size={12} />
-                {missionTypeLabel[mission.type]}
-              </Badge>
-              <Badge variant="muted" style={{ fontSize: "11px" }}>{missionStatusLabel[mission.status]}</Badge>
-            </div>
-            <h2 style={{ margin: "0 0 8px", fontSize: "22px", fontWeight: 700, letterSpacing: "-0.01em", lineHeight: 1.2 }}>{mission.title}</h2>
-            <p style={{ margin: 0, fontSize: "13.5px", color: "#6B6B6B", lineHeight: 1.6 }}>{mission.description}</p>
-          </div>
-
-          <div>
-            <div style={{ height: "6px", background: "#F0EFED", borderRadius: "999px", overflow: "hidden", marginBottom: "6px" }}>
-              <div style={{ width: `${mission.progress}%`, height: "100%", background: "#D72228", borderRadius: "999px" }} />
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", color: "#6B6B6B" }}>
-              <span>{mission.progress}% completo</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: "#1D1D1B" }}>{mission.progress}%</span>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-            <div style={{ background: "#F5F5F5", borderRadius: "11px", padding: "12px" }}>
-              <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#9a9a98", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "4px" }}>Proyecto</div>
-              <div style={{ fontSize: "13px", fontWeight: 600, color: "#1D1D1B" }}>{mission.project.name}</div>
-            </div>
-            <div style={{ background: "#F5F5F5", borderRadius: "11px", padding: "12px" }}>
-              <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#9a9a98", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "4px" }}>Vence</div>
-              <div style={{ fontSize: "13px", fontWeight: 600, color: mission.dueDate ? "#B91C22" : "#6B6B6B" }}>{formatDate(mission.dueDate)}</div>
-            </div>
-            <div style={{ background: "#F5F5F5", borderRadius: "11px", padding: "12px" }}>
-              <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#9a9a98", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "4px" }}>Owner</div>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 600 }}>
-                <Avatar className="size-6 rounded-full">
-                  <AvatarImage src={mission.owner.avatarUrl} alt="" />
-                  <AvatarFallback className="bg-carbon text-[0.55rem] font-medium text-white">
-                    {mission.owner.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                {mission.owner.username}
-              </div>
-            </div>
-            <div style={{ background: "#F5F5F5", borderRadius: "11px", padding: "12px" }}>
-              <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#9a9a98", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "4px" }}>Episode</div>
-              <div style={{ fontSize: "13px", fontWeight: 600, color: "#1D1D1B" }}>{mission.episode?.name ?? "Sin episode"}</div>
-            </div>
-          </div>
-
-          {mission.questItems.length > 0 && (
-            <div>
-              <h3 style={{ margin: "0 0 10px", fontSize: "12.5px", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#454543" }}>
-                Quest Items ({mission.questItems.length})
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {mission.questItems.map((item) => (
-                  <Tooltip key={item.id}>
-                    <TooltipTrigger asChild>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "10px",
-                          padding: "10px 12px",
-                          background: "#fff",
-                          border: "1px solid rgba(29,29,27,0.10)",
-                          borderRadius: "11px",
-                          cursor: "pointer",
-                          transition: "all .2s ease"
-                        }}
-                        className="tloz-qi-hover"
-                      >
-                    <span
-                      style={{
-                        width: "28px",
-                        height: "28px",
-                        borderRadius: "8px",
-                        background: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
-                        color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0
-                      }}
-                    >
-                      {item.icon.slice(0, 1)}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "13px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.name}</div>
-                      <div style={{ fontSize: "11px", color: "#9a9a98" }}>{item.description}</div>
-                    </div>
-                    <span
-                      style={{
-                        fontSize: "10px",
-                        fontWeight: 700,
-                        color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
-                        background: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
-                        borderRadius: "999px",
-                        padding: "3px 8px",
-                        flexShrink: 0
-                      }}
-                    >
-                      {item.status === "completed" ? "Desbloqueado" : "Bloqueado"}
-                    </span>
-                  </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" align="center">
-                      {item.name}
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {mission.dependencies.length > 0 && (
-            <div>
-              <h3 style={{ margin: "0 0 10px", fontSize: "12.5px", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#454543" }}>
-                Dependencias ({mission.dependencies.length})
-              </h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {mission.dependencies.map((dep) => (
-                  <Link
-                    key={dep.id}
-                    href={`/tloz/missions/${dep.id}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "10px",
-                      padding: "10px 12px",
-                      background: "#fff",
-                      border: "1px solid rgba(29,29,27,0.10)",
-                      borderRadius: "11px",
-                      textDecoration: "none",
-                      color: "inherit",
-                      transition: "all .2s ease"
-                    }}
-                    className="tloz-qi-hover"
-                  >
-                    <span
-                      style={{
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "999px",
-                        background: dep.status === "now" ? "#1E8E5A" : dep.status === "next" ? "#3A47B5" : "#9a9a98",
-                        flexShrink: 0
-                      }}
-                    />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: "13px", fontWeight: 600 }}>{dep.title}</div>
-                    </div>
-                    <span style={{ fontSize: "10.5px", color: "#9a9a98", flexShrink: 0 }}>
-                      {dep.status}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div
-          style={{
-            padding: "16px 22px",
-            borderTop: "1px solid rgba(29,29,27,0.08)",
-            display: "flex",
-            gap: "10px",
-            flexShrink: 0
-          }}
-        >
-          <Button asChild style={{ flex: 1, height: "42px", borderRadius: "11px", display: "flex", alignItems: "center", gap: "7px", fontWeight: 600, fontSize: "13.5px" }}>
+    <SlideOver
+      open={open}
+      title="Detalle de Mission"
+      onOpenChange={(nextOpen) => !nextOpen && onClose()}
+      footer={
+        <>
+          <Button asChild className="h-[42px] flex-1 rounded-[11px] text-[13.5px] font-semibold">
             <Link href={`/tloz/missions/${mission.id}`}>
-              <ExternalLink size={16} />
+              <ExternalLink size={16} aria-hidden="true" />
               Ver detalle completo
             </Link>
           </Button>
           <Tooltip>
             <TooltipTrigger asChild>
               <span tabIndex={0}>
-                <Button
-                  variant="outline"
-                  style={{ height: "42px", borderRadius: "11px", fontWeight: 600, fontSize: "13.5px" }}
-                  disabled
-                >
+                <Button variant="outline" className="h-[42px] rounded-[11px] text-[13.5px] font-semibold" disabled>
                   Editar
                 </Button>
               </span>
@@ -290,8 +56,107 @@ export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
               Pendiente: edición persistente
             </TooltipContent>
           </Tooltip>
-        </div>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-5">
+        <section>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <ToneBadge tone={{ color: tone }} className="gap-1.5 text-[11px]">
+              <Icon size={12} aria-hidden="true" />
+              {missionTypeLabel[mission.type]}
+            </ToneBadge>
+            <StatusPill label={missionStatusLabel[mission.status]} color={mission.status === "blocked" ? "#B91C22" : "#1E8E5A"} active={mission.status === "now"} />
+          </div>
+          <h2 className="m-0 mb-2 text-[22px] font-bold leading-tight tracking-normal">{mission.title}</h2>
+          <p className="m-0 text-[13.5px] leading-6 text-carbon/65">{mission.description}</p>
+        </section>
+
+        <MetricProgress value={mission.progress} label={`${mission.progress}% completo`} tone="#D72228" />
+
+        <dl className="grid grid-cols-2 gap-2.5">
+          <MetaBox label="Proyecto">{mission.project.name}</MetaBox>
+          <MetaBox label="Vence" tone={mission.dueDate ? "danger" : "muted"}>{formatDate(mission.dueDate)}</MetaBox>
+          <MetaBox label="Owner">
+            <UserAvatarLabel name={mission.owner.name} label={mission.owner.username} imageUrl={mission.owner.avatarUrl} size="sm" />
+          </MetaBox>
+          <MetaBox label="Episode">{mission.episode?.name ?? "Sin episode"}</MetaBox>
+        </dl>
+
+        {mission.questItems.length > 0 ? (
+          <SlideSection title={`Quest Items (${mission.questItems.length})`}>
+            {mission.questItems.map((item) => (
+              <Tooltip key={item.id}>
+                <TooltipTrigger asChild>
+                  <div className="tloz-qi-hover flex cursor-pointer items-center gap-2.5 rounded-[11px] border border-carbon/10 bg-white px-3 py-2.5 transition-colors">
+                    <span
+                      className="grid size-7 shrink-0 place-items-center rounded-lg text-sm font-semibold"
+                      style={{
+                        backgroundColor: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
+                        color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
+                      }}
+                    >
+                      {item.icon.slice(0, 1)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold">{item.name}</span>
+                      <span className="block truncate text-[11px] text-carbon/50">{item.description}</span>
+                    </span>
+                    <span
+                      className="shrink-0 rounded-full px-2 py-1 text-[10px] font-bold"
+                      style={{
+                        backgroundColor: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
+                        color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
+                      }}
+                    >
+                      {item.status === "completed" ? "Desbloqueado" : "Bloqueado"}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  {item.name}
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </SlideSection>
+        ) : null}
+
+        {mission.dependencies.length > 0 ? (
+          <SlideSection title={`Dependencias (${mission.dependencies.length})`}>
+            {mission.dependencies.map((dep) => (
+              <Link
+                key={dep.id}
+                href={`/tloz/missions/${dep.id}`}
+                className="tloz-qi-hover flex items-center gap-2.5 rounded-[11px] border border-carbon/10 bg-white px-3 py-2.5 text-inherit transition-colors"
+              >
+                <span className="size-2 shrink-0 rounded-full bg-carbon/35" aria-hidden="true" />
+                <span className="min-w-0 flex-1 text-[13px] font-semibold">{dep.title}</span>
+                <span className="shrink-0 text-[10.5px] text-carbon/50">{dep.status}</span>
+              </Link>
+            ))}
+          </SlideSection>
+        ) : null}
       </div>
-    </>
+    </SlideOver>
+  );
+}
+
+function MetaBox({ label, tone, children }: { label: string; tone?: "danger" | "muted"; children: React.ReactNode }) {
+  return (
+    <div className="rounded-[11px] bg-carbon/5 p-3">
+      <dt className="mb-1 text-[10.5px] font-bold uppercase tracking-normal text-carbon/45">{label}</dt>
+      <dd className={tone === "danger" ? "m-0 text-[13px] font-semibold text-[#B91C22]" : "m-0 text-[13px] font-semibold text-carbon"}>
+        {children}
+      </dd>
+    </div>
+  );
+}
+
+function SlideSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <h3 className="m-0 mb-2.5 text-[12.5px] font-bold uppercase tracking-normal text-carbon/75">{title}</h3>
+      <div className="flex flex-col gap-2">{children}</div>
+    </section>
   );
 }

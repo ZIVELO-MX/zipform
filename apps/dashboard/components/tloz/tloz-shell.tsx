@@ -1,4 +1,4 @@
-import { Select } from "@zipform/ui";
+import { PageSubHeader, SegmentedControl, Select } from "@zipform/ui";
 import type { TlozEpisode, TlozProject, TlozSeason } from "@zipform/types";
 import { TlozHeader } from "./tloz-header";
 
@@ -39,13 +39,40 @@ export function TlozPageShell({
 }
 
 export function TlozSubpageHeader({ title, description }: { title: string; description: string }) {
+  return <PageSubHeader title={title} description={description} />;
+}
+
+export function TlozViewHeader({
+  title,
+  description,
+  children,
+  showAudienceToggle = false
+}: {
+  title: string;
+  description: React.ReactNode;
+  children?: React.ReactNode;
+  showAudienceToggle?: boolean;
+}) {
   return (
-    <div style={{ padding: "18px 26px 0", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
-      <div>
-        <h1 style={{ margin: 0, fontSize: "21px", fontWeight: 700, letterSpacing: "-0.02em" }}>{title}</h1>
-        <p style={{ margin: "4px 0 0", color: "#6B6B6B", fontSize: "13px" }}>{description}</p>
-      </div>
-    </div>
+    <PageSubHeader
+      title={title}
+      description={description}
+      actions={
+        <>
+          {showAudienceToggle ? (
+            <SegmentedControl
+              aria-label="Filtrar por audiencia"
+              value="team"
+              options={[
+                { label: "Todo el equipo", value: "team" },
+                { label: "Solo yo", value: "me" },
+              ]}
+            />
+          ) : null}
+          {children}
+        </>
+      }
+    />
   );
 }
 

@@ -58,6 +58,7 @@ Status:
 
 - [UI] Extract reusable dashboard components into shared UI primitives
 - [UI] Continue hardening shared primitives used by TLOZ and platform pages
+- [UI] Revisit the internal Attachment primitive when an official shadcn registry item is available
 
 **Infrastructure**
 
