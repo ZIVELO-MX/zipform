@@ -1,7 +1,6 @@
-import { MissionTable } from "../../../components/tloz/mission-views";
 import { TlozFilters, TlozPageShell } from "../../../components/tloz/tloz-shell";
-import { TlozViewClient } from "../../../components/tloz/tloz-view-client";
 import { getTlozEpisodes, getTlozMissions, getTlozProjects, getTlozSeasons } from "../../../lib/tloz-data";
+import { TableClient } from "./table-client";
 
 export default async function TlozTablePage() {
   const [missions, projects, seasons, episodes] = await Promise.all([
@@ -23,9 +22,7 @@ export default async function TlozTablePage() {
         </div>
       </div>
       <div className="tloz-scrl" style={{ flex: 1, overflow: "auto", padding: "0 26px 26px" }}>
-        <TlozViewClient>
-          {(onSelect) => <MissionTable missions={missions} onSelect={onSelect} />}
-        </TlozViewClient>
+        <TableClient missions={missions} />
       </div>
     </TlozPageShell>
   );
