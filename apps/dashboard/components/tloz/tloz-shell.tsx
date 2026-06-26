@@ -10,6 +10,7 @@ type TlozPageShellProps = {
   detailLabel?: string;
   showSearch?: boolean;
   showHeader?: boolean;
+  fullWidth?: boolean;
 };
 
 export function TlozPageShell({
@@ -19,10 +20,11 @@ export function TlozPageShell({
   detailLabel,
   showSearch = true,
   showHeader = true,
+  fullWidth = false,
   children
 }: TlozPageShellProps) {
   return (
-    <div className="page-stack tloz-page">
+    <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
       <TlozHeader
         title={title}
         currentView={currentView}

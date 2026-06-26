@@ -11,8 +11,8 @@ export default async function TlozBoardPage() {
   ]);
 
   return (
-    <TlozPageShell title="Board" currentView="Board" showSearch>
-      <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 64px)" }}>
+    <TlozPageShell title="Board" currentView="Board" showSearch fullWidth>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ flexShrink: 0, padding: "16px 26px 14px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: "21px", fontWeight: 700, letterSpacing: "-0.02em" }}>Board</h1>
@@ -26,7 +26,7 @@ export default async function TlozBoardPage() {
             <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
           </div>
         </div>
-        <div className="tloz-scrl" style={{ flex: 1, overflow: "auto", padding: "4px 26px 26px" }}>
+        <div style={{ flex: 1, padding: "4px 26px 26px" }}>
           <BoardClient missions={missions} />
         </div>
       </div>

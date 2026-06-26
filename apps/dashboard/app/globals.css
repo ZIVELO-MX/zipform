@@ -648,6 +648,12 @@ button {
   container-type: inline-size;
 }
 
+.tloz-page-full {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
 .tloz-header h2 {
   font-size: 1.65rem;
   line-height: 1.1;
