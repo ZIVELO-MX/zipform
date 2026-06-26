@@ -35,13 +35,17 @@ This roadmap is product-specific. The Zipform platform roadmap remains in
 - [IMPLEMENTED] Badge background matches mission type tone color in all views
 - [IMPLEMENTED] QuestItemDots: hidden when empty, overflow count (+N) when >3 items
 - [IMPLEMENTED] currentUser imported from @zipform/data (no duplication)
+- [IMPLEMENTED] Search-aware client wrappers for Dashboard, Board, Lista, Tabla, and Calendario views
+- [IMPLEMENTED] Shared dashboard primitives for section headers, status pills, avatars, progress, board columns, and icon buttons
+- [IMPLEMENTED] Shared slide-over drawer primitive used by Mission detail previews
+- [IMPLEMENTED] Internal Attachment primitive for resource metadata rows and action affordances
 
 Current limitations:
 
 - Creation and editing are visible but non-persistent.
 - Search and filters are placeholders backed by mock data.
 - Activity history is a placeholder.
-- Resources are metadata-only; uploads are not implemented.
+- Resources render as attachment metadata rows; uploads, previews, storage, and permissions are not implemented.
 - Permissions are not defined.
 
 ---

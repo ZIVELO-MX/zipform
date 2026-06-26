@@ -21,6 +21,7 @@
 - [TLOZ] Badge color matches mission type tone on all views
 - [TLOZ] QuestItemDots: hidden when empty, overflow count (+N) when >3
 - [UI] Sidebar UserAvatar changed to circle (rounded-full) globally
+- [UI] Shared dashboard primitives extracted for TLOZ cards, view sections, slide-over drawers, and attachment metadata
 
 Status:
 
@@ -33,6 +34,7 @@ Status:
 - Owner display uses `UserProfile` with avatar image, username, and initials fallback.
 - All user avatars (sidebar + TLOZ) are circles.
 - Mission type badges use the same color as the right border accent.
+- TLOZ now uses shared UI primitives for dashboard presentation, slide-over panels, and attachment/resource rows.
 
 ---
 
@@ -56,7 +58,6 @@ Status:
 
 **UI**
 
-- [UI] Extract reusable dashboard components into shared UI primitives
 - [UI] Continue hardening shared primitives used by TLOZ and platform pages
 - [UI] Revisit the internal Attachment primitive when an official shadcn registry item is available
 
