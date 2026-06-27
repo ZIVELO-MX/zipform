@@ -1,0 +1,38 @@
+model User {
+  id                String                 @id
+  name              String
+  username          String
+  email             String                 @unique
+  role              String
+  avatarUrl         String
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  sessions          Session[]
+  ownedMissions     TlozMission[]
+  userMissionStates TlozUserMissionState[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PlatformMetric {
+  id        String   @id
+  label     String
+  value     String
+  tone      String
+  position  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("platform_metrics")
+}

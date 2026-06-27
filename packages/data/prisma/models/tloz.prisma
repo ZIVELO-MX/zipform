@@ -1,0 +1,169 @@
+model TlozSeason {
+  id          String        @id
+  name        String
+  version     String
+  description String
+  status      String
+  startDate   String
+  endDate     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  episodes    TlozEpisode[]
+  missions    TlozMission[]
+
+  @@map("tloz_seasons")
+}
+
+model TlozEpisode {
+  id          String        @id
+  seasonId    String
+  season      TlozSeason    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  name        String
+  romanNumber String
+  description String
+  status      String
+  startDate   String
+  endDate     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  missions    TlozMission[]
+
+  @@index([seasonId])
+  @@map("tloz_episodes")
+}
+
+model TlozProject {
+  id          String        @id
+  name        String
+  description String
+  color       String
+  icon        String
+  status      String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  missions    TlozMission[]
+
+  @@map("tloz_projects")
+}
+
+model TlozMission {
+  id                 String                  @id
+  title              String
+  description        String
+  icon               String
+  type               String
+  status             String
+  conclusion         String?
+  ownerId            String
+  owner              User                    @relation(fields: [ownerId], references: [id])
+  projectId          String
+  project            TlozProject             @relation(fields: [projectId], references: [id])
+  seasonId           String?
+  season             TlozSeason?             @relation(fields: [seasonId], references: [id])
+  episodeId          String?
+  episode            TlozEpisode?            @relation(fields: [episodeId], references: [id])
+  dueDate            String?
+  startDate          String?
+  completedAt        DateTime?
+  blockedReason      String?
+  progress           Int
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  dependencies       TlozMissionDependency[] @relation("MissionDependencies")
+  dependedOnBy       TlozMissionDependency[] @relation("MissionDependents")
+  missionQuestItems  TlozMissionQuestItem[]
+  checklistItems     TlozChecklistItem[]
+  resources          TlozResource[]
+  userMissionStates  TlozUserMissionState[]
+
+  @@index([ownerId])
+  @@index([projectId])
+  @@index([seasonId])
+  @@index([episodeId])
+  @@map("tloz_missions")
+}
+
+model TlozMissionDependency {
+  id                 String      @id
+  missionId          String
+  mission            TlozMission @relation("MissionDependencies", fields: [missionId], references: [id], onDelete: Cascade)
+  dependsOnMissionId String
+  dependsOnMission   TlozMission @relation("MissionDependents", fields: [dependsOnMissionId], references: [id], onDelete: Cascade)
+  createdAt          DateTime    @default(now())
+
+  @@unique([missionId, dependsOnMissionId])
+  @@index([dependsOnMissionId])
+  @@map("tloz_mission_dependencies")
+}
+
+model TlozQuestItem {
+  id                String                 @id
+  name              String
+  description       String
+  icon              String
+  status            String
+  acquiredAt        String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  missionQuestItems TlozMissionQuestItem[]
+
+  @@map("tloz_quest_items")
+}
+
+model TlozMissionQuestItem {
+  id          String        @id
+  missionId   String
+  mission     TlozMission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  questItemId String
+  questItem   TlozQuestItem @relation(fields: [questItemId], references: [id], onDelete: Cascade)
+  required    Boolean
+  createdAt   DateTime      @default(now())
+
+  @@unique([missionId, questItemId])
+  @@index([questItemId])
+  @@map("tloz_mission_quest_items")
+}
+
+model TlozChecklistItem {
+  id        String      @id
+  missionId String
+  mission   TlozMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  title     String
+  completed Boolean
+  position  Int
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([missionId])
+  @@map("tloz_checklist_items")
+}
+
+model TlozResource {
+  id        String      @id
+  missionId String
+  mission   TlozMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  url       String?
+  fileId    String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([missionId])
+  @@map("tloz_resources")
+}
+
+model TlozUserMissionState {
+  id        String      @id
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  missionId String
+  mission   TlozMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  slot      String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([userId, slot])
+  @@index([missionId])
+  @@map("tloz_user_mission_states")
+}
