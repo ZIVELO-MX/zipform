@@ -7,7 +7,11 @@
     "dev": "pnpm --filter @zipform/dashboard dev",
     "build": "pnpm --filter @zipform/dashboard build",
     "lint": "pnpm --filter @zipform/dashboard lint",
-    "typecheck": "pnpm --filter @zipform/dashboard typecheck"
+    "typecheck": "pnpm --filter @zipform/dashboard typecheck",
+    "db:generate": "pnpm --filter @zipform/data db:generate",
+    "db:migrate": "pnpm --filter @zipform/data db:migrate",
+    "db:seed": "pnpm --filter @zipform/data db:seed",
+    "db:studio": "pnpm --filter @zipform/data db:studio"
   },
   "devDependencies": {
     "typescript": "^5.8.3"
