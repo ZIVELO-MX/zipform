@@ -33,6 +33,25 @@ export type TlozMissionDetail = TlozMissionRecord & {
   resources: TlozResource[];
 };
 
+export type TlozMissionCreateInput = Omit<TlozMission, "id" | "createdAt" | "updatedAt" | "completedAt"> & {
+  id?: string;
+  completedAt?: string;
+};
+
+export type TlozMissionUpdateInput = Partial<
+  Omit<TlozMission, "id" | "createdAt" | "updatedAt" | "ownerId" | "projectId">
+> & {
+  ownerId?: string;
+  projectId?: string;
+};
+
+export type TlozMissionFilters = {
+  projectId?: string;
+  seasonId?: string;
+  episodeId?: string;
+  ownerId?: string;
+};
+
 export type TlozDashboardSummary = {
   activeQuest: TlozMissionRecord | null;
   activeSupportQuest: TlozMissionRecord | null;
@@ -47,12 +66,16 @@ export type TlozDashboardSummary = {
 
 export type TlozRepository = {
   getDashboardSummary(): Promise<TlozDashboardSummary>;
-  getMissions(): Promise<TlozMissionRecord[]>;
+  getMissions(filters?: TlozMissionFilters): Promise<TlozMissionRecord[]>;
   getMissionDetail(missionId: string): Promise<TlozMissionDetail | null>;
   getProjects(): Promise<TlozProject[]>;
   getSeasons(): Promise<TlozSeason[]>;
   getEpisodes(): Promise<TlozEpisode[]>;
   getQuestItems(): Promise<TlozQuestItem[]>;
+  createMission(input: TlozMissionCreateInput): Promise<TlozMissionRecord>;
+  updateMission(missionId: string, input: TlozMissionUpdateInput): Promise<TlozMissionRecord>;
+  patchMissionStatus(missionId: string, status: TlozMission["status"]): Promise<TlozMissionRecord>;
+  deleteMission(missionId: string): Promise<void>;
 };
 
 export type ZipformDataClient = {

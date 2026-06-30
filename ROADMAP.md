@@ -56,6 +56,31 @@ Status:
 - [TLOZ] Define creation and editing behavior for Missions, checklist items, resources, dependencies, and Quest Items
 - [TLOZ] Resolve activity semantics for Mission Detail
 
+**TLOZ hardening — pendientes auditados**
+
+P0 — bloqueantes antes de habilitar escritura en producción:
+
+- [TLOZ][SECURITY] Proteger Server Actions con autenticación, autorización por operación y validación runtime de IDs y payloads
+  Depends on: Enable shared internal authentication
+- [TLOZ][CORRECTNESS] Representar `blocked` como columna real del Board para que una Mission no desaparezca al cambiar de estado
+
+P1 — confiabilidad y escalabilidad:
+
+- [TLOZ][CORRECTNESS] Mostrar `blocked` correctamente en Tabla e incluir `completed` en Lista
+- [TLOZ][TESTS] Añadir integración del driver Prisma contra SQLite real; los tests actuales usan un stub de Prisma
+- [TLOZ][TESTS] Cubrir Server Actions, filtros, actualización optimista, rollback y estados loading/error
+- [TLOZ][DX] Migrar `next lint` a ESLint CLI y restaurar un comando de lint no interactivo
+- [TLOZ][PERFORMANCE] Aplicar filtros y paginación en Prisma, evitando cargar e hidratar el grafo TLOZ completo en cada listado
+
+P2 — completar experiencia de producto:
+
+- [TLOZ][UX] Conectar los flujos visibles de crear, editar y eliminar Mission al CRUD ya disponible
+- [TLOZ][SEARCH] Implementar búsqueda global sobre Missions, Projects, Quest Items y Resources
+- [TLOZ][UX] Sincronizar el Mission slide-over con mutaciones optimistas y añadir loading boundaries específicos por vista
+- [TLOZ][BOARD] Implementar drag-and-drop accesible o retirar el atributo `draggable` hasta que exista comportamiento real
+- [TLOZ][ARCHITECTURE] Dividir `mission-views.tsx` por vista y consolidar configuración compartida de estados
+- [TLOZ][DOCS] Sincronizar `apps/dashboard/app/tloz/ARQUITECTURE.md` con CRUD, filtros, tests y estados UX ya implementados
+
 **UI**
 
 - [UI] Continue hardening shared primitives used by TLOZ and platform pages

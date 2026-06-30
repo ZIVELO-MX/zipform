@@ -6,6 +6,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "db:generate": "prisma generate --schema prisma",
     "db:migrate": "prisma migrate dev --schema prisma",
     "db:seed": "prisma db seed --schema prisma",
@@ -16,8 +18,10 @@
     "@zipform/types": "workspace:*"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.9",
     "dotenv": "^16.6.1",
     "prisma": "^6.19.0",
-    "tsx": "^4.20.6"
+    "tsx": "^4.20.6",
+    "vitest": "^4.1.9"
   }
 }

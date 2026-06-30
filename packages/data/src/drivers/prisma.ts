@@ -310,8 +310,12 @@ async function loadTlozDataSet(prisma = getPrismaClient()): Promise<TlozDataSet>
   };
 }
 
-export function createPrismaDataClient(): ZipformDataClient {
-  const prisma = getPrismaClient();
+export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient()): ZipformDataClient {
+  const getHydratedMission = async (missionId: string) => {
+    const mission = hydrateMissions(await loadTlozDataSet(prisma)).find((item) => item.id === missionId);
+    if (!mission) throw new Error(`TLOZ mission ${missionId} was not found`);
+    return mission;
+  };
 
   return {
     apps: {
@@ -343,8 +347,13 @@ export function createPrismaDataClient(): ZipformDataClient {
         const [currentUser, tlozData] = await Promise.all([getCurrentUser(prisma), loadTlozDataSet(prisma)]);
         return buildTlozDashboardSummary(tlozData, currentUser.id);
       },
-      async getMissions() {
-        return hydrateMissions(await loadTlozDataSet(prisma));
+      async getMissions(filters = {}) {
+        return hydrateMissions(await loadTlozDataSet(prisma)).filter((mission) =>
+          (!filters.projectId || mission.projectId === filters.projectId) &&
+          (!filters.seasonId || mission.seasonId === filters.seasonId) &&
+          (!filters.episodeId || mission.episodeId === filters.episodeId) &&
+          (!filters.ownerId || mission.ownerId === filters.ownerId)
+        );
       },
       async getMissionDetail(missionId) {
         return buildTlozMissionDetail(await loadTlozDataSet(prisma), missionId);
@@ -364,6 +373,33 @@ export function createPrismaDataClient(): ZipformDataClient {
       async getQuestItems() {
         const rows = await prisma.tlozQuestItem.findMany({ orderBy: { createdAt: "asc" } });
         return rows.map(mapQuestItem);
+      },
+      async createMission(input) {
+        const { id = crypto.randomUUID(), completedAt, ...data } = input;
+        await prisma.tlozMission.create({
+          data: { ...data, id, completedAt: completedAt ? new Date(completedAt) : null }
+        });
+        return getHydratedMission(id);
+      },
+      async updateMission(missionId, input) {
+        const { completedAt, ...data } = input;
+        await prisma.tlozMission.update({
+          where: { id: missionId },
+          data: { ...data, ...(Object.prototype.hasOwnProperty.call(input, "completedAt")
+            ? { completedAt: completedAt ? new Date(completedAt) : null }
+            : {}) }
+        });
+        return getHydratedMission(missionId);
+      },
+      async patchMissionStatus(missionId, status) {
+        await prisma.tlozMission.update({
+          where: { id: missionId },
+          data: { status, completedAt: status === "completed" ? new Date() : null }
+        });
+        return getHydratedMission(missionId);
+      },
+      async deleteMission(missionId) {
+        await prisma.tlozMission.delete({ where: { id: missionId } });
       }
     }
   };

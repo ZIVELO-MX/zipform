@@ -13,6 +13,7 @@ export * from "./components/input";
 export * from "./components/page-layout";
 export * from "./components/progress";
 export * from "./components/select";
+export * from "./components/skeleton";
 export * from "./components/separator";
 export * from "./components/slide-over";
 export * from "./components/table";

@@ -7,7 +7,10 @@ export type {
   DataDriver,
   TlozDashboardSummary,
   TlozMissionDetail,
+  TlozMissionFilters,
+  TlozMissionCreateInput,
   TlozMissionRecord,
+  TlozMissionUpdateInput,
   TlozRepository,
   ZipformDataClient
 } from "./contracts";
