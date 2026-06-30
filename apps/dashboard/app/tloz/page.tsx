@@ -1,10 +1,15 @@
 import { TlozPageShell } from "../../components/tloz/tloz-shell";
 import { DashboardClient } from "./dashboard-client";
 import { getTlozDashboardSummary } from "../../lib/tloz-data";
+import { Suspense } from "react";
+import { TlozLoading } from "../../components/tloz/tloz-loading";
 
-export default async function TlozPage() {
+async function DashboardData() {
   const summary = await getTlozDashboardSummary();
+  return <DashboardClient summary={summary} />;
+}
 
+export default function TlozPage() {
   return (
     <TlozPageShell
       title="Dashboard"
@@ -13,7 +18,9 @@ export default async function TlozPage() {
       showSearch={true}
       showHeader={true}
     >
-      <DashboardClient summary={summary} />
+      <Suspense fallback={<TlozLoading />}>
+        <DashboardData />
+      </Suspense>
     </TlozPageShell>
   );
 }

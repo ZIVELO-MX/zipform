@@ -26,7 +26,7 @@ import {
   UserAvatarLabel,
 } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozResourceType, UserProfile } from "@zipform/types";
+import type { TlozMissionStatus, TlozResourceType, UserProfile } from "@zipform/types";
 import { QuestItemDots } from "./mission-card";
 import {
   formatDate,
@@ -740,7 +740,7 @@ export function MissionList({ missions, onSelect }: { missions: TlozMissionRecor
 
 // ─── BOARD ─────────────────────────────────────────────────────────
 
-export function MissionBoard({ missions, onSelect }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void }) {
+export function MissionBoard({ missions, onSelect, onStatusChange }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void; onStatusChange?: (id: string, status: TlozMissionStatus) => void }) {
   return (
     <div className="tloz-scrl" style={{ display: "flex", gap: "16px", alignItems: "flex-start", minWidth: "min-content", height: "100%", paddingBottom: "8px" }}>
       {boardGroups.map((group) => {
@@ -753,7 +753,7 @@ export function MissionBoard({ missions, onSelect }: { missions: TlozMissionReco
             <div className="tloz-droplist flex min-h-[60px] flex-1 flex-col gap-3 overflow-auto pb-2 pl-0.5 pr-0.5" data-group={group.id}>
               {groupMissions.length > 0 ? (
                 groupMissions.map((mission) => (
-                  <BoardCard key={mission.id} mission={mission} isCompleted={isCompleted} onSelect={onSelect} />
+                  <BoardCard key={mission.id} mission={mission} isCompleted={isCompleted} onSelect={onSelect} onStatusChange={onStatusChange} />
                 ))
               ) : (
                 <EmptyState title="Sin missions" />
@@ -802,7 +802,7 @@ export function MissionBoard({ missions, onSelect }: { missions: TlozMissionReco
   );
 }
 
-function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRecord; isCompleted: boolean; onSelect?: (m: TlozMissionRecord) => void }) {
+function BoardCard({ mission, isCompleted, onSelect, onStatusChange }: { mission: TlozMissionRecord; isCompleted: boolean; onSelect?: (m: TlozMissionRecord) => void; onStatusChange?: (id: string, status: TlozMissionStatus) => void }) {
   const tone = missionTypeTone[mission.type];
   const blocked = mission.requiredQuestItems.some((item) => item.status !== "completed") || mission.dependencies.length > 0;
 
@@ -890,6 +890,20 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
           </div>
         </>
       )}
+      {onStatusChange ? (
+        <label className="mt-3 flex items-center gap-2 text-[10.5px] font-semibold text-carbon/60" onClick={(event) => event.stopPropagation()}>
+          Estado
+          <select
+            className="min-h-8 flex-1 rounded-lg border border-carbon/15 bg-paper px-2 text-xs font-semibold"
+            aria-label={`Estado de ${mission.title}`}
+            value={mission.status}
+            onChange={(event) => onStatusChange(mission.id, event.target.value as TlozMissionStatus)}
+          >
+            {boardGroups.map((group) => <option key={group.id} value={group.id}>{group.label}</option>)}
+            <option value="blocked">Blocked</option>
+          </select>
+        </label>
+      ) : null}
     </div>
   );
 }

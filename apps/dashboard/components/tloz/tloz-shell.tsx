@@ -1,5 +1,4 @@
-import { PageSubHeader, SegmentedControl, Select } from "@zipform/ui";
-import type { TlozEpisode, TlozProject, TlozSeason } from "@zipform/types";
+import { PageSubHeader, SegmentedControl } from "@zipform/ui";
 import { TlozHeader } from "./tloz-header";
 
 type TlozPageShellProps = {
@@ -73,48 +72,5 @@ export function TlozViewHeader({
         </>
       }
     />
-  );
-}
-
-export function TlozFilters({
-  projects,
-  seasons,
-  episodes
-}: {
-  projects: TlozProject[];
-  seasons: TlozSeason[];
-  episodes: TlozEpisode[];
-}) {
-  return (
-    <section className="tloz-filters" aria-label="Filtros TLOZ">
-      <Select aria-label="Filtrar por proyecto" defaultValue="all">
-        <option value="all">Todos los proyectos</option>
-        {projects.map((project) => (
-          <option value={project.id} key={project.id}>
-            {project.name}
-          </option>
-        ))}
-      </Select>
-      <Select aria-label="Filtrar por temporada" defaultValue="all">
-        <option value="all">Todas las Seasons</option>
-        {seasons.map((season) => (
-          <option value={season.id} key={season.id}>
-            {season.name}
-          </option>
-        ))}
-      </Select>
-      <Select aria-label="Filtrar por episodio" defaultValue="all">
-        <option value="all">Todos los Episodes</option>
-        {episodes.map((episode) => (
-          <option value={episode.id} key={episode.id}>
-            {episode.name}
-          </option>
-        ))}
-      </Select>
-      <label className="tloz-checkbox-filter">
-        <input type="checkbox" />
-        Solo mis Missions
-      </label>
-    </section>
   );
 }

@@ -1,10 +1,12 @@
-import { TlozFilters, TlozPageShell, TlozViewHeader } from "../../../components/tloz/tloz-shell";
-import { getTlozEpisodes, getTlozMissions, getTlozProjects, getTlozSeasons } from "../../../lib/tloz-data";
+import { TlozPageShell, TlozViewHeader } from "../../../components/tloz/tloz-shell";
+import { TlozFilters } from "../../../components/tloz/tloz-filters";
+import { getTlozEpisodes, getTlozMissionFilters, getTlozMissions, getTlozProjects, getTlozSeasons } from "../../../lib/tloz-data";
 import { ListClient } from "./list-client";
 
-export default async function TlozListPage() {
+export default async function TlozListPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const filters = await getTlozMissionFilters(searchParams);
   const [missions, projects, seasons, episodes] = await Promise.all([
-    getTlozMissions(),
+    getTlozMissions(filters),
     getTlozProjects(),
     getTlozSeasons(),
     getTlozEpisodes()
