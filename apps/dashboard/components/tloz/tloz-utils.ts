@@ -2,11 +2,16 @@ import {
   CircleDot,
   Copy,
   Database,
+  FileCheck,
   FileText,
   History,
+  KeyRound,
   LayoutDashboard,
   LucideIcon,
   Search,
+  Shield,
+  Sparkles,
+  Sword,
   Wrench
 } from "lucide-react";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
@@ -37,10 +42,15 @@ export const missionTypeTone: Record<TlozMissionType, string> = {
 const iconRegistry: Record<string, LucideIcon> = {
   Copy,
   Database,
+  FileCheck,
   FileText,
   History,
+  KeyRound,
   LayoutDashboard,
   Search,
+  Shield,
+  Sparkles,
+  Sword,
   Wrench
 };
 

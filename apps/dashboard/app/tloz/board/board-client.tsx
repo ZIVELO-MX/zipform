@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import type { TlozEpisode, TlozMissionStatus, TlozProject } from "@zipform/types";
+import type { TlozEpisode, TlozMissionStatus, TlozProject, UserProfile } from "@zipform/types";
 import { MissionBoard } from "../../../components/tloz/mission-views";
 import { MissionSlideOver } from "../../../components/tloz/mission-slide-over";
+import { toast } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../../lib/tloz-data";
 import { patchMissionStatus } from "../actions";
 
-export function BoardClient({ missions, projects, episodes }: { missions: TlozMissionRecord[]; projects: TlozProject[]; episodes: TlozEpisode[] }) {
+export function BoardClient({ missions, projects, episodes, users }: { missions: TlozMissionRecord[]; projects: TlozProject[]; episodes: TlozEpisode[]; users: UserProfile[] }) {
   const [currentMissions, setCurrentMissions] = useState(missions);
   const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,9 +25,11 @@ export function BoardClient({ missions, projects, episodes }: { missions: TlozMi
       try {
         const updated = await patchMissionStatus(missionId, status);
         updateMissionInView(updated);
+        toast.success("Estado actualizado", { description: `La misión se movió a ${status}.` });
       } catch {
         setCurrentMissions(previousMissions);
         setError("No se pudo actualizar la Mission. Intenta de nuevo.");
+        toast.error("No se pudo mover la misión", { description: "El Board volvió al estado anterior." });
       }
     });
   }
@@ -43,7 +46,7 @@ export function BoardClient({ missions, projects, episodes }: { missions: TlozMi
       <MissionSlideOver
         mission={selectedMission}
         onClose={() => setSelectedMission(null)}
-        editorOptions={{ projects, episodes }}
+        editorOptions={{ projects, episodes, users }}
         onMissionChange={updateMissionInView}
       />
     </>

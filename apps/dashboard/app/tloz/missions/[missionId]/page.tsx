@@ -14,8 +14,9 @@ export async function generateStaticParams() {
 
 export default async function MissionDetailPage({ params }: MissionDetailPageProps) {
   const { missionId } = await params;
-  const [mission, projects, episodes] = await Promise.all([
+  const [mission, missions, projects, episodes] = await Promise.all([
     getTlozMissionDetail(missionId),
+    getTlozMissions(),
     getTlozProjects(),
     getTlozEpisodes(),
   ]);
@@ -23,10 +24,11 @@ export default async function MissionDetailPage({ params }: MissionDetailPagePro
   if (!mission) {
     notFound();
   }
+  const users = Array.from(new Map(missions.map((item) => [item.owner.id, item.owner])).values());
 
   return (
     <TlozPageShell title={mission.title} description="Detalle completo de Mission con metadatos, dependencias, Quest Items, checklist, recursos y actividad placeholder." detailLabel="Mission Detail">
-      <MissionDetailView mission={mission} editorOptions={{ projects, episodes }} />
+      <MissionDetailView mission={mission} editorOptions={{ projects, episodes, users }} />
     </TlozPageShell>
   );
 }

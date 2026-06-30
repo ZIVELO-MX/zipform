@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { dataClient } from "../lib/data";
 import { AppShell } from "../components/app-shell";
+import { Toaster } from "@zipform/ui";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,6 +18,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <AppShell user={user}>
           {children}
         </AppShell>
+        <Toaster />
       </body>
     </html>
   );
