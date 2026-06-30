@@ -1,7 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { File, FileText, ImageIcon, Link2, Plus, StickyNote } from "lucide-react";
+import { CSSProperties, useState } from "react";
+import {
+  closestCorners,
+  DndContext,
+  DragEndEvent,
+  KeyboardCoordinateGetter,
+  KeyboardSensor,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { File, FileText, GripVertical, ImageIcon, Link2, Plus, StickyNote } from "lucide-react";
 import {
   Attachment,
   AttachmentContent,
@@ -34,6 +47,7 @@ import {
   missionTypeLabel,
   missionTypeTone,
 } from "./tloz-utils";
+import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 
 const statusConfig: Record<string, { label: string; dotColor: string; textColor: string; bgColor?: string }> = {
   now: { label: "Now", dotColor: "#1E8E5A", textColor: "#1E8E5A" },
@@ -47,6 +61,7 @@ const boardGroups = [
   { id: "now", label: "Now" },
   { id: "next", label: "Next" },
   { id: "later", label: "Later" },
+  { id: "blocked", label: "Blocked" },
   { id: "completed", label: "Completed" },
 ] as const;
 
@@ -741,95 +756,127 @@ export function MissionList({ missions, onSelect }: { missions: TlozMissionRecor
 // ─── BOARD ─────────────────────────────────────────────────────────
 
 export function MissionBoard({ missions, onSelect, onStatusChange }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void; onStatusChange?: (id: string, status: TlozMissionStatus) => void }) {
+  const keyboardCoordinates: KeyboardCoordinateGetter = (event, { currentCoordinates }) => {
+    const step = event.code === "ArrowLeft" || event.code === "ArrowRight" ? 312 : 72;
+    if (event.code === "ArrowRight") return { ...currentCoordinates, x: currentCoordinates.x + step };
+    if (event.code === "ArrowLeft") return { ...currentCoordinates, x: currentCoordinates.x - step };
+    if (event.code === "ArrowDown") return { ...currentCoordinates, y: currentCoordinates.y + step };
+    if (event.code === "ArrowUp") return { ...currentCoordinates, y: currentCoordinates.y - step };
+    return undefined;
+  };
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: keyboardCoordinates })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const status = String(event.over?.id ?? "").replace("status:", "") as TlozMissionStatus;
+    const mission = missions.find((item) => item.id === event.active.id);
+    if (!mission || !boardGroups.some((group) => group.id === status) || mission.status === status) return;
+    onStatusChange?.(mission.id, status);
+  }
+
   return (
-    <div className="tloz-scrl" style={{ display: "flex", gap: "16px", alignItems: "flex-start", minWidth: "min-content", height: "100%", paddingBottom: "8px" }}>
-      {boardGroups.map((group) => {
-        const groupMissions = missions.filter((mission) => mission.status === group.id);
-        const isCompleted = group.id === "completed";
-        const tone = group.id === "now" ? "#1E8E5A" : group.id === "next" ? "#3A47B5" : group.id === "later" ? "#9a9a98" : "#1E6B3C";
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragEnd={handleDragEnd}
+      accessibility={{
+        screenReaderInstructions: {
+          draggable: "Presiona Espacio o Enter para tomar una misión. Usa las flechas para moverla entre columnas, Espacio o Enter para soltarla y Escape para cancelar.",
+        },
+        announcements: {
+          onDragStart: ({ active }) => `Misión ${active.data.current?.title ?? active.id} seleccionada.`,
+          onDragOver: ({ active, over }) => over ? `Misión ${active.data.current?.title ?? active.id} sobre ${String(over.id).replace("status:", "")}.` : undefined,
+          onDragEnd: ({ active, over }) => over ? `Misión ${active.data.current?.title ?? active.id} movida a ${String(over.id).replace("status:", "")}.` : `Movimiento cancelado.`,
+          onDragCancel: ({ active }) => `Movimiento de ${active.data.current?.title ?? active.id} cancelado.`,
+        },
+      }}
+    >
+      <div className="tloz-board-scroll tloz-scrl" aria-label="Board de misiones">
+        <div className="tloz-board-track">
+          {boardGroups.map((group) => {
+            const groupMissions = missions.filter((mission) => mission.status === group.id);
+            const tone = group.id === "now" ? "#1E8E5A" : group.id === "next" ? "#3A47B5" : group.id === "later" ? "#9a9a98" : group.id === "blocked" ? "#B91C22" : "#1E6B3C";
+            return (
+              <BoardDropColumn key={group.id} id={group.id} label={group.label} count={groupMissions.length} tone={tone} active={group.id === "now"}>
+                {groupMissions.length > 0 ? groupMissions.map((mission) => (
+                  <BoardCard key={mission.id} mission={mission} isCompleted={group.id === "completed"} onSelect={onSelect} />
+                )) : <EmptyState title="Suelta una misión aquí" />}
+              </BoardDropColumn>
+            );
+          })}
+        </div>
+      </div>
+    </DndContext>
+  );
+}
 
-        return (
-          <BoardColumnShell key={group.id} title={group.label} count={groupMissions.length} tone={tone} active={group.id === "now"}>
-            <div className="tloz-droplist flex min-h-[60px] flex-1 flex-col gap-3 overflow-auto pb-2 pl-0.5 pr-0.5" data-group={group.id}>
-              {groupMissions.length > 0 ? (
-                groupMissions.map((mission) => (
-                  <BoardCard key={mission.id} mission={mission} isCompleted={isCompleted} onSelect={onSelect} onStatusChange={onStatusChange} />
-                ))
-              ) : (
-                <EmptyState title="Sin missions" />
-              )}
-            </div>
-          </BoardColumnShell>
-        );
-      })}
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span tabIndex={0}>
-            <button
-              className="tloz-addc"
-              style={{
-                flex: "0 0 240px",
-                alignSelf: "flex-start",
-                marginTop: "30px",
-                height: "46px",
-                background: "transparent",
-                border: "1.5px dashed rgba(29,29,27,0.16)",
-                borderRadius: "14px",
-                color: "#9a9a98",
-                fontFamily: "inherit",
-                fontWeight: 600,
-                fontSize: "13px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "7px",
-                cursor: "pointer",
-                transition: "all .2s ease"
-              }}
-              disabled
-            >
-              <Plus size={16} />
-              Añadir columna
-            </button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent side="top" align="center">
-          Pendiente: crear columna
-        </TooltipContent>
-      </Tooltip>
+function BoardDropColumn({ id, label, count, tone, active, children }: { id: TlozMissionStatus; label: string; count: number; tone: string; active: boolean; children: React.ReactNode }) {
+  const { isOver, setNodeRef } = useDroppable({ id: `status:${id}`, data: { status: id } });
+  return (
+    <div ref={setNodeRef} className="tloz-board-column" data-over={isOver}>
+      <BoardColumnShell title={label} count={count} tone={tone} active={active}>
+        <div className="tloz-droplist flex min-h-[84px] flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pb-2 pl-0.5 pr-0.5" data-group={id}>
+          {children}
+        </div>
+      </BoardColumnShell>
     </div>
   );
 }
 
-function BoardCard({ mission, isCompleted, onSelect, onStatusChange }: { mission: TlozMissionRecord; isCompleted: boolean; onSelect?: (m: TlozMissionRecord) => void; onStatusChange?: (id: string, status: TlozMissionStatus) => void }) {
+function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRecord; isCompleted: boolean; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
   const blocked = mission.requiredQuestItems.some((item) => item.status !== "completed") || mission.dependencies.length > 0;
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: mission.id,
+    data: { title: mission.title, status: mission.status },
+  });
+  const dragStyle: CSSProperties = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
+    : {};
 
   return (
     <div
+      ref={setNodeRef}
       className="tloz-kcard"
-      draggable="true"
       style={{
+        ...dragStyle,
         background: isCompleted ? "#FBFBFA" : "#fff",
         border: `1px solid ${isCompleted ? "rgba(29,29,27,0.08)" : "rgba(29,29,27,0.10)"}`,
         borderRadius: "14px",
         padding: "14px",
         boxShadow: "0 4px 14px rgba(29,29,27,0.04)",
-        opacity: isCompleted ? 0.82 : 1,
-        cursor: "grab"
+        opacity: isDragging ? 0.55 : isCompleted ? 0.82 : 1,
+        position: "relative",
+        zIndex: isDragging ? 5 : undefined,
       }}
-      onClick={(e) => {
-        e.preventDefault();
-        if (e.target === e.currentTarget || (e.target as HTMLElement).closest(".tloz-kcard")) {
+      data-dragging={isDragging}
+      onClick={() => onSelect?.(mission)}
+      onKeyDown={(event) => {
+        if (event.currentTarget !== event.target) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
           onSelect?.(mission);
         }
       }}
+      role="button"
+      tabIndex={0}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
         <ToneBadge tone={{ color: tone }} className="text-[10.5px]">
           {missionTypeLabel[mission.type]}
         </ToneBadge>
+        <button
+          type="button"
+          className="grid size-8 touch-none place-items-center rounded-lg text-carbon/45 transition-colors hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zivelo active:cursor-grabbing"
+          aria-label={`Mover ${mission.title}`}
+          onClick={(event) => event.stopPropagation()}
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical aria-hidden="true" />
+        </button>
         {isCompleted ? (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10.5px", color: "#1E6B3C", fontWeight: 700, background: "#E6F4EA", borderRadius: "999px", padding: "2px 8px" }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -890,20 +937,6 @@ function BoardCard({ mission, isCompleted, onSelect, onStatusChange }: { mission
           </div>
         </>
       )}
-      {onStatusChange ? (
-        <label className="mt-3 flex items-center gap-2 text-[10.5px] font-semibold text-carbon/60" onClick={(event) => event.stopPropagation()}>
-          Estado
-          <select
-            className="min-h-8 flex-1 rounded-lg border border-carbon/15 bg-paper px-2 text-xs font-semibold"
-            aria-label={`Estado de ${mission.title}`}
-            value={mission.status}
-            onChange={(event) => onStatusChange(mission.id, event.target.value as TlozMissionStatus)}
-          >
-            {boardGroups.map((group) => <option key={group.id} value={group.id}>{group.label}</option>)}
-            <option value="blocked">Blocked</option>
-          </select>
-        </label>
-      ) : null}
     </div>
   );
 }
@@ -941,69 +974,43 @@ export function MissionCalendar({ missions, onSelect }: { missions: TlozMissionR
 
 // ─── MISSION DETAIL VIEW ──────────────────────────────────────────
 
-export function MissionDetailView({ mission }: { mission: import("../../lib/tloz-data").TlozMissionDetail }) {
-  const tone = missionTypeTone[mission.type];
+export function MissionDetailView({ mission, editorOptions }: { mission: import("../../lib/tloz-data").TlozMissionDetail; editorOptions: MissionEditorOptions }) {
+  const [currentMission, setCurrentMission] = useState(mission);
+  const tone = missionTypeTone[currentMission.type];
   return (
     <div style={{ padding: "24px 26px 48px", maxWidth: "1180px", margin: "0 auto" }}>
       <div className="tloz-detail-grid">
         <section className="panel tloz-detail-main">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow" style={{ color: tone }}>{missionTypeLabel[mission.type]}</p>
-              <h3>{mission.title}</h3>
+              <p className="eyebrow" style={{ color: tone }}>{missionTypeLabel[currentMission.type]}</p>
+              <h2>{currentMission.title}</h2>
             </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span tabIndex={0}>
-                  <button
-                    className="tloz-pbtn"
-                    disabled
-                    style={{
-                      height: "36px",
-                      padding: "0 14px",
-                      borderRadius: "999px",
-                      border: "1px solid rgba(29,29,27,0.10)",
-                      background: "#fff",
-                      color: "#454543",
-                      fontFamily: "inherit",
-                      fontWeight: 600,
-                      fontSize: "12.5px",
-                      cursor: "pointer",
-                      transition: "all .2s ease"
-                    }}
-                  >
-                    Editar
-                  </button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="top" align="center">
-                Pendiente: edición persistente
-              </TooltipContent>
-            </Tooltip>
           </div>
-          <p style={{ color: "#6B6B6B", lineHeight: 1.6 }}>{mission.description}</p>
-          <div className="tloz-detail-meta">
-            <span>Status: {missionStatusLabel[mission.status]}</span>
-            <span>Proyecto: {mission.project.name}</span>
-            <span>Owner: {mission.owner.username}</span>
-            <span>Due date: {formatDate(mission.dueDate)}</span>
-            <span>Season: {mission.season?.name ?? "Sin Season"}</span>
-            <span>Episode: {mission.episode?.name ?? "Sin Episode"}</span>
-          </div>
+          <p style={{ color: "#6B6B6B", lineHeight: 1.6 }}>{currentMission.description}</p>
           <div>
-            <h4 style={{ marginBottom: "8px", fontSize: "14px", fontWeight: 700 }}>Outcome definition</h4>
+            <h3 style={{ marginBottom: "8px", fontSize: "14px", fontWeight: 700 }}>Definición del resultado</h3>
             <p style={{ color: "#6B6B6B", lineHeight: 1.6 }}>
-              {mission.conclusion ?? "TODO: definir outcome antes de marcar esta Mission como completada."}
+              {currentMission.conclusion ?? "Aún no se ha definido el resultado esperado de esta misión."}
             </p>
           </div>
         </section>
 
-        <aside className="panel tloz-detail-side" style={{ alignSelf: "start" }}>
-          <h3 style={{ marginBottom: "12px", fontSize: "14px", fontWeight: 700 }}>Quest Items</h3>
+        <aside className="panel tloz-detail-side" style={{ alignSelf: "start" }} aria-labelledby="mission-edit-heading">
+          <div className="mb-4">
+            <h2 id="mission-edit-heading" className="m-0 text-sm font-bold">Campos de la misión</h2>
+            <p className="mb-0 mt-1 text-xs text-carbon/50">Haz clic en un campo para modificarlo.</p>
+          </div>
+          <MissionInlineEditor
+            mission={currentMission}
+            options={editorOptions}
+            onMissionChange={(updated) => setCurrentMission((current) => ({ ...current, ...updated }))}
+          />
+          <h3 className="mb-3 mt-6 text-sm font-bold">Quest Items</h3>
           <div className="tloz-quest-list">
-            {mission.questItems.length > 0 ? (
-              mission.questItems.map((item) => {
-                const required = mission.requiredQuestItems.some((requiredItem) => requiredItem.id === item.id);
+            {currentMission.questItems.length > 0 ? (
+              currentMission.questItems.map((item) => {
+                const required = currentMission.requiredQuestItems.some((requiredItem) => requiredItem.id === item.id);
                 return (
                   <span key={item.id} data-status={item.status}>
                     <strong>{item.name}</strong>
@@ -1039,12 +1046,12 @@ export function MissionDetailView({ mission }: { mission: import("../../lib/tloz
             {mission.checklist.length > 0 ? (
               mission.checklist.map((item) => (
                 <label key={item.id}>
-                  <input type="checkbox" checked={item.completed} readOnly />
+                  <input type="checkbox" checked={item.completed} disabled />
                   <span>{item.title}</span>
                 </label>
               ))
             ) : (
-              <EmptyTlozState title="Sin checklist" description="TODO: definir creación y edición de checklist." />
+              <EmptyTlozState title="Sin checklist" description="Esta misión todavía no tiene pasos definidos." />
             )}
           </div>
         </section>
@@ -1076,7 +1083,7 @@ export function MissionDetailView({ mission }: { mission: import("../../lib/tloz
               })}
             </AttachmentGroup>
           ) : (
-            <EmptyTlozState title="Sin recursos" description="TODO: definir uploads, permisos y almacenamiento." />
+            <EmptyTlozState title="Sin recursos" description="Esta misión todavía no tiene recursos vinculados." />
           )}
         </section>
 
@@ -1086,7 +1093,7 @@ export function MissionDetailView({ mission }: { mission: import("../../lib/tloz
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            TODO: definir eventos visibles, retención y diferencia entre actividad y auditoría.
+            Aún no hay actividad registrada para esta misión.
           </div>
         </section>
       </div>

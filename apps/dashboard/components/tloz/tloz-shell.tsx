@@ -1,4 +1,5 @@
 import { PageSubHeader, SegmentedControl } from "@zipform/ui";
+import { getTlozMissions, getTlozProjects, getTlozQuestItems } from "../../lib/tloz-data";
 import { TlozHeader } from "./tloz-header";
 
 type TlozPageShellProps = {
@@ -12,7 +13,7 @@ type TlozPageShellProps = {
   fullWidth?: boolean;
 };
 
-export function TlozPageShell({
+export async function TlozPageShell({
   title,
   description,
   currentView,
@@ -22,6 +23,12 @@ export function TlozPageShell({
   fullWidth = false,
   children
 }: TlozPageShellProps) {
+  const [missions, projects, questItems] = await Promise.all([
+    getTlozMissions(),
+    getTlozProjects(),
+    getTlozQuestItems(),
+  ]);
+
   return (
     <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
       <TlozHeader
@@ -30,9 +37,16 @@ export function TlozPageShell({
         detailLabel={detailLabel}
         showSearch={showSearch}
         showHeader={showHeader}
+        commandEntities={{
+          missions: missions.map((mission) => ({ id: mission.id, label: mission.title })),
+          projects: projects.map((project) => ({ id: project.id, label: project.name })),
+          questItems: questItems.map((questItem) => ({ id: questItem.id, label: questItem.name })),
+        }}
       />
 
-      {children}
+      <main className="tloz-page-content" id="tloz-content" tabIndex={-1}>
+        {children}
+      </main>
     </div>
   );
 }

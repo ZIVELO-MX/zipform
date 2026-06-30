@@ -341,6 +341,18 @@ button {
   padding: 28px;
 }
 
+.shell-tloz {
+  block-size: 100dvh;
+  min-block-size: 0;
+  overflow: hidden;
+}
+
+.tloz-main-surface {
+  block-size: 100dvh;
+  overflow: hidden;
+  padding: 0;
+}
+
 .page-stack {
   display: grid;
   gap: 22px;
@@ -440,6 +452,7 @@ button {
   margin-block-end: 16px;
 }
 
+.panel-heading h2,
 .panel-heading h3 {
   margin: 4px 0 0;
   font-size: 1.32rem;
@@ -645,13 +658,163 @@ button {
 }
 
 .tloz-page {
+  display: flex;
+  block-size: 100%;
+  max-inline-size: none;
+  flex-direction: column;
+  gap: 0;
   container-type: inline-size;
 }
 
 .tloz-page-full {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  block-size: 100%;
+  min-block-size: 0;
+}
+
+.tloz-page-content {
+  display: flex;
+  min-block-size: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.tloz-main-header {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  display: flex;
+  min-block-size: 64px;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-block-end: 1px solid rgba(29, 29, 27, 0.1);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  padding: 10px 26px;
+  backdrop-filter: blur(14px);
+}
+
+.tloz-header-leading {
+  display: flex;
+  min-inline-size: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.tloz-command-trigger {
+  display: flex;
+  inline-size: min(430px, 48%);
+  min-block-size: 40px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(29, 29, 27, 0.12);
+  border-radius: 11px;
+  background: var(--paper);
+  padding: 0 10px 0 13px;
+  color: var(--ink-muted);
+  text-align: start;
+  cursor: pointer;
+}
+
+.tloz-command-trigger svg,
+.tloz-command-input-wrap svg,
+[cmdk-item] svg {
+  inline-size: 16px;
+  block-size: 16px;
+  flex: none;
+}
+
+.tloz-command-trigger span {
+  min-inline-size: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tloz-command-trigger kbd {
+  border: 1px solid rgba(29, 29, 27, 0.1);
+  border-radius: 5px;
+  background: var(--off-white);
+  padding: 2px 6px;
+  font-size: 0.68rem;
+}
+
+[cmdk-overlay] {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  background: rgba(29, 29, 27, 0.38);
+  backdrop-filter: blur(3px);
+}
+
+.tloz-command-dialog {
+  position: fixed;
+  z-index: 51;
+  inset-block-start: 18vh;
+  inset-inline-start: 50%;
+  inline-size: min(560px, calc(100% - 32px));
+  max-block-size: min(560px, 70dvh);
+  overflow: hidden;
+  border: 1px solid rgba(29, 29, 27, 0.12);
+  border-radius: 18px;
+  background: var(--paper);
+  box-shadow: 0 28px 80px rgba(29, 29, 27, 0.24);
+  transform: translateX(-50%);
+}
+
+.tloz-command-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-block-end: 1px solid rgba(29, 29, 27, 0.1);
+  padding: 0 18px;
+}
+
+[cmdk-input] {
+  inline-size: 100%;
+  min-block-size: 56px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+[cmdk-list] {
+  max-block-size: min(470px, calc(70dvh - 57px));
+  overflow-y: auto;
+  padding: 8px;
+}
+
+[cmdk-group-heading] {
+  padding: 10px 10px 6px;
+  color: var(--ink-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+[cmdk-item] {
+  display: flex;
+  min-block-size: 42px;
+  align-items: center;
+  gap: 11px;
+  border-radius: 10px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+[cmdk-item][data-selected="true"] {
+  background: var(--carbon);
+  color: white;
+}
+
+[cmdk-empty] {
+  padding: 36px 16px;
+  color: var(--ink-muted);
+  text-align: center;
 }
 
 .tloz-header h2 {
@@ -1205,6 +1368,11 @@ button {
 }
 
 .tloz-detail-side {
+  position: sticky;
+  inset-block-start: 16px;
+  max-block-size: calc(100dvh - 112px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   align-self: start;
 }
 
@@ -1302,6 +1470,38 @@ button {
 }
 
 /* --- TLOZ scrollbar --- */
+.tloz-board-scroll {
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+.tloz-board-track {
+  display: flex;
+  min-inline-size: max-content;
+  block-size: 100%;
+  align-items: stretch;
+  gap: 16px;
+  padding-block-end: 10px;
+}
+
+.tloz-board-column {
+  display: flex;
+  flex: 0 0 296px;
+  min-block-size: 0;
+  border-radius: 14px;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.tloz-board-column[data-over="true"] {
+  background: rgba(215, 34, 40, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(215, 34, 40, 0.18);
+}
+
 .tloz-scrl::-webkit-scrollbar {
   width: 9px;
   height: 9px;
@@ -1383,7 +1583,7 @@ button {
 
 /* --- Board card hover --- */
 .tloz-kcard {
-  transition: all 0.16s ease;
+  transition: box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, opacity 0.16s ease;
   cursor: grab;
 }
 .tloz-kcard:hover {
@@ -1455,6 +1655,31 @@ button {
 
   .main-surface {
     padding: 72px 16px calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .tloz-main-surface {
+    block-size: 100dvh;
+    padding: 0 0 calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .tloz-detail-side {
+    position: static;
+    max-block-size: none;
+    overflow: visible;
+  }
+
+  .tloz-main-header {
+    min-block-size: 56px;
+    padding: 8px 12px;
+  }
+
+  .tloz-command-trigger {
+    inline-size: auto;
+    min-block-size: 38px;
+  }
+
+  .tloz-command-trigger span {
+    display: none;
   }
 
   .page-header,

@@ -217,7 +217,7 @@ export type BoardColumnShellProps = {
 
 export function BoardColumnShell({ title, count, tone, active, children }: BoardColumnShellProps) {
   return (
-    <section className="flex max-h-full flex-[0_0_296px] flex-col [contain-intrinsic-size:auto_296px_auto_760px] [content-visibility:auto]">
+    <section className="flex min-w-0 max-h-full flex-1 flex-col [contain-intrinsic-size:auto_296px_auto_760px] [content-visibility:auto]">
       <div className="flex items-center gap-2 px-1.5 pb-3 pt-1">
         <span className={cn("size-2 rounded-full", active && "animate-pulse")} style={{ backgroundColor: tone }} aria-hidden="true" />
         <h2 className="m-0 text-[13px] font-bold tracking-normal">{title}</h2>
