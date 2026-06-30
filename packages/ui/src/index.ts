@@ -7,6 +7,7 @@ export * from "./components/badge";
 export * from "./components/breadcrumb";
 export * from "./components/button";
 export * from "./components/card";
+export * from "./components/command";
 export * from "./components/dropdown-menu";
 export * from "./components/dashboard-primitives";
 export * from "./components/input";

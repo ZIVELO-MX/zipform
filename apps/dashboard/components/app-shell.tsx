@@ -27,7 +27,7 @@ import {
   NavSection,
   TooltipProvider,
 } from "@zipform/ui";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 type AppShellProps = {
   children: ReactNode;
@@ -36,6 +36,14 @@ type AppShellProps = {
 
 const SIDEBAR_STATE_KEY = "zipform-sidebar-state";
 const SIDEBAR_WIDTH_KEY = "zipform-sidebar-width";
+
+const AppSidebarContext = createContext<(() => void) | null>(null);
+
+export function useAppSidebar() {
+  const toggleSidebar = useContext(AppSidebarContext);
+  if (!toggleSidebar) throw new Error("useAppSidebar must be used inside AppShell");
+  return { toggleSidebar };
+}
 
 function getEnabledApps(): NavItem[] {
   return [
@@ -147,11 +155,20 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
     return current?.label ?? "Zipform";
   }, [pathname]);
 
+  const toggleSidebar = useCallback(() => {
+    if (window.matchMedia("(max-width: 920px)").matches) {
+      setMobileMenuOpen((current) => !current);
+      return;
+    }
+    setCollapsed((current) => !current);
+  }, []);
+
   return (
-    <div
-      className="shell min-h-dvh bg-ivory text-carbon"
-      data-sidebar={collapsed ? "collapsed" : "expanded"}
-    >
+    <AppSidebarContext.Provider value={toggleSidebar}>
+      <div
+        className={`shell min-h-dvh bg-ivory text-carbon${isTloz ? " shell-tloz" : ""}`}
+        data-sidebar={collapsed ? "collapsed" : "expanded"}
+      >
       <DesktopSidebar
         collapsed={collapsed}
         pathname={pathname}
@@ -164,7 +181,7 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
         onToggleCollapsed={() => setCollapsed((current) => !current)}
       />
 
-      <main className="main-surface min-w-0">{children}</main>
+      <main className={`main-surface min-w-0${isTloz ? " tloz-main-surface" : ""}`}>{children}</main>
 
       <MobileBottomNav pathname={pathname} user={user} items={navItems} onOpenMenu={() => setMobileMenuOpen(true)} />
       <MobileMenuPanel
@@ -177,7 +194,7 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      <div className="fixed inset-x-0 top-0 z-20 flex h-12 items-center border-b border-carbon/10 bg-paper/90 backdrop-blur md:hidden">
+      {!isTloz ? <div className="fixed inset-x-0 top-0 z-20 flex h-12 items-center border-b border-carbon/10 bg-paper/90 backdrop-blur md:hidden">
         <button
           type="button"
           className="grid size-12 shrink-0 place-items-center text-carbon/70"
@@ -188,7 +205,8 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
         </button>
         <span className="flex-1 text-center text-sm font-black">{title}</span>
         <div className="size-12 shrink-0" />
+      </div> : null}
       </div>
-    </div>
+    </AppSidebarContext.Provider>
   );
 }
