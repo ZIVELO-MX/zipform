@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { MissionDetailView } from "../../../../components/tloz/mission-views";
 import { TlozPageShell } from "../../../../components/tloz/tloz-shell";
-import { getTlozMissionDetail, getTlozMissions } from "../../../../lib/tloz-data";
+import { getTlozEpisodes, getTlozMissionDetail, getTlozMissions, getTlozProjects } from "../../../../lib/tloz-data";
 
 type MissionDetailPageProps = {
   params: Promise<{ missionId: string }>;
@@ -14,7 +14,11 @@ export async function generateStaticParams() {
 
 export default async function MissionDetailPage({ params }: MissionDetailPageProps) {
   const { missionId } = await params;
-  const mission = await getTlozMissionDetail(missionId);
+  const [mission, projects, episodes] = await Promise.all([
+    getTlozMissionDetail(missionId),
+    getTlozProjects(),
+    getTlozEpisodes(),
+  ]);
 
   if (!mission) {
     notFound();
@@ -22,7 +26,7 @@ export default async function MissionDetailPage({ params }: MissionDetailPagePro
 
   return (
     <TlozPageShell title={mission.title} description="Detalle completo de Mission con metadatos, dependencias, Quest Items, checklist, recursos y actividad placeholder." detailLabel="Mission Detail">
-      <MissionDetailView mission={mission} />
+      <MissionDetailView mission={mission} editorOptions={{ projects, episodes }} />
     </TlozPageShell>
   );
 }

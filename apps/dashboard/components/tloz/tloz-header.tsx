@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   ListTodo,
   PackageOpen,
-  PanelLeft,
   Plus,
   Search,
   Sword,
@@ -20,10 +19,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Button,
   Command,
+  CommandDialogTitle,
 } from "@zipform/ui";
-import { useAppSidebar } from "../app-shell";
 
 type TlozHeaderProps = {
   title: string;
@@ -60,8 +58,9 @@ const commandGroups = [
 
 export function TlozHeader({ title, currentView, detailLabel, showSearch = true, showHeader = true, commandEntities }: TlozHeaderProps) {
   const [commandOpen, setCommandOpen] = useState(false);
-  const { toggleSidebar } = useAppSidebar();
   const router = useRouter();
+  const currentLabel = currentView || title;
+  const isDashboardRoot = currentLabel === "Dashboard" && !detailLabel;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -85,20 +84,25 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
     <>
       <header className="tloz-main-header">
         <div className="tloz-header-leading">
-          <Button variant="ghost" size="icon" type="button" aria-label="Alternar barra lateral" onClick={toggleSidebar}>
-            <PanelLeft aria-hidden="true" />
-          </Button>
           <Breadcrumb>
             <BreadcrumbList className="flex-nowrap text-carbon/60">
-              <BreadcrumbItem>
-                <BreadcrumbLink asChild>
-                  <Link href="/tloz">Dashboard</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem className="min-w-0">
-                <BreadcrumbPage className="truncate">{currentView || title}</BreadcrumbPage>
-              </BreadcrumbItem>
+              {isDashboardRoot ? (
+                <BreadcrumbItem>
+                  <BreadcrumbPage>Dashboard</BreadcrumbPage>
+                </BreadcrumbItem>
+              ) : (
+                <>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link href="/tloz">Dashboard</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem className="min-w-0">
+                    <BreadcrumbPage className="truncate">{currentLabel}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              )}
               {detailLabel ? (
                 <>
                   <BreadcrumbSeparator />
@@ -126,6 +130,7 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
         open={commandOpen}
         onOpenChange={setCommandOpen}
       >
+        <CommandDialogTitle className="sr-only">Buscar y ejecutar comandos</CommandDialogTitle>
         <div className="tloz-command-input-wrap">
           <Search aria-hidden="true" />
           <Command.Input autoFocus placeholder="Buscar misiones, proyectos, quest items..." />

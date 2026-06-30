@@ -452,6 +452,7 @@ button {
   margin-block-end: 16px;
 }
 
+.panel-heading h2,
 .panel-heading h3 {
   margin: 4px 0 0;
   font-size: 1.32rem;
@@ -1367,6 +1368,11 @@ button {
 }
 
 .tloz-detail-side {
+  position: sticky;
+  inset-block-start: 16px;
+  max-block-size: calc(100dvh - 112px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   align-self: start;
 }
 
@@ -1464,6 +1470,38 @@ button {
 }
 
 /* --- TLOZ scrollbar --- */
+.tloz-board-scroll {
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+.tloz-board-track {
+  display: flex;
+  min-inline-size: max-content;
+  block-size: 100%;
+  align-items: stretch;
+  gap: 16px;
+  padding-block-end: 10px;
+}
+
+.tloz-board-column {
+  display: flex;
+  flex: 0 0 296px;
+  min-block-size: 0;
+  border-radius: 14px;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.tloz-board-column[data-over="true"] {
+  background: rgba(215, 34, 40, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(215, 34, 40, 0.18);
+}
+
 .tloz-scrl::-webkit-scrollbar {
   width: 9px;
   height: 9px;
@@ -1545,7 +1583,7 @@ button {
 
 /* --- Board card hover --- */
 .tloz-kcard {
-  transition: all 0.16s ease;
+  transition: box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, opacity 0.16s ease;
   cursor: grab;
 }
 .tloz-kcard:hover {
@@ -1622,6 +1660,12 @@ button {
   .tloz-main-surface {
     block-size: 100dvh;
     padding: 0 0 calc(72px + env(safe-area-inset-bottom));
+  }
+
+  .tloz-detail-side {
+    position: static;
+    max-block-size: none;
+    overflow: visible;
   }
 
   .tloz-main-header {

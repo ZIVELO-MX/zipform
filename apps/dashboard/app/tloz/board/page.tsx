@@ -14,12 +14,12 @@ export default async function TlozBoardPage({ searchParams }: { searchParams: Pr
 
   return (
     <TlozPageShell title="Board" currentView="Board" showSearch fullWidth>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <TlozViewHeader title="Board" description="Flujo de trabajo del equipo · agrupado por estado" showAudienceToggle>
           <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
         </TlozViewHeader>
-        <div style={{ flex: 1, padding: "4px 26px 26px" }}>
-          <BoardClient missions={missions} />
+        <div className="min-h-0 min-w-0 flex-1 overflow-hidden px-[26px] pb-[26px] pt-1">
+          <BoardClient missions={missions} projects={projects} episodes={episodes} />
         </div>
       </div>
     </TlozPageShell>

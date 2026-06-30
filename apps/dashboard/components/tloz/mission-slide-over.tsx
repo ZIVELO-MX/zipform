@@ -11,17 +11,19 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  UserAvatarLabel,
 } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
-import { formatDate, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
+import { missionStatusLabel, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
+import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 
 type MissionSlideOverProps = {
   mission: TlozMissionRecord | null;
   onClose: () => void;
+  editorOptions?: MissionEditorOptions;
+  onMissionChange?: (mission: TlozMissionRecord) => void;
 };
 
-export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
+export function MissionSlideOver({ mission, onClose, editorOptions, onMissionChange }: MissionSlideOverProps) {
   const open = Boolean(mission);
 
   if (!mission) {
@@ -37,26 +39,12 @@ export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
       title="Detalle de Mission"
       onOpenChange={(nextOpen) => !nextOpen && onClose()}
       footer={
-        <>
-          <Button asChild className="h-[42px] flex-1 rounded-[11px] text-[13.5px] font-semibold">
-            <Link href={`/tloz/missions/${mission.id}`}>
-              <ExternalLink size={16} aria-hidden="true" />
-              Ver detalle completo
-            </Link>
-          </Button>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span tabIndex={0}>
-                <Button variant="outline" className="h-[42px] rounded-[11px] text-[13.5px] font-semibold" disabled>
-                  Editar
-                </Button>
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top" align="center">
-              Pendiente: edición persistente
-            </TooltipContent>
-          </Tooltip>
-        </>
+        <Button asChild className="h-[42px] flex-1 rounded-[11px] text-[13.5px] font-semibold">
+          <Link href={`/tloz/missions/${mission.id}`}>
+            <ExternalLink aria-hidden="true" />
+            Ver detalle completo
+          </Link>
+        </Button>
       }
     >
       <div className="flex flex-col gap-5">
@@ -74,14 +62,13 @@ export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
 
         <MetricProgress value={mission.progress} label={`${mission.progress}% completo`} tone="#D72228" />
 
-        <dl className="grid grid-cols-2 gap-2.5">
-          <MetaBox label="Proyecto">{mission.project.name}</MetaBox>
-          <MetaBox label="Vence" tone={mission.dueDate ? "danger" : "muted"}>{formatDate(mission.dueDate)}</MetaBox>
-          <MetaBox label="Owner">
-            <UserAvatarLabel name={mission.owner.name} label={mission.owner.username} imageUrl={mission.owner.avatarUrl} size="sm" />
-          </MetaBox>
-          <MetaBox label="Episode">{mission.episode?.name ?? "Sin episode"}</MetaBox>
-        </dl>
+        <section aria-labelledby="mission-fields-heading">
+          <div className="mb-2.5 flex items-center justify-between gap-3">
+            <h3 id="mission-fields-heading" className="m-0 text-[12.5px] font-bold uppercase text-carbon/75">Campos</h3>
+            <span className="text-[11px] text-carbon/45">Haz clic para editar</span>
+          </div>
+          <MissionInlineEditor mission={mission} options={editorOptions} onMissionChange={onMissionChange} />
+        </section>
 
         {mission.questItems.length > 0 ? (
           <SlideSection title={`Quest Items (${mission.questItems.length})`}>
@@ -138,17 +125,6 @@ export function MissionSlideOver({ mission, onClose }: MissionSlideOverProps) {
         ) : null}
       </div>
     </SlideOver>
-  );
-}
-
-function MetaBox({ label, tone, children }: { label: string; tone?: "danger" | "muted"; children: React.ReactNode }) {
-  return (
-    <div className="rounded-[11px] bg-carbon/5 p-3">
-      <dt className="mb-1 text-[10.5px] font-bold uppercase tracking-normal text-carbon/45">{label}</dt>
-      <dd className={tone === "danger" ? "m-0 text-[13px] font-semibold text-[#B91C22]" : "m-0 text-[13px] font-semibold text-carbon"}>
-        {children}
-      </dd>
-    </div>
   );
 }
 

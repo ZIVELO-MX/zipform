@@ -27,7 +27,7 @@ import {
   NavSection,
   TooltipProvider,
 } from "@zipform/ui";
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
 type AppShellProps = {
   children: ReactNode;
@@ -36,14 +36,6 @@ type AppShellProps = {
 
 const SIDEBAR_STATE_KEY = "zipform-sidebar-state";
 const SIDEBAR_WIDTH_KEY = "zipform-sidebar-width";
-
-const AppSidebarContext = createContext<(() => void) | null>(null);
-
-export function useAppSidebar() {
-  const toggleSidebar = useContext(AppSidebarContext);
-  if (!toggleSidebar) throw new Error("useAppSidebar must be used inside AppShell");
-  return { toggleSidebar };
-}
 
 function getEnabledApps(): NavItem[] {
   return [
@@ -155,20 +147,11 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
     return current?.label ?? "Zipform";
   }, [pathname]);
 
-  const toggleSidebar = useCallback(() => {
-    if (window.matchMedia("(max-width: 920px)").matches) {
-      setMobileMenuOpen((current) => !current);
-      return;
-    }
-    setCollapsed((current) => !current);
-  }, []);
-
   return (
-    <AppSidebarContext.Provider value={toggleSidebar}>
-      <div
-        className={`shell min-h-dvh bg-ivory text-carbon${isTloz ? " shell-tloz" : ""}`}
-        data-sidebar={collapsed ? "collapsed" : "expanded"}
-      >
+    <div
+      className={`shell min-h-dvh bg-ivory text-carbon${isTloz ? " shell-tloz" : ""}`}
+      data-sidebar={collapsed ? "collapsed" : "expanded"}
+    >
       <DesktopSidebar
         collapsed={collapsed}
         pathname={pathname}
@@ -206,7 +189,6 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
         <span className="flex-1 text-center text-sm font-black">{title}</span>
         <div className="size-12 shrink-0" />
       </div> : null}
-      </div>
-    </AppSidebarContext.Provider>
+    </div>
   );
 }
