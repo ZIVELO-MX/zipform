@@ -5,12 +5,14 @@ import { BoardClient } from "./board-client";
 
 export default async function TlozBoardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const filters = await getTlozMissionFilters(searchParams);
-  const [missions, projects, seasons, episodes] = await Promise.all([
+  const [missions, allMissions, projects, seasons, episodes] = await Promise.all([
     getTlozMissions(filters),
+    getTlozMissions(),
     getTlozProjects(),
     getTlozSeasons(),
     getTlozEpisodes()
   ]);
+  const users = Array.from(new Map(allMissions.map((mission) => [mission.owner.id, mission.owner])).values());
 
   return (
     <TlozPageShell title="Board" currentView="Board" showSearch fullWidth>
@@ -19,7 +21,7 @@ export default async function TlozBoardPage({ searchParams }: { searchParams: Pr
           <TlozFilters projects={projects} seasons={seasons} episodes={episodes} />
         </TlozViewHeader>
         <div className="min-h-0 min-w-0 flex-1 overflow-hidden px-[26px] pb-[26px] pt-1">
-          <BoardClient missions={missions} projects={projects} episodes={episodes} />
+          <BoardClient missions={missions} projects={projects} episodes={episodes} users={users} />
         </div>
       </div>
     </TlozPageShell>

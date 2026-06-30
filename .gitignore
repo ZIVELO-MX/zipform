@@ -1,5 +1,8 @@
 node_modules
+.pnpm-store
 .next
+.turbo
+.vercel
 dist
 coverage
 .env
@@ -9,3 +12,8 @@ coverage
 *.tsbuildinfo
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite-journal
+.DS_Store

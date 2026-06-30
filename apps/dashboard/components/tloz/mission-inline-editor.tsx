@@ -1,15 +1,31 @@
 "use client";
 
-import { Check, Pencil, X } from "lucide-react";
+import { Database, FileCheck, FileText, KeyRound, LayoutDashboard, Search, Shield, Sparkles, Sword, Wrench, Check, Pencil, X } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
+import { DatePicker, IconPicker, toast, UserPicker, type IconPickerOption } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozMissionStatus, TlozMissionType } from "@zipform/types";
 import { patchMissionStatus, updateMission } from "../../app/tloz/actions";
+import { missionTypeTone } from "./tloz-utils";
 
 export type MissionEditorOptions = {
   projects: Array<{ id: string; name: string }>;
   episodes: Array<{ id: string; name: string }>;
+  users: Array<{ id: string; name: string; username?: string; avatarUrl?: string }>;
 };
+
+const missionIcons: IconPickerOption[] = [
+  { id: "Sword", label: "Misión", icon: Sword },
+  { id: "Sparkles", label: "Destacado", icon: Sparkles },
+  { id: "LayoutDashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "Search", label: "Búsqueda", icon: Search },
+  { id: "Database", label: "Base de datos", icon: Database },
+  { id: "FileText", label: "Documento", icon: FileText },
+  { id: "FileCheck", label: "Validación", icon: FileCheck },
+  { id: "KeyRound", label: "Acceso", icon: KeyRound },
+  { id: "Shield", label: "Seguridad", icon: Shield },
+  { id: "Wrench", label: "Herramienta", icon: Wrench },
+];
 
 type MissionInlineEditorProps = {
   mission: TlozMissionRecord;
@@ -41,6 +57,7 @@ export function MissionInlineEditor({ mission, options, onMissionChange }: Missi
 
   function saveField(field: string, value: string) {
     setMessage("Guardando…");
+    const toastId = toast.loading("Guardando cambios…");
     startTransition(async () => {
       try {
         const updated = field === "status"
@@ -51,32 +68,72 @@ export function MissionInlineEditor({ mission, options, onMissionChange }: Missi
         setCurrentMission(updated);
         onMissionChange?.(updated);
         setMessage("Cambios guardados.");
+        toast.success("Misión actualizada", { id: toastId, description: `${fieldLabel(field)} se guardó correctamente.` });
       } catch {
         setMessage("No se pudo guardar. Intenta nuevamente.");
+        toast.error("No se pudo actualizar la misión", { id: toastId, description: "Revisa el campo e intenta nuevamente." });
       }
     });
   }
 
   return (
     <div className="flex flex-col gap-2.5" aria-busy={isPending}>
+      <PickerField label="Icono">
+        <IconPicker
+          icons={missionIcons}
+          value={currentMission.icon}
+          color={missionTypeTone[currentMission.type]}
+          recentStorageKey="zipform-tloz-recent-icons"
+          onValueChange={(value) => saveField("icon", value)}
+        />
+      </PickerField>
       <EditableMetaField label="Título" value={currentMission.title} displayValue={currentMission.title} onSave={(value) => saveField("title", value)} />
       <EditableMetaField label="Descripción" value={currentMission.description} displayValue={currentMission.description || "Sin descripción"} onSave={(value) => saveField("description", value)} />
       <EditableMetaField label="Resultado" value={currentMission.conclusion ?? ""} displayValue={currentMission.conclusion || "Sin resultado definido"} onSave={(value) => saveField("conclusion", value)} />
       <EditableMetaField label="Estado" value={currentMission.status} displayValue={statuses.find((item) => item.value === currentMission.status)?.label ?? currentMission.status} options={statuses} onSave={(value) => saveField("status", value)} />
       <EditableMetaField label="Tipo" value={currentMission.type} displayValue={missionTypes.find((item) => item.value === currentMission.type)?.label ?? currentMission.type} options={missionTypes} onSave={(value) => saveField("type", value)} />
       <EditableMetaField label="Progreso" value={String(currentMission.progress)} displayValue={`${currentMission.progress}%`} type="number" min="0" max="100" onSave={(value) => saveField("progress", value)} />
-      <EditableMetaField label="Fecha límite" value={currentMission.dueDate?.slice(0, 10) ?? ""} displayValue={currentMission.dueDate?.slice(0, 10) ?? "Sin fecha"} type="date" onSave={(value) => saveField("dueDate", value)} />
+      <PickerField label="Fecha límite">
+        <DatePicker value={currentMission.dueDate} label="Fecha límite" clearable={false} onValueChange={(value) => value && saveField("dueDate", value)} />
+      </PickerField>
       {options?.projects.length ? (
         <EditableMetaField label="Proyecto" value={currentMission.projectId} displayValue={currentMission.project.name} options={options.projects.map((project) => ({ value: project.id, label: project.name }))} onSave={(value) => saveField("projectId", value)} />
       ) : null}
       {options?.episodes.length ? (
         <EditableMetaField label="Episodio" value={currentMission.episodeId ?? ""} displayValue={currentMission.episode?.name ?? "Sin episodio"} options={[{ value: "", label: "Sin episodio" }, ...options.episodes.map((episode) => ({ value: episode.id, label: episode.name }))]} onSave={(value) => saveField("episodeId", value)} />
       ) : null}
-      <div className="rounded-[11px] bg-carbon/5 p-3">
-        <span className="block text-[10.5px] font-bold uppercase text-carbon/45">Owner</span>
-        <span className="mt-1 block truncate text-[13px] font-semibold">{currentMission.owner.name}</span>
-      </div>
+      {options?.users.length ? (
+        <PickerField label="Owner">
+          <UserPicker users={options.users} value={currentMission.ownerId} onValueChange={(value) => saveField("ownerId", value)} />
+        </PickerField>
+      ) : null}
       <p className={message.startsWith("No se pudo") ? "m-0 text-xs font-semibold text-[#B91C22]" : "m-0 text-xs text-carbon/50"} aria-live="polite">{message}</p>
+    </div>
+  );
+}
+
+function fieldLabel(field: string) {
+  const labels: Record<string, string> = {
+    icon: "El icono",
+    title: "El título",
+    description: "La descripción",
+    conclusion: "El resultado",
+    status: "El estado",
+    type: "El tipo",
+    progress: "El progreso",
+    dueDate: "La fecha límite",
+    projectId: "El proyecto",
+    episodeId: "El episodio",
+    ownerId: "El responsable",
+  };
+  return labels[field] ?? "El campo";
+}
+
+function PickerField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-[11px] bg-carbon/5 p-3">
+      <span className="mb-1.5 block text-[10.5px] font-bold uppercase text-carbon/45">{label}</span>
+      {children}
     </div>
   );
 }
