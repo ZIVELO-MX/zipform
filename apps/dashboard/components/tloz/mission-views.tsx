@@ -15,7 +15,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Link2, PanelRightOpen, Plus } from "lucide-react";
+import { Link2, Plus } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -106,11 +106,6 @@ export function DashboardNowSection({ missions, onSelect }: { missions: TlozMiss
   );
 }
 
-function OpenMissionButton({ mission, onSelect }: { mission: TlozMissionRecord; onSelect?: (mission: TlozMissionRecord) => void }) {
-  const label = `Abrir detalle de ${mission.title}`;
-  return <Tooltip><TooltipTrigger asChild>{onSelect ? <Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md [&_svg]:size-3" aria-label={label} onClick={(event) => { event.stopPropagation(); onSelect(mission); }}><PanelRightOpen aria-hidden="true" /></Button> : <Button asChild variant="ghost" size="icon-xs" className="size-6 rounded-md [&_svg]:size-3"><Link href={`/tloz/missions/${mission.id}`} aria-label={label} onClick={(event) => event.stopPropagation()}><PanelRightOpen aria-hidden="true" /></Link></Button>}</TooltipTrigger><TooltipContent>Abrir detalle</TooltipContent></Tooltip>;
-}
-
 function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionRecord; accent: string; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
 
@@ -160,7 +155,7 @@ function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionR
         </span>
         <div className="flex items-center gap-2"><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span><span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "#1E8E5A" }}>
           <span style={{ width: "7px", height: "7px", borderRadius: "999px", background: "#1E8E5A", animation: "nowpulse 1.8s ease-in-out infinite" }} />Now
-        </span><OpenMissionButton mission={mission} onSelect={onSelect} /></div>
+        </span></div>
       </div>
       <h3 style={{ margin: "0 0 7px", fontSize: "19px", fontWeight: 700, letterSpacing: "-0.01em" }}>{mission.title}</h3>
       <p style={{ margin: "0 0 16px", fontSize: "13.5px", color: "#6B6B6B", lineHeight: 1.5, textWrap: "pretty" }}>{missionPreviewDescription(mission.description)}</p>
@@ -251,7 +246,7 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
         </span>
         <div className="flex items-center gap-2"><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span><span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: 600, color: statusCfg.textColor }}>
           <span style={{ width: "6px", height: "6px", borderRadius: "999px", background: statusCfg.dotColor, animation: mission.status === "now" ? "nowpulse 1.8s ease-in-out infinite" : undefined }} />{statusCfg.label}
-        </span><OpenMissionButton mission={mission} onSelect={onSelect} /></div>
+        </span></div>
       </div>
       <h3 style={{ margin: "0 0 10px", fontSize: "15px", fontWeight: 700, lineHeight: 1.25 }}>{mission.title}</h3>
       <div style={{ display: "flex", gap: "7px", marginBottom: "13px" }}>
@@ -878,21 +873,7 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
             <span className="inline-flex items-center gap-1 rounded-full bg-[#E6F4EA] px-[8px] py-[2px] text-[10.5px] font-bold text-[#1E6B3C]">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
             </span>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="tloz-kcard-open-btn flex size-6 items-center justify-center rounded-md text-carbon/40 opacity-0 transition-opacity hover:bg-carbon/5 hover:text-carbon focus:opacity-100"
-                  aria-label={`Abrir detalle de ${mission.title}`}
-                  onClick={(e) => { e.stopPropagation(); onSelect?.(mission); }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M9 8h6" /><path d="M9 12h6" /><path d="M9 16h4" /></svg>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Abrir detalle</TooltipContent>
-            </Tooltip>
-          )}
+          ) : null}
         </div>
       </div>
       <div

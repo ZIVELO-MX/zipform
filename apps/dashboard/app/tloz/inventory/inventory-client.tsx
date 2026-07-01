@@ -13,7 +13,7 @@ const statusBadgeText: Record<string, string> = { planned: "#2D6CDF", active: "#
 
 type ViewMode = "table" | "list";
 
-export function QuestItemsClient({ questItems }: { questItems: TlozQuestItem[] }) {
+export function InventoryClient({ questItems }: { questItems: TlozQuestItem[] }) {
   const [view, setView] = useState<ViewMode>("table");
   const [selected, setSelected] = useState<TlozQuestItem | null>(null);
 
@@ -83,23 +83,36 @@ export function QuestItemsClient({ questItems }: { questItems: TlozQuestItem[] }
         )}
       </div>
 
-      <SlideOver open={Boolean(selected)} title={selected?.name ?? "Quest Item"} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        {selected ? <QuestItemDetail item={selected} /> : null}
+      <SlideOver open={Boolean(selected)} title={selected?.name ?? "Inventory"} onOpenChange={(open) => { if (!open) setSelected(null); }}>
+        {selected ? <InventoryDetail item={selected} /> : null}
       </SlideOver>
     </>
   );
 }
 
-function QuestItemDetail({ item }: { item: TlozQuestItem }) {
+function InventoryDetail({ item }: { item: TlozQuestItem }) {
   const Icon = resolveMissionIcon(item.icon);
   return (
-    <article className="min-h-full bg-[#FAFAF9] p-6">
-      <div className="mb-6 flex items-start gap-4">
+    <article className="flex min-h-full flex-col gap-6 bg-[#FAFAF9] p-6">
+      <div className="flex items-start gap-4">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-[#FFF4DE] text-[#7A5A12] [&_svg]:size-5"><Icon aria-hidden="true" /></span>
         <div className="min-w-0">
           <h2 className="m-0 text-xl font-bold text-carbon">{item.name}</h2>
           <span className="mt-2 inline-block rounded-full px-[10px] py-[4px] text-[11.5px] font-bold" style={{ background: statusBadgeBg[item.status], color: statusBadgeText[item.status] }}>{statusLabel[item.status]}</span>
           {item.acquiredAt ? <p className="mt-2 font-mono text-[12px] text-carbon/45">Adquirido: {item.acquiredAt}</p> : null}
+        </div>
+      </div>
+      <div className="rounded-xl border border-carbon/10 bg-white p-5">
+        <h3 className="mb-3 text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/55">Propiedades</h3>
+        <div className="space-y-2 text-[13px]">
+          <div className="flex items-center justify-between">
+            <span className="text-carbon/55">Estado</span>
+            <span className="font-semibold text-carbon">{statusLabel[item.status]}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-carbon/55">Adquirido</span>
+            <span className="font-mono text-carbon/70">{item.acquiredAt || "—"}</span>
+          </div>
         </div>
       </div>
       <div className="prose prose-sm max-w-none rounded-xl border border-carbon/10 bg-white p-5 text-carbon/75">

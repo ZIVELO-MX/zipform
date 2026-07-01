@@ -67,7 +67,7 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
       collapsible: true,
       defaultCollapsed: false,
       items: [
-        { label: "Inventory", href: "/tloz/quest-items", icon: PackageOpen },
+        { label: "Inventory", href: "/tloz/inventory", icon: PackageOpen },
       ],
     },
     ...(projectItems.length > 0

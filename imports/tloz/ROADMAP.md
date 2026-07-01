@@ -48,6 +48,20 @@ Current limitations:
 - Resources render as attachment metadata rows; uploads, previews, storage, and permissions are not implemented.
 - Permissions are not defined.
 
+Recent additions:
+
+- [IMPLEMENTED] Board cards: owner avatar+tooltip, type badge icon+color, detail button removed (click card opens SlideOver)
+- [IMPLEMENTED] Board columns: clean flex layout, no background
+- [IMPLEMENTED] Filters: selects deshabilitados (project/season/episode)
+- [IMPLEMENTED] Sidebar: Quest Items renamed to Inventory, project links point to dedicated pages
+- [IMPLEMENTED] Breadcrumb with project context (Missions > Core)
+- [IMPLEMENTED] Mission display IDs in PRO-0001 format
+- [IMPLEMENTED] /tloz/inventory page with table/list views, SlideOver detail (markdown + properties)
+- [IMPLEMENTED] /tloz/projects page: table of all projects (name, status, mission count)
+- [IMPLEMENTED] /tloz/projects/[id]: dashboard filtrado por proyecto con hero + view switcher + filtered views
+- [IMPLEMENTED] MissionDetail variant="panel" mode with "Abrir en página completa" link in properties sidebar
+- [IMPLEMENTED] getResources() in TlozRepository contract
+
 ---
 
 ## NEXT

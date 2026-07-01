@@ -45,7 +45,7 @@ const commandGroups = [
     heading: "Acciones",
     items: [
       { label: "Crear nueva misión", href: "/tloz/board?create=mission", icon: Plus, keywords: "mission misión nueva crear" },
-      { label: "Crear quest item", href: "/tloz#quest-items", icon: PackageOpen, keywords: "quest item crear" },
+      { label: "Crear quest item", href: "/tloz/inventory", icon: PackageOpen, keywords: "quest item crear" },
       { label: "Crear proyecto", href: "/tloz#projects", icon: FolderKanban, keywords: "proyecto crear" },
     ],
   },
@@ -173,7 +173,7 @@ export function TlozHeader({ title, projectLabel, detailLabel, showSearch = true
           </Command.Group>
           <Command.Group heading="Quest items">
             {commandEntities.questItems.map((questItem) => (
-              <Command.Item key={questItem.id} value={`Quest item ${questItem.label}`} onSelect={() => runCommand(`/tloz?questItem=${questItem.id}#quest-items`)}>
+              <Command.Item key={questItem.id} value={`Quest item ${questItem.label}`} onSelect={() => runCommand(`/tloz/inventory`)}>
                 <PackageOpen aria-hidden="true" />
                 <span>{questItem.label}</span>
               </Command.Item>
