@@ -5,10 +5,10 @@ import { TlozHeader } from "./tloz-header";
 type TlozPageShellProps = {
   title: string;
   description?: string;
-  currentView?: string;
   children: React.ReactNode;
   detailLabel?: string;
   showSearch?: boolean;
+  showDisplaySwitcher?: boolean;
   showHeader?: boolean;
   fullWidth?: boolean;
 };
@@ -16,9 +16,9 @@ type TlozPageShellProps = {
 export async function TlozPageShell({
   title,
   description,
-  currentView,
   detailLabel,
   showSearch = true,
+  showDisplaySwitcher = false,
   showHeader = true,
   fullWidth = false,
   children
@@ -33,9 +33,9 @@ export async function TlozPageShell({
     <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
       <TlozHeader
         title={title}
-        currentView={currentView}
         detailLabel={detailLabel}
         showSearch={showSearch}
+        showDisplaySwitcher={showDisplaySwitcher}
         showHeader={showHeader}
         commandEntities={{
           missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type })),

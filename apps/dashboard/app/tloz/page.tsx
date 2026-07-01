@@ -1,29 +1,77 @@
 import { TlozPageShell } from "../../components/tloz/tloz-shell";
-import { DashboardClient } from "./dashboard-client";
-import { getTlozDashboardSummary, getTlozEpisodes, getTlozMissions, getTlozProjects, getTlozQuestItems, getTlozSeasons } from "../../lib/tloz-data";
+import { TlozViewRenderer } from "./tloz-view-renderer";
+import {
+  getTlozDashboardSummary,
+  getTlozEpisodes,
+  getTlozMissionFilters,
+  getTlozMissions,
+  getTlozProjects,
+  getTlozQuestItems,
+  getTlozSeasons,
+} from "../../lib/tloz-data";
+import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { Suspense } from "react";
 import { TlozLoading } from "../../components/tloz/tloz-loading";
 
-async function DashboardData() {
-  const [summary, missions, projects, seasons, episodes, questItems] = await Promise.all([
-    getTlozDashboardSummary(), getTlozMissions(), getTlozProjects(), getTlozSeasons(), getTlozEpisodes(), getTlozQuestItems()
-  ]);
-  const users = Array.from(new Map(missions.map((mission) => [mission.owner.id, mission.owner])).values());
-  return <DashboardClient summary={summary} detailOptions={{ missions, projects, seasons, episodes, questItems, users }} />;
-}
+type TlozPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
 
-export default function TlozPage() {
+async function TlozData({ searchParams }: TlozPageProps) {
+  const params = await searchParams;
+  const view = typeof params.view === "string" ? params.view : "dashboard";
+  const filters = await getTlozMissionFilters(searchParams);
+
+  const dashboardView = view === "dashboard";
+
+  const [summary, missions, allMissions, projects, seasons, episodes, questItems] = await Promise.all([
+    dashboardView ? getTlozDashboardSummary() : Promise.resolve(null),
+    dashboardView ? Promise.resolve([] as TlozMissionRecord[]) : getTlozMissions(filters),
+    getTlozMissions(),
+    getTlozProjects(),
+    getTlozSeasons(),
+    getTlozEpisodes(),
+    getTlozQuestItems(),
+  ]);
+
+  const users = Array.from(new Map(allMissions.map((m) => [m.owner.id, m.owner])).values());
+
+  const detailOptions = {
+    missions: allMissions,
+    projects,
+    seasons,
+    episodes,
+    questItems,
+    users,
+  };
+
   return (
     <TlozPageShell
-      title="Dashboard"
-      description="Visión general del equipo · trabajo activo en todos los proyectos · 4 personas"
-      currentView="Dashboard"
-      showSearch={true}
-      showHeader={true}
+      title="Missions"
+      showSearch
+      showDisplaySwitcher
+      fullWidth={view === "board"}
     >
-      <Suspense fallback={<TlozLoading />}>
-        <DashboardData />
-      </Suspense>
+      <TlozViewRenderer
+        view={view}
+        summary={summary}
+        missions={missions}
+        allMissions={allMissions}
+        projects={projects}
+        seasons={seasons}
+        episodes={episodes}
+        users={users}
+        questItems={questItems}
+        detailOptions={detailOptions}
+      />
     </TlozPageShell>
+  );
+}
+
+export default async function TlozPage(props: TlozPageProps) {
+  return (
+    <Suspense fallback={<TlozLoading />}>
+      <TlozData searchParams={props.searchParams} />
+    </Suspense>
   );
 }

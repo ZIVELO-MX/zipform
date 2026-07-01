@@ -704,6 +704,13 @@ button {
   gap: 10px;
 }
 
+.tloz-header-trailing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .tloz-command-trigger {
   display: flex;
   inline-size: min(430px, 48%);

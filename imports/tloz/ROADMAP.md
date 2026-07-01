@@ -10,12 +10,9 @@ This roadmap is product-specific. The Zipform platform roadmap remains in
 
 ## NOW
 
-- [IMPLEMENTED] Dashboard route at `/tloz`
-- [IMPLEMENTED] Board route at `/tloz/board`
-- [IMPLEMENTED] Lista route at `/tloz/list`
-- [IMPLEMENTED] Tabla route at `/tloz/table`
-- [IMPLEMENTED] Calendario route at `/tloz/calendar`
+- [IMPLEMENTED] Mission workspace at `/tloz` with view query param (`?view=dashboard|board|list|table|calendar`)
 - [IMPLEMENTED] Mission Detail route at `/tloz/missions/[missionId]`
+- [LEGACY] View routes (`/tloz/board`, `/tloz/list`, `/tloz/table`, `/tloz/calendar`) redirect to `/tloz?view=...`
 - [IMPLEMENTED] Async mock data layer in `apps/dashboard/lib/tloz-data.ts`
 - [IMPLEMENTED] TLOZ shared types for Season, Episode, Project, Mission, dependencies, Quest Items, checklist items, resources, and user mission state
 - [IMPLEMENTED] Spanish UI with RPG terms kept in English
@@ -37,6 +34,9 @@ This roadmap is product-specific. The Zipform platform roadmap remains in
 - [IMPLEMENTED] currentUser imported from @zipform/data (no duplication)
 - [IMPLEMENTED] Search-aware client wrappers for Dashboard, Board, Lista, Tabla, and Calendario views
 - [IMPLEMENTED] Shared dashboard primitives for section headers, status pills, avatars, progress, board columns, and icon buttons
+- [IMPLEMENTED] Sidebar entity-based with collapsible sections and project counters
+- [IMPLEMENTED] Display switcher in header (DropdownMenu) to switch view without changing entity
+- [IMPLEMENTED] Views consolidated under `/tloz?view=` query parameter with redirects from legacy routes
 - [IMPLEMENTED] Shared slide-over drawer primitive used by Mission detail previews
 - [IMPLEMENTED] Internal Attachment primitive for resource metadata rows and action affordances
 

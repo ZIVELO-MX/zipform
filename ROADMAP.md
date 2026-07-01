@@ -83,6 +83,7 @@ P2 — completar experiencia de producto:
 - [TLOZ][UX] Sincronizar el Mission slide-over con mutaciones optimistas y añadir loading boundaries específicos por vista
 - [TLOZ][BOARD] Implementar drag-and-drop accesible o retirar el atributo `draggable` hasta que exista comportamiento real
 - [TLOZ][ARCHITECTURE] Dividir `mission-views.tsx` por vista y consolidar configuración compartida de estados
+- [TLOZ][ARCHITECTURE] Separar navegación (sidebar por entidades) de visualización (Display switcher en header)
 - [TLOZ][DOCS] Sincronizar `apps/dashboard/app/tloz/ARQUITECTURE.md` con CRUD, filtros, tests y estados UX ya implementados
 
 **UI**

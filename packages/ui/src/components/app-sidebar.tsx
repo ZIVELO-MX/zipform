@@ -9,7 +9,7 @@ import {
   Settings,
   X
 } from "lucide-react";
-import { type ComponentType, useCallback } from "react";
+import { type ComponentType, useCallback, useState } from "react";
 
 export type SidebarUser = {
   name: string;
@@ -29,6 +29,7 @@ import {
   AlertDialogTrigger,
 } from "./alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import { Badge } from "./badge";
 import { Button } from "./button";
 import {
   DropdownMenu,
@@ -40,16 +41,20 @@ import {
 } from "./dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { cn } from "../lib/utils";
+import { ChevronDown } from "lucide-react";
 
 export type NavItem = {
   label: string;
   href: string;
   icon: ComponentType<{ className?: string; size?: number }>;
+  badge?: string | number;
 };
 
 export type NavSection = {
   label?: string;
   items: NavItem[];
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
 };
 
 export const SIDEBAR_MIN_WIDTH = 220;
@@ -58,9 +63,8 @@ export const SIDEBAR_DEFAULT_WIDTH = 284;
 
 export function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
-  const segments = href.split("/").filter(Boolean);
   if (pathname === href) return true;
-  if (segments.length > 1 && pathname.startsWith(`${href}/`)) return true;
+  if (pathname.startsWith(`${href}/`)) return true;
   return false;
 }
 
@@ -152,16 +156,12 @@ export function DesktopSidebar({
             </div>
           ) : null}
           {(sections ?? [{ items }]).map((section, sectionIndex) => (
-            <div className="grid gap-1" key={section.label ?? sectionIndex}>
-              {section.label && !collapsed ? (
-                <p className="m-0 px-3 pb-1 text-[0.68rem] font-medium uppercase tracking-0 text-carbon/40">
-                  {section.label}
-                </p>
-              ) : null}
-              {section.items.map((item) => (
-                <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={collapsed} />
-              ))}
-            </div>
+            <SidebarSection
+              key={section.label ?? sectionIndex}
+              section={section}
+              collapsed={collapsed}
+              pathname={pathname}
+            />
           ))}
         </nav>
       </div>
@@ -227,7 +227,22 @@ export function SidebarLink({
       aria-current={active ? "page" : undefined}
     >
       <Icon size={18} className="shrink-0" />
-      {!collapsed ? <span className="truncate">{item.label}</span> : null}
+      {!collapsed ? (
+        <>
+          <span className="flex-1 truncate">{item.label}</span>
+          {item.badge != null ? (
+            typeof item.badge === "number" ? (
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-carbon/10 text-[0.65rem] font-semibold text-carbon/60">
+                {item.badge}
+              </span>
+            ) : (
+              <span className="rounded-full bg-carbon/10 px-2 py-0.5 text-[0.65rem] font-semibold text-carbon/60">
+                {item.badge}
+              </span>
+            )
+          ) : null}
+        </>
+      ) : null}
     </Link>
   );
 
@@ -347,7 +362,7 @@ export function MobileMenuPanel({
                   {section.label}
                 </p>
               ) : null}
-              {section.items.map((item) => (
+              {(section.collapsible ? section.items : section.items).map((item) => (
                 <MobileNavLink key={item.href} item={item} active={isActive(pathname, item.href)} onClose={onClose} />
               ))}
             </div>
@@ -463,6 +478,56 @@ export function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+  );
+}
+
+function SidebarSection({
+  section,
+  collapsed,
+  pathname
+}: {
+  section: NavSection;
+  collapsed: boolean;
+  pathname: string;
+}) {
+  const [open, setOpen] = useState(!section.defaultCollapsed);
+
+  if (collapsed) {
+    return (
+      <div className="grid gap-1">
+        {section.items.map((item) => (
+          <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-1">
+      {section.label ? (
+        <button
+          type="button"
+          onClick={section.collapsible ? () => setOpen((v) => !v) : undefined}
+          className={cn(
+            "flex items-center gap-1.5 px-3 pb-1 text-[0.68rem] font-medium uppercase tracking-0 text-carbon/40",
+            section.collapsible && "w-full cursor-pointer hover:text-carbon/60"
+          )}
+        >
+          {section.collapsible ? (
+            <ChevronDown
+              size={12}
+              className={cn("shrink-0 transition-transform duration-200", !open && "-rotate-90")}
+            />
+          ) : null}
+          {section.label}
+        </button>
+      ) : null}
+      {open || !section.collapsible
+        ? section.items.map((item) => (
+            <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={false} />
+          ))
+        : null}
+    </div>
   );
 }
 

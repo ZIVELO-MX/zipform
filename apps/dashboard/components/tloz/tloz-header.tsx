@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   FolderKanban,
-  LayoutDashboard,
   ListTodo,
   PackageOpen,
   Plus,
@@ -25,13 +24,14 @@ import {
 } from "@zipform/ui";
 import type { TlozMissionType } from "@zipform/types";
 import { missionTypeTone, resolveMissionIcon } from "./tloz-utils";
+import { DisplaySwitcher } from "./display-switcher";
 
 type TlozHeaderProps = {
   title: string;
-  currentView?: string;
   detailLabel?: string;
   showSearch?: boolean;
   showHeader?: boolean;
+  showDisplaySwitcher?: boolean;
   commandEntities: {
     missions: Array<{ id: string; label: string; icon: string; type: TlozMissionType }>;
     projects: Array<{ id: string; label: string; icon: string }>;
@@ -51,19 +51,14 @@ const commandGroups = [
   {
     heading: "Navegación",
     items: [
-      { label: "Dashboard", href: "/tloz", icon: LayoutDashboard, keywords: "inicio resumen" },
-      { label: "Missions", href: "/tloz/board", icon: Sword, keywords: "misiones missions board" },
-      { label: "Projects", href: "/tloz#projects", icon: FolderKanban, keywords: "proyectos projects" },
-      { label: "Quest items", href: "/tloz#quest-items", icon: ListTodo, keywords: "quest items tareas" },
+      { label: "Missions", href: "/tloz", icon: Sword, keywords: "misiones missions" },
     ],
   },
 ];
 
-export function TlozHeader({ title, currentView, detailLabel, showSearch = true, showHeader = true, commandEntities }: TlozHeaderProps) {
+export function TlozHeader({ title, detailLabel, showSearch = true, showHeader = true, showDisplaySwitcher = false, commandEntities }: TlozHeaderProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   const router = useRouter();
-  const currentLabel = currentView || title;
-  const isDashboardRoot = currentLabel === "Dashboard" && !detailLabel;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -89,31 +84,23 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
         <div className="tloz-header-leading">
           <Breadcrumb>
             <BreadcrumbList className="flex-nowrap text-carbon/60">
-              {isDashboardRoot ? (
-                <BreadcrumbItem>
-                  <BreadcrumbPage>Dashboard</BreadcrumbPage>
-                </BreadcrumbItem>
-              ) : (
+              {detailLabel ? (
                 <>
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link href="/tloz">Dashboard</Link>
+                      <Link href="/tloz">{title}</Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbItem className="min-w-0">
-                    <BreadcrumbPage className="truncate">{currentLabel}</BreadcrumbPage>
-                  </BreadcrumbItem>
-                </>
-              )}
-              {detailLabel ? (
-                <>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem className="min-w-0">
                     <BreadcrumbPage className="truncate">{detailLabel}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </>
-              ) : null}
+              ) : (
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{title}</BreadcrumbPage>
+                </BreadcrumbItem>
+              )}
             </BreadcrumbList>
           </Breadcrumb>
         </div>
@@ -124,6 +111,12 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
             <span>Buscar misiones, proyectos, quest items...</span>
             <kbd>⌘K / Ctrl+K</kbd>
           </button>
+        ) : null}
+
+        {showDisplaySwitcher ? (
+          <div className="tloz-header-trailing">
+            <DisplaySwitcher />
+          </div>
         ) : null}
       </header>
 
@@ -167,7 +160,7 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
           </Command.Group>
           <Command.Group heading="Proyectos">
             {commandEntities.projects.map((project) => (
-              <Command.Item key={project.id} value={`Proyecto ${project.label}`} onSelect={() => runCommand(`/tloz?project=${project.id}#projects`)}>
+              <Command.Item key={project.id} value={`Proyecto ${project.label}`} onSelect={() => runCommand(`/tloz?project=${project.id}`)}>
                 <FolderKanban aria-hidden="true" />
                 <span>{project.label}</span>
               </Command.Item>

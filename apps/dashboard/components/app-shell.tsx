@@ -2,22 +2,15 @@
 
 import {
   ArrowLeft,
-  Boxes,
-  CalendarDays,
   FileText,
-  FolderKanban,
   Home,
-  KanbanSquare,
   LayoutDashboard,
-  List,
   Menu,
   PackageOpen,
   Sword,
-  Table2,
-  X
 } from "lucide-react";
 import { usePathname } from "next/navigation";
-import type { UserProfile } from "@zipform/types";
+import type { TlozProject, UserProfile } from "@zipform/types";
 import {
   DesktopSidebar,
   isActive,
@@ -28,10 +21,13 @@ import {
   TooltipProvider,
 } from "@zipform/ui";
 import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { resolveMissionIcon } from "./tloz/tloz-utils";
 
 type AppShellProps = {
   children: ReactNode;
   user: UserProfile;
+  tlozProjects?: TlozProject[];
+  projectActiveCounts?: Map<string, number>;
 };
 
 const SIDEBAR_STATE_KEY = "zipform-sidebar-state";
@@ -49,45 +45,65 @@ const navItems = getEnabledApps();
 
 const tlozContextItem: NavItem = { label: "TLOZ", href: "/", icon: ArrowLeft };
 
-const tlozSections: NavSection[] = [
-  {
-    items: [
-      { label: "Dashboard", href: "/tloz", icon: LayoutDashboard },
-      { label: "Board", href: "/tloz/board", icon: KanbanSquare },
-      { label: "Lista", href: "/tloz/list", icon: List },
-      { label: "Tabla", href: "/tloz/table", icon: Table2 },
-      { label: "Calendario", href: "/tloz/calendar", icon: CalendarDays }
-    ]
-  },
-  {
-    label: "Sistema",
-    items: [
-      { label: "Quest Items", href: "/tloz#quest-items", icon: PackageOpen },
-      { label: "Recursos", href: "/tloz#resources", icon: Boxes }
-    ]
-  },
-  {
-    label: "Proyectos",
-    items: [{ label: "Proyectos", href: "/tloz#projects", icon: FolderKanban }]
-  }
-];
+function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<string, number>): NavSection[] {
+  const projectItems: NavItem[] = projects.map((project) => {
+    const Icon = resolveMissionIcon(project.icon);
+    return {
+      label: project.name,
+      href: `/tloz?project=${project.id}`,
+      icon: Icon,
+      badge: projectActiveCounts.get(project.id) ?? 0,
+    };
+  });
 
-export function AppShell({ children, user }: AppShellProps) {
+  return [
+    {
+      items: [
+        { label: "Missions", href: "/tloz", icon: LayoutDashboard },
+      ],
+    },
+    {
+      label: "Sistema",
+      collapsible: true,
+      defaultCollapsed: false,
+      items: [
+        { label: "Quest Items", href: "/tloz/quest-items", icon: PackageOpen },
+      ],
+    },
+    ...(projectItems.length > 0
+      ? [
+        {
+          label: "Proyectos",
+          collapsible: true,
+          defaultCollapsed: false,
+          items: projectItems,
+        } satisfies NavSection,
+      ]
+      : []),
+  ];
+}
+
+export function AppShell({ children, user, tlozProjects = [], projectActiveCounts = new Map() }: AppShellProps) {
   return (
     <TooltipProvider delayDuration={180}>
-      <DashboardLayoutClient user={user}>
+      <DashboardLayoutClient user={user} tlozProjects={tlozProjects} projectActiveCounts={projectActiveCounts}>
         {children}
       </DashboardLayoutClient>
     </TooltipProvider>
   );
 }
 
-function DashboardLayoutClient({ children, user }: AppShellProps) {
+function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCounts }: AppShellProps) {
   const pathname = usePathname();
   const isTloz = pathname === "/tloz" || pathname.startsWith("/tloz/");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(284);
+
+  const tlozSections = useMemo(
+    () => buildTlozSections(tlozProjects ?? [], projectActiveCounts ?? new Map()),
+    [tlozProjects, projectActiveCounts]
+  );
 
   useEffect(() => {
     setCollapsed(window.localStorage.getItem(SIDEBAR_STATE_KEY) === "collapsed");
@@ -177,14 +193,14 @@ function DashboardLayoutClient({ children, user }: AppShellProps) {
         onClose={() => setMobileMenuOpen(false)}
       />
 
-      {!isTloz ? <div className="fixed inset-x-0 top-0 z-20 flex h-12 items-center border-b border-carbon/10 bg-paper/90 backdrop-blur md:hidden">
+          {!isTloz ? <div className="fixed inset-x-0 top-0 z-20 flex h-12 items-center border-b border-carbon/10 bg-paper/90 backdrop-blur md:hidden">
         <button
           type="button"
           className="grid size-12 shrink-0 place-items-center text-carbon/70"
           aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
           onClick={() => setMobileMenuOpen((prev) => !prev)}
         >
-          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          {mobileMenuOpen ? <Menu size={20} /> : <Menu size={20} />}
         </button>
         <span className="flex-1 text-center text-sm font-black">{title}</span>
         <div className="size-12 shrink-0" />
