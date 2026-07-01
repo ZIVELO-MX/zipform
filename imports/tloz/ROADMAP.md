@@ -62,6 +62,8 @@ Current limitations:
 - Define Quest Item acquisition, requirement, and blocking semantics.
 - Define the activity event model.
 - Define resource upload, preview, access, deletion, and storage behavior.
+- Define and persist Kano classification before exposing it again; never derive `Basic` from Mission type.
+- Re-enable Episode in Mission properties after the Project → Season → Episode selector and empty-state behavior are finalized.
 
 ### Persistence
 

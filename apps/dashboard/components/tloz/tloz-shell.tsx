@@ -38,9 +38,9 @@ export async function TlozPageShell({
         showSearch={showSearch}
         showHeader={showHeader}
         commandEntities={{
-          missions: missions.map((mission) => ({ id: mission.id, label: mission.title })),
-          projects: projects.map((project) => ({ id: project.id, label: project.name })),
-          questItems: questItems.map((questItem) => ({ id: questItem.id, label: questItem.name })),
+          missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type })),
+          projects: projects.map((project) => ({ id: project.id, label: project.name, icon: project.icon })),
+          questItems: questItems.map((questItem) => ({ id: questItem.id, label: questItem.name, icon: questItem.icon })),
         }}
       />
 

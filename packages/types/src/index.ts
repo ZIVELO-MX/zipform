@@ -105,7 +105,7 @@ export type TlozMission = {
   status: TlozMissionStatus;
   conclusion?: string;
   ownerId: string;
-  projectId: string;
+  projectId?: string;
   seasonId?: string;
   episodeId?: string;
   dueDate?: string;

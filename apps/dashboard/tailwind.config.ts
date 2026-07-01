@@ -7,7 +7,7 @@ const config: Config = {
     extend: {
       colors: {
         carbon: "#1D1D1B",
-        ivory: "#F5F4F0",
+        ivory: "#FAFAF9",
         paper: "#FFFDF8",
         stonewarm: "#C8B99A",
         zivelo: "#D72228",

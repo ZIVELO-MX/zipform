@@ -32,8 +32,8 @@ describe("TLOZ hydration", () => {
     expect(hydrateMission(data, source).owner).toMatchObject({ id: "missing-user", name: "missing-user" });
   });
 
-  it("rejects a mission whose project does not exist", () => {
-    expect(() => hydrateMission(data, { ...missions[0], projectId: "missing" })).toThrow("is missing project");
+  it("supports missions without a project", () => {
+    expect(hydrateMission(data, { ...missions[0], projectId: undefined }).project).toBeUndefined();
   });
 
   it("hydrates every mission and builds dashboard groups", () => {
@@ -48,6 +48,7 @@ describe("TLOZ hydration", () => {
     const detail = buildTlozMissionDetail(data, missions[0].id);
     expect(detail?.checklist).toEqual([...(detail?.checklist ?? [])].sort((a, b) => a.position - b.position));
     expect(detail?.resources.every((item) => item.missionId === missions[0].id)).toBe(true);
+    expect(detail?.requiredBy.every((item) => item.id !== missions[0].id)).toBe(true);
     expect(buildTlozMissionDetail(data, "missing")).toBeNull();
   });
 });

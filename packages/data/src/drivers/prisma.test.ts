@@ -63,7 +63,9 @@ describe("prisma data driver", () => {
     expect(await client.tloz.getMissions()).toHaveLength(missions.length);
     expect(await client.tloz.getMissionDetail(missions[0].id)).not.toBeNull();
     expect((await client.tloz.getDashboardSummary()).projects).toHaveLength(projects.length);
-    expect(await client.tloz.getProjects()).toHaveLength(projects.length);
+    expect(await client.tloz.getProjects()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: projects[0].id, color: projects[0].color })
+    ]));
     expect(await client.tloz.getSeasons()).toHaveLength(seasons.length);
     expect(await client.tloz.getEpisodes()).toHaveLength(episodes.length);
     expect(await client.tloz.getQuestItems()).toHaveLength(questItems.length);
@@ -82,7 +84,8 @@ describe("prisma data driver", () => {
     const { createdAt: _createdAt, updatedAt: _updatedAt, completedAt: _completedAt, ...input } = missions[0];
     const created = await client.tloz.createMission({ ...input, id: "prisma-test", title: "Created" });
     expect(created.title).toBe("Created");
-    expect((await client.tloz.updateMission(created.id, { title: "Updated" })).title).toBe("Updated");
+    const updated = await client.tloz.updateMission(created.id, { title: "Updated", startDate: "2026-07-01" });
+    expect(updated).toMatchObject({ title: "Updated", startDate: "2026-07-01" });
     expect((await client.tloz.patchMissionStatus(created.id, "completed")).completedAt).toBeTruthy();
     await client.tloz.deleteMission(created.id);
     expect(await client.tloz.getMissionDetail(created.id)).toBeNull();

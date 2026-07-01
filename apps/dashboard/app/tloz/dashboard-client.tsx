@@ -12,8 +12,9 @@ import {
 } from "../../components/tloz/mission-views";
 import { MissionSlideOver } from "../../components/tloz/mission-slide-over";
 import type { TlozDashboardSummary, TlozMissionRecord } from "../../lib/tloz-data";
+import type { MissionDetailOptions } from "../../components/tloz/mission-detail";
 
-export function DashboardClient({ summary }: { summary: TlozDashboardSummary }) {
+export function DashboardClient({ summary, detailOptions }: { summary: TlozDashboardSummary; detailOptions: MissionDetailOptions }) {
   const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
 
   return (
@@ -64,7 +65,7 @@ export function DashboardClient({ summary }: { summary: TlozDashboardSummary }) 
         <DashboardQuestItemsSection questItems={summary.questItems} />
       </div>
 
-      <MissionSlideOver mission={selectedMission} onClose={() => setSelectedMission(null)} />
+      <MissionSlideOver mission={selectedMission} onClose={() => setSelectedMission(null)} editorOptions={detailOptions} />
     </>
   );
 }
