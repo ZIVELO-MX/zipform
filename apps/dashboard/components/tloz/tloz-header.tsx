@@ -28,6 +28,7 @@ import { DisplaySwitcher } from "./display-switcher";
 
 type TlozHeaderProps = {
   title: string;
+  projectLabel?: string;
   detailLabel?: string;
   showSearch?: boolean;
   showHeader?: boolean;
@@ -56,7 +57,7 @@ const commandGroups = [
   },
 ];
 
-export function TlozHeader({ title, detailLabel, showSearch = true, showHeader = true, showDisplaySwitcher = false, commandEntities }: TlozHeaderProps) {
+export function TlozHeader({ title, projectLabel, detailLabel, showSearch = true, showHeader = true, showDisplaySwitcher = false, commandEntities }: TlozHeaderProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   const router = useRouter();
 
@@ -84,23 +85,27 @@ export function TlozHeader({ title, detailLabel, showSearch = true, showHeader =
         <div className="tloz-header-leading">
           <Breadcrumb>
             <BreadcrumbList className="flex-nowrap text-carbon/60">
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link href="/tloz">{title}</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              {projectLabel ? (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>{projectLabel}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </>
+              ) : null}
               {detailLabel ? (
                 <>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild>
-                      <Link href="/tloz">{title}</Link>
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem className="min-w-0">
                     <BreadcrumbPage className="truncate">{detailLabel}</BreadcrumbPage>
                   </BreadcrumbItem>
                 </>
-              ) : (
-                <BreadcrumbItem>
-                  <BreadcrumbPage>{title}</BreadcrumbPage>
-                </BreadcrumbItem>
-              )}
+              ) : null}
             </BreadcrumbList>
           </Breadcrumb>
         </div>

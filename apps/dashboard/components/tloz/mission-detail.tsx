@@ -176,7 +176,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
             <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
               <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold ${typeBadgeClass}`}><Star className="size-[13px] fill-current" aria-hidden="true" />{missionTypeLabel[current.type]}</span>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold ${statusBadgeClass}`}><span className={`size-[7px] rounded-full bg-current ${current.status === "now" ? "animate-pulse" : ""}`} aria-hidden="true" />{missionStatusLabel[current.status]}</span>
-              <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.id}</span>
+              <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.displayId}</span>
             </div>
             <div className="flex items-start gap-2.5">
               <IconPicker icons={missionIcons} value={current.icon} color={tone} recentStorageKey="zipform-tloz-recent-icons" onValueChange={saveIcon} iconOnly className={`mt-0.5 size-8 shrink-0 justify-center rounded-lg border-0 p-0 shadow-none [&_svg]:size-[15px] ${iconSurfaceClass}`} />

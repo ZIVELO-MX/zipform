@@ -20,6 +20,7 @@ export type DataClientOptions = {
 };
 
 export type TlozMissionRecord = TlozMission & {
+  displayId: string;
   project?: TlozProject;
   season?: TlozSeason;
   episode?: TlozEpisode;
@@ -78,6 +79,7 @@ export type TlozRepository = {
   getSeasons(): Promise<TlozSeason[]>;
   getEpisodes(): Promise<TlozEpisode[]>;
   getQuestItems(): Promise<TlozQuestItem[]>;
+  getResources(): Promise<TlozResource[]>;
   createProject(name: string): Promise<TlozProject>;
   createSeason(name: string): Promise<TlozSeason>;
   createEpisode(name: string, seasonId: string): Promise<TlozEpisode>;

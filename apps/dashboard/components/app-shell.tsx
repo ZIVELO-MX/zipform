@@ -50,7 +50,7 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
     const Icon = resolveMissionIcon(project.icon);
     return {
       label: project.name,
-      href: `/tloz?project=${project.id}`,
+      href: `/tloz/projects/${project.id}`,
       icon: Icon,
       badge: projectActiveCounts.get(project.id) ?? 0,
     };
@@ -67,7 +67,7 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
       collapsible: true,
       defaultCollapsed: false,
       items: [
-        { label: "Quest Items", href: "/tloz/quest-items", icon: PackageOpen },
+        { label: "Inventory", href: "/tloz/quest-items", icon: PackageOpen },
       ],
     },
     ...(projectItems.length > 0

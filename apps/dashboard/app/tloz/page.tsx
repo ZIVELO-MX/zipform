@@ -36,6 +36,8 @@ async function TlozData({ searchParams }: TlozPageProps) {
 
   const users = Array.from(new Map(allMissions.map((m) => [m.owner.id, m.owner])).values());
 
+  const projectLabel = params.project ? projects.find(p => p.id === params.project)?.name : undefined;
+
   const detailOptions = {
     missions: allMissions,
     projects,
@@ -48,6 +50,7 @@ async function TlozData({ searchParams }: TlozPageProps) {
   return (
     <TlozPageShell
       title="Missions"
+      projectLabel={projectLabel}
       showSearch
       showDisplaySwitcher
       fullWidth={view === "board"}

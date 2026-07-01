@@ -1,5 +1,3 @@
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { PrismaClient } from "@prisma/client";
 import type {
   PlatformMetric,
@@ -25,15 +23,22 @@ import {
   type TlozDataSet
 } from "../tloz-hydration";
 
-const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-
-process.env.DATABASE_URL ??= `file:${resolve(packageRoot, "dev.db")}`;
+function ensureDatabaseUrl() {
+  if (!process.env.DATABASE_URL) {
+    const cwd = process.cwd();
+    const dbPath = cwd.includes("packages/data")
+      ? `${cwd}/dev.db`
+      : `${cwd}/packages/data/dev.db`;
+    process.env.DATABASE_URL = `file:${dbPath}`;
+  }
+}
 
 const globalForPrisma = globalThis as typeof globalThis & {
   zipformPrisma?: PrismaClient;
 };
 
 function getPrismaClient() {
+  ensureDatabaseUrl();
   globalForPrisma.zipformPrisma ??= new PrismaClient();
   return globalForPrisma.zipformPrisma;
 }
@@ -375,6 +380,10 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       async getQuestItems() {
         const rows = await prisma.tlozQuestItem.findMany({ orderBy: { createdAt: "asc" } });
         return rows.map(mapQuestItem);
+      },
+      async getResources() {
+        const rows = await prisma.tlozResource.findMany({ orderBy: { createdAt: "asc" } });
+        return rows.map(mapResource);
       },
       async createProject(name) {
         const row = await prisma.tlozProject.create({ data: { id: crypto.randomUUID(), name, description: "", color: "#6B6B6B", icon: "Folder", status: "active" } });

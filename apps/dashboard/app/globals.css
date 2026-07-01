@@ -1592,6 +1592,10 @@ button {
   box-shadow: inset 0 0 0 1px rgba(215, 34, 40, 0.18);
 }
 
+.tloz-kcard:hover .tloz-kcard-open-btn {
+  opacity: 1;
+}
+
 .tloz-scrl::-webkit-scrollbar {
   width: 9px;
   height: 9px;

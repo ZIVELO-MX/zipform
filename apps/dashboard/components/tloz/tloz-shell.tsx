@@ -6,6 +6,7 @@ type TlozPageShellProps = {
   title: string;
   description?: string;
   children: React.ReactNode;
+  projectLabel?: string;
   detailLabel?: string;
   showSearch?: boolean;
   showDisplaySwitcher?: boolean;
@@ -16,6 +17,7 @@ type TlozPageShellProps = {
 export async function TlozPageShell({
   title,
   description,
+  projectLabel,
   detailLabel,
   showSearch = true,
   showDisplaySwitcher = false,
@@ -33,6 +35,7 @@ export async function TlozPageShell({
     <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
       <TlozHeader
         title={title}
+        projectLabel={projectLabel}
         detailLabel={detailLabel}
         showSearch={showSearch}
         showDisplaySwitcher={showDisplaySwitcher}
@@ -58,33 +61,14 @@ export function TlozSubpageHeader({ title, description }: { title: string; descr
 export function TlozViewHeader({
   title,
   description,
-  children,
-  showAudienceToggle = false
 }: {
   title: string;
   description: React.ReactNode;
-  children?: React.ReactNode;
-  showAudienceToggle?: boolean;
 }) {
   return (
     <PageSubHeader
       title={title}
       description={description}
-      actions={
-        <>
-          {showAudienceToggle ? (
-            <SegmentedControl
-              aria-label="Filtrar por audiencia"
-              value="team"
-              options={[
-                { label: "Todo el equipo", value: "team" },
-                { label: "Solo yo", value: "me" },
-              ]}
-            />
-          ) : null}
-          {children}
-        </>
-      }
     />
   );
 }
