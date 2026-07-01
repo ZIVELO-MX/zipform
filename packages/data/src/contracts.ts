@@ -5,6 +5,7 @@ import type {
   TlozChecklistItem,
   TlozEpisode,
   TlozMission,
+  TlozMissionQuestItem,
   TlozProject,
   TlozQuestItem,
   TlozResource,
@@ -19,7 +20,7 @@ export type DataClientOptions = {
 };
 
 export type TlozMissionRecord = TlozMission & {
-  project: TlozProject;
+  project?: TlozProject;
   season?: TlozSeason;
   episode?: TlozEpisode;
   dependencies: TlozMission[];
@@ -31,7 +32,12 @@ export type TlozMissionRecord = TlozMission & {
 export type TlozMissionDetail = TlozMissionRecord & {
   checklist: TlozChecklistItem[];
   resources: TlozResource[];
+  requiredBy: TlozMission[];
+  missionQuestItems: TlozMissionQuestItem[];
 };
+
+export type TlozResourceInput = Pick<TlozResource, "type" | "title"> &
+  Partial<Pick<TlozResource, "url" | "fileId">>;
 
 export type TlozMissionCreateInput = Omit<TlozMission, "id" | "createdAt" | "updatedAt" | "completedAt"> & {
   id?: string;
@@ -72,8 +78,18 @@ export type TlozRepository = {
   getSeasons(): Promise<TlozSeason[]>;
   getEpisodes(): Promise<TlozEpisode[]>;
   getQuestItems(): Promise<TlozQuestItem[]>;
+  createProject(name: string): Promise<TlozProject>;
+  createSeason(name: string): Promise<TlozSeason>;
+  createEpisode(name: string, seasonId: string): Promise<TlozEpisode>;
   createMission(input: TlozMissionCreateInput): Promise<TlozMissionRecord>;
   updateMission(missionId: string, input: TlozMissionUpdateInput): Promise<TlozMissionRecord>;
+  saveMissionDocument(missionId: string, markdown: string): Promise<TlozMissionDetail>;
+  addMissionDependency(missionId: string, dependsOnMissionId: string): Promise<TlozMissionDetail>;
+  removeMissionDependency(missionId: string, dependsOnMissionId: string): Promise<TlozMissionDetail>;
+  setMissionQuestItem(missionId: string, questItemId: string, required: boolean): Promise<TlozMissionDetail>;
+  removeMissionQuestItem(missionId: string, questItemId: string): Promise<TlozMissionDetail>;
+  addMissionResource(missionId: string, input: TlozResourceInput): Promise<TlozMissionDetail>;
+  removeMissionResource(missionId: string, resourceId: string): Promise<TlozMissionDetail>;
   patchMissionStatus(missionId: string, status: TlozMission["status"]): Promise<TlozMissionRecord>;
   deleteMission(missionId: string): Promise<void>;
 };

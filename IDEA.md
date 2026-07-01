@@ -469,7 +469,7 @@ that instruction overrides this rule for that session only.
 | ---------- | ------- | ------------------------------- |
 | Zivelo Red | #D72228 | Primary accent color            |
 | Carbon     | #1D1D1B | Text, headings, dark surfaces   |
-| Off-White  | #F5F4F0 | Primary background              |
+| Off-White  | #FAFAF9 | Primary background              |
 | Warm Stone | #C8B99A | Secondary accents               |
 | Tint Red   | #F5E0E1 | Soft backgrounds and highlights |
 

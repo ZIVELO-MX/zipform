@@ -24,10 +24,11 @@ export type UserAvatarLabelProps = {
   label?: string;
   imageUrl?: string;
   size?: "sm" | "md";
+  labelOnly?: boolean;
   className?: string;
 };
 
-export function UserAvatarLabel({ name, label, imageUrl, size = "md", className }: UserAvatarLabelProps) {
+export function UserAvatarLabel({ name, label, imageUrl, size = "md", labelOnly = false, className }: UserAvatarLabelProps) {
   return (
     <span className={cn("inline-flex min-w-0 items-center gap-2", className)}>
       <Avatar className={cn("rounded-full", size === "sm" ? "size-5" : "size-7")}>
@@ -36,7 +37,10 @@ export function UserAvatarLabel({ name, label, imageUrl, size = "md", className 
           {initialsFromName(name)}
         </AvatarFallback>
       </Avatar>
-      {label ? <span className="truncate text-carbon/75">{label}</span> : null}
+      {label ? <span className="min-w-0 leading-tight">
+        {!labelOnly ? <span className="block truncate font-semibold text-carbon">{name}</span> : null}
+        <span className={cn("block truncate font-medium", labelOnly ? "text-carbon" : "text-[0.68rem] text-carbon/45")}>{label}</span>
+      </span> : null}
     </span>
   );
 }
@@ -145,39 +149,6 @@ export function PageSubHeader({ title, description, actions, className }: PageSu
   );
 }
 
-export type SegmentedControlOption = {
-  label: string;
-  value: string;
-};
-
-export function SegmentedControl({
-  options,
-  value,
-  "aria-label": ariaLabel = "View selector"
-}: {
-  options: SegmentedControlOption[];
-  value: string;
-  "aria-label"?: string;
-}) {
-  return (
-    <div className="inline-flex gap-0.5 rounded-full bg-carbon/5 p-0.5" aria-label={ariaLabel}>
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className={cn(
-            "rounded-full px-3 py-1.5 text-xs font-medium text-carbon/65 transition-colors",
-            option.value === value && "bg-white font-semibold text-carbon shadow-[0_1px_2px_rgba(29,29,27,0.07)]"
-          )}
-          disabled={option.value === value}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 export function EmptyState({ title, description }: { title: string; description?: string }) {
   return (
     <div className="rounded-xl border border-dashed border-carbon/15 p-5 text-center text-sm text-carbon/55">
@@ -217,13 +188,13 @@ export type BoardColumnShellProps = {
 
 export function BoardColumnShell({ title, count, tone, active, children }: BoardColumnShellProps) {
   return (
-    <section className="flex min-w-0 max-h-full flex-1 flex-col [contain-intrinsic-size:auto_296px_auto_760px] [content-visibility:auto]">
+    <section className="flex min-w-0 flex-1 flex-col [contain-intrinsic-size:auto_296px_auto_760px] [content-visibility:auto]">
       <div className="flex items-center gap-2 px-1.5 pb-3 pt-1">
         <span className={cn("size-2 rounded-full", active && "animate-pulse")} style={{ backgroundColor: tone }} aria-hidden="true" />
         <h2 className="m-0 text-[13px] font-bold tracking-normal">{title}</h2>
         <span className="rounded-full bg-carbon/5 px-2 py-0.5 font-mono text-[11px] font-medium text-carbon/65">{count}</span>
       </div>
-      <div className="flex min-h-[60px] flex-1 flex-col gap-3 overflow-auto pb-2 pl-0.5 pr-0.5">{children}</div>
+      <div className="flex min-h-[60px] flex-1 flex-col gap-3 pb-2 pl-0.5 pr-0.5">{children}</div>
     </section>
   );
 }

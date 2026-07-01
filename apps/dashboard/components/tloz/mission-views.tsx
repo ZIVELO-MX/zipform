@@ -6,6 +6,7 @@ import {
   closestCorners,
   DndContext,
   DragEndEvent,
+  DragOverlay,
   KeyboardCoordinateGetter,
   KeyboardSensor,
   PointerSensor,
@@ -14,20 +15,14 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { File, FileText, GripVertical, ImageIcon, Link2, Plus, StickyNote } from "lucide-react";
+import { Link2, PanelRightOpen, Plus } from "lucide-react";
 import {
-  Attachment,
-  AttachmentContent,
-  AttachmentDescription,
-  AttachmentGroup,
-  AttachmentMedia,
-  AttachmentTitle,
-  AttachmentTrigger,
   Avatar,
   AvatarFallback,
   AvatarImage,
   Badge,
   BoardColumnShell,
+  Button,
   EmptyState,
   MetricProgress,
   SectionHeading,
@@ -39,15 +34,15 @@ import {
   UserAvatarLabel,
 } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozMissionStatus, TlozResourceType, UserProfile } from "@zipform/types";
+import type { TlozMissionStatus, UserProfile } from "@zipform/types";
 import { QuestItemDots } from "./mission-card";
 import {
   formatDate,
+  missionPreviewDescription,
   missionStatusLabel,
   missionTypeLabel,
   missionTypeTone,
 } from "./tloz-utils";
-import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 
 const statusConfig: Record<string, { label: string; dotColor: string; textColor: string; bgColor?: string }> = {
   now: { label: "Now", dotColor: "#1E8E5A", textColor: "#1E8E5A" },
@@ -64,14 +59,6 @@ const boardGroups = [
   { id: "blocked", label: "Blocked" },
   { id: "completed", label: "Completed" },
 ] as const;
-
-const resourceMeta: Record<TlozResourceType, { label: string; icon: React.ElementType }> = {
-  document: { label: "Documento", icon: FileText },
-  link: { label: "Link", icon: Link2 },
-  image: { label: "Imagen", icon: ImageIcon },
-  file: { label: "Archivo", icon: File },
-  note: { label: "Nota", icon: StickyNote }
-};
 
 // ─── DASHBOARD ────────────────────────────────────────────────────
 
@@ -118,6 +105,11 @@ export function DashboardNowSection({ missions, onSelect }: { missions: TlozMiss
       </div>
     </section>
   );
+}
+
+function OpenMissionButton({ mission, onSelect }: { mission: TlozMissionRecord; onSelect?: (mission: TlozMissionRecord) => void }) {
+  const label = `Abrir detalle de ${mission.title}`;
+  return <Tooltip><TooltipTrigger asChild>{onSelect ? <Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md [&_svg]:size-3" aria-label={label} onClick={(event) => { event.stopPropagation(); onSelect(mission); }}><PanelRightOpen aria-hidden="true" /></Button> : <Button asChild variant="ghost" size="icon-xs" className="size-6 rounded-md [&_svg]:size-3"><Link href={`/tloz/missions/${mission.id}`} aria-label={label} onClick={(event) => event.stopPropagation()}><PanelRightOpen aria-hidden="true" /></Link></Button>}</TooltipTrigger><TooltipContent>Abrir detalle</TooltipContent></Tooltip>;
 }
 
 function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionRecord; accent: string; onSelect?: (m: TlozMissionRecord) => void }) {
@@ -167,35 +159,22 @@ function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionR
           </svg>
           {missionTypeLabel[mission.type]}
         </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "#1E8E5A" }}>
-          <span style={{ width: "7px", height: "7px", borderRadius: "999px", background: "#1E8E5A", animation: "nowpulse 1.8s ease-in-out infinite" }} />
-          Now
-        </span>
+        <div className="flex items-center gap-2"><span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "#1E8E5A" }}>
+          <span style={{ width: "7px", height: "7px", borderRadius: "999px", background: "#1E8E5A", animation: "nowpulse 1.8s ease-in-out infinite" }} />Now
+        </span><OpenMissionButton mission={mission} onSelect={onSelect} /></div>
       </div>
       <h3 style={{ margin: "0 0 7px", fontSize: "19px", fontWeight: 700, letterSpacing: "-0.01em" }}>{mission.title}</h3>
-      <p style={{ margin: "0 0 16px", fontSize: "13.5px", color: "#6B6B6B", lineHeight: 1.5, textWrap: "pretty" }}>{mission.description}</p>
+      <p style={{ margin: "0 0 16px", fontSize: "13.5px", color: "#6B6B6B", lineHeight: 1.5, textWrap: "pretty" }}>{missionPreviewDescription(mission.description)}</p>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#454543", background: "#F5F5F5", borderRadius: "999px", padding: "4px 10px", fontWeight: 500 }}>
-          <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project.color || "#999" }} />
-          {mission.project.name}
+          <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
+          {mission.project?.name ?? "Sin proyecto"}
         </span>
         {mission.episode && (
           <span style={{ fontSize: "12px", color: "#6B6B6B", background: "#F5F5F5", borderRadius: "999px", padding: "4px 10px", fontWeight: 500 }}>
             {mission.episode.name}
           </span>
         )}
-      </div>
-      <div style={{ marginBottom: "16px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", marginBottom: "6px" }}>
-          <span style={{ color: "#6B6B6B", fontWeight: 500, display: "inline-flex", alignItems: "center", gap: "6px" }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1E8E5A" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-            {mission.progress}% completo
-          </span>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: "#1D1D1B" }}>{mission.progress}%</span>
-        </div>
-        <div style={{ height: "7px", background: "#F0EFED", borderRadius: "999px", overflow: "hidden" }}>
-          <div style={{ width: `${mission.progress}%`, height: "100%", background: "#D72228", borderRadius: "999px" }} />
-        </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid rgba(29,29,27,0.07)", paddingTop: "14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "9px" }}>
@@ -219,8 +198,8 @@ function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionR
           </span>
         ) : (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#6B6B6B", fontWeight: 500 }}>
-            <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project.color || "#999" }} />
-            {mission.project.name}
+            <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
+            {mission.project?.name ?? "Sin proyecto"}
           </span>
         )}
       </div>
@@ -271,16 +250,15 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z" /></svg>
           Main
         </span>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: 600, color: statusCfg.textColor }}>
-          <span style={{ width: "6px", height: "6px", borderRadius: "999px", background: statusCfg.dotColor, animation: mission.status === "now" ? "nowpulse 1.8s ease-in-out infinite" : undefined }} />
-          {statusCfg.label}
-        </span>
+        <div className="flex items-center gap-2"><span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: 600, color: statusCfg.textColor }}>
+          <span style={{ width: "6px", height: "6px", borderRadius: "999px", background: statusCfg.dotColor, animation: mission.status === "now" ? "nowpulse 1.8s ease-in-out infinite" : undefined }} />{statusCfg.label}
+        </span><OpenMissionButton mission={mission} onSelect={onSelect} /></div>
       </div>
       <h3 style={{ margin: "0 0 10px", fontSize: "15px", fontWeight: 700, lineHeight: 1.25 }}>{mission.title}</h3>
       <div style={{ display: "flex", gap: "7px", marginBottom: "13px" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "#6B6B6B", fontWeight: 500 }}>
-          <span style={{ width: "6px", height: "6px", borderRadius: "2px", background: mission.project.color || "#999" }} />
-          {mission.project.name}
+          <span style={{ width: "6px", height: "6px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
+          {mission.project?.name ?? "Sin proyecto"}
         </span>
         {mission.episode && (
           <>
@@ -288,9 +266,6 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
             <span style={{ fontSize: "11px", color: "#6B6B6B", fontWeight: 500 }}>Ep. {mission.episode.romanNumber}</span>
           </>
         )}
-      </div>
-      <div style={{ height: "6px", background: "#F0EFED", borderRadius: "999px", overflow: "hidden", marginBottom: "13px" }}>
-        <div style={{ width: `${mission.progress}%`, height: "100%", background: "#D72228" }} />
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <Avatar className="size-6 rounded-full">
@@ -315,7 +290,6 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
               </TooltipContent>
             </Tooltip>
           )}
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "#9a9a98" }}>{mission.progress}%</span>
         </div>
       </div>
     </div>
@@ -392,8 +366,8 @@ export function DashboardNextLaterSection({
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: "13.5px", fontWeight: 600 }}>{mission.title}</div>
                   <div style={{ fontSize: "11px", color: "#9a9a98", display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
-                    <span style={{ width: "6px", height: "6px", borderRadius: "2px", background: mission.project.color || "#999" }} />
-                    {mission.project.name} · {missionTypeLabel[mission.type]}
+                    <span style={{ width: "6px", height: "6px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
+                    {mission.project?.name ?? "Sin proyecto"} · {missionTypeLabel[mission.type]}
                   </div>
                 </div>
                 <Avatar className="size-6 rounded-full">
@@ -573,7 +547,7 @@ export function MissionTable({ missions, onSelect }: { missions: TlozMissionReco
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
         <thead>
           <tr style={{ textAlign: "left" }}>
-            {["Mission", "Estado", "Tipo", "Proyecto", "Owner", "Ep.", "Progreso", "Vence"].map((label) => (
+            {["Mission", "Estado", "Tipo", "Proyecto", "Responsable", "Ep.", "Vence"].map((label) => (
               <th
                 key={label}
                 className="tloz-th"
@@ -586,7 +560,6 @@ export function MissionTable({ missions, onSelect }: { missions: TlozMissionReco
                   color: "#9a9a98",
                   borderBottom: "1px solid rgba(29,29,27,0.10)",
                   ...(label === "Vence" ? { textAlign: "right" as const } : {}),
-                  ...(label === "Progreso" ? { width: "150px" } : {})
                 }}
               >
                 {label}
@@ -616,8 +589,8 @@ export function MissionTable({ missions, onSelect }: { missions: TlozMissionReco
                 </td>
                 <td style={{ padding: "11px 14px" }}>
                   <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#454543" }}>
-                    <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project.color || "#999" }} />
-                    {mission.project.name}
+                    <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
+                    {mission.project?.name ?? "Sin proyecto"}
                   </span>
                 </td>
                 <td style={{ padding: "11px 14px" }}>
@@ -625,9 +598,6 @@ export function MissionTable({ missions, onSelect }: { missions: TlozMissionReco
                 </td>
                 <td style={{ padding: "11px 14px", color: "#6B6B6B", fontSize: "12px" }}>
                   {mission.episode?.romanNumber ?? "—"}
-                </td>
-                <td style={{ padding: "11px 14px" }}>
-                  <MetricProgress value={mission.progress} tone="#D72228" />
                 </td>
                 <td style={{ padding: "11px 14px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", fontSize: "11.5px", color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>
                   {formatDate(mission.dueDate)}
@@ -681,7 +651,7 @@ export function MissionList({ missions, onSelect }: { missions: TlozMissionRecor
                     className="tloz-lrow"
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "minmax(0,1fr) 130px 110px 132px 96px",
+                      gridTemplateColumns: "minmax(0,1fr) 130px 132px 96px",
                       gap: "14px",
                       alignItems: "center",
                       padding: "13px 16px",
@@ -734,11 +704,10 @@ export function MissionList({ missions, onSelect }: { missions: TlozMissionRecor
                       )}
                     </span>
                     <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#6B6B6B", fontWeight: 500 }}>
-                      <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project.color || "#999" }} />
-                      {mission.project.name}
+                      <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
+                      {mission.project?.name ?? "Sin proyecto"}
                     </span>
                     <UserAvatarLabel name={mission.owner.name} label={mission.owner.username} imageUrl={mission.owner.avatarUrl} size="sm" />
-                    <MetricProgress value={mission.progress} tone="#D72228" />
                     <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11.5px", fontWeight: 500, textAlign: "right", color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>
                       {formatDate(mission.dueDate)}
                     </span>
@@ -756,6 +725,7 @@ export function MissionList({ missions, onSelect }: { missions: TlozMissionRecor
 // ─── BOARD ─────────────────────────────────────────────────────────
 
 export function MissionBoard({ missions, onSelect, onStatusChange }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void; onStatusChange?: (id: string, status: TlozMissionStatus) => void }) {
+  const [activeMissionId, setActiveMissionId] = useState<string | null>(null);
   const keyboardCoordinates: KeyboardCoordinateGetter = (event, { currentCoordinates }) => {
     const step = event.code === "ArrowLeft" || event.code === "ArrowRight" ? 312 : 72;
     if (event.code === "ArrowRight") return { ...currentCoordinates, x: currentCoordinates.x + step };
@@ -765,11 +735,12 @@ export function MissionBoard({ missions, onSelect, onStatusChange }: { missions:
     return undefined;
   };
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, { activationConstraint: { delay: 240, tolerance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: keyboardCoordinates })
   );
 
   function handleDragEnd(event: DragEndEvent) {
+    setActiveMissionId(null);
     const status = String(event.over?.id ?? "").replace("status:", "") as TlozMissionStatus;
     const mission = missions.find((item) => item.id === event.active.id);
     if (!mission || !boardGroups.some((group) => group.id === status) || mission.status === status) return;
@@ -780,7 +751,9 @@ export function MissionBoard({ missions, onSelect, onStatusChange }: { missions:
     <DndContext
       sensors={sensors}
       collisionDetection={closestCorners}
+      onDragStart={(event) => setActiveMissionId(String(event.active.id))}
       onDragEnd={handleDragEnd}
+      onDragCancel={() => setActiveMissionId(null)}
       accessibility={{
         screenReaderInstructions: {
           draggable: "Presiona Espacio o Enter para tomar una misión. Usa las flechas para moverla entre columnas, Espacio o Enter para soltarla y Escape para cancelar.",
@@ -808,6 +781,9 @@ export function MissionBoard({ missions, onSelect, onStatusChange }: { missions:
           })}
         </div>
       </div>
+      <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
+        {activeMissionId ? <BoardDragPreview mission={missions.find((item) => item.id === activeMissionId)} /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }
@@ -817,7 +793,7 @@ function BoardDropColumn({ id, label, count, tone, active, children }: { id: Tlo
   return (
     <div ref={setNodeRef} className="tloz-board-column" data-over={isOver}>
       <BoardColumnShell title={label} count={count} tone={tone} active={active}>
-        <div className="tloz-droplist flex min-h-[84px] flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pb-2 pl-0.5 pr-0.5" data-group={id}>
+        <div className="tloz-droplist flex min-h-[84px] flex-1 flex-col gap-3 pb-2 pl-0.5 pr-0.5" data-group={id}>
           {children}
         </div>
       </BoardColumnShell>
@@ -845,9 +821,9 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
         background: isCompleted ? "#FBFBFA" : "#fff",
         border: `1px solid ${isCompleted ? "rgba(29,29,27,0.08)" : "rgba(29,29,27,0.10)"}`,
         borderRadius: "14px",
-        padding: "14px",
+        padding: "14px 14px 14px 22px",
         boxShadow: "0 4px 14px rgba(29,29,27,0.04)",
-        opacity: isDragging ? 0.55 : isCompleted ? 0.82 : 1,
+        opacity: isDragging ? 0 : isCompleted ? 0.82 : 1,
         position: "relative",
         zIndex: isDragging ? 5 : undefined,
       }}
@@ -863,38 +839,22 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
       role="button"
       tabIndex={0}
     >
+      <button
+        type="button"
+        className="absolute bottom-3 left-1 top-3 w-3 touch-none cursor-grab rounded-full border-0 bg-carbon/[0.06] p-0 transition-colors hover:bg-carbon/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-zivelo active:cursor-grabbing"
+        aria-label={`Mantén presionado para mover ${mission.title}`}
+        {...attributes}
+        {...listeners}
+      />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
         <ToneBadge tone={{ color: tone }} className="text-[10.5px]">
           {missionTypeLabel[mission.type]}
         </ToneBadge>
-        <button
-          type="button"
-          className="grid size-8 touch-none place-items-center rounded-lg text-carbon/45 transition-colors hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zivelo active:cursor-grabbing"
-          aria-label={`Mover ${mission.title}`}
-          onClick={(event) => event.stopPropagation()}
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical aria-hidden="true" />
-        </button>
         {isCompleted ? (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10.5px", color: "#1E6B3C", fontWeight: 700, background: "#E6F4EA", borderRadius: "999px", padding: "2px 8px" }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
           </span>
-        ) : (
-          <span
-            style={{
-              fontSize: "10.5px",
-              color: "#7A5A12",
-              background: "#FFF4DE",
-              borderRadius: "999px",
-              padding: "3px 8px",
-              fontWeight: 600
-            }}
-          >
-            {missionTypeLabel[mission.type] === "Main Quest" ? "Basic" : "—"}
-          </span>
-        )}
+        ) : null}
       </div>
       <div
         style={{
@@ -910,11 +870,10 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
       </div>
       {!isCompleted && (
         <>
-          <MetricProgress className="mb-[11px]" value={mission.progress} tone="#D72228" />
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "#6B6B6B", fontWeight: 500 }}>
-              <span style={{ width: "6px", height: "6px", borderRadius: "2px", background: mission.project.color || "#999" }} />
-              {mission.project.name}
+              <span style={{ width: "6px", height: "6px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
+              {mission.project?.name ?? "Sin proyecto"}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               {blocked && (
@@ -932,13 +891,21 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
                   </TooltipContent>
                 </Tooltip>
               )}
-              <UserAvatarLabel name={mission.owner.name} imageUrl={mission.owner.avatarUrl} size="sm" />
+              <UserAvatarLabel name={mission.owner.name} label={mission.owner.username} imageUrl={mission.owner.avatarUrl} size="sm" />
             </div>
           </div>
         </>
       )}
     </div>
   );
+}
+
+function BoardDragPreview({ mission }: { mission?: TlozMissionRecord }) {
+  if (!mission) return null;
+  return <div className="w-[280px] rotate-1 rounded-[14px] border border-carbon/10 bg-white px-4 py-3 shadow-2xl">
+    <p className="m-0 text-[10px] font-bold uppercase text-carbon/45">{missionTypeLabel[mission.type]}</p>
+    <p className="mb-3 mt-1 text-sm font-semibold">{mission.title}</p>
+  </div>;
 }
 
 // ─── CALENDAR ──────────────────────────────────────────────────────
@@ -964,140 +931,11 @@ export function MissionCalendar({ missions, onSelect }: { missions: TlozMissionR
             {formatDate(mission.dueDate)}
           </span>
           <strong>{mission.title}</strong>
-          <em>{mission.project.name}</em>
+          <em>{mission.project?.name ?? "Sin proyecto"}</em>
           <Badge style={{ backgroundColor: missionTypeTone[mission.type], color: "#fff" }}>{missionTypeLabel[mission.type]}</Badge>
         </div>
       ))}
     </section>
-  );
-}
-
-// ─── MISSION DETAIL VIEW ──────────────────────────────────────────
-
-export function MissionDetailView({ mission, editorOptions }: { mission: import("../../lib/tloz-data").TlozMissionDetail; editorOptions: MissionEditorOptions }) {
-  const [currentMission, setCurrentMission] = useState(mission);
-  const tone = missionTypeTone[currentMission.type];
-  return (
-    <div style={{ padding: "24px 26px 48px", maxWidth: "1180px", margin: "0 auto" }}>
-      <div className="tloz-detail-grid">
-        <section className="panel tloz-detail-main">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow" style={{ color: tone }}>{missionTypeLabel[currentMission.type]}</p>
-              <h2>{currentMission.title}</h2>
-            </div>
-          </div>
-          <p style={{ color: "#6B6B6B", lineHeight: 1.6 }}>{currentMission.description}</p>
-          <div>
-            <h3 style={{ marginBottom: "8px", fontSize: "14px", fontWeight: 700 }}>Definición del resultado</h3>
-            <p style={{ color: "#6B6B6B", lineHeight: 1.6 }}>
-              {currentMission.conclusion ?? "Aún no se ha definido el resultado esperado de esta misión."}
-            </p>
-          </div>
-        </section>
-
-        <aside className="panel tloz-detail-side" style={{ alignSelf: "start" }} aria-labelledby="mission-edit-heading">
-          <div className="mb-4">
-            <h2 id="mission-edit-heading" className="m-0 text-sm font-bold">Campos de la misión</h2>
-            <p className="mb-0 mt-1 text-xs text-carbon/50">Haz clic en un campo para modificarlo.</p>
-          </div>
-          <MissionInlineEditor
-            mission={currentMission}
-            options={editorOptions}
-            onMissionChange={(updated) => setCurrentMission((current) => ({ ...current, ...updated }))}
-          />
-          <h3 className="mb-3 mt-6 text-sm font-bold">Quest Items</h3>
-          <div className="tloz-quest-list">
-            {currentMission.questItems.length > 0 ? (
-              currentMission.questItems.map((item) => {
-                const required = currentMission.requiredQuestItems.some((requiredItem) => requiredItem.id === item.id);
-                return (
-                  <span key={item.id} data-status={item.status}>
-                    <strong>{item.name}</strong>
-                    <small>{required ? "Required" : "Optional"}</small>
-                  </span>
-                );
-              })
-            ) : (
-              <p style={{ color: "#9a9a98" }}>Sin Quest Items.</p>
-            )}
-          </div>
-        </aside>
-
-        <section className="panel">
-          <h3 style={{ marginBottom: "12px", fontSize: "14px", fontWeight: 700 }}>Dependencias</h3>
-          {mission.dependencies.length > 0 ? (
-            <div className="task-stack">
-              {mission.dependencies.map((dependency) => (
-                <Link href={`/tloz/missions/${dependency.id}`} className="task-card" key={dependency.id}>
-                  <span>{missionStatusLabel[dependency.status]}</span>
-                  <strong>{dependency.title}</strong>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <EmptyTlozState title="Sin dependencias" description="Esta Mission puede avanzar sin bloqueos mock." />
-          )}
-        </section>
-
-        <section className="panel">
-          <h3 style={{ marginBottom: "12px", fontSize: "14px", fontWeight: 700 }}>Checklist</h3>
-          <div className="tloz-checklist">
-            {mission.checklist.length > 0 ? (
-              mission.checklist.map((item) => (
-                <label key={item.id}>
-                  <input type="checkbox" checked={item.completed} disabled />
-                  <span>{item.title}</span>
-                </label>
-              ))
-            ) : (
-              <EmptyTlozState title="Sin checklist" description="Esta misión todavía no tiene pasos definidos." />
-            )}
-          </div>
-        </section>
-
-        <section className="panel">
-          <h3 style={{ marginBottom: "12px", fontSize: "14px", fontWeight: 700 }}>Recursos</h3>
-          {mission.resources.length > 0 ? (
-            <AttachmentGroup>
-              {mission.resources.map((resource) => {
-                const meta = resourceMeta[resource.type];
-                const Icon = meta.icon;
-
-                return (
-                  <Attachment key={resource.id} state="done" size="sm" className="min-w-[220px] flex-1">
-                    <AttachmentMedia>
-                      <Icon aria-hidden="true" />
-                    </AttachmentMedia>
-                    <AttachmentContent>
-                      <AttachmentTitle>{resource.title}</AttachmentTitle>
-                      <AttachmentDescription>{meta.label}</AttachmentDescription>
-                    </AttachmentContent>
-                    {resource.url ? (
-                      <AttachmentTrigger asChild>
-                        <Link href={resource.url} aria-label={`Abrir recurso ${resource.title}`} />
-                      </AttachmentTrigger>
-                    ) : null}
-                  </Attachment>
-                );
-              })}
-            </AttachmentGroup>
-          ) : (
-            <EmptyTlozState title="Sin recursos" description="Esta misión todavía no tiene recursos vinculados." />
-          )}
-        </section>
-
-        <section className="panel">
-          <h3 style={{ marginBottom: "12px", fontSize: "14px", fontWeight: 700 }}>Actividad</h3>
-          <div className="tloz-activity-placeholder">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            Aún no hay actividad registrada para esta misión.
-          </div>
-        </section>
-      </div>
-    </div>
   );
 }
 

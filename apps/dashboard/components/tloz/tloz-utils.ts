@@ -28,8 +28,8 @@ export const missionStatusLabel: Record<TlozMissionStatus, string> = {
   now: "Now",
   next: "Next",
   later: "Later",
-  completed: "Completed",
-  blocked: "Blocked"
+  completed: "Completada",
+  blocked: "Bloqueada"
 };
 
 export const missionTypeTone: Record<TlozMissionType, string> = {
@@ -73,6 +73,15 @@ export function formatDate(date?: string) {
     month: "short",
     year: "numeric"
   }).format(new Date(`${date}T12:00:00`));
+}
+
+export function missionPreviewDescription(markdown: string) {
+  return markdown
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*[-*+]\s+/.test(line))
+    .map((line) => line.replace(/^\s{0,3}#{1,6}\s+/, "").trim())
+    .filter(Boolean)
+    .join(" ");
 }
 
 export function dependencyLabel(mission: TlozMissionRecord) {

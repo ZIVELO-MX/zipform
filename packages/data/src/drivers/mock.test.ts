@@ -42,4 +42,50 @@ describe("mock data driver", () => {
     await expect(client.tloz.deleteMission(created.id)).rejects.toThrow("was not found");
     expect(await createMockDataClient().tloz.getMissions()).toHaveLength(missions.length);
   });
+
+  it("uses Markdown as checklist source of truth and persists mission relations", async () => {
+    const client = createMockDataClient();
+    const mission = missions[0];
+    const dependency = missions.find((item) => item.id !== mission.id)!;
+    const questItem = (await client.tloz.getQuestItems())[0];
+
+    let detail = await client.tloz.saveMissionDocument(mission.id, "# Work\n- [ ] First\n- [x] Second");
+    expect(detail.description).toContain("- [x] Second");
+    expect(detail.progress).toBe(50);
+    expect(detail.checklist.map((item) => [item.title, item.completed, item.position])).toEqual([
+      ["First", false, 0], ["Second", true, 1]
+    ]);
+
+    detail = await client.tloz.saveMissionDocument(mission.id, "- [x] First");
+    expect(detail.checklist).toHaveLength(1);
+    expect(detail.checklist[0]).toMatchObject({ title: "First", completed: true, position: 0 });
+    expect(detail.progress).toBe(100);
+
+    detail = await client.tloz.addMissionDependency(mission.id, dependency.id);
+    expect(detail.dependencies).toEqual(expect.arrayContaining([expect.objectContaining({ id: dependency.id })]));
+    expect((await client.tloz.getMissionDetail(dependency.id))?.requiredBy).toEqual(expect.arrayContaining([expect.objectContaining({ id: mission.id })]));
+    await client.tloz.removeMissionDependency(mission.id, dependency.id);
+
+    detail = await client.tloz.setMissionQuestItem(mission.id, questItem.id, true);
+    expect(detail.missionQuestItems).toEqual(expect.arrayContaining([expect.objectContaining({ questItemId: questItem.id, required: true })]));
+    await client.tloz.removeMissionQuestItem(mission.id, questItem.id);
+
+    detail = await client.tloz.addMissionResource(mission.id, { type: "link", title: "Spec", url: "https://example.com" });
+    const resource = detail.resources.find((item) => item.title === "Spec")!;
+    expect(resource.url).toBe("https://example.com");
+    expect((await client.tloz.removeMissionResource(mission.id, resource.id)).resources).not.toContainEqual(expect.objectContaining({ id: resource.id }));
+  });
+
+  it("creates dependent picker entities and allows clearing the hierarchy", async () => {
+    const client = createMockDataClient();
+    const project = await client.tloz.createProject("New project");
+    const season = await client.tloz.createSeason("Season III");
+    const episode = await client.tloz.createEpisode("First episode", season.id);
+    expect(project).toMatchObject({ name: "New project", status: "active" });
+    expect(episode).toMatchObject({ seasonId: season.id, name: "First episode" });
+
+    const mission = missions[0];
+    expect(await client.tloz.updateMission(mission.id, { projectId: project.id, seasonId: season.id, episodeId: episode.id })).toMatchObject({ projectId: project.id, seasonId: season.id, episodeId: episode.id });
+    expect(await client.tloz.updateMission(mission.id, { projectId: "", seasonId: "", episodeId: "" })).toMatchObject({ projectId: undefined, seasonId: undefined, episodeId: undefined });
+  });
 });

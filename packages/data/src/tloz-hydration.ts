@@ -35,10 +35,6 @@ function byId<T extends { id: string }>(items: T[], id?: string) {
 export function hydrateMission(data: TlozDataSet, mission: TlozMission): TlozMissionRecord {
   const project = byId(data.projects, mission.projectId);
 
-  if (!project) {
-    throw new Error(`TLOZ mission ${mission.id} is missing project ${mission.projectId}`);
-  }
-
   const dependencyIds = data.missionDependencies
     .filter((dependency) => dependency.missionId === mission.id)
     .map((dependency) => dependency.dependsOnMissionId);
@@ -113,6 +109,18 @@ export function buildTlozMissionDetail(data: TlozDataSet, missionId: string): Tl
     checklist: data.checklistItems
       .filter((item) => item.missionId === mission.id)
       .sort((a, b) => a.position - b.position),
-    resources: data.resources.filter((resource) => resource.missionId === mission.id)
+    resources: data.resources.filter((resource) => resource.missionId === mission.id),
+    requiredBy: data.missionDependencies
+      .filter((dependency) => dependency.dependsOnMissionId === mission.id)
+      .map((dependency) => data.missions.find((item) => item.id === dependency.missionId))
+      .filter((item): item is TlozMission => Boolean(item)),
+    missionQuestItems: data.missionQuestItems.filter((item) => item.missionId === mission.id)
   };
+}
+
+export function parseMarkdownChecklist(markdown: string) {
+  return markdown.split(/\r?\n/).flatMap((line) => {
+    const match = line.match(/^\s*[-*+]\s+\[([ xX])\]\s+(.+?)\s*$/);
+    return match ? [{ title: match[2], completed: match[1].toLowerCase() === "x" }] : [];
+  });
 }

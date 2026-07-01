@@ -35,6 +35,8 @@ Status:
 - All user avatars (sidebar + TLOZ) are circles.
 - Mission type badges use the same color as the right border accent.
 - TLOZ now uses shared UI primitives for dashboard presentation, slide-over panels, and attachment/resource rows.
+- Mission Detail reads persisted `TlozMission.startDate` and `TlozProject.color`; the database audit confirmed both already exist in Prisma and the current migration, so no duplicate columns are required.
+- Episode and Kano are hidden from Mission properties until their deferred data/UX work below is completed.
 
 ---
 
@@ -74,6 +76,8 @@ P1 — confiabilidad y escalabilidad:
 
 P2 — completar experiencia de producto:
 
+- [TLOZ][DATA] Definir y persistir clasificación Kano antes de volver a mostrarla; no inferir `Basic` desde el tipo de Mission
+- [TLOZ][UX] Volver a mostrar Episode en propiedades cuando el selector Project → Season → Episode y sus estados vacíos estén cerrados
 - [TLOZ][UX] Conectar los flujos visibles de crear, editar y eliminar Mission al CRUD ya disponible
 - [TLOZ][SEARCH] Implementar búsqueda global sobre Missions, Projects, Quest Items y Resources
 - [TLOZ][UX] Sincronizar el Mission slide-over con mutaciones optimistas y añadir loading boundaries específicos por vista

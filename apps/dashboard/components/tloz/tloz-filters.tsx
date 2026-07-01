@@ -1,6 +1,6 @@
 "use client";
 
-import { Select } from "@zipform/ui";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@zipform/ui";
 import type { TlozEpisode, TlozProject, TlozSeason } from "@zipform/types";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
@@ -21,18 +21,9 @@ export function TlozFilters({ projects, seasons, episodes }: { projects: TlozPro
   return (
     <fieldset className="tloz-filters" aria-busy={pending} disabled={pending}>
       <legend className="sr-only">Filtrar missions</legend>
-      <Select aria-label="Filtrar por proyecto" value={searchParams.get("project") ?? "all"} onChange={(event) => update("project", event.target.value)}>
-        <option value="all">Todos los proyectos</option>
-        {projects.map((project) => <option value={project.id} key={project.id}>{project.name}</option>)}
-      </Select>
-      <Select aria-label="Filtrar por temporada" value={searchParams.get("season") ?? "all"} onChange={(event) => update("season", event.target.value)}>
-        <option value="all">Todas las Seasons</option>
-        {seasons.map((season) => <option value={season.id} key={season.id}>{season.name}</option>)}
-      </Select>
-      <Select aria-label="Filtrar por episodio" value={searchParams.get("episode") ?? "all"} onChange={(event) => update("episode", event.target.value)}>
-        <option value="all">Todos los Episodes</option>
-        {episodes.map((episode) => <option value={episode.id} key={episode.id}>{episode.name}</option>)}
-      </Select>
+      <FilterSelect label="Filtrar por proyecto" value={searchParams.get("project") ?? "all"} allLabel="Todos los proyectos" options={projects} onChange={(value) => update("project", value)} />
+      <FilterSelect label="Filtrar por temporada" value={searchParams.get("season") ?? "all"} allLabel="Todas las Seasons" options={seasons} onChange={(value) => update("season", value)} />
+      <FilterSelect label="Filtrar por episodio" value={searchParams.get("episode") ?? "all"} allLabel="Todos los Episodes" options={episodes} onChange={(value) => update("episode", value)} />
       <label className="tloz-checkbox-filter">
         <input type="checkbox" checked={searchParams.get("mine") === "1"} onChange={(event) => update("mine", event.target.checked)} />
         Solo mis Missions
@@ -40,4 +31,8 @@ export function TlozFilters({ projects, seasons, episodes }: { projects: TlozPro
       <span className="sr-only" aria-live="polite">{pending ? "Actualizando resultados" : "Filtros actualizados"}</span>
     </fieldset>
   );
+}
+
+function FilterSelect({ label, value, allLabel, options, onChange }: { label: string; value: string; allLabel: string; options: Array<{ id: string; name: string }>; onChange: (value: string) => void }) {
+  return <Select value={value} onValueChange={onChange}><SelectTrigger aria-label={label}><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup><SelectItem value="all">{allLabel}</SelectItem>{options.map((option) => <SelectItem value={option.id} key={option.id}>{option.name}</SelectItem>)}</SelectGroup></SelectContent></Select>;
 }

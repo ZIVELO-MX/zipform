@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { CalendarDays, X } from "lucide-react";
+import { X } from "lucide-react";
 import { Button } from "./button";
 import { Calendar } from "./calendar";
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
@@ -31,7 +31,6 @@ export function DatePicker({ value, onValueChange, label = "Fecha", placeholder 
       <span className={cn("flex items-center gap-1.5", className)}>
         <PopoverTrigger asChild>
           <Button type="button" variant="outline" className="min-w-0 flex-1 justify-start" aria-label={`Seleccionar ${label.toLowerCase()}`}>
-            <CalendarDays aria-hidden="true" />
             <span className="truncate">{formatted}</span>
           </Button>
         </PopoverTrigger>

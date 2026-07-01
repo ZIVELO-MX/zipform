@@ -11,6 +11,7 @@ export type {
   TlozMissionCreateInput,
   TlozMissionRecord,
   TlozMissionUpdateInput,
+  TlozResourceInput,
   TlozRepository,
   ZipformDataClient
 } from "./contracts";

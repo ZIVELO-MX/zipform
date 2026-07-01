@@ -722,8 +722,8 @@ button {
 .tloz-command-trigger svg,
 .tloz-command-input-wrap svg,
 [cmdk-item] svg {
-  inline-size: 16px;
-  block-size: 16px;
+  inline-size: 14px;
+  block-size: 14px;
   flex: none;
 }
 
@@ -1475,7 +1475,7 @@ button {
   block-size: 100%;
   min-inline-size: 0;
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   overscroll-behavior-inline: contain;
   scrollbar-gutter: stable;
 }
@@ -1483,7 +1483,7 @@ button {
 .tloz-board-track {
   display: flex;
   min-inline-size: max-content;
-  block-size: 100%;
+  min-block-size: 100%;
   align-items: stretch;
   gap: 16px;
   padding-block-end: 10px;
@@ -1492,9 +1492,92 @@ button {
 .tloz-board-column {
   display: flex;
   flex: 0 0 296px;
-  min-block-size: 0;
+  min-block-size: 100%;
   border-radius: 14px;
   transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.mission-detail-workspace {
+  container-type: inline-size;
+  --tw-ring-color: rgba(29, 29, 27, 0.18);
+}
+
+.mission-detail-layout {
+  grid-template-columns: minmax(0, 1fr) 308px;
+}
+
+.mission-detail-properties {
+  position: sticky;
+  inset-block-start: 84px;
+}
+
+.mission-slide-over .mission-detail-properties {
+  inset-block-start: 1rem;
+}
+
+@container (max-width: 760px) {
+  .mission-detail-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mission-detail-properties {
+    position: static;
+  }
+
+  .mission-resource-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 639px) {
+  .slide-over-content-panel {
+    flex: 1 1 100% !important;
+    inline-size: 100% !important;
+  }
+}
+
+.mission-slide-over {
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    display 180ms allow-discrete,
+    overlay 180ms allow-discrete;
+}
+
+.mission-slide-over::backdrop {
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    display 180ms allow-discrete,
+    overlay 180ms allow-discrete;
+}
+
+.mission-slide-over[open],
+.mission-slide-over[open]::backdrop {
+  opacity: 1;
+}
+
+.mission-slide-over .slide-over-content-panel > div {
+  transform: translateX(28px);
+  opacity: 0;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease;
+}
+
+.mission-slide-over[open] .slide-over-content-panel > div {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+@starting-style {
+  .mission-slide-over[open],
+  .mission-slide-over[open]::backdrop {
+    opacity: 0;
+  }
+
+  .mission-slide-over[open] .slide-over-content-panel > div {
+    transform: translateX(28px);
+    opacity: 0;
+  }
 }
 
 .tloz-board-column[data-over="true"] {

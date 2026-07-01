@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import type { TlozEpisode, TlozMissionStatus, TlozProject, UserProfile } from "@zipform/types";
+import type { TlozEpisode, TlozMissionStatus, TlozProject, TlozQuestItem, TlozSeason, UserProfile } from "@zipform/types";
 import { MissionBoard } from "../../../components/tloz/mission-views";
 import { MissionSlideOver } from "../../../components/tloz/mission-slide-over";
 import { toast } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../../lib/tloz-data";
 import { patchMissionStatus } from "../actions";
 
-export function BoardClient({ missions, projects, episodes, users }: { missions: TlozMissionRecord[]; projects: TlozProject[]; episodes: TlozEpisode[]; users: UserProfile[] }) {
+export function BoardClient({ missions, allMissions, projects, seasons, episodes, users, questItems }: { missions: TlozMissionRecord[]; allMissions: TlozMissionRecord[]; projects: TlozProject[]; seasons: TlozSeason[]; episodes: TlozEpisode[]; users: UserProfile[]; questItems: TlozQuestItem[] }) {
   const [currentMissions, setCurrentMissions] = useState(missions);
   const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function BoardClient({ missions, projects, episodes, users }: { missions:
       <MissionSlideOver
         mission={selectedMission}
         onClose={() => setSelectedMission(null)}
-        editorOptions={{ projects, episodes, users }}
+        editorOptions={{ projects, seasons, episodes, users, missions: allMissions, questItems }}
         onMissionChange={updateMissionInView}
       />
     </>

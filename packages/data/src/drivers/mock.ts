@@ -18,7 +18,7 @@ import {
   userMissionStates,
   users
 } from "../seed-data";
-import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions } from "../tloz-hydration";
+import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions, parseMarkdownChecklist } from "../tloz-hydration";
 
 export function createMockDataClient(): ZipformDataClient {
   const tlozData = {
@@ -92,6 +92,24 @@ export function createMockDataClient(): ZipformDataClient {
       async getQuestItems() {
         return questItems;
       },
+      async createProject(name) {
+        const now = new Date().toISOString();
+        const project = { id: randomUUID(), name, description: "", color: "#6B6B6B", icon: "Folder", status: "active" as const, createdAt: now, updatedAt: now };
+        tlozData.projects.push(project);
+        return project;
+      },
+      async createSeason(name) {
+        const now = new Date().toISOString();
+        const season = { id: randomUUID(), name, version: name, description: "", status: "active" as const, startDate: now.slice(0, 10), createdAt: now, updatedAt: now };
+        tlozData.seasons.push(season);
+        return season;
+      },
+      async createEpisode(name, seasonId) {
+        const now = new Date().toISOString();
+        const episode = { id: randomUUID(), seasonId, name, romanNumber: String(tlozData.episodes.filter((item) => item.seasonId === seasonId).length + 1), description: "", status: "active" as const, startDate: now.slice(0, 10), createdAt: now, updatedAt: now };
+        tlozData.episodes.push(episode);
+        return episode;
+      },
       async createMission(input) {
         const now = new Date().toISOString();
         const mission: TlozMission = {
@@ -106,8 +124,53 @@ export function createMockDataClient(): ZipformDataClient {
       async updateMission(missionId, input) {
         const index = tlozData.missions.findIndex((mission) => mission.id === missionId);
         if (index < 0) throw new Error(`TLOZ mission ${missionId} was not found`);
-        tlozData.missions[index] = { ...tlozData.missions[index], ...input, updatedAt: new Date().toISOString() };
+        const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [
+          key,
+          value === "" && ["conclusion", "projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? undefined : value
+        ]));
+        tlozData.missions[index] = { ...tlozData.missions[index], ...normalized, updatedAt: new Date().toISOString() };
         return getHydratedMission(missionId);
+      },
+      async saveMissionDocument(missionId, markdown) {
+        const checklist = parseMarkdownChecklist(markdown);
+        const progress = checklist.length ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100) : 0;
+        await this.updateMission(missionId, { description: markdown, progress });
+        const now = new Date().toISOString();
+        tlozData.checklistItems = tlozData.checklistItems.filter((item) => item.missionId !== missionId);
+        tlozData.checklistItems.push(...checklist.map((item, position) => ({
+          id: randomUUID(), missionId, title: item.title, completed: item.completed, position, createdAt: now, updatedAt: now
+        })));
+        return (await this.getMissionDetail(missionId))!;
+      },
+      async addMissionDependency(missionId, dependsOnMissionId) {
+        if (missionId === dependsOnMissionId) throw new Error("A mission cannot depend on itself");
+        if (!tlozData.missionDependencies.some((item) => item.missionId === missionId && item.dependsOnMissionId === dependsOnMissionId)) {
+          tlozData.missionDependencies.push({ id: randomUUID(), missionId, dependsOnMissionId, createdAt: new Date().toISOString() });
+        }
+        return (await this.getMissionDetail(missionId))!;
+      },
+      async removeMissionDependency(missionId, dependsOnMissionId) {
+        tlozData.missionDependencies = tlozData.missionDependencies.filter((item) => item.missionId !== missionId || item.dependsOnMissionId !== dependsOnMissionId);
+        return (await this.getMissionDetail(missionId))!;
+      },
+      async setMissionQuestItem(missionId, questItemId, required) {
+        const current = tlozData.missionQuestItems.find((item) => item.missionId === missionId && item.questItemId === questItemId);
+        if (current) current.required = required;
+        else tlozData.missionQuestItems.push({ id: randomUUID(), missionId, questItemId, required, createdAt: new Date().toISOString() });
+        return (await this.getMissionDetail(missionId))!;
+      },
+      async removeMissionQuestItem(missionId, questItemId) {
+        tlozData.missionQuestItems = tlozData.missionQuestItems.filter((item) => item.missionId !== missionId || item.questItemId !== questItemId);
+        return (await this.getMissionDetail(missionId))!;
+      },
+      async addMissionResource(missionId, input) {
+        const now = new Date().toISOString();
+        tlozData.resources.push({ id: randomUUID(), missionId, ...input, createdAt: now, updatedAt: now });
+        return (await this.getMissionDetail(missionId))!;
+      },
+      async removeMissionResource(missionId, resourceId) {
+        tlozData.resources = tlozData.resources.filter((item) => item.missionId !== missionId || item.id !== resourceId);
+        return (await this.getMissionDetail(missionId))!;
       },
       async patchMissionStatus(missionId, status) {
         return this.updateMission(missionId, {

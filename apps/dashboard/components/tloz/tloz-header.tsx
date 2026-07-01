@@ -19,9 +19,12 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
+  Button,
   Command,
-  CommandDialogTitle,
+  CommandDialog,
 } from "@zipform/ui";
+import type { TlozMissionType } from "@zipform/types";
+import { missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 
 type TlozHeaderProps = {
   title: string;
@@ -30,9 +33,9 @@ type TlozHeaderProps = {
   showSearch?: boolean;
   showHeader?: boolean;
   commandEntities: {
-    missions: Array<{ id: string; label: string }>;
-    projects: Array<{ id: string; label: string }>;
-    questItems: Array<{ id: string; label: string }>;
+    missions: Array<{ id: string; label: string; icon: string; type: TlozMissionType }>;
+    projects: Array<{ id: string; label: string; icon: string }>;
+    questItems: Array<{ id: string; label: string; icon: string }>;
   };
 };
 
@@ -124,13 +127,12 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
         ) : null}
       </header>
 
-      <Command.Dialog
+      <CommandDialog
         className="tloz-command-dialog"
         label="Buscar y ejecutar comandos"
         open={commandOpen}
         onOpenChange={setCommandOpen}
       >
-        <CommandDialogTitle className="sr-only">Buscar y ejecutar comandos</CommandDialogTitle>
         <div className="tloz-command-input-wrap">
           <Search aria-hidden="true" />
           <Command.Input autoFocus placeholder="Buscar misiones, proyectos, quest items..." />
@@ -156,12 +158,12 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
             </Command.Group>
           ))}
           <Command.Group heading="Misiones">
-            {commandEntities.missions.map((mission) => (
+            {commandEntities.missions.map((mission) => { const MissionIcon = resolveMissionIcon(mission.icon); return (
               <Command.Item key={mission.id} value={`Misión ${mission.label}`} onSelect={() => runCommand(`/tloz/missions/${mission.id}`)}>
-                <Sword aria-hidden="true" />
+                <span className="grid size-7 shrink-0 place-items-center rounded-lg" style={{ color: missionTypeTone[mission.type], backgroundColor: missionTypeBackground[mission.type] }}><MissionIcon aria-hidden="true" /></span>
                 <span>{mission.label}</span>
               </Command.Item>
-            ))}
+            ); })}
           </Command.Group>
           <Command.Group heading="Proyectos">
             {commandEntities.projects.map((project) => (
@@ -180,7 +182,9 @@ export function TlozHeader({ title, currentView, detailLabel, showSearch = true,
             ))}
           </Command.Group>
         </Command.List>
-      </Command.Dialog>
+      </CommandDialog>
     </>
   );
 }
+
+const missionTypeBackground: Record<TlozMissionType, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };

@@ -56,8 +56,8 @@ model TlozMission {
   conclusion         String?
   ownerId            String
   owner              User                    @relation(fields: [ownerId], references: [id])
-  projectId          String
-  project            TlozProject             @relation(fields: [projectId], references: [id])
+  projectId          String?
+  project            TlozProject?            @relation(fields: [projectId], references: [id])
   seasonId           String?
   season             TlozSeason?             @relation(fields: [seasonId], references: [id])
   episodeId          String?

@@ -7,10 +7,10 @@ import {
   LucideIcon,
   Plus
 } from "lucide-react";
-import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, MetricProgress, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@zipform/ui";
+import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@zipform/types";
-import { dependencyLabel, formatDate, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
+import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
 
 const MAX_VISIBLE_QUEST_ITEMS = 3;
 
@@ -67,9 +67,9 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 pt-2">
-        {!compact ? <p className="tloz-card-description">{mission.description}</p> : null}
+        {!compact ? <p className="tloz-card-description">{missionPreviewDescription(mission.description)}</p> : null}
         <div className="tloz-meta-row">
-          <span>{mission.project.name}</span>
+          <span>{mission.project?.name ?? "Sin proyecto"}</span>
           <span>{formatDate(mission.dueDate)}</span>
         </div>
         {mission.dependencies.length > 0 ? (
@@ -94,7 +94,6 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
             <span className="tloz-dependency-copy">{dependencyLabel(mission)}</span>
           </div>
         ) : null}
-        <MetricProgress className="tloz-progress" value={mission.progress} tone="#D72228" />
         <div className="tloz-card-footer">
           <OwnerAvatar user={mission.owner} />
         </div>
@@ -115,7 +114,7 @@ export function ActiveMissionPanel({ label, mission }: { label: string; mission:
       </div>
       {mission ? (
         <>
-          <p>{mission.description}</p>
+          <p>{missionPreviewDescription(mission.description)}</p>
           <div className="tloz-active-actions">
           <OwnerAvatar user={mission.owner} />
             <Button asChild size="sm">
