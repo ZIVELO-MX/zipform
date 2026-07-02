@@ -9,6 +9,8 @@ import { ListClient } from "./list/list-client";
 import { TableClient } from "./table/table-client";
 import { CalendarClient } from "./calendar/calendar-client";
 import { TlozViewHeader } from "../../components/tloz/tloz-shell";
+import { useTlozViewState } from "../../components/tloz/tloz-view-state";
+import { CreateNewEntityButton } from "../../components/tloz/tloz-create";
 
 const viewConfig: Record<string, { title: string; description: string }> = {
   dashboard: { title: "Dashboard", description: "Visión general del equipo · trabajo activo en todos los proyectos" },
@@ -19,7 +21,6 @@ const viewConfig: Record<string, { title: string; description: string }> = {
 };
 
 type ViewRendererProps = {
-  view: string;
   summary: TlozDashboardSummary | null;
   missions: TlozMissionRecord[];
   allMissions: TlozMissionRecord[];
@@ -29,15 +30,44 @@ type ViewRendererProps = {
   users: UserProfile[];
   questItems: TlozQuestItem[];
   detailOptions: MissionDetailOptions;
+  hideProjectSections?: boolean;
 };
 
 export function TlozViewRenderer(props: ViewRendererProps) {
-  const { view, summary, missions, allMissions, projects, seasons, episodes, users, questItems, detailOptions } = props;
+  const { summary, missions, allMissions, projects, seasons, episodes, users, questItems, detailOptions, hideProjectSections } = props;
+  const { state } = useTlozViewState();
+  const view = state.view;
   const config = viewConfig[view] ?? viewConfig.dashboard;
+  const projectFilterActive = projects.length > 1 && projects.some((project) => project.id === state.projectId);
+  const seasonFilterActive = seasons.some((season) => season.id === state.seasonId);
+  const episodeFilterActive = episodes.some((episode) => episode.id === state.episodeId);
+  const ownerFilterActive = users.some((user) => user.id === state.ownerId);
+  const visibleMissions = missions
+    .filter((mission) => !projectFilterActive || mission.projectId === state.projectId)
+    .filter((mission) => !seasonFilterActive || mission.seasonId === state.seasonId)
+    .filter((mission) => !episodeFilterActive || mission.episodeId === state.episodeId)
+    .filter((mission) => !ownerFilterActive || mission.ownerId === state.ownerId)
+    .filter((mission) => state.showCompleted || mission.status !== "completed")
+    .sort((left, right) => state.sort === "title"
+      ? left.title.localeCompare(right.title)
+      : state.sort === "due-date"
+        ? (left.dueDate ?? "9999-12-31").localeCompare(right.dueDate ?? "9999-12-31")
+        : left.createdAt.localeCompare(right.createdAt));
 
   if (view === "dashboard") {
     if (!summary) return null;
-    return <DashboardClient summary={summary} detailOptions={detailOptions} />;
+    const visibleIds = new Set(visibleMissions.map((mission) => mission.id));
+    const filteredSummary = {
+      ...summary,
+      activeQuest: summary.activeQuest && visibleIds.has(summary.activeQuest.id) ? summary.activeQuest : null,
+      activeSupportQuest: summary.activeSupportQuest && visibleIds.has(summary.activeSupportQuest.id) ? summary.activeSupportQuest : null,
+      nowMissions: visibleMissions.filter((mission) => mission.status === "now" || mission.status === "blocked"),
+      mainQuests: visibleMissions.filter((mission) => mission.type === "main_quest" && mission.status !== "completed"),
+      upcomingMissions: visibleMissions.filter((mission) => mission.status === "next"),
+      futureMissions: visibleMissions.filter((mission) => mission.status === "later"),
+      projects: summary.projects.filter((project) => visibleMissions.some((mission) => mission.projectId === project.id)),
+    };
+    return <DashboardClient summary={filteredSummary} detailOptions={detailOptions} hideProjectSections={hideProjectSections} />;
   }
 
   return (
@@ -46,7 +76,7 @@ export function TlozViewRenderer(props: ViewRendererProps) {
       <div className={view === "board" ? "min-h-0 min-w-0 flex-1 overflow-hidden px-[26px] pb-[26px] pt-1" : "tloz-scrl flex-1 overflow-auto px-[26px] pb-[26px]"}>
         {view === "board" ? (
           <BoardClient
-            missions={missions}
+            missions={visibleMissions}
             allMissions={allMissions}
             projects={projects}
             seasons={seasons}
@@ -55,14 +85,15 @@ export function TlozViewRenderer(props: ViewRendererProps) {
             questItems={questItems}
           />
         ) : view === "list" ? (
-          <ListClient missions={missions} />
+          <ListClient missions={visibleMissions} grouping={state.grouping} />
         ) : view === "table" ? (
-          <TableClient missions={missions} />
+          <TableClient missions={visibleMissions} />
         ) : view === "calendar" ? (
-          <CalendarClient missions={missions} />
+          <CalendarClient missions={visibleMissions} />
         ) : (
-          <ListClient missions={missions} />
+          <ListClient missions={visibleMissions} grouping={state.grouping} />
         )}
+        {view === "list" || view === "table" ? <CreateNewEntityButton /> : null}
       </div>
     </div>
   );

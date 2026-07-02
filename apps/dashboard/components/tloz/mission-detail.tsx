@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, Database, File, FileCheck, FileText, ImageIcon, KeyRound, LayoutDashboard, Link2, MoreHorizontal, PanelRightOpen, Plus, Search, Shield, Sparkles, Star, StickyNote, Sword, Target, Wrench, X } from "lucide-react";
-import { Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, type EntityPickerOption, type IconPickerOption } from "@zipform/ui";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, type EntityPickerOption, type IconPickerOption } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
+import type { TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
 import {
   addMissionDependency,
   addMissionResource,
@@ -19,6 +19,7 @@ import {
 } from "../../app/tloz/actions";
 import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 import { missionStatusLabel, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
+import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 
 const missionIcons: IconPickerOption[] = [
   { id: "Sword", label: "Misión", icon: Sword }, { id: "Sparkles", label: "Destacado", icon: Sparkles }, { id: "LayoutDashboard", label: "Dashboard", icon: LayoutDashboard }, { id: "Search", label: "Búsqueda", icon: Search }, { id: "Database", label: "Base de datos", icon: Database }, { id: "FileText", label: "Documento", icon: FileText }, { id: "FileCheck", label: "Validación", icon: FileCheck }, { id: "KeyRound", label: "Acceso", icon: KeyRound }, { id: "Shield", label: "Seguridad", icon: Shield }, { id: "Wrench", label: "Herramienta", icon: Wrench },
@@ -39,6 +40,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
   onNavigateQuestItem?: (questItemId: string) => void;
   variant?: "panel" | "full";
 }) {
+  const fullMissionHref = mission.project ? missionHref(mission.project, mission.displayId) : "/tloz";
   const [current, setCurrent] = useState(mission);
   const [markdown, setMarkdown] = useState(mission.description);
   const [descriptionDraft, setDescriptionDraft] = useState(withoutTaskLines(mission.description));
@@ -171,6 +173,17 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
   return (
     <article className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-[26px] py-7" aria-busy={isPending}>
+      {variant === "full" && current.project ? (
+        <Breadcrumb className="mb-5">
+          <BreadcrumbList className="flex-nowrap text-carbon/60">
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild><Link href={projectHref(current.project)}>{current.project.name}</Link></BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem className="min-w-0"><BreadcrumbPage className="truncate">{current.title}</BreadcrumbPage></BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      ) : null}
       <div className="mission-detail-layout grid min-w-0 gap-[30px]">
         <main className="min-w-0">
           <header>
@@ -208,15 +221,15 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
           <div className="flex flex-col gap-7">
             <RelationsSection title="Dependencias">
-              <MissionReferences missions={current.dependencies} onRemove={(id) => mutate("Quitando dependencia…", () => removeMissionDependency(current.id, id))} onNavigate={onNavigateMission} />
-              <div className="flex flex-col gap-[9px]">{current.questItems.map((item) => <QuestReference key={item.id} item={item} required={current.missionQuestItems.find((link) => link.questItemId === item.id)?.required ?? false} onNavigate={onNavigateQuestItem} onRequiredChange={(checked) => mutate("Actualizando requisito…", () => setMissionQuestItem(current.id, item.id, checked))} onRemove={() => mutate("Quitando Quest Item…", () => removeMissionQuestItem(current.id, item.id))} />)}</div>
+              <MissionReferences missions={current.dependencies} project={current.project} onRemove={(id) => mutate("Quitando dependencia…", () => removeMissionDependency(current.id, id))} onNavigate={onNavigateMission} />
+              <div className="flex flex-col gap-[9px]">{current.questItems.map((item) => <QuestReference key={item.id} item={item} required={current.missionQuestItems.find((link) => link.questItemId === item.id)?.required ?? false} onNavigate={onNavigateQuestItem} onRequiredChange={(checked) => mutate("Actualizando requisito…", () => setMissionQuestItem(current.id, item.id, checked))} onRemove={() => mutate("Quitando item…", () => removeMissionQuestItem(current.id, item.id))} />)}</div>
               <AddDependency
-                missions={options.missions.filter((item) => item.id !== current.id && !current.dependencies.some((dependency) => dependency.id === item.id)).map((item) => ({ id: item.id, name: item.title, iconComponent: resolveMissionIcon(item.icon), iconColor: missionTypeTone[item.type], iconBackground: missionTypeBackground[item.type] }))}
+                missions={options.missions.filter((item) => Boolean(current.projectId) && item.projectId === current.projectId && item.id !== current.id && !current.dependencies.some((dependency) => dependency.id === item.id)).map((item) => ({ id: item.id, name: item.title, iconComponent: resolveMissionIcon(item.icon), iconColor: missionTypeTone[item.type], iconBackground: missionTypeBackground[item.type] }))}
                 questItems={options.questItems.filter((item) => !current.questItems.some((linked) => linked.id === item.id)).map((item) => ({ id: item.id, name: item.name, iconComponent: resolveMissionIcon(item.icon), iconColor: "#7A5A12", iconBackground: "#FFF4DE" }))}
                 onAddMission={(id) => mutate("Agregando dependencia…", () => addMissionDependency(current.id, id))}
-                onAddQuestItem={(id) => mutate("Agregando Quest Item…", () => setMissionQuestItem(current.id, id, false))}
+                onAddQuestItem={(id) => mutate("Agregando item…", () => setMissionQuestItem(current.id, id, false))}
               />
-              {current.requiredBy.length ? <><Separator /><h3 className="m-0 text-xs font-semibold text-carbon/45">Requerida por</h3><MissionReferences missions={current.requiredBy} onNavigate={onNavigateMission} /></> : null}
+              {current.requiredBy.length ? <><Separator /><h3 className="m-0 text-xs font-semibold text-carbon/45">Requerida por</h3><MissionReferences missions={current.requiredBy} project={current.project} onNavigate={onNavigateMission} /></> : null}
             </RelationsSection>
           </div>
 
@@ -231,7 +244,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
         <aside className="mission-detail-properties flex self-start flex-col gap-3.5" aria-label="Información de la misión">
           {variant === "panel" ? (
-            <Link href={`/tloz/missions/${current.id}`} className="flex items-center justify-center gap-2 rounded-xl border border-carbon/10 bg-white px-4 py-3 text-[13px] font-semibold text-carbon/60 no-underline transition-colors hover:border-carbon/20 hover:text-carbon">
+            <Link href={fullMissionHref} className="flex items-center justify-center gap-2 rounded-xl border border-carbon/10 bg-white px-4 py-3 text-[13px] font-semibold text-carbon/60 no-underline transition-colors hover:border-carbon/20 hover:text-carbon">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M9 8h6" /><path d="M9 12h6" /><path d="M9 16h4" /></svg>
               Abrir en página completa
             </Link>
@@ -265,8 +278,8 @@ function AddDependency({ missions, questItems, onAddMission, onAddQuestItem }: {
   const [kind, setKind] = useState<"mission" | "quest">("mission");
   if (!adding) return <button type="button" className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setAdding(true)}><Plus className="size-3.5" aria-hidden="true" />Agregar nuevo</button>;
   return <div className="rounded-xl border border-[#1D1D1B]/10 bg-white p-3">
-    <SegmentedControl aria-label="Tipo de dependencia" value={kind} onValueChange={(value) => setKind(value as "mission" | "quest")} options={[{ label: "Mission", value: "mission" }, { label: "Quest Item", value: "quest" }]} />
-    <div className="mt-2 flex items-center gap-2"><EntityPicker label={kind === "mission" ? "Mission" : "Quest Item"} options={kind === "mission" ? missions : questItems} allowEmpty={false} onValueChange={(id) => { if (kind === "mission") onAddMission(id); else onAddQuestItem(id); setAdding(false); }} /><Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancelar</Button></div>
+    <SegmentedControl aria-label="Tipo de dependencia" value={kind} onValueChange={(value) => setKind(value as "mission" | "quest")} options={[{ label: "Mission", value: "mission" }, { label: "Inventory", value: "quest" }]} />
+    <div className="mt-2 flex items-center gap-2"><EntityPicker label={kind === "mission" ? "Mission" : "Inventory item"} options={kind === "mission" ? missions : questItems} allowEmpty={false} onValueChange={(id) => { if (kind === "mission") onAddMission(id); else onAddQuestItem(id); setAdding(false); }} /><Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancelar</Button></div>
   </div>;
 }
 
@@ -276,24 +289,28 @@ function RelationsSection({ title, children, className = "" }: { title: string; 
 
 function QuestReference({ item, required, onNavigate, onRequiredChange, onRemove }: { item: TlozQuestItem; required: boolean; onNavigate?: (id: string) => void; onRequiredChange: (checked: boolean) => void; onRemove: () => void }) {
   const QuestIcon = resolveMissionIcon(item.icon);
-  const unlocked = item.status === "completed";
+  const unlocked = item.status === "unlocked";
+  const href = inventoryItemHref(item.id);
   return <div className="group/quest flex min-h-[54px] items-center gap-3 rounded-xl border border-[#1D1D1B]/10 bg-white px-3.5 py-3 transition-colors hover:border-[#D72228]/25">
-    <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#FFF4DE] text-[#7A5A12] [&_svg]:size-3"><QuestIcon aria-hidden="true" /></span>
-    <div className="min-w-0 flex-1"><p className="m-0 truncate text-[13.5px] font-semibold text-[#1D1D1B]">{item.name}</p><p className="m-0 mt-px truncate text-[11.5px] text-[#9A9A98]">{item.description || "Quest Item"}</p></div>
+    {onNavigate ? <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onNavigate(item.id)}><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#FFF4DE] text-[#7A5A12] [&_svg]:size-3"><QuestIcon aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold text-[#1D1D1B]">{item.name}</span><span className="mt-px block truncate text-[11.5px] text-[#9A9A98]">{item.description || "Inventory item"}</span></span></button> : <Link href={href} className="flex min-w-0 flex-1 items-center gap-3 text-inherit no-underline"><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#FFF4DE] text-[#7A5A12] [&_svg]:size-3"><QuestIcon aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold text-[#1D1D1B]">{item.name}</span><span className="mt-px block truncate text-[11.5px] text-[#9A9A98]">{item.description || "Inventory item"}</span></span></Link>}
     <span className={unlocked ? "rounded-full bg-[#E6F4EA] px-[9px] py-1 text-[11px] font-bold text-[#1E6B3C]" : "rounded-full bg-[#FFF4DE] px-[9px] py-1 text-[11px] font-bold text-[#7A5A12]"}>{unlocked ? "Desbloqueado" : "Bloqueado"}</span>
-    <OpenReferenceButton label={`Abrir ${item.name}`} href="/tloz/inventory" onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/quest:opacity-100 focus:opacity-100" />
+    <OpenReferenceButton label={`Abrir ${item.name}`} href={href} onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/quest:opacity-100 focus:opacity-100" />
     <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md opacity-0 group-hover/quest:opacity-100 focus:opacity-100 [&_svg]:size-3" aria-label={`Acciones para ${item.name}`}><MoreHorizontal aria-hidden="true" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>
-      {onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir Quest Item</DropdownMenuItem> : <DropdownMenuItem asChild><Link href="/tloz/inventory"><PanelRightOpen aria-hidden="true" />Abrir Quest Item</Link></DropdownMenuItem>}
+      {onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir item</DropdownMenuItem> : <DropdownMenuItem asChild><Link href={href}><PanelRightOpen aria-hidden="true" />Abrir item</Link></DropdownMenuItem>}
       <DropdownMenuCheckboxItem checked={required} onCheckedChange={(checked) => onRequiredChange(Boolean(checked))}>Requerido</DropdownMenuCheckboxItem>
       <DropdownMenuSeparator />
-      <DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={onRemove}><X aria-hidden="true" />Eliminar Quest Item</DropdownMenuItem>
+      <DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={onRemove}><X aria-hidden="true" />Eliminar item</DropdownMenuItem>
     </DropdownMenuGroup></DropdownMenuContent></DropdownMenu>
   </div>;
 }
 
-function MissionReferences({ missions, onRemove, onNavigate }: { missions: Array<{ id: string; title: string; status: TlozMissionRecord["status"]; icon: string; type: TlozMissionRecord["type"] }>; onRemove?: (id: string) => void; onNavigate?: (id: string) => void }) {
+function MissionReferences({ missions, project, onRemove, onNavigate }: { missions: Array<{ id: string; displayId: string; title: string; status: TlozMissionRecord["status"]; icon: string; type: TlozMissionRecord["type"] }>; project?: Pick<TlozProject, "name" | "slug">; onRemove?: (id: string) => void; onNavigate?: (id: string) => void }) {
   if (!missions.length) return null;
-  return <div className="flex flex-col gap-[9px]">{missions.map((item) => { const Icon = resolveMissionIcon(item.icon); const itemTone = missionTypeTone[item.type]; const content = <><span className="grid size-7 shrink-0 place-items-center rounded-lg [&_svg]:size-3" style={{ color: itemTone, backgroundColor: missionTypeBackground[item.type] }}><Icon aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold text-[#1D1D1B]">{item.title}</span><span className="mt-px block text-[11.5px] text-[#9A9A98]">Mission · {missionStatusLabel[item.status]}</span></span></>; return <div key={item.id} className="group/mission flex min-h-[54px] items-center gap-2 rounded-xl border border-[#1D1D1B]/10 bg-white px-3.5 py-3 transition-colors hover:border-[#D72228]/25">{onNavigate ? <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onNavigate(item.id)}>{content}</button> : <Link className="flex min-w-0 flex-1 items-center gap-3 text-inherit" href={`/tloz/missions/${item.id}`}>{content}</Link>}{item.status === "completed" ? <span className="rounded-full bg-[#E6F4EA] px-[9px] py-1 text-[11px] font-bold text-[#1E6B3C]">Completada</span> : null}<OpenReferenceButton label={`Abrir ${item.title}`} href={`/tloz/missions/${item.id}`} onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/mission:opacity-100 focus:opacity-100" /><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md opacity-0 group-hover/mission:opacity-100 focus:opacity-100 [&_svg]:size-3" aria-label={`Acciones para ${item.title}`}><MoreHorizontal aria-hidden="true" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>{onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir Mission</DropdownMenuItem> : <DropdownMenuItem asChild><Link href={`/tloz/missions/${item.id}`}><PanelRightOpen aria-hidden="true" />Abrir Mission</Link></DropdownMenuItem>}{onRemove ? <><DropdownMenuSeparator /><DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={() => onRemove(item.id)}><X aria-hidden="true" />Eliminar dependencia</DropdownMenuItem></> : null}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>; })}</div>;
+  return <div className="flex flex-col gap-[9px]">{missions.map((item) => {
+    const Icon = resolveMissionIcon(item.icon); const itemTone = missionTypeTone[item.type]; const href = project ? missionHref(project, item.displayId) : "/tloz";
+    const content = <><span className="grid size-7 shrink-0 place-items-center rounded-lg [&_svg]:size-3" style={{ color: itemTone, backgroundColor: missionTypeBackground[item.type] }}><Icon aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold text-[#1D1D1B]">{item.title}</span><span className="mt-px block text-[11.5px] text-[#9A9A98]">Mission · {missionStatusLabel[item.status]}</span></span></>;
+    return <div key={item.id} className="group/mission flex min-h-[54px] items-center gap-2 rounded-xl border border-[#1D1D1B]/10 bg-white px-3.5 py-3 transition-colors hover:border-[#D72228]/25">{onNavigate ? <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onNavigate(item.id)}>{content}</button> : <Link className="flex min-w-0 flex-1 items-center gap-3 text-inherit" href={href}>{content}</Link>}{item.status === "completed" ? <span className="rounded-full bg-[#E6F4EA] px-[9px] py-1 text-[11px] font-bold text-[#1E6B3C]">Completada</span> : null}<OpenReferenceButton label={`Abrir ${item.title}`} href={href} onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/mission:opacity-100 focus:opacity-100" /><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md opacity-0 group-hover/mission:opacity-100 focus:opacity-100 [&_svg]:size-3" aria-label={`Acciones para ${item.title}`}><MoreHorizontal aria-hidden="true" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>{onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir Mission</DropdownMenuItem> : <DropdownMenuItem asChild><Link href={href}><PanelRightOpen aria-hidden="true" />Abrir Mission</Link></DropdownMenuItem>}{onRemove ? <><DropdownMenuSeparator /><DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={() => onRemove(item.id)}><X aria-hidden="true" />Eliminar dependencia</DropdownMenuItem></> : null}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>;
+  })}</div>;
 }
 
 function ResourceReference({ resource, onRemove }: { resource: TlozResource; onRemove: () => void }) {

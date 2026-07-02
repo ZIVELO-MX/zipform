@@ -18,6 +18,8 @@ import {
   users
 } from "../seed-data";
 import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions, parseMarkdownChecklist } from "../tloz-hydration";
+import { assertProjectScopedDependency } from "../dependency-rules";
+import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 
 export function createMockDataClient(): ZipformDataClient {
   const tlozData = {
@@ -80,7 +82,7 @@ export function createMockDataClient(): ZipformDataClient {
         return buildTlozMissionDetail(tlozData, missionId);
       },
       async getProjects() {
-        return projects;
+        return tlozData.projects;
       },
       async getSeasons() {
         return seasons;
@@ -89,16 +91,43 @@ export function createMockDataClient(): ZipformDataClient {
         return episodes;
       },
       async getQuestItems() {
-        return questItems;
+        return tlozData.questItems;
       },
       async getResources() {
         return tlozData.resources;
       },
-      async createProject(name) {
+      async getUsers() {
+        return tlozData.users;
+      },
+      async createProject(input) {
+        const valid = validateProjectCreate(input);
         const now = new Date().toISOString();
-        const project = { id: crypto.randomUUID(), name, description: "", color: "#6B6B6B", icon: "Folder", status: "active" as const, createdAt: now, updatedAt: now };
+        if (!tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ project owner was not found");
+        const project = { ...valid, id: crypto.randomUUID(), slug: uniqueSlug(valid.name, tlozData.projects.map((item) => item.slug)), createdAt: now, updatedAt: now };
         tlozData.projects.push(project);
         return project;
+      },
+      async createQuestItem(input) {
+        const valid = validateQuestItemCreate(input);
+        if (valid.ownerId && !tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ inventory owner was not found");
+        const now = new Date().toISOString();
+        const item = { ...valid, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
+        tlozData.questItems.push(item);
+        return item;
+      },
+      async updateProject(projectId, input) {
+        const index = tlozData.projects.findIndex((item) => item.id === projectId);
+        if (index < 0) throw new Error(`TLOZ project ${projectId} was not found`);
+        const normalized = { ...input, dueDate: input.dueDate || undefined };
+        tlozData.projects[index] = { ...tlozData.projects[index], ...normalized, updatedAt: new Date().toISOString() };
+        return tlozData.projects[index];
+      },
+      async updateQuestItem(questItemId, input) {
+        const index = tlozData.questItems.findIndex((item) => item.id === questItemId);
+        if (index < 0) throw new Error(`TLOZ inventory item ${questItemId} was not found`);
+        const normalized = { ...input, ownerId: input.ownerId || undefined, acquiredAt: input.acquiredAt || undefined };
+        tlozData.questItems[index] = { ...tlozData.questItems[index], ...normalized, updatedAt: new Date().toISOString() };
+        return tlozData.questItems[index];
       },
       async createSeason(name) {
         const now = new Date().toISOString();
@@ -113,10 +142,15 @@ export function createMockDataClient(): ZipformDataClient {
         return episode;
       },
       async createMission(input) {
+        const valid = validateMissionCreate(input);
+        const project = tlozData.projects.find((item) => item.id === valid.projectId);
+        if (!project) throw new Error("TLOZ mission project was not found");
+        if (!tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ mission owner was not found");
         const now = new Date().toISOString();
         const mission: TlozMission = {
-          ...input,
-          id: input.id ?? crypto.randomUUID(),
+          ...valid,
+          id: valid.id ?? crypto.randomUUID(),
+          displayId: nextMissionDisplayId(project.name, tlozData.missions.map((item) => item.displayId)),
           createdAt: now,
           updatedAt: now
         };
@@ -130,7 +164,17 @@ export function createMockDataClient(): ZipformDataClient {
           key,
           value === "" && ["conclusion", "projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? undefined : value
         ]));
+        if (input.projectId && input.projectId !== tlozData.missions[index].projectId) {
+          const project = tlozData.projects.find((item) => item.id === input.projectId);
+          if (!project) throw new Error("TLOZ mission project was not found");
+          normalized.displayId = nextMissionDisplayId(project.name, tlozData.missions.map((item) => item.displayId));
+        }
         tlozData.missions[index] = { ...tlozData.missions[index], ...normalized, updatedAt: new Date().toISOString() };
+        if (Object.prototype.hasOwnProperty.call(input, "projectId")) {
+          tlozData.missionDependencies = tlozData.missionDependencies.filter(
+            (item) => item.missionId !== missionId && item.dependsOnMissionId !== missionId,
+          );
+        }
         return getHydratedMission(missionId);
       },
       async saveMissionDocument(missionId, markdown) {
@@ -145,7 +189,10 @@ export function createMockDataClient(): ZipformDataClient {
         return (await this.getMissionDetail(missionId))!;
       },
       async addMissionDependency(missionId, dependsOnMissionId) {
-        if (missionId === dependsOnMissionId) throw new Error("A mission cannot depend on itself");
+        assertProjectScopedDependency(
+          tlozData.missions.find((item) => item.id === missionId),
+          tlozData.missions.find((item) => item.id === dependsOnMissionId),
+        );
         if (!tlozData.missionDependencies.some((item) => item.missionId === missionId && item.dependsOnMissionId === dependsOnMissionId)) {
           tlozData.missionDependencies.push({ id: crypto.randomUUID(), missionId, dependsOnMissionId, createdAt: new Date().toISOString() });
         }
@@ -173,6 +220,24 @@ export function createMockDataClient(): ZipformDataClient {
       async removeMissionResource(missionId, resourceId) {
         tlozData.resources = tlozData.resources.filter((item) => item.missionId !== missionId || item.id !== resourceId);
         return (await this.getMissionDetail(missionId))!;
+      },
+      async addProjectResource(projectId, input) {
+        const now = new Date().toISOString();
+        tlozData.resources.push({ id: crypto.randomUUID(), projectId, ...input, createdAt: now, updatedAt: now });
+        return tlozData.resources.filter((item) => item.projectId === projectId);
+      },
+      async removeProjectResource(projectId, resourceId) {
+        tlozData.resources = tlozData.resources.filter((item) => item.id !== resourceId || item.projectId !== projectId);
+        return tlozData.resources.filter((item) => item.projectId === projectId);
+      },
+      async addQuestItemResource(questItemId, input) {
+        const now = new Date().toISOString();
+        tlozData.resources.push({ id: crypto.randomUUID(), questItemId, ...input, createdAt: now, updatedAt: now });
+        return tlozData.resources.filter((item) => item.questItemId === questItemId);
+      },
+      async removeQuestItemResource(questItemId, resourceId) {
+        tlozData.resources = tlozData.resources.filter((item) => item.id !== resourceId || item.questItemId !== questItemId);
+        return tlozData.resources.filter((item) => item.questItemId === questItemId);
       },
       async patchMissionStatus(missionId, status) {
         return this.updateMission(missionId, {

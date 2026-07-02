@@ -9,6 +9,8 @@ model User {
   updatedAt         DateTime               @updatedAt
   sessions          Session[]
   ownedMissions     TlozMission[]
+  ownedProjects     TlozProject[]
+  ownedQuestItems   TlozQuestItem[]
   userMissionStates TlozUserMissionState[]
 
   @@map("users")

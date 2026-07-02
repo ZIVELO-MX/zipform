@@ -27,7 +27,10 @@ function createPrismaStub() {
     platformMetric: { findMany: vi.fn(async () => [{ label: "Health", value: "100", tone: "good" }]) },
     tlozSeason: { findMany: findMany(seasons.map((item) => ({ ...withDates(item), endDate: nullable(item.endDate) }))) },
     tlozEpisode: { findMany: findMany(episodes.map((item) => ({ ...withDates(item), endDate: nullable(item.endDate) }))) },
-    tlozProject: { findMany: findMany(projects.map(withDates)) },
+    tlozProject: {
+      findMany: findMany(projects.map(withDates)),
+      findUnique: vi.fn(async ({ where }: { where: { id: string } }) => projects.find((project) => project.id === where.id) ?? null),
+    },
     tlozMission: {
       findMany: findMany(missionRows),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
@@ -59,6 +62,7 @@ describe("prisma data driver", () => {
   it("maps persistent records for every read operation", async () => {
     const client = createPrismaDataClient(createPrismaStub());
     expect(await client.user.getCurrent()).toEqual(currentUser);
+    expect(await client.tloz.getUsers()).toEqual(expect.arrayContaining([expect.objectContaining({ id: currentUser.id })]));
     expect(await client.platform.getMetrics()).toEqual([{ label: "Health", value: "100", tone: "good" }]);
     expect(await client.tloz.getMissions()).toHaveLength(missions.length);
     expect(await client.tloz.getMissionDetail(missions[0].id)).not.toBeNull();
@@ -81,7 +85,7 @@ describe("prisma data driver", () => {
 
   it("creates, updates, completes and deletes missions", async () => {
     const client = createPrismaDataClient(createPrismaStub());
-    const { createdAt: _createdAt, updatedAt: _updatedAt, completedAt: _completedAt, ...input } = missions[0];
+    const { createdAt: _createdAt, updatedAt: _updatedAt, completedAt: _completedAt, displayId: _displayId, ...input } = missions[0];
     const created = await client.tloz.createMission({ ...input, id: "prisma-test", title: "Created" });
     expect(created.title).toBe("Created");
     const updated = await client.tloz.updateMission(created.id, { title: "Updated", startDate: "2026-07-01" });

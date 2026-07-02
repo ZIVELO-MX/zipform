@@ -7,6 +7,7 @@ describe("mock data driver", () => {
     const client = createMockDataClient();
     expect(await client.apps.list()).not.toHaveLength(0);
     expect(await client.user.getCurrent()).toEqual(currentUser);
+    expect(await client.tloz.getUsers()).toEqual(expect.arrayContaining([currentUser]));
     expect((await client.tloz.getDashboardSummary()).projects).not.toHaveLength(0);
     expect(await client.tloz.getMissionDetail("missing")).toBeNull();
     const source = missions[0];
@@ -46,7 +47,7 @@ describe("mock data driver", () => {
   it("uses Markdown as checklist source of truth and persists mission relations", async () => {
     const client = createMockDataClient();
     const mission = missions[0];
-    const dependency = missions.find((item) => item.id !== mission.id)!;
+    const dependency = missions.find((item) => item.id !== mission.id && item.projectId === mission.projectId)!;
     const questItem = (await client.tloz.getQuestItems())[0];
 
     let detail = await client.tloz.saveMissionDocument(mission.id, "# Work\n- [ ] First\n- [x] Second");
@@ -76,9 +77,17 @@ describe("mock data driver", () => {
     expect((await client.tloz.removeMissionResource(mission.id, resource.id)).resources).not.toContainEqual(expect.objectContaining({ id: resource.id }));
   });
 
+  it("rejects dependencies outside the mission project", async () => {
+    const client = createMockDataClient();
+    const mission = missions[0];
+    const otherProjectMission = missions.find((item) => item.projectId !== mission.projectId)!;
+    await expect(client.tloz.addMissionDependency(mission.id, otherProjectMission.id))
+      .rejects.toThrow("same project");
+  });
+
   it("creates dependent picker entities and allows clearing the hierarchy", async () => {
     const client = createMockDataClient();
-    const project = await client.tloz.createProject("New project");
+    const project = await client.tloz.createProject({ name: "New project", description: "", icon: "FolderKanban", color: "#2D6CDF", status: "active", type: "normal", ownerId: currentUser.id, startDate: "2026-07-01" });
     const season = await client.tloz.createSeason("Season III");
     const episode = await client.tloz.createEpisode("First episode", season.id);
     expect(project).toMatchObject({ name: "New project", status: "active" });
@@ -87,5 +96,29 @@ describe("mock data driver", () => {
     const mission = missions[0];
     expect(await client.tloz.updateMission(mission.id, { projectId: project.id, seasonId: season.id, episodeId: episode.id })).toMatchObject({ projectId: project.id, seasonId: season.id, episodeId: episode.id });
     expect(await client.tloz.updateMission(mission.id, { projectId: "", seasonId: "", episodeId: "" })).toMatchObject({ projectId: undefined, seasonId: undefined, episodeId: undefined });
+  });
+
+  it("updates system-project entities and keeps resources scoped to one owner", async () => {
+    const client = createMockDataClient();
+    const project = (await client.tloz.getProjects())[0];
+    const item = (await client.tloz.getQuestItems())[0];
+
+    expect(await client.tloz.updateProject(project.id, { name: "Updated project", status: "archived", dueDate: "2026-08-01" }))
+      .toMatchObject({ name: "Updated project", status: "archived", dueDate: "2026-08-01" });
+    expect(await client.tloz.updateQuestItem(item.id, { status: "unlocked", category: "asset", acquiredAt: "2026-07-01" }))
+      .toMatchObject({ status: "unlocked", category: "asset", acquiredAt: "2026-07-01" });
+
+    const projectResources = await client.tloz.addProjectResource(project.id, { type: "link", title: "Project brief" });
+    expect(projectResources.at(-1)).toMatchObject({ projectId: project.id });
+    expect(projectResources.at(-1)).not.toHaveProperty("missionId");
+    expect(projectResources.at(-1)).not.toHaveProperty("questItemId");
+    const itemResources = await client.tloz.addQuestItemResource(item.id, { type: "document", title: "Inventory spec" });
+    expect(itemResources.at(-1)).toMatchObject({ questItemId: item.id });
+    expect(itemResources.at(-1)).not.toHaveProperty("missionId");
+    expect(itemResources.at(-1)).not.toHaveProperty("projectId");
+
+    await client.tloz.removeProjectResource(project.id, projectResources.at(-1)!.id);
+    await client.tloz.removeQuestItemResource(item.id, itemResources.at(-1)!.id);
+    expect((await client.tloz.getResources()).filter((resource) => resource.projectId === project.id || resource.questItemId === item.id)).toEqual([]);
   });
 });

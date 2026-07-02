@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Search, UserRound } from "lucide-react";
+import { Check, Search, UserRound, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 import { Button } from "./button";
 import { Input } from "./input";
@@ -15,12 +15,13 @@ export type UserPickerOption = {
   avatarUrl?: string;
 };
 
-export function UserPicker({ users, value, onValueChange, label = "Responsable", className }: {
+export function UserPicker({ users, value, onValueChange, label = "Responsable", className, allowEmpty = false }: {
   users: UserPickerOption[];
   value?: string;
   onValueChange: (value: string) => void;
   label?: string;
   className?: string;
+  allowEmpty?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -45,6 +46,7 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
           <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuarios…" className="pl-9" autoComplete="off" />
         </label>
         <div className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto overscroll-contain">
+          {allowEmpty ? <button type="button" className="flex min-h-11 items-center gap-3 rounded-xl px-2.5 text-left text-carbon/55 transition-colors hover:bg-carbon/5" onClick={() => { onValueChange(""); setOpen(false); setQuery(""); }}><span className="grid size-7 place-items-center rounded-full bg-carbon/5"><X className="size-3.5" /></span><span className="text-sm font-semibold">Sin responsable</span></button> : null}
           {filtered.map((user) => (
             <button
               key={user.id}

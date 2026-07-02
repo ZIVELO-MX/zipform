@@ -3,6 +3,7 @@
 import * as React from "react";
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { cn } from "../lib/utils";
+import { useOverlayPortalContainer } from "./overlay-portal";
 
 const Popover = PopoverPrimitive.Root;
 const PopoverTrigger = PopoverPrimitive.Trigger;
@@ -11,8 +12,9 @@ const PopoverAnchor = PopoverPrimitive.Anchor;
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = "start", sideOffset = 8, ...props }, ref) => (
-  <PopoverPrimitive.Portal>
+>(({ className, align = "start", sideOffset = 8, ...props }, ref) => {
+  const container = useOverlayPortalContainer();
+  return <PopoverPrimitive.Portal container={container ?? undefined}>
     <PopoverPrimitive.Content
       ref={ref}
       align={align}
@@ -23,8 +25,8 @@ const PopoverContent = React.forwardRef<
       )}
       {...props}
     />
-  </PopoverPrimitive.Portal>
-));
+  </PopoverPrimitive.Portal>;
+});
 PopoverContent.displayName = PopoverPrimitive.Content.displayName;
 
 function PopoverHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
