@@ -22,6 +22,8 @@ import {
   parseMarkdownChecklist,
   type TlozDataSet
 } from "../tloz-hydration";
+import { assertProjectScopedDependency } from "../dependency-rules";
+import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 
 function ensureDatabaseUrl() {
   if (!process.env.DATABASE_URL) {
@@ -107,17 +109,24 @@ function mapEpisode(episode: {
 
 function mapProject(project: {
   id: string;
+  slug: string;
   name: string;
   description: string;
   color: string;
   icon: string;
   status: string;
+  type: string;
+  ownerId: string;
+  startDate: string;
+  dueDate: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): TlozProject {
   return {
     ...project,
     status: project.status as TlozProject["status"],
+    type: project.type as TlozProject["type"],
+    dueDate: project.dueDate ?? undefined,
     createdAt: toIso(project.createdAt),
     updatedAt: toIso(project.updatedAt)
   };
@@ -125,6 +134,7 @@ function mapProject(project: {
 
 function mapMission(mission: {
   id: string;
+  displayId: string;
   title: string;
   description: string;
   icon: string;
@@ -178,6 +188,8 @@ function mapQuestItem(item: {
   description: string;
   icon: string;
   status: string;
+  category: string;
+  ownerId: string | null;
   acquiredAt: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -185,6 +197,8 @@ function mapQuestItem(item: {
   return {
     ...item,
     status: item.status as TlozQuestItem["status"],
+    category: item.category as TlozQuestItem["category"],
+    ownerId: item.ownerId ?? undefined,
     acquiredAt: item.acquiredAt ?? undefined,
     createdAt: toIso(item.createdAt),
     updatedAt: toIso(item.updatedAt)
@@ -222,7 +236,9 @@ function mapChecklistItem(item: {
 
 function mapResource(resource: {
   id: string;
-  missionId: string;
+  missionId: string | null;
+  projectId: string | null;
+  questItemId: string | null;
   type: string;
   title: string;
   url: string | null;
@@ -233,6 +249,9 @@ function mapResource(resource: {
   return {
     ...resource,
     type: resource.type as TlozResource["type"],
+    missionId: resource.missionId ?? undefined,
+    projectId: resource.projectId ?? undefined,
+    questItemId: resource.questItemId ?? undefined,
     url: resource.url ?? undefined,
     fileId: resource.fileId ?? undefined,
     createdAt: toIso(resource.createdAt),
@@ -385,9 +404,28 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const rows = await prisma.tlozResource.findMany({ orderBy: { createdAt: "asc" } });
         return rows.map(mapResource);
       },
-      async createProject(name) {
-        const row = await prisma.tlozProject.create({ data: { id: crypto.randomUUID(), name, description: "", color: "#6B6B6B", icon: "Folder", status: "active" } });
+      async getUsers() {
+        const rows = await prisma.user.findMany({ orderBy: { name: "asc" } });
+        return rows.map(mapUser);
+      },
+      async createProject(input) {
+        const valid = validateProjectCreate(input);
+        const existing = await prisma.tlozProject.findMany({ select: { slug: true } });
+        const row = await prisma.tlozProject.create({ data: { ...valid, id: crypto.randomUUID(), slug: uniqueSlug(valid.name, existing.map((item) => item.slug)), dueDate: valid.dueDate || null } });
         return mapProject(row);
+      },
+      async createQuestItem(input) {
+        const valid = validateQuestItemCreate(input);
+        const row = await prisma.tlozQuestItem.create({ data: { ...valid, id: crypto.randomUUID(), ownerId: valid.ownerId || null, acquiredAt: valid.acquiredAt || null } });
+        return mapQuestItem(row);
+      },
+      async updateProject(projectId, input) {
+        const row = await prisma.tlozProject.update({ where: { id: projectId }, data: { ...input, ...(Object.prototype.hasOwnProperty.call(input, "dueDate") ? { dueDate: input.dueDate || null } : {}) } });
+        return mapProject(row);
+      },
+      async updateQuestItem(questItemId, input) {
+        const row = await prisma.tlozQuestItem.update({ where: { id: questItemId }, data: { ...input, ...(Object.prototype.hasOwnProperty.call(input, "ownerId") ? { ownerId: input.ownerId || null } : {}), ...(Object.prototype.hasOwnProperty.call(input, "acquiredAt") ? { acquiredAt: input.acquiredAt || null } : {}) } });
+        return mapQuestItem(row);
       },
       async createSeason(name) {
         const today = new Date().toISOString().slice(0, 10);
@@ -401,9 +439,13 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         return mapEpisode(row);
       },
       async createMission(input) {
-        const { id = crypto.randomUUID(), completedAt, ...data } = input;
+        const valid = validateMissionCreate(input);
+        const project = await prisma.tlozProject.findUnique({ where: { id: valid.projectId } });
+        if (!project) throw new Error("TLOZ mission project was not found");
+        const existing = await prisma.tlozMission.findMany({ select: { displayId: true } });
+        const { id = crypto.randomUUID(), completedAt, ...data } = valid;
         await prisma.tlozMission.create({
-          data: { ...data, id, completedAt: completedAt ? new Date(completedAt) : null }
+          data: { ...data, id, displayId: nextMissionDisplayId(project.name, existing.map((item) => item.displayId)), completedAt: completedAt ? new Date(completedAt) : null }
         });
         return getHydratedMission(id);
       },
@@ -413,12 +455,26 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           key,
           value === "" && ["conclusion", "projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? null : value
         ]));
+        let nextDisplayId: string | undefined;
+        if (input.projectId) {
+          const current = await prisma.tlozMission.findUnique({ where: { id: missionId }, select: { projectId: true } });
+          if (current?.projectId !== input.projectId) {
+            const [project, existing] = await Promise.all([prisma.tlozProject.findUnique({ where: { id: input.projectId } }), prisma.tlozMission.findMany({ select: { displayId: true } })]);
+            if (!project) throw new Error("TLOZ mission project was not found");
+            nextDisplayId = nextMissionDisplayId(project.name, existing.map((item) => item.displayId));
+          }
+        }
         await prisma.tlozMission.update({
           where: { id: missionId },
-          data: { ...nullableData, ...(Object.prototype.hasOwnProperty.call(input, "completedAt")
+          data: { ...nullableData, ...(nextDisplayId ? { displayId: nextDisplayId } : {}), ...(Object.prototype.hasOwnProperty.call(input, "completedAt")
             ? { completedAt: completedAt ? new Date(completedAt) : null }
             : {}) }
         });
+        if (Object.prototype.hasOwnProperty.call(input, "projectId")) {
+          await prisma.tlozMissionDependency.deleteMany({
+            where: { OR: [{ missionId }, { dependsOnMissionId: missionId }] },
+          });
+        }
         return getHydratedMission(missionId);
       },
       async saveMissionDocument(missionId, markdown) {
@@ -436,7 +492,14 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         return detail;
       },
       async addMissionDependency(missionId, dependsOnMissionId) {
-        if (missionId === dependsOnMissionId) throw new Error("A mission cannot depend on itself");
+        const [mission, dependency] = await Promise.all([
+          prisma.tlozMission.findUnique({ where: { id: missionId }, select: { id: true, projectId: true } }),
+          prisma.tlozMission.findUnique({ where: { id: dependsOnMissionId }, select: { id: true, projectId: true } }),
+        ]);
+        assertProjectScopedDependency(
+          mission ? { id: mission.id, projectId: mission.projectId ?? undefined } : null,
+          dependency ? { id: dependency.id, projectId: dependency.projectId ?? undefined } : null,
+        );
         await prisma.tlozMissionDependency.upsert({
           where: { missionId_dependsOnMissionId: { missionId, dependsOnMissionId } },
           create: { id: crypto.randomUUID(), missionId, dependsOnMissionId },
@@ -467,6 +530,22 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       async removeMissionResource(missionId, resourceId) {
         await prisma.tlozResource.deleteMany({ where: { id: resourceId, missionId } });
         return (await this.getMissionDetail(missionId))!;
+      },
+      async addProjectResource(projectId, input) {
+        await prisma.tlozResource.create({ data: { id: crypto.randomUUID(), projectId, ...input } });
+        return (await prisma.tlozResource.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } })).map(mapResource);
+      },
+      async removeProjectResource(projectId, resourceId) {
+        await prisma.tlozResource.deleteMany({ where: { id: resourceId, projectId } });
+        return (await prisma.tlozResource.findMany({ where: { projectId }, orderBy: { createdAt: "asc" } })).map(mapResource);
+      },
+      async addQuestItemResource(questItemId, input) {
+        await prisma.tlozResource.create({ data: { id: crypto.randomUUID(), questItemId, ...input } });
+        return (await prisma.tlozResource.findMany({ where: { questItemId }, orderBy: { createdAt: "asc" } })).map(mapResource);
+      },
+      async removeQuestItemResource(questItemId, resourceId) {
+        await prisma.tlozResource.deleteMany({ where: { id: resourceId, questItemId } });
+        return (await prisma.tlozResource.findMany({ where: { questItemId }, orderBy: { createdAt: "asc" } })).map(mapResource);
       },
       async patchMissionStatus(missionId, status) {
         await prisma.tlozMission.update({

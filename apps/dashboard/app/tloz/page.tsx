@@ -3,30 +3,18 @@ import { TlozViewRenderer } from "./tloz-view-renderer";
 import {
   getTlozDashboardSummary,
   getTlozEpisodes,
-  getTlozMissionFilters,
   getTlozMissions,
   getTlozProjects,
   getTlozQuestItems,
   getTlozSeasons,
 } from "../../lib/tloz-data";
-import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { Suspense } from "react";
 import { TlozLoading } from "../../components/tloz/tloz-loading";
 
-type TlozPageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
-
-async function TlozData({ searchParams }: TlozPageProps) {
-  const params = await searchParams;
-  const view = typeof params.view === "string" ? params.view : "dashboard";
-  const filters = await getTlozMissionFilters(searchParams);
-
-  const dashboardView = view === "dashboard";
-
+async function TlozData() {
   const [summary, missions, allMissions, projects, seasons, episodes, questItems] = await Promise.all([
-    dashboardView ? getTlozDashboardSummary() : Promise.resolve(null),
-    dashboardView ? Promise.resolve([] as TlozMissionRecord[]) : getTlozMissions(filters),
+    getTlozDashboardSummary(),
+    getTlozMissions(),
     getTlozMissions(),
     getTlozProjects(),
     getTlozSeasons(),
@@ -35,8 +23,6 @@ async function TlozData({ searchParams }: TlozPageProps) {
   ]);
 
   const users = Array.from(new Map(allMissions.map((m) => [m.owner.id, m.owner])).values());
-
-  const projectLabel = params.project ? projects.find(p => p.id === params.project)?.name : undefined;
 
   const detailOptions = {
     missions: allMissions,
@@ -49,14 +35,11 @@ async function TlozData({ searchParams }: TlozPageProps) {
 
   return (
     <TlozPageShell
-      title="Missions"
-      projectLabel={projectLabel}
+      title="Lobby"
       showSearch
-      showDisplaySwitcher
-      fullWidth={view === "board"}
+      fullWidth
     >
       <TlozViewRenderer
-        view={view}
         summary={summary}
         missions={missions}
         allMissions={allMissions}
@@ -71,10 +54,10 @@ async function TlozData({ searchParams }: TlozPageProps) {
   );
 }
 
-export default async function TlozPage(props: TlozPageProps) {
+export default async function TlozPage() {
   return (
     <Suspense fallback={<TlozLoading />}>
-      <TlozData searchParams={props.searchParams} />
+      <TlozData />
     </Suspense>
   );
 }

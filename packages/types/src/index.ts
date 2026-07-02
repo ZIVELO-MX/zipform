@@ -47,6 +47,10 @@ export type PlatformMetric = {
 };
 
 export type TlozEntityStatus = "planned" | "active" | "completed" | "blocked" | "archived";
+export type TlozProjectStatus = "planned" | "active" | "archived";
+export type TlozProjectType = "normal" | "system";
+export type TlozInventoryStatus = "locked" | "unlocked";
+export type TlozInventoryCategory = "tool" | "access" | "asset" | "document" | "other";
 
 export type TlozMissionType =
   | "main_quest"
@@ -87,17 +91,23 @@ export type TlozEpisode = {
 
 export type TlozProject = {
   id: string;
+  slug: string;
   name: string;
   description: string;
   color: string;
   icon: string;
-  status: TlozEntityStatus;
+  status: TlozProjectStatus;
+  type: TlozProjectType;
+  ownerId: string;
+  startDate: string;
+  dueDate?: string;
   createdAt: string;
   updatedAt: string;
 };
 
 export type TlozMission = {
   id: string;
+  displayId: string;
   title: string;
   description: string;
   icon: string;
@@ -129,7 +139,9 @@ export type TlozQuestItem = {
   name: string;
   description: string;
   icon: string;
-  status: TlozEntityStatus;
+  status: TlozInventoryStatus;
+  category: TlozInventoryCategory;
+  ownerId?: string;
   acquiredAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -155,7 +167,9 @@ export type TlozChecklistItem = {
 
 export type TlozResource = {
   id: string;
-  missionId: string;
+  missionId?: string;
+  projectId?: string;
+  questItemId?: string;
   type: TlozResourceType;
   title: string;
   url?: string;

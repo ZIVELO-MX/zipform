@@ -34,20 +34,30 @@ model TlozEpisode {
 
 model TlozProject {
   id          String        @id
+  slug        String        @unique
   name        String
   description String
   color       String
   icon        String
   status      String
+  type        String        @default("normal")
+  ownerId     String
+  owner       User          @relation(fields: [ownerId], references: [id])
+  startDate   String
+  dueDate     String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   missions    TlozMission[]
+  resources   TlozResource[]
+
+  @@index([ownerId])
 
   @@map("tloz_projects")
 }
 
 model TlozMission {
   id                 String                  @id
+  displayId          String                  @unique
   title              String
   description        String
   icon               String
@@ -102,10 +112,16 @@ model TlozQuestItem {
   description       String
   icon              String
   status            String
+  category          String                 @default("other")
+  ownerId           String?
+  owner             User?                  @relation(fields: [ownerId], references: [id])
   acquiredAt        String?
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   missionQuestItems TlozMissionQuestItem[]
+  resources         TlozResource[]
+
+  @@index([ownerId])
 
   @@map("tloz_quest_items")
 }
@@ -140,8 +156,12 @@ model TlozChecklistItem {
 
 model TlozResource {
   id        String      @id
-  missionId String
-  mission   TlozMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  missionId String?
+  mission   TlozMission? @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   TlozProject? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  questItemId String?
+  questItem TlozQuestItem? @relation(fields: [questItemId], references: [id], onDelete: Cascade)
   type      String
   title     String
   url       String?
@@ -150,6 +170,8 @@ model TlozResource {
   updatedAt DateTime    @updatedAt
 
   @@index([missionId])
+  @@index([projectId])
+  @@index([questItemId])
   @@map("tloz_resources")
 }
 

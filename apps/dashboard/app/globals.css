@@ -1109,7 +1109,7 @@ button {
   margin-inline-start: 0;
 }
 
-.tloz-quest-dots > span[data-status="completed"] {
+.tloz-quest-dots > span[data-status="unlocked"] {
   background: #d8f0df;
   color: #20552b;
 }
