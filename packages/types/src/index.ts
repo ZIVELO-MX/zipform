@@ -94,6 +94,7 @@ export type TlozProject = {
   slug: string;
   name: string;
   description: string;
+  descriptionDetail: string;
   color: string;
   icon: string;
   status: TlozProjectStatus;
@@ -138,6 +139,7 @@ export type TlozQuestItem = {
   id: string;
   name: string;
   description: string;
+  descriptionDetail: string;
   icon: string;
   status: TlozInventoryStatus;
   category: TlozInventoryCategory;

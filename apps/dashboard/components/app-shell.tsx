@@ -61,7 +61,7 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
   return [
     {
       items: [
-        { label: "Lobby", href: "/tloz", icon: LayoutDashboard },
+        { label: "Lobby", href: "/tloz", icon: LayoutDashboard, exact: true },
       ],
     },
     {

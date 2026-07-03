@@ -103,7 +103,7 @@ export function createMockDataClient(): ZipformDataClient {
         const valid = validateProjectCreate(input);
         const now = new Date().toISOString();
         if (!tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ project owner was not found");
-        const project = { ...valid, id: crypto.randomUUID(), slug: uniqueSlug(valid.name, tlozData.projects.map((item) => item.slug)), createdAt: now, updatedAt: now };
+        const project = { ...valid, descriptionDetail: input.descriptionDetail ?? "", id: crypto.randomUUID(), slug: uniqueSlug(valid.name, tlozData.projects.map((item) => item.slug)), createdAt: now, updatedAt: now };
         tlozData.projects.push(project);
         return project;
       },
@@ -111,7 +111,7 @@ export function createMockDataClient(): ZipformDataClient {
         const valid = validateQuestItemCreate(input);
         if (valid.ownerId && !tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ inventory owner was not found");
         const now = new Date().toISOString();
-        const item = { ...valid, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
+        const item = { ...valid, descriptionDetail: input.descriptionDetail ?? "", id: crypto.randomUUID(), createdAt: now, updatedAt: now };
         tlozData.questItems.push(item);
         return item;
       },
