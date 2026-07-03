@@ -61,6 +61,9 @@ Recent additions:
 - [IMPLEMENTED] /tloz/projects/[id]: dashboard filtrado por proyecto con hero + view switcher + filtered views
 - [IMPLEMENTED] MissionDetail variant="panel" mode with "Abrir en página completa" link in properties sidebar
 - [IMPLEMENTED] getResources() in TlozRepository contract
+- [IMPLEMENTED] Editable fields show a visual field indicator (border + edit icon on hover) in DetailPropertyRow
+- [IMPLEMENTED] Description and DescriptionDetail editing moved behind three-dots menu with explicit Cancel/Guardar buttons in Projects and Inventory
+- [IMPLEMENTED] Markdown editor defaults to text mode instead of visual
 
 ---
 

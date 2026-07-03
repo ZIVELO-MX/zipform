@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
-import { Check, ExternalLink, File, FileText, ImageIcon, Link2, Lock, Plus, StickyNote, Unlock, X } from "lucide-react";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, ColorPicker, DatePicker, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, UserAvatarLabel, UserPicker, type IconPickerOption } from "@zipform/ui";
+import { Check, ClipboardCopy, Edit3, ExternalLink, File, FileText, ImageIcon, Link2, Lock, MoreHorizontal, Plus, StickyNote, Unlock, X } from "lucide-react";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, ColorPicker, DatePicker, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, UserAvatarLabel, UserPicker, type IconPickerOption } from "@zipform/ui";
 import type { TlozInventoryCategory, TlozProject, TlozProjectStatus, TlozProjectType, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { addProjectResource, addQuestItemResource, getEntityResources, removeProjectResource, removeQuestItemResource, updateProject, updateQuestItem } from "../../app/tloz/actions";
@@ -96,7 +96,7 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
           <div className="mb-3 flex items-center gap-2"><span className="rounded-full px-2.5 py-1 text-[11px] font-bold" style={{ background: `${tone}18`, color: tone }}>{project ? projectTypeLabel[project.type] : categoryLabel[item!.category]}</span></div>
           <div className="flex items-start gap-2.5"><IconPicker label="Icono" value={entity.icon} icons={icons} color={tone} iconOnly className="mt-0.5 size-8 shrink-0 justify-center rounded-lg border-0 bg-white p-0 shadow-none [&_svg]:size-[15px]" onValueChange={(icon) => persist({ icon })} /><EditableText value={entity.name} className="text-[30px] font-bold leading-[1.12] tracking-[-0.025em]" onSave={(name) => persist({ name })} /></div>
         </header>
-        <EditableText value={entity.description} multiline placeholder="Añadir descripción corta…" className="mb-2 block min-h-24 w-full text-[15px] leading-[1.6] text-[#454543]" onSave={(description) => persist({ description })} />
+        <DescriptionEditor value={entity.description} placeholder="Añadir descripción corta…" onSave={(description) => persist({ description })} />
         <MarkdownEditor value={entity.descriptionDetail} onSave={(descriptionDetail) => persist({ descriptionDetail })} />
 
         <DetailSection title={project ? "Missions" : "Usado por"}>
@@ -130,10 +130,18 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
   </article>;
 }
 
-function EditableText({ value, onSave, multiline = false, placeholder, className = "" }: { value: string; onSave: (value: string) => void; multiline?: boolean; placeholder?: string; className?: string }) {
+function EditableText({ value, onSave, className = "" }: { value: string; onSave: (value: string) => void; className?: string }) {
   const [draft, setDraft] = useState(value); useEffect(() => setDraft(value), [value]);
-  if (multiline) return <textarea className={`resize-none border-0 bg-transparent p-0 outline-none focus:ring-0 ${className}`} value={draft} placeholder={placeholder} onChange={(event) => setDraft(event.target.value)} onBlur={() => draft !== value && onSave(draft)} />;
   return <input className={`min-w-0 flex-1 border-0 bg-transparent p-0 text-carbon outline-none focus:ring-0 ${className}`} value={draft} onChange={(event) => setDraft(event.target.value)} onBlur={() => draft.trim() && draft !== value && onSave(draft.trim())} />;
+}
+
+function DescriptionEditor({ value, onSave, placeholder }: { value: string; onSave: (value: string) => void; placeholder?: string }) {
+  const [draft, setDraft] = useState(value);
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { setDraft(value); setEditing(false); }, [value]);
+  function handleCopy() { navigator.clipboard.writeText(value).then(() => toast.success("Copiado al portapapeles")); }
+  if (editing) return <div className="mb-2 space-y-2"><textarea autoFocus className="min-h-24 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10" value={draft} placeholder={placeholder} onChange={(event) => setDraft(event.target.value)} /><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => { setDraft(value); setEditing(false); }}>Cancelar</Button><Button type="button" onClick={() => { if (draft !== value) onSave(draft); setEditing(false); }}>Guardar</Button></div></div>;
+  return <div className="group relative mb-2"><button type="button" className="block w-full min-h-24 rounded-xl border border-transparent bg-[#FAF9F7] px-4 py-3 text-left text-[15px] leading-[1.6] text-[#454543] transition-colors hover:border-carbon/15 hover:bg-white" tabIndex={0}>{value || <span className="text-carbon/45">{placeholder}</span>}</button><div className="absolute right-2 top-2"><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-7 rounded-md text-carbon/45 hover:text-carbon" aria-label="Opciones de descripción"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40"><DropdownMenuItem onSelect={handleCopy}><ClipboardCopy className="size-3.5" />Copiar</DropdownMenuItem><DropdownMenuItem onSelect={() => setEditing(true)}><Edit3 className="size-3.5" />Editar</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div></div>;
 }
 function StatusDisplay({ label, tone }: { label: string; tone: string }) { return <span className="inline-flex items-center gap-1.5" style={{ color: tone }}><span className="size-[7px] rounded-full bg-current" />{label}</span>; }
 function OwnerDisplay({ ownerId, users }: { ownerId?: string; users: DetailUser[] }) { const user = users.find((candidate) => candidate.id === ownerId); return user ? <UserAvatarLabel name={user.name} label={user.username ?? user.name} labelOnly imageUrl={user.avatarUrl} size="sm" /> : <span className="text-carbon/45">Sin responsable</span>; }

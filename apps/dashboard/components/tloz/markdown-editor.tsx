@@ -15,23 +15,21 @@ type MarkdownEditorProps = {
 export function MarkdownEditor({ value, onSave, placeholder = "Añadir descripción detallada con Markdown…" }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
-  const [mode, setMode] = useState<"visual" | "text">("visual");
+  const [mode, setMode] = useState<"visual" | "text">("text");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const skipSave = useRef(false);
 
   useEffect(() => {
     setDraft(value);
     setEditing(false);
-    setMode("visual");
+    setMode("text");
   }, [value]);
 
-  function finish() {
-    if (skipSave.current) {
-      skipSave.current = false;
-      setDraft(value);
-      setEditing(false);
-      return;
-    }
+  function cancel() {
+    setDraft(value);
+    setEditing(false);
+  }
+
+  function save() {
     if (draft !== value) onSave(draft);
     setEditing(false);
   }
@@ -84,14 +82,6 @@ export function MarkdownEditor({ value, onSave, placeholder = "Añadir descripci
               value={draft}
               placeholder={placeholder}
               onChange={(event) => setDraft(event.target.value)}
-              onBlur={finish}
-              onKeyDown={(event) => {
-                if (event.key === "Escape") {
-                  skipSave.current = true;
-                  setDraft(value);
-                  setEditing(false);
-                }
-              }}
             />
           ) : (
             <div
@@ -101,14 +91,15 @@ export function MarkdownEditor({ value, onSave, placeholder = "Añadir descripci
               <MarkdownContent>{draft}</MarkdownContent>
             </div>
           )}
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={cancel}>Cancelar</Button>
+            <Button type="button" onClick={save}>Guardar</Button>
+          </div>
         </div>
       ) : (
         <div
-          className="min-h-24 w-full cursor-pointer rounded-xl border border-transparent bg-[#FAF9F7] px-4 py-3 text-[15px] leading-[1.6] text-[#454543] transition-colors hover:border-carbon/15 hover:bg-white"
-          role="button"
+          className="min-h-24 w-full rounded-xl border border-transparent bg-[#FAF9F7] px-4 py-3 text-[15px] leading-[1.6] text-[#454543] transition-colors hover:border-carbon/15 hover:bg-white"
           tabIndex={0}
-          onClick={() => setEditing(true)}
-          onKeyDown={(event) => { if (event.key === "Enter") setEditing(true); }}
         >
           {value ? <MarkdownContent>{value}</MarkdownContent> : <span className="text-carbon/45">{placeholder}</span>}
         </div>
