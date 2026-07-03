@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { SegmentedControl } from "@zipform/ui";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, SegmentedControl, toast } from "@zipform/ui";
 
 type MarkdownEditorProps = {
   value: string;
@@ -36,66 +36,84 @@ export function MarkdownEditor({ value, onSave, placeholder = "Añadir descripci
     setEditing(false);
   }
 
-  if (!editing) {
-    if (!value) {
-      return (
-        <button
-          type="button"
-          className="block min-h-24 w-full rounded-md text-left text-[15px] leading-[1.6] text-carbon/45 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20"
-          onClick={() => setEditing(true)}
-        >
-          {placeholder}
-        </button>
-      );
-    }
-    return (
-      <button
-        type="button"
-        className="block w-full rounded-md text-left text-[15px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20"
-        onClick={() => setEditing(true)}
-      >
-        <MarkdownContent>{value}</MarkdownContent>
-      </button>
-    );
+  function handleCopy() {
+    navigator.clipboard.writeText(value).then(() => toast.success("Copiado al portapapeles"));
   }
 
   return (
-    <div className="space-y-2">
-      <SegmentedControl
-        aria-label="Modo de edición"
-        value={mode}
-        onValueChange={(v) => setMode(v as "visual" | "text")}
-        options={[
-          { label: "Visual", value: "visual" },
-          { label: "Text", value: "text" },
-        ]}
-      />
-      {mode === "text" ? (
-        <textarea
-          ref={textareaRef}
-          autoFocus
-          className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
-          value={draft}
-          placeholder={placeholder}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={finish}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              skipSave.current = true;
-              setDraft(value);
-              setEditing(false);
-            }
-          }}
-        />
+    <section className="mb-7">
+      <div className="mb-2 flex items-center justify-between">
+        <h2 className="text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Descripción</h2>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="ghost" size="icon-xs" className="size-7 rounded-md text-carbon/45 hover:text-carbon" aria-label="Opciones de descripción">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem onSelect={handleCopy}>
+              <ClipboardCopy className="size-3.5" />
+              Copiar
+            </DropdownMenuItem>
+            {!editing ? (
+              <DropdownMenuItem onSelect={() => setEditing(true)}>
+                <Edit3 className="size-3.5" />
+                Editar
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {editing ? (
+        <div className="space-y-2">
+          <SegmentedControl
+            aria-label="Modo de edición"
+            value={mode}
+            onValueChange={(v) => setMode(v as "visual" | "text")}
+            options={[
+              { label: "Visual", value: "visual" },
+              { label: "Text", value: "text" },
+            ]}
+          />
+          {mode === "text" ? (
+            <textarea
+              ref={textareaRef}
+              autoFocus
+              className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
+              value={draft}
+              placeholder={placeholder}
+              onChange={(event) => setDraft(event.target.value)}
+              onBlur={finish}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  skipSave.current = true;
+                  setDraft(value);
+                  setEditing(false);
+                }
+              }}
+            />
+          ) : (
+            <div
+              className="min-h-28 w-full cursor-text rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543]"
+              onClick={() => textareaRef.current?.focus()}
+            >
+              <MarkdownContent>{draft}</MarkdownContent>
+            </div>
+          )}
+        </div>
       ) : (
         <div
-          className="min-h-28 w-full rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543]"
-          onClick={() => textareaRef.current?.focus()}
+          className="min-h-24 w-full cursor-pointer rounded-xl border border-transparent bg-[#FAF9F7] px-4 py-3 text-[15px] leading-[1.6] text-[#454543] transition-colors hover:border-carbon/15 hover:bg-white"
+          role="button"
+          tabIndex={0}
+          onClick={() => setEditing(true)}
+          onKeyDown={(event) => { if (event.key === "Enter") setEditing(true); }}
         >
-          <MarkdownContent>{draft}</MarkdownContent>
+          {value ? <MarkdownContent>{value}</MarkdownContent> : <span className="text-carbon/45">{placeholder}</span>}
         </div>
       )}
-    </div>
+    </section>
   );
 }
 

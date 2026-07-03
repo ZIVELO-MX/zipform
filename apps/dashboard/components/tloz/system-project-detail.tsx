@@ -50,14 +50,11 @@ export function SystemEntitySlideOver({ detail, onClose, onChange, users, missio
   </SlideOver>;
 }
 
-type SystemEditableField = "status" | "type" | "color" | "owner" | "startDate" | "dueDate" | "category";
-
 export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onChange?: (entity: TlozProject | TlozQuestItem) => void; onNavigateMission?: (mission: TlozMissionRecord) => void; onOpenFullPage?: () => void }) {
   const { variant, users, missions, resources: initialResources, panel = false, onChange } = props;
   const [entity, setEntity] = useState<TlozProject | TlozQuestItem>(props.entity);
   const [resources, setResources] = useState(initialResources);
   const [pending, startTransition] = useTransition();
-  const [activeField, setActiveField] = useState<SystemEditableField | null>(null);
   const { setState } = useTlozViewState();
   const router = useRouter();
   useEffect(() => setEntity(props.entity), [props.entity]);
@@ -73,7 +70,6 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
   const tone = project?.color ?? "#7A5A12";
 
   function persist(input: Record<string, string | undefined>, label = "Guardando cambios…") {
-    setActiveField(null);
     const toastId = toast.loading(label);
     startTransition(async () => {
       try {
@@ -115,16 +111,16 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
         {panel ? <Button type="button" variant="outline" className="min-h-11 rounded-xl bg-white text-carbon/60" onClick={props.onOpenFullPage}><ExternalLink size={14} />Abrir en página completa</Button> : null}
         <section className="overflow-hidden rounded-2xl border border-carbon/10 bg-white"><h2 className="m-0 border-b border-carbon/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/45">Propiedades</h2><div className="space-y-1 px-3 py-2">
           {project ? <>
-            <DetailPropertyRow label="Estado" display={<StatusDisplay label={projectStatusLabel[project.status]} tone={project.color} />} editing={activeField === "status"} onEdit={(editing) => setActiveField(editing ? "status" : null)}><Select value={project.status} onValueChange={(status) => persist({ status })}><SelectTrigger aria-label="Estado"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{Object.entries(projectStatusLabel).map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow>
-            <DetailPropertyRow label="Tipo" display={<span>{projectTypeLabel[project.type]}</span>} editing={activeField === "type"} onEdit={(editing) => setActiveField(editing ? "type" : null)}><Select value={project.type} onValueChange={(type) => persist({ type })}><SelectTrigger aria-label="Tipo"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{Object.entries(projectTypeLabel).map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow>
-            <DetailPropertyRow label="Color" display={<span className="inline-flex items-center gap-2"><span className="size-3 rounded-full" style={{ backgroundColor: project.color }} />{project.color.toUpperCase()}</span>} editing={activeField === "color"} onEdit={(editing) => setActiveField(editing ? "color" : null)}><ColorPicker value={project.color} onValueChange={(color) => persist({ color })} /></DetailPropertyRow>
-            <DetailPropertyRow label="Responsable" display={<OwnerDisplay ownerId={project.ownerId} users={users} />} editing={activeField === "owner"} onEdit={(editing) => setActiveField(editing ? "owner" : null)}><UserPicker users={users} value={project.ownerId} onValueChange={(ownerId) => persist({ ownerId })} /></DetailPropertyRow>
-            <DetailPropertyRow label="Inicio" display={<span className="font-mono">{formatDate(project.startDate)}</span>} editing={activeField === "startDate"} onEdit={(editing) => setActiveField(editing ? "startDate" : null)}><DatePicker value={project.startDate} label="Fecha de inicio" clearable={false} onValueChange={(startDate) => startDate && persist({ startDate })} /></DetailPropertyRow>
-            <DetailPropertyRow label="Vence" display={<span className="font-mono text-[#B91C22]">{formatDate(project.dueDate)}</span>} editing={activeField === "dueDate"} onEdit={(editing) => setActiveField(editing ? "dueDate" : null)}><DatePicker value={project.dueDate} label="Fecha límite" onValueChange={(dueDate) => persist({ dueDate: dueDate ?? "" })} /></DetailPropertyRow>
+            <DetailPropertyRow label="Estado" display={<StatusDisplay label={projectStatusLabel[project.status]} tone={project.color} />}><Select value={project.status} onValueChange={(status) => persist({ status })}><SelectTrigger aria-label="Estado"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{Object.entries(projectStatusLabel).map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow>
+            <DetailPropertyRow label="Tipo" display={<span>{projectTypeLabel[project.type]}</span>}><Select value={project.type} onValueChange={(type) => persist({ type })}><SelectTrigger aria-label="Tipo"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{Object.entries(projectTypeLabel).map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow>
+            <DetailPropertyRow label="Color" display={<span className="inline-flex items-center gap-2"><span className="size-3 rounded-full" style={{ backgroundColor: project.color }} />{project.color.toUpperCase()}</span>}><ColorPicker value={project.color} onValueChange={(color) => persist({ color })} /></DetailPropertyRow>
+            <DetailPropertyRow label="Responsable" display={<OwnerDisplay ownerId={project.ownerId} users={users} />}><UserPicker users={users} value={project.ownerId} onValueChange={(ownerId) => persist({ ownerId })} /></DetailPropertyRow>
+            <DetailPropertyRow label="Inicio" display={<span className="font-mono">{formatDate(project.startDate)}</span>}><DatePicker value={project.startDate} label="Fecha de inicio" clearable={false} onValueChange={(startDate) => startDate && persist({ startDate })} /></DetailPropertyRow>
+            <DetailPropertyRow label="Vence" display={<span className="font-mono text-[#B91C22]">{formatDate(project.dueDate)}</span>}><DatePicker value={project.dueDate} label="Fecha límite" onValueChange={(dueDate) => persist({ dueDate: dueDate ?? "" })} /></DetailPropertyRow>
           </> : <>
-            <DetailPropertyRow label="Estado" display={<StatusDisplay label={item!.status === "unlocked" ? "Desbloqueado" : "Bloqueado"} tone={item!.status === "unlocked" ? "#1E8E5A" : "#7A5A12"} />} editing={false} onEdit={() => undefined} readOnly><span /></DetailPropertyRow>
-            <DetailPropertyRow label="Categoría" display={<span>{categoryLabel[item!.category]}</span>} editing={activeField === "category"} onEdit={(editing) => setActiveField(editing ? "category" : null)}><Select value={item!.category} onValueChange={(category) => persist({ category })}><SelectTrigger aria-label="Categoría"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{Object.entries(categoryLabel).map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow>
-            <DetailPropertyRow label="Responsable" display={<OwnerDisplay ownerId={item!.ownerId} users={users} />} editing={activeField === "owner"} onEdit={(editing) => setActiveField(editing ? "owner" : null)}><UserPicker users={users} value={item!.ownerId} allowEmpty onValueChange={(ownerId) => persist({ ownerId })} /></DetailPropertyRow>
+            <DetailPropertyRow label="Estado" display={<StatusDisplay label={item!.status === "unlocked" ? "Desbloqueado" : "Bloqueado"} tone={item!.status === "unlocked" ? "#1E8E5A" : "#7A5A12"} />} readOnly><span /></DetailPropertyRow>
+            <DetailPropertyRow label="Categoría" display={<span>{categoryLabel[item!.category]}</span>}><Select value={item!.category} onValueChange={(category) => persist({ category })}><SelectTrigger aria-label="Categoría"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{Object.entries(categoryLabel).map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow>
+            <DetailPropertyRow label="Responsable" display={<OwnerDisplay ownerId={item!.ownerId} users={users} />}><UserPicker users={users} value={item!.ownerId} allowEmpty onValueChange={(ownerId) => persist({ ownerId })} /></DetailPropertyRow>
           </>}
         </div></section>
         <section className="overflow-hidden rounded-2xl border border-carbon/10 bg-white"><h2 className="m-0 border-b border-carbon/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/45">Actividad</h2><div className="space-y-3 p-4 text-xs text-carbon/60"><Activity label="Entidad actualizada" date={entity.updatedAt} tone={tone} /><Activity label="Entidad creada" date={entity.createdAt} /></div></section>
