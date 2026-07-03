@@ -105,6 +105,55 @@ P2 — completar experiencia de producto:
 
 ---
 
+### PRE-1.0.0 RELEASE GATE — DATABASE AND DEPLOYMENT
+
+These items must be completed before the `1.0.0` release. Authentication is
+tracked separately and is not part of this database-readiness gate.
+
+P0 — PostgreSQL/Supabase migration:
+
+- [DATA][DATABASE] Change the Prisma datasource from SQLite to PostgreSQL and
+  create a clean PostgreSQL migration baseline; do not run the existing
+  SQLite-specific migrations against Supabase
+- [DATA][DATABASE] Configure a pooled runtime connection and a direct migration
+  connection for serverless deployment
+- [DATA][DEPLOYMENT] Add a production migration command based on
+  `prisma migrate deploy`; keep `prisma migrate dev` for local development only
+- [DATA][SEED] Provide an idempotent, production-safe seed/bootstrap process for
+  required platform records and the initial internal user
+
+P1 — production correctness:
+
+- [TLOZ][TESTS] Add PostgreSQL integration tests covering migrations, seed,
+  reads, CRUD, relations, constraints, transactions, and cascade behavior
+- [TLOZ][CORRECTNESS] Make project slug and Mission `displayId` allocation safe
+  under concurrent writes, with deterministic retry behavior for unique conflicts
+- [TLOZ][CORRECTNESS] Wrap multi-step Mission updates and dependency cleanup in
+  transactions so partial writes cannot leave inconsistent data
+- [TLOZ][DEPLOYMENT] Remove accidental build-time database coupling from `/tloz`;
+  make its runtime rendering and cache/revalidation policy explicit
+
+P2 — production scalability and validation:
+
+- [TLOZ][PERFORMANCE] Replace full-dataset hydration on list and detail requests
+  with scoped Prisma queries, database-level filters, and pagination
+- [PLATFORM][DEPLOYMENT] Validate the complete release sequence in a staging
+  environment: provision database, migrate, seed, build, deploy, execute TLOZ
+  CRUD smoke tests, and verify rollback/recovery instructions
+- [PLATFORM][DOCS] Document required environment variables, pooled versus direct
+  connection usage, migration ownership, seed policy, and deployment runbook
+
+Release acceptance criteria:
+
+- `pnpm check` passes with the PostgreSQL Prisma client
+- A clean Supabase/PostgreSQL database can be migrated and bootstrapped without
+  manual table edits
+- TLOZ read and write smoke tests pass against the deployed staging environment
+- The dashboard build does not require an already populated runtime database
+- No request path loads the complete TLOZ dataset when a scoped query is possible
+
+---
+
 ### LATER
 
 - Add Finance as an internal platform application
