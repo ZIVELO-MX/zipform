@@ -17,6 +17,7 @@ jobs:
     timeout-minutes: 15
     env:
       ZIPFORM_DATA_DRIVER: mock
+      DATABASE_URL: "file:./dev.db"
     steps:
       - uses: actions/checkout@v4
       - run: corepack enable
