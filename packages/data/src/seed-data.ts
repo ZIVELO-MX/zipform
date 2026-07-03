@@ -170,7 +170,7 @@ export const metrics: PlatformMetric[] = [
   { label: "Current version", value: "0.1", tone: "good" },
   { label: "Target version", value: "1.0", tone: "neutral" },
   { label: "Auth", value: "Planned", tone: "warning" },
-  { label: "Data", value: "Prisma SQLite", tone: "good" }
+  { label: "Data", value: "Prisma PostgreSQL", tone: "good" }
 ];
 
 export const seasons: TlozSeason[] = [
