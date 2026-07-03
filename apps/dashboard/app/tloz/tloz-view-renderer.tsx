@@ -1,16 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { useMemo } from "react";
 import type { TlozEpisode, TlozProject, TlozQuestItem, TlozSeason, UserProfile } from "@zipform/types";
 import type { TlozDashboardSummary, TlozMissionRecord } from "../../lib/tloz-data";
 import type { MissionDetailOptions } from "../../components/tloz/mission-detail";
 import { DashboardClient } from "./dashboard-client";
-import { BoardClient } from "./board/board-client";
-import { ListClient } from "./list/list-client";
-import { TableClient } from "./table/table-client";
-import { CalendarClient } from "./calendar/calendar-client";
 import { TlozViewHeader } from "../../components/tloz/tloz-shell";
 import { useTlozViewState } from "../../components/tloz/tloz-view-state";
 import { CreateNewEntityButton } from "../../components/tloz/tloz-create";
+
+const BoardClient = dynamic(() => import("./board/board-client").then((module) => module.BoardClient), { loading: ViewLoading });
+const ListClient = dynamic(() => import("./list/list-client").then((module) => module.ListClient), { loading: ViewLoading });
+const TableClient = dynamic(() => import("./table/table-client").then((module) => module.TableClient), { loading: ViewLoading });
+const CalendarClient = dynamic(() => import("./calendar/calendar-client").then((module) => module.CalendarClient), { loading: ViewLoading });
+
+function ViewLoading() {
+  return <div className="min-h-40 animate-pulse rounded-2xl bg-carbon/[0.04]" aria-label="Cargando vista" />;
+}
 
 const viewConfig: Record<string, { title: string; description: string }> = {
   dashboard: { title: "Dashboard", description: "Visión general del equipo · trabajo activo en todos los proyectos" },
@@ -42,17 +49,21 @@ export function TlozViewRenderer(props: ViewRendererProps) {
   const seasonFilterActive = seasons.some((season) => season.id === state.seasonId);
   const episodeFilterActive = episodes.some((episode) => episode.id === state.episodeId);
   const ownerFilterActive = users.some((user) => user.id === state.ownerId);
-  const visibleMissions = missions
-    .filter((mission) => !projectFilterActive || mission.projectId === state.projectId)
-    .filter((mission) => !seasonFilterActive || mission.seasonId === state.seasonId)
-    .filter((mission) => !episodeFilterActive || mission.episodeId === state.episodeId)
-    .filter((mission) => !ownerFilterActive || mission.ownerId === state.ownerId)
-    .filter((mission) => state.showCompleted || mission.status !== "completed")
-    .sort((left, right) => state.sort === "title"
+  const visibleMissions = useMemo(() => {
+    const visible = missions.filter((mission) => (
+      (!projectFilterActive || mission.projectId === state.projectId)
+      && (!seasonFilterActive || mission.seasonId === state.seasonId)
+      && (!episodeFilterActive || mission.episodeId === state.episodeId)
+      && (!ownerFilterActive || mission.ownerId === state.ownerId)
+      && (state.showCompleted || mission.status !== "completed")
+    ));
+
+    return visible.sort((left, right) => state.sort === "title"
       ? left.title.localeCompare(right.title)
       : state.sort === "due-date"
         ? (left.dueDate ?? "9999-12-31").localeCompare(right.dueDate ?? "9999-12-31")
         : left.createdAt.localeCompare(right.createdAt));
+  }, [episodeFilterActive, missions, ownerFilterActive, projectFilterActive, seasonFilterActive, state]);
 
   if (view === "dashboard") {
     if (!summary) return null;

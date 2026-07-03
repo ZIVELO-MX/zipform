@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { dataClient } from "../lib/data";
+import { getCurrentUser } from "../lib/data";
+import { getTlozMissions, getTlozProjects } from "../lib/tloz-data";
 import { AppShell } from "../components/app-shell";
 import { Toaster } from "@zipform/ui";
 import type { TlozProject } from "@zipform/types";
@@ -12,9 +13,9 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const [user, projects, missions] = await Promise.all([
-    dataClient.user.getCurrent(),
-    dataClient.tloz.getProjects(),
-    dataClient.tloz.getMissions(),
+    getCurrentUser(),
+    getTlozProjects(),
+    getTlozMissions(),
   ]);
 
   const projectActiveCounts = new Map<string, number>();

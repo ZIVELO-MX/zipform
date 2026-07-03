@@ -21,7 +21,7 @@ describe("TLOZ hydration", () => {
   it("hydrates mission relationships and required quest items", () => {
     const source = missions.find((mission) => missionDependencies.some((dependency) => dependency.missionId === mission.id)) ?? missions[0];
     const result = hydrateMission(data, source);
-    expect(result.project.id).toBe(source.projectId);
+    expect(result.project?.id).toBe(source.projectId);
     expect(result.owner.id).toBe(source.ownerId);
     expect(result.dependencies.every((item) => missions.some((mission) => mission.id === item.id))).toBe(true);
     expect(result.requiredQuestItems.every((item) => result.questItems.includes(item))).toBe(true);

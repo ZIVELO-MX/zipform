@@ -136,14 +136,6 @@ export const roadmap: RoadmapSnapshot = {
       label: "Add Security as an internal platform application"
     },
     {
-      id: "ci-check-scripts",
-      lane: "LATER",
-      category: "Infrastructure",
-      app: "PLATFORM",
-      label: "Add check scripts to data and dashboard packages so CI workflows can validate them",
-      human: true
-    },
-    {
       id: "ui-preview",
       lane: "LATER",
       app: "UI",
