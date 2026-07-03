@@ -72,8 +72,15 @@ Install dependencies and run the dashboard:
 
 ```sh
 pnpm install
+cp apps/dashboard/.env.example apps/dashboard/.env.local
+# Replace AUTH_SECRET in apps/dashboard/.env.local with the output of:
+openssl rand -base64 32
 pnpm dev
 ```
+
+The dashboard is the Next.js project root, so its local authentication variables
+must be stored in `apps/dashboard/.env.local`. Never commit this file or reuse a
+development `AUTH_SECRET` in production.
 
 Build the dashboard:
 

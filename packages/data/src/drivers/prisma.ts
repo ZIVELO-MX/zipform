@@ -42,7 +42,7 @@ const globalForPrisma = globalThis as typeof globalThis & {
   zipformPrisma?: PrismaClient;
 };
 
-function getPrismaClient() {
+export function getPrismaClient() {
   ensureDatabaseUrl();
   globalForPrisma.zipformPrisma ??= new PrismaClient();
   return globalForPrisma.zipformPrisma;

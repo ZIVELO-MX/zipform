@@ -1,6 +1,7 @@
 import type { DataClientOptions, DataDriver, ZipformDataClient } from "./contracts";
 import { createMockDataClient } from "./drivers/mock";
 import { createPrismaDataClient } from "./drivers/prisma";
+export { getPrismaClient } from "./drivers/prisma";
 
 export type {
   DataClientOptions,
