@@ -44,8 +44,8 @@ export type TlozMissionCreateInput = Omit<TlozMission, "id" | "displayId" | "cre
   completedAt?: string;
 };
 
-export type TlozProjectCreateInput = Omit<TlozProject, "id" | "slug" | "createdAt" | "updatedAt">;
-export type TlozQuestItemCreateInput = Omit<TlozQuestItem, "id" | "createdAt" | "updatedAt" | "acquiredAt"> & { acquiredAt?: string };
+export type TlozProjectCreateInput = Omit<TlozProject, "id" | "slug" | "createdAt" | "updatedAt" | "descriptionDetail"> & { descriptionDetail?: string };
+export type TlozQuestItemCreateInput = Omit<TlozQuestItem, "id" | "createdAt" | "updatedAt" | "acquiredAt" | "descriptionDetail"> & { descriptionDetail?: string; acquiredAt?: string };
 
 export type TlozMissionUpdateInput = Partial<
   Omit<TlozMission, "id" | "createdAt" | "updatedAt" | "ownerId" | "projectId">
@@ -54,8 +54,8 @@ export type TlozMissionUpdateInput = Partial<
   projectId?: string;
 };
 
-export type TlozProjectUpdateInput = Partial<Pick<TlozProject, "name" | "description" | "icon" | "color" | "status" | "type" | "ownerId" | "startDate" | "dueDate">>;
-export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "icon" | "status" | "category" | "ownerId" | "acquiredAt">>;
+export type TlozProjectUpdateInput = Partial<Pick<TlozProject, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "type" | "ownerId" | "startDate" | "dueDate">>;
+export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "status" | "category" | "ownerId" | "acquiredAt">>;
 
 export type TlozMissionFilters = {
   projectId?: string;

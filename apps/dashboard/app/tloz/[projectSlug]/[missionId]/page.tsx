@@ -15,12 +15,12 @@ export default async function ProjectMissionPage({ params }: { params: Promise<{
   if (systemProject?.detailVariant === "inventory") {
     const item = questItems.find((candidate) => candidate.id === missionId);
     if (!item) notFound();
-    return <TlozPageShell title="Lobby" showHeader={false}><SystemEntityDetail variant="inventory" entity={item} missions={missions} users={allUsers} resources={resources.filter((resource) => resource.questItemId === item.id)} /></TlozPageShell>;
+    return <TlozPageShell title="Lobby" showHeader={false}><div className="min-h-full bg-[#FAFAF9]"><SystemEntityDetail variant="inventory" entity={item} missions={missions} users={allUsers} resources={resources.filter((resource) => resource.questItemId === item.id)} /></div></TlozPageShell>;
   }
   if (systemProject?.detailVariant === "project") {
     const selectedProject = projects.find((candidate) => candidate.id === missionId) ?? findProjectBySlug(projects, missionId);
     if (!selectedProject) notFound();
-    return <TlozPageShell title="Lobby" showHeader={false}><SystemEntityDetail variant="project" entity={selectedProject} missions={missions} users={allUsers} resources={resources.filter((resource) => resource.projectId === selectedProject.id)} /></TlozPageShell>;
+    return <TlozPageShell title="Lobby" showHeader={false}><div className="min-h-full bg-[#FAFAF9]"><SystemEntityDetail variant="project" entity={selectedProject} missions={missions} users={allUsers} resources={resources.filter((resource) => resource.projectId === selectedProject.id)} /></div></TlozPageShell>;
   }
   const project = findProjectBySlug(projects, projectSlug);
   if (!project || !mission || mission.projectId !== project.id) notFound();

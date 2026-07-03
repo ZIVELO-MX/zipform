@@ -33,14 +33,15 @@ model TlozEpisode {
 }
 
 model TlozProject {
-  id          String        @id
-  slug        String        @unique
-  name        String
-  description String
-  color       String
-  icon        String
-  status      String
-  type        String        @default("normal")
+  id                String        @id
+  slug              String        @unique
+  name              String
+  description       String
+  descriptionDetail String        @default("")
+  color             String
+  icon              String
+  status            String
+  type              String        @default("normal")
   ownerId     String
   owner       User          @relation(fields: [ownerId], references: [id])
   startDate   String
@@ -110,6 +111,7 @@ model TlozQuestItem {
   id                String                 @id
   name              String
   description       String
+  descriptionDetail String                 @default("")
   icon              String
   status            String
   category          String                 @default("other")

@@ -28,9 +28,12 @@ import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjec
 function ensureDatabaseUrl() {
   if (!process.env.DATABASE_URL) {
     const cwd = process.cwd();
-    const dbPath = cwd.includes("packages/data")
-      ? `${cwd}/dev.db`
-      : `${cwd}/packages/data/dev.db`;
+    const cwdEnd = cwd.replace(/\\/g, "/").replace(/\/+$/, "");
+    const dbPath = cwdEnd.endsWith("packages/data")
+      ? `${cwdEnd}/dev.db`
+      : cwdEnd.endsWith("apps/dashboard")
+        ? `${cwdEnd.slice(0, cwdEnd.lastIndexOf("apps/dashboard"))}packages/data/dev.db`
+        : `${cwdEnd}/packages/data/dev.db`;
     process.env.DATABASE_URL = `file:${dbPath}`;
   }
 }
@@ -112,6 +115,7 @@ function mapProject(project: {
   slug: string;
   name: string;
   description: string;
+  descriptionDetail: string;
   color: string;
   icon: string;
   status: string;
@@ -186,6 +190,7 @@ function mapQuestItem(item: {
   id: string;
   name: string;
   description: string;
+  descriptionDetail: string;
   icon: string;
   status: string;
   category: string;
