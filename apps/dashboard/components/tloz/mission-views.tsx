@@ -15,7 +15,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Link2, Plus } from "lucide-react";
+import { FolderKanban, Link2, Plus } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
@@ -35,13 +35,20 @@ import {
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozMissionStatus, UserProfile } from "@zipform/types";
 import { QuestItemDots } from "./mission-card";
+import { projectHref } from "../../lib/tloz-routes";
+import { useTlozViewState, type TlozGrouping } from "./tloz-view-state";
+import { EntityList, EntityTable, type EntityColumn } from "./entity-views";
 import {
   formatDate,
   missionPreviewDescription,
   missionStatusLabel,
   missionTypeLabel,
   missionTypeTone,
+  resolveMissionIcon,
 } from "./tloz-utils";
+
+const typeBadgeBg: Record<string, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
+const typeBadgeText: Record<string, string> = { main_quest: "#B91C22", side_quest: "#2D6CDF", farming_quest: "#1E6B3C", exploration_quest: "#7A4ED9" };
 
 const statusConfig: Record<string, { label: string; dotColor: string; textColor: string; bgColor?: string }> = {
   now: { label: "Now", dotColor: "#1E8E5A", textColor: "#1E8E5A" },
@@ -62,6 +69,10 @@ const boardGroups = [
 // ─── DASHBOARD ────────────────────────────────────────────────────
 
 export function DashboardNowSection({ missions, onSelect }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void }) {
+  const questMissions = missions.filter((m) => m.type === "main_quest" || m.type === "side_quest");
+  const supportMissions = missions.filter((m) => m.type === "farming_quest" || m.type === "exploration_quest");
+  const focusedMissions = [questMissions[0], supportMissions[0]].filter(Boolean);
+
   return (
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "13px" }}>
@@ -92,9 +103,9 @@ export function DashboardNowSection({ missions, onSelect }: { missions: TlozMiss
         </span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1.08fr 1fr", gap: "16px" }}>
-        {missions.length > 0 ? (
-          missions.slice(0, 2).map((mission, i) => (
-            <DashboardNowCard key={mission.id} mission={mission} accent={i === 0 ? "#D72228" : "#7A4ED9"} onSelect={onSelect} />
+        {focusedMissions.length > 0 ? (
+          focusedMissions.map((mission) => (
+            <DashboardNowCard key={mission.id} mission={mission} onSelect={onSelect} />
           ))
         ) : (
           <div className="panel" style={{ padding: "20px", gridColumn: "1 / -1", textAlign: "center", color: "#6B6B6B" }}>
@@ -106,7 +117,7 @@ export function DashboardNowSection({ missions, onSelect }: { missions: TlozMiss
   );
 }
 
-function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionRecord; accent: string; onSelect?: (m: TlozMissionRecord) => void }) {
+function DashboardNowCard({ mission, onSelect }: { mission: TlozMissionRecord; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
 
   return (
@@ -125,7 +136,7 @@ function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionR
       }}
       onClick={() => onSelect?.(mission)}
     >
-      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "4px", background: accent }} />
+      <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "4px", background: tone }} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
         <span
           style={{
@@ -178,10 +189,7 @@ function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionR
               {mission.owner.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div style={{ lineHeight: 1.1 }}>
-            <div style={{ fontSize: "12.5px", fontWeight: 600 }}>{mission.owner.name}</div>
-            <div style={{ fontSize: "11px", color: "#9a9a98" }}>Owner</div>
-          </div>
+          <div style={{ fontSize: "11.5px", fontWeight: 500, color: "#6B6B6B" }}>@{mission.owner.username ?? mission.owner.name}</div>
         </div>
         {mission.dueDate ? (
           <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#B91C22", fontWeight: 600, background: "#FDECEC", borderRadius: "999px", padding: "5px 11px" }}>
@@ -202,6 +210,7 @@ function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionR
 }
 
 export function DashboardMainQuests({ missions, onSelect }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void }) {
+  const { setState } = useTlozViewState();
   return (
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "13px" }}>
@@ -210,9 +219,9 @@ export function DashboardMainQuests({ missions, onSelect }: { missions: TlozMiss
           Main Quests
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "#9a9a98", background: "#F1F0EE", borderRadius: "999px", padding: "1px 8px", fontWeight: 500 }}>{missions.length}</span>
         </h2>
-        <Link href="/tloz/list" style={{ fontSize: "12.5px", color: "#D72228", fontWeight: 600, textDecoration: "none", cursor: "pointer" }}>
+        <button type="button" onClick={() => setState({ view: "list" })} style={{ fontSize: "12.5px", color: "#D72228", fontWeight: 600, background: "transparent", border: 0, padding: 0, cursor: "pointer" }}>
           Ver todas →
-        </Link>
+        </button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
         {missions.slice(0, 3).map((mission) => <DashboardMainQuestCard key={mission.id} mission={mission} onSelect={onSelect} />)}
@@ -223,7 +232,7 @@ export function DashboardMainQuests({ missions, onSelect }: { missions: TlozMiss
 
 function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRecord; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
-  const blocked = mission.requiredQuestItems.some((item) => item.status !== "completed") || mission.dependencies.length > 0;
+  const blocked = mission.requiredQuestItems.some((item) => item.status !== "unlocked") || mission.dependencies.length > 0;
   const statusCfg = statusConfig[mission.status === "blocked" ? "now" : mission.status];
 
   return (
@@ -240,9 +249,9 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
       onClick={() => onSelect?.(mission)}
     >
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-        <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", background: "#FDECEC", color: "#B91C22", fontSize: "10.5px", fontWeight: 700, padding: "3px 9px", borderRadius: "999px" }}>
+        <span className="inline-flex items-center gap-1.5 rounded-full px-[9px] py-[3px] text-[10.5px] font-bold" style={{ background: typeBadgeBg[mission.type], color: typeBadgeText[mission.type] }}>
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z" /></svg>
-          Main
+          {missionTypeLabel[mission.type]}
         </span>
         <div className="flex items-center gap-2"><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span><span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: 600, color: statusCfg.textColor }}>
           <span style={{ width: "6px", height: "6px", borderRadius: "999px", background: statusCfg.dotColor, animation: mission.status === "now" ? "nowpulse 1.8s ease-in-out infinite" : undefined }} />{statusCfg.label}
@@ -262,12 +271,7 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
         )}
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <Avatar className="size-6 rounded-full">
-          <AvatarImage src={mission.owner.avatarUrl} alt="" />
-          <AvatarFallback className="bg-carbon text-[0.55rem] font-medium text-white">
-            {mission.owner.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+                <UserAvatarLabel name={mission.owner.name} label={mission.owner.username ?? mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" />
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           {blocked && (
             <Tooltip>
@@ -276,11 +280,11 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
+                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "unlocked").length}
                 </span>
               </TooltipTrigger>
               <TooltipContent side="top" align="center">
-                {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias
+                {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "unlocked").length} dependencias
               </TooltipContent>
             </Tooltip>
           )}
@@ -383,17 +387,18 @@ export function DashboardNextLaterSection({
   );
 }
 
-export function DashboardProjectsSection({ projects, missions }: { projects: Array<{ id: string; name: string; color: string; totalMissions: number; nowMissions: number; completedMissions: number }>; missions: TlozMissionRecord[] }) {
+export function DashboardProjectsSection({ projects, missions }: { projects: Array<{ id: string; slug: string; name: string; color: string; totalMissions: number; nowMissions: number; completedMissions: number }>; missions: TlozMissionRecord[] }) {
   return (
     <section>
-      <SectionHeading title="Proyectos" action={<a className="text-[12.5px] font-semibold text-zivelo">Ver todos →</a>} />
+      <SectionHeading icon={<FolderKanban size={15} aria-hidden="true" />} title="Projects" action={<Link href="/tloz/projects" className="text-[12.5px] font-semibold text-zivelo">Ver todos →</Link>} />
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "13px" }}>
         {projects.map((project) => {
           const projectMissions = missions.filter((m) => m.projectId === project.id);
           const ownerSet = new Set(projectMissions.map(m => m.owner.id));
           const uniqueOwners = Array.from(ownerSet).slice(0, 3);
           return (
-            <div
+            <Link
+              href={projectHref(project)}
               key={project.id}
               className="tloz-card-hover"
               style={{
@@ -424,7 +429,7 @@ export function DashboardProjectsSection({ projects, missions }: { projects: Arr
                 </div>
                 <span style={{ fontSize: "11px", color: "#6B6B6B", fontWeight: 500 }}>{project.nowMissions} activa{project.nowMissions !== 1 ? "s" : ""}</span>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>
@@ -432,7 +437,7 @@ export function DashboardProjectsSection({ projects, missions }: { projects: Arr
   );
 }
 
-export function DashboardQuestItemsSection({ questItems }: { questItems: Array<{ id: string; name: string; description: string; icon: string; status: string }> }) {
+export function DashboardInventorySection({ questItems, onSelect }: { questItems: Array<{ id: string; name: string; description: string; icon: string; status: string }>; onSelect?: (item: TlozMissionRecord["questItems"][number]) => void }) {
   return (
     <section>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "13px" }}>
@@ -440,18 +445,18 @@ export function DashboardQuestItemsSection({ questItems }: { questItems: Array<{
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7A5A12" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
-          Quest Items
+          Inventory
           <span style={{ fontSize: "11px", color: "#6B6B6B", fontWeight: 500, textTransform: "none", letterSpacing: 0 }}>
             desbloqueos reutilizables
           </span>
         </h2>
-        <a style={{ fontSize: "12.5px", color: "#D72228", fontWeight: 600, textDecoration: "none", cursor: "pointer" }}>Gestionar →</a>
+        <Link href="/tloz/inventory" style={{ fontSize: "12.5px", color: "#D72228", fontWeight: 600, textDecoration: "none", cursor: "pointer" }}>Gestionar →</Link>
       </div>
       <div className="tloz-scrl" style={{ display: "flex", gap: "12px", overflowX: "auto", paddingBottom: "4px" }}>
         {questItems.map((item) => (
           <Tooltip key={item.id}>
             <TooltipTrigger asChild>
-              <div
+              <button type="button"
                 className="tloz-qi-hover"
                 style={{
                   flex: "0 0 auto",
@@ -463,6 +468,7 @@ export function DashboardQuestItemsSection({ questItems }: { questItems: Array<{
                   transition: "all .2s ease",
                   cursor: "pointer"
                 }}
+                onClick={() => onSelect?.(item as TlozMissionRecord["questItems"][number])}
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
                   <span
@@ -470,8 +476,8 @@ export function DashboardQuestItemsSection({ questItems }: { questItems: Array<{
                       width: "30px",
                       height: "30px",
                       borderRadius: "9px",
-                      background: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
-                      color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
+                      background: item.status === "unlocked" ? "#E6F4EA" : "#FFF4DE",
+                      color: item.status === "unlocked" ? "#1E6B3C" : "#7A5A12",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center"
@@ -483,18 +489,18 @@ export function DashboardQuestItemsSection({ questItems }: { questItems: Array<{
                     style={{
                       fontSize: "10px",
                       fontWeight: 700,
-                      color: item.status === "completed" ? "#1E6B3C" : "#7A5A12",
-                      background: item.status === "completed" ? "#E6F4EA" : "#FFF4DE",
+                      color: item.status === "unlocked" ? "#1E6B3C" : "#7A5A12",
+                      background: item.status === "unlocked" ? "#E6F4EA" : "#FFF4DE",
                       borderRadius: "999px",
                       padding: "3px 8px"
                     }}
                   >
-                    {item.status === "completed" ? "Desbloqueado" : "Bloqueado"}
+                    {item.status === "unlocked" ? "Desbloqueado" : "Bloqueado"}
                   </span>
                 </div>
                 <div style={{ fontWeight: 600, fontSize: "13.5px", marginBottom: "3px" }}>{item.name}</div>
                 <div style={{ fontSize: "11px", color: "#9a9a98" }}>{item.description}</div>
-              </div>
+              </button>
             </TooltipTrigger>
             <TooltipContent side="top" align="center">
               {item.name}
@@ -513,7 +519,7 @@ export function DashboardActivitySection({ activities }: { activities: Array<{ u
         <h2 style={{ margin: 0, fontSize: "12.5px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#454543" }}>Actividad reciente</h2>
       </div>
       <div style={{ background: "#fff", border: "1px solid rgba(29,29,27,0.10)", borderRadius: "16px", padding: "6px" }}>
-        {activities.map((activity, i) => (
+        {activities.length > 0 ? activities.map((activity, i) => (
           <div key={i} style={{ display: "flex", gap: "11px", padding: "11px 12px" }}>
             <div style={{ position: "relative", flexShrink: 0 }}>
               <span style={{ width: "8px", height: "8px", borderRadius: "999px", background: activity.dotColor, display: "block", marginTop: "5px" }} />
@@ -527,7 +533,7 @@ export function DashboardActivitySection({ activities }: { activities: Array<{ u
               </div>
             </div>
           </div>
-        ))}
+        )) : <EmptyState title="Sin actividad reciente" description="Aún no hay cambios registrados en proyectos o misiones." />}
       </div>
     </div>
   );
@@ -536,185 +542,41 @@ export function DashboardActivitySection({ activities }: { activities: Array<{ u
 // ─── TABLE ─────────────────────────────────────────────────────────
 
 export function MissionTable({ missions, onSelect }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void }) {
-  return (
-    <div style={{ background: "#fff", border: "1px solid rgba(29,29,27,0.10)", borderRadius: "14px", overflow: "hidden", minWidth: "920px" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-        <thead>
-          <tr style={{ textAlign: "left" }}>
-            {["Mission", "Estado", "Tipo", "Proyecto", "Responsable", "Ep.", "Vence"].map((label) => (
-              <th
-                key={label}
-                className="tloz-th"
-                style={{
-                  padding: "11px 14px",
-                  fontSize: "10.5px",
-                  fontWeight: 700,
-                  letterSpacing: "0.04em",
-                  textTransform: "uppercase",
-                  color: "#9a9a98",
-                  borderBottom: "1px solid rgba(29,29,27,0.10)",
-                  ...(label === "Vence" ? { textAlign: "right" as const } : {}),
-                }}
-              >
-                {label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {missions.map((mission) => {
-            const tone = missionTypeTone[mission.type];
-            const statusCfg = statusConfig[mission.status === "blocked" ? "now" : mission.status];
-            return (
-              <tr
-                key={mission.id}
-                className="tloz-trow"
-                style={{ cursor: "pointer", borderBottom: "1px solid rgba(29,29,27,0.06)" }}
-                onClick={() => onSelect?.(mission)}
-              >
-                <td style={{ padding: "11px 14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span>{mission.title}</td>
-                <td style={{ padding: "11px 14px" }}>
-                  <StatusPill label={statusCfg.label} color={statusCfg.textColor} active={mission.status === "now"} />
-                </td>
-                <td style={{ padding: "11px 14px" }}>
-                  <ToneBadge tone={{ color: tone }} className="text-[11px]">
-                    {missionTypeLabel[mission.type]}
-                  </ToneBadge>
-                </td>
-                <td style={{ padding: "11px 14px" }}>
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#454543" }}>
-                    <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
-                    {mission.project?.name ?? "Sin proyecto"}
-                  </span>
-                </td>
-                <td style={{ padding: "11px 14px" }}>
-                  <UserAvatarLabel name={mission.owner.name} label={mission.owner.username} imageUrl={mission.owner.avatarUrl} size="sm" />
-                </td>
-                <td style={{ padding: "11px 14px", color: "#6B6B6B", fontSize: "12px" }}>
-                  {mission.episode?.romanNumber ?? "—"}
-                </td>
-                <td style={{ padding: "11px 14px", textAlign: "right", fontFamily: "'JetBrains Mono', monospace", fontSize: "11.5px", color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>
-                  {formatDate(mission.dueDate)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
+  const columns: EntityColumn<TlozMissionRecord>[] = [
+    { id: "mission", label: "Mission", render: (mission) => <span className="flex items-center gap-2 font-semibold"><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span>{mission.title}</span> },
+    { id: "status", label: "Estado", render: (mission) => { const cfg = statusConfig[mission.status === "blocked" ? "now" : mission.status]; return <StatusPill label={cfg.label} color={cfg.textColor} active={mission.status === "now"} />; } },
+    { id: "type", label: "Tipo", render: (mission) => <ToneBadge tone={{ color: missionTypeTone[mission.type] }} className="text-[11px]">{missionTypeLabel[mission.type]}</ToneBadge> },
+    { id: "project", label: "Proyecto", render: (mission) => <span className="inline-flex items-center gap-1.5 text-xs text-carbon/75"><span className="size-[7px] rounded-sm" style={{ background: mission.project?.color || "#999" }} />{mission.project?.name ?? "Sin proyecto"}</span> },
+    { id: "owner", label: "Responsable", render: (mission) => <UserAvatarLabel name={mission.owner.name} label={mission.owner.username ?? mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" /> },
+    { id: "episode", label: "Ep.", render: (mission) => <span className="text-xs text-carbon/65">{mission.episode?.romanNumber ?? "—"}</span> },
+    { id: "due", label: "Vence", align: "right", render: (mission) => <span className="font-mono text-[11.5px]" style={{ color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>{formatDate(mission.dueDate)}</span> },
+  ];
+  return <EntityTable items={missions} columns={columns} onSelect={onSelect} />;
 }
 
 // ─── LIST ──────────────────────────────────────────────────────────
 
-export function MissionList({ missions, onSelect }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void }) {
-  const groups = [
-    { id: "now", label: "Now", missions: missions.filter((m) => m.status === "now" || m.status === "blocked") },
-    { id: "next", label: "Next", missions: missions.filter((m) => m.status === "next") },
-    { id: "later", label: "Later", missions: missions.filter((m) => m.status === "later") },
-  ] as const;
+export function MissionList({ missions, grouping = "status", onSelect }: { missions: TlozMissionRecord[]; grouping?: TlozGrouping; onSelect?: (m: TlozMissionRecord) => void }) {
+  const groups = grouping === "project"
+    ? Array.from(new Map(missions.map((mission) => [mission.projectId ?? "none", mission.project?.name ?? "Sin proyecto"]))).map(([id, label]) => ({ id, label, missions: missions.filter((mission) => (mission.projectId ?? "none") === id) }))
+    : grouping === "none"
+      ? [{ id: "all", label: "Todas", missions }]
+      : [
+        { id: "now", label: "Now", missions: missions.filter((mission) => mission.status === "now" || mission.status === "blocked") },
+        { id: "next", label: "Next", missions: missions.filter((mission) => mission.status === "next") },
+        { id: "later", label: "Later", missions: missions.filter((mission) => mission.status === "later") },
+        { id: "completed", label: "Completed", missions: missions.filter((mission) => mission.status === "completed") },
+      ];
 
-  return (
-    <div style={{ maxWidth: "1180px", margin: "0 auto" }}>
-      {groups.map((group) => {
-        if (group.missions.length === 0) return null;
-        const statusCfg = statusConfig[group.id];
-
-        return (
-          <div key={group.id} style={{ marginBottom: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "9px", padding: "13px 16px 9px" }}>
-              <span style={{
-                width: "9px",
-                height: "9px",
-                borderRadius: "999px",
-                background: statusCfg.dotColor,
-                animation: group.id === "now" ? "nowpulse 1.8s ease-in-out infinite" : undefined
-              }} />
-              <span style={{ fontWeight: 700, fontSize: "13px" }}>{group.label}</span>
-              <span className="rounded-full bg-carbon/5 px-2 py-0.5 font-mono text-[11px] font-medium text-carbon/65">{group.missions.length}</span>
-            </div>
-            <div style={{ background: "#fff", border: "1px solid rgba(29,29,27,0.10)", borderRadius: "14px", overflow: "hidden" }}>
-              {group.missions.map((mission, idx) => {
-                const tone = missionTypeTone[mission.type];
-                const blocked = mission.requiredQuestItems.some((item) => item.status !== "completed") || mission.dependencies.length > 0;
-                const isLast = idx === group.missions.length - 1;
-
-                return (
-                  <div
-                    key={mission.id}
-                    className="tloz-lrow"
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "minmax(0,1fr) 130px 132px 96px",
-                      gap: "14px",
-                      alignItems: "center",
-                      padding: "13px 16px",
-                      cursor: "pointer",
-                      borderBottom: isLast ? "none" : "1px solid rgba(29,29,27,0.06)"
-                    }}
-                    onClick={() => onSelect?.(mission)}
-                  >
-                    <span style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
-                      <span
-                        style={{
-                          width: "24px",
-                          height: "24px",
-                          borderRadius: "7px",
-                          background: tone === "#d72228" ? "#FDECEC" : tone === "#2d6cdf" ? "#EEF2FF" : tone === "#1e8e5a" ? "#E6F4EA" : "#F2EAFE",
-                          color: tone,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          fontSize: "11px",
-                          fontWeight: 700
-                        }}
-                      >
-                        {mission.type === "main_quest" ? (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z" /></svg>
-                        ) : mission.type === "exploration_quest" ? (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><polygon points="15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6" fill="currentColor" stroke="none" /></svg>
-                        ) : (
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></svg>
-                        )}
-                      </span>
-                      <span className="font-mono mr-1 text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span>
-                      <span style={{ fontSize: "13.5px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        {mission.title}
-                      </span>
-                      {blocked && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "9.5px", fontWeight: 600, color: "#7A5A12", background: "#FFF4DE", borderRadius: "999px", padding: "2px 7px", flexShrink: 0 }}>
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                              </svg>
-                              {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" align="center">
-                            {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </span>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#6B6B6B", fontWeight: 500 }}>
-                      <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
-                      {mission.project?.name ?? "Sin proyecto"}
-                    </span>
-                    <UserAvatarLabel name={mission.owner.name} label={mission.owner.username} imageUrl={mission.owner.avatarUrl} size="sm" />
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11.5px", fontWeight: 500, textAlign: "right", color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>
-                      {formatDate(mission.dueDate)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
+  return <div>{groups.filter((group) => group.missions.length).map((group) => {
+    const cfg = statusConfig[group.id] ?? { dotColor: "#9a9a98" };
+    return <EntityList key={group.id} title={group.label} tone={cfg.dotColor} items={group.missions} onSelect={onSelect} render={(mission) => {
+      const tone = missionTypeTone[mission.type];
+      const Icon = resolveMissionIcon(mission.icon);
+      const blockedCount = mission.dependencies.length + mission.requiredQuestItems.filter((item) => item.status !== "unlocked").length;
+      return <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_130px_132px_96px] items-center gap-3.5"><span className="flex min-w-0 items-center gap-2.5"><span className="grid size-6 shrink-0 place-items-center rounded-[7px] [&_svg]:size-3" style={{ color: tone, background: `${tone}18` }}><Icon /></span><span className="font-mono text-[10.5px] text-carbon/40">{mission.displayId}</span><strong className="truncate text-[13.5px]">{mission.title}</strong>{blockedCount ? <span className="rounded-full bg-[#FFF4DE] px-2 py-0.5 text-[9.5px] font-semibold text-[#7A5A12]">{blockedCount}</span> : null}</span><span className="truncate rounded-full px-[9px] py-[3px] text-[11px] font-bold" style={{ background: `${mission.project?.color || "#999"}18`, color: mission.project?.color || "#999" }}>{mission.project?.name ?? "Sin proyecto"}</span><UserAvatarLabel name={mission.owner.name} label={mission.owner.username ?? mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" /><span className="text-right font-mono text-[11.5px]" style={{ color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>{formatDate(mission.dueDate)}</span></span>;
+    }} />;
+  })}</div>;
 }
 
 // ─── BOARD ─────────────────────────────────────────────────────────
@@ -806,7 +668,7 @@ function BoardDropColumn({ id, label, count, tone, active, children }: { id: Tlo
 
 function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRecord; isCompleted: boolean; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
-  const blocked = mission.requiredQuestItems.some((item) => item.status !== "completed") || mission.dependencies.length > 0;
+  const blocked = mission.requiredQuestItems.some((item) => item.status !== "unlocked") || mission.dependencies.length > 0;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: mission.id,
     data: { title: mission.title, status: mission.status },
@@ -814,9 +676,6 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
   const dragStyle: CSSProperties = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : {};
-
-  const typeBadgeBg: Record<string, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
-  const typeBadgeText: Record<string, string> = { main_quest: "#B91C22", side_quest: "#2D6CDF", farming_quest: "#1E6B3C", exploration_quest: "#7A4ED9" };
 
   return (
     <div
@@ -902,11 +761,11 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                     </svg>
-                    {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
+                    {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "unlocked").length}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="top" align="center">
-                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias
+                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "unlocked").length} dependencias
                 </TooltipContent>
               </Tooltip>
             )}
@@ -919,7 +778,7 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
                   </AvatarFallback>
                 </Avatar>
               </TooltipTrigger>
-              <TooltipContent side="top">{mission.owner.name}</TooltipContent>
+              <TooltipContent side="top">@{mission.owner.username ?? mission.owner.name}</TooltipContent>
             </Tooltip>
           </div>
         </div>

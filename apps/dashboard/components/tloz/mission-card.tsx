@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { missionHref } from "../../lib/tloz-routes";
 import {
   CircleDot,
   CheckCircle2,
@@ -15,7 +16,7 @@ import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLa
 const MAX_VISIBLE_QUEST_ITEMS = 3;
 
 export function MissionCard({ mission, compact = false, onSelect }: { mission: TlozMissionRecord; compact?: boolean; onSelect?: (mission: TlozMissionRecord) => void }) {
-  const blocked = mission.requiredQuestItems.some((item) => item.status !== "completed") || mission.dependencies.length > 0;
+  const blocked = mission.requiredQuestItems.some((item) => item.status !== "unlocked") || mission.dependencies.length > 0;
   const tone = missionTypeTone[mission.type];
   const Icon = resolveMissionIcon(mission.icon);
 
@@ -37,7 +38,7 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
             </div>
             <CardTitle className="mt-2">
               <a
-                href={`/tloz/missions/${mission.id}`}
+                href={mission.project ? missionHref(mission.project, mission.displayId) : "/tloz"}
                 onClick={(e) => {
                   if (onSelect) {
                     e.preventDefault();
@@ -118,7 +119,7 @@ export function ActiveMissionPanel({ label, mission }: { label: string; mission:
           <div className="tloz-active-actions">
           <OwnerAvatar user={mission.owner} />
             <Button asChild size="sm">
-              <Link href={`/tloz/missions/${mission.id}`}>Abrir detalle</Link>
+              <Link href={mission.project ? missionHref(mission.project, mission.displayId) : "/tloz"}>Abrir detalle</Link>
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -172,7 +173,7 @@ export function QuestItemDots({ mission, max = MAX_VISIBLE_QUEST_ITEMS }: { miss
   const remaining = mission.questItems.length - max;
 
   return (
-    <span className="tloz-quest-dots" aria-label={`${mission.questItems.length} Quest Items`}>
+    <span className="tloz-quest-dots" aria-label={`${mission.questItems.length} Inventory items`}>
       {visible.map((item) => (
         <Tooltip key={item.id}>
           <TooltipTrigger asChild>

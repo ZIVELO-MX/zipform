@@ -5,6 +5,7 @@ import { ArrowLeft, X } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable";
+import { OverlayPortalProvider } from "./overlay-portal";
 
 export type SlideOverProps = {
   open: boolean;
@@ -18,6 +19,8 @@ export type SlideOverProps = {
 
 export function SlideOver({ open, title, children, footer, onBack, onOpenChange, className }: SlideOverProps) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
+  const [portalContainer, setPortalContainer] = React.useState<HTMLDialogElement | null>(null);
+  const setDialogRef = React.useCallback((node: HTMLDialogElement | null) => { dialogRef.current = node; setPortalContainer(node); }, []);
 
   React.useEffect(() => {
     const dialog = dialogRef.current;
@@ -43,12 +46,13 @@ export function SlideOver({ open, title, children, footer, onBack, onOpenChange,
 
   return (
     <dialog
-      ref={dialogRef}
+      ref={setDialogRef}
       className={cn(
         "mission-slide-over fixed inset-0 m-0 h-dvh max-h-none w-full max-w-none overflow-hidden border-0 bg-transparent p-0 text-carbon backdrop:bg-carbon/60",
         className
       )}
     >
+      <OverlayPortalProvider container={portalContainer}>
       <ResizablePanelGroup orientation="horizontal" className="slide-over-panels">
         <ResizablePanel defaultSize="35%" minSize="5%" maxSize="55%" className="hidden sm:block" onPointerDown={() => dialogRef.current?.close()} aria-label="Cerrar panel" />
         <ResizableHandle className="hidden sm:flex" />
@@ -64,6 +68,7 @@ export function SlideOver({ open, title, children, footer, onBack, onOpenChange,
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+      </OverlayPortalProvider>
     </dialog>
   );
 }

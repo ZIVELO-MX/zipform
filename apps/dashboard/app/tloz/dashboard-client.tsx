@@ -7,15 +7,18 @@ import {
   DashboardMainQuests,
   DashboardNextLaterSection,
   DashboardProjectsSection,
-  DashboardQuestItemsSection,
+  DashboardInventorySection,
   DashboardActivitySection,
 } from "../../components/tloz/mission-views";
 import { MissionSlideOver } from "../../components/tloz/mission-slide-over";
 import type { TlozDashboardSummary, TlozMissionRecord } from "../../lib/tloz-data";
 import type { MissionDetailOptions } from "../../components/tloz/mission-detail";
+import type { TlozQuestItem } from "@zipform/types";
+import { SystemEntitySlideOver } from "../../components/tloz/system-project-detail";
 
-export function DashboardClient({ summary, detailOptions }: { summary: TlozDashboardSummary; detailOptions: MissionDetailOptions }) {
+export function DashboardClient({ summary, detailOptions, hideProjectSections = false }: { summary: TlozDashboardSummary; detailOptions: MissionDetailOptions; hideProjectSections?: boolean }) {
   const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
+  const [selectedQuestItem, setSelectedQuestItem] = useState<TlozQuestItem | null>(null);
 
   return (
     <>
@@ -57,15 +60,16 @@ export function DashboardClient({ summary, detailOptions }: { summary: TlozDashb
           />
         </section>
 
-        <section style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "16px" }}>
-          <DashboardProjectsSection projects={summary.projects} missions={summary.nowMissions} />
+        <section style={{ display: "grid", gridTemplateColumns: hideProjectSections ? "1fr" : "1.5fr 1fr", gap: "16px" }}>
+          {hideProjectSections ? null : <DashboardProjectsSection projects={summary.projects} missions={summary.nowMissions} />}
           <DashboardActivitySection activities={summary.recentActivity} />
         </section>
 
-        <DashboardQuestItemsSection questItems={summary.questItems} />
+        {hideProjectSections ? null : <DashboardInventorySection questItems={summary.questItems} onSelect={setSelectedQuestItem} />}
       </div>
 
       <MissionSlideOver mission={selectedMission} onClose={() => setSelectedMission(null)} editorOptions={detailOptions} />
+      <SystemEntitySlideOver detail={selectedQuestItem ? { variant: "inventory", entity: selectedQuestItem } : null} onClose={() => setSelectedQuestItem(null)} onChange={(entity) => setSelectedQuestItem(entity as TlozQuestItem)} users={detailOptions.users} missions={detailOptions.missions} resources={[]} onNavigateMission={(mission) => { setSelectedQuestItem(null); setSelectedMission(mission); }} />
     </>
   );
 }

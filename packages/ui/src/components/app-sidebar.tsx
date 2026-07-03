@@ -48,6 +48,7 @@ export type NavItem = {
   href: string;
   icon: ComponentType<{ className?: string; size?: number }>;
   badge?: string | number;
+  exact?: boolean;
 };
 
 export type NavSection = {
@@ -61,7 +62,8 @@ export const SIDEBAR_MIN_WIDTH = 220;
 export const SIDEBAR_MAX_WIDTH = 500;
 export const SIDEBAR_DEFAULT_WIDTH = 284;
 
-export function isActive(pathname: string, href: string) {
+export function isActive(pathname: string, href: string, exact?: boolean) {
+  if (exact) return pathname === href;
   if (href === "/") return pathname === "/";
   if (pathname === href) return true;
   if (pathname.startsWith(`${href}/`)) return true;
@@ -281,7 +283,7 @@ export function MobileBottomNav({
     >
       {items.map((item) => {
         const Icon = item.icon;
-        const active = isActive(pathname, item.href);
+        const active = isActive(pathname, item.href, item.exact);
         return (
           <Link
             key={item.href}
@@ -363,7 +365,7 @@ export function MobileMenuPanel({
                 </p>
               ) : null}
               {(section.collapsible ? section.items : section.items).map((item) => (
-                <MobileNavLink key={item.href} item={item} active={isActive(pathname, item.href)} onClose={onClose} />
+                <MobileNavLink key={item.href} item={item} active={isActive(pathname, item.href, item.exact)} onClose={onClose} />
               ))}
             </div>
           ))}
@@ -496,7 +498,7 @@ function SidebarSection({
     return (
       <div className="grid gap-1">
         {section.items.map((item) => (
-          <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed />
+          <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href, item.exact)} collapsed />
         ))}
       </div>
     );
@@ -524,7 +526,7 @@ function SidebarSection({
       ) : null}
       {open || !section.collapsible
         ? section.items.map((item) => (
-            <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href)} collapsed={false} />
+            <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href, item.exact)} collapsed={false} />
           ))
         : null}
     </div>

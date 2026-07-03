@@ -20,7 +20,6 @@ export type DataClientOptions = {
 };
 
 export type TlozMissionRecord = TlozMission & {
-  displayId: string;
   project?: TlozProject;
   season?: TlozSeason;
   episode?: TlozEpisode;
@@ -40,10 +39,13 @@ export type TlozMissionDetail = TlozMissionRecord & {
 export type TlozResourceInput = Pick<TlozResource, "type" | "title"> &
   Partial<Pick<TlozResource, "url" | "fileId">>;
 
-export type TlozMissionCreateInput = Omit<TlozMission, "id" | "createdAt" | "updatedAt" | "completedAt"> & {
+export type TlozMissionCreateInput = Omit<TlozMission, "id" | "displayId" | "createdAt" | "updatedAt" | "completedAt"> & {
   id?: string;
   completedAt?: string;
 };
+
+export type TlozProjectCreateInput = Omit<TlozProject, "id" | "slug" | "createdAt" | "updatedAt" | "descriptionDetail"> & { descriptionDetail?: string };
+export type TlozQuestItemCreateInput = Omit<TlozQuestItem, "id" | "createdAt" | "updatedAt" | "acquiredAt" | "descriptionDetail"> & { descriptionDetail?: string; acquiredAt?: string };
 
 export type TlozMissionUpdateInput = Partial<
   Omit<TlozMission, "id" | "createdAt" | "updatedAt" | "ownerId" | "projectId">
@@ -51,6 +53,9 @@ export type TlozMissionUpdateInput = Partial<
   ownerId?: string;
   projectId?: string;
 };
+
+export type TlozProjectUpdateInput = Partial<Pick<TlozProject, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "type" | "ownerId" | "startDate" | "dueDate">>;
+export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "status" | "category" | "ownerId" | "acquiredAt">>;
 
 export type TlozMissionFilters = {
   projectId?: string;
@@ -80,7 +85,11 @@ export type TlozRepository = {
   getEpisodes(): Promise<TlozEpisode[]>;
   getQuestItems(): Promise<TlozQuestItem[]>;
   getResources(): Promise<TlozResource[]>;
-  createProject(name: string): Promise<TlozProject>;
+  getUsers(): Promise<UserProfile[]>;
+  createProject(input: TlozProjectCreateInput): Promise<TlozProject>;
+  createQuestItem(input: TlozQuestItemCreateInput): Promise<TlozQuestItem>;
+  updateProject(projectId: string, input: TlozProjectUpdateInput): Promise<TlozProject>;
+  updateQuestItem(questItemId: string, input: TlozQuestItemUpdateInput): Promise<TlozQuestItem>;
   createSeason(name: string): Promise<TlozSeason>;
   createEpisode(name: string, seasonId: string): Promise<TlozEpisode>;
   createMission(input: TlozMissionCreateInput): Promise<TlozMissionRecord>;
@@ -92,6 +101,10 @@ export type TlozRepository = {
   removeMissionQuestItem(missionId: string, questItemId: string): Promise<TlozMissionDetail>;
   addMissionResource(missionId: string, input: TlozResourceInput): Promise<TlozMissionDetail>;
   removeMissionResource(missionId: string, resourceId: string): Promise<TlozMissionDetail>;
+  addProjectResource(projectId: string, input: TlozResourceInput): Promise<TlozResource[]>;
+  removeProjectResource(projectId: string, resourceId: string): Promise<TlozResource[]>;
+  addQuestItemResource(questItemId: string, input: TlozResourceInput): Promise<TlozResource[]>;
+  removeQuestItemResource(questItemId: string, resourceId: string): Promise<TlozResource[]>;
   patchMissionStatus(missionId: string, status: TlozMission["status"]): Promise<TlozMissionRecord>;
   deleteMission(missionId: string): Promise<void>;
 };

@@ -34,7 +34,7 @@ export const apps: AppModule[] = [
     name: "TLOZ",
     shortName: "TLOZ",
     description:
-      "The Legend of Zivelo module for Missions, Quest Items, board, list, table, calendar, and Mission detail workflows.",
+      "The Legend of Zivelo module for Missions, Inventory, board, list, table, calendar, and Mission detail workflows.",
     href: "/tloz",
     status: "enabled",
     versionTarget: "1.0",
@@ -225,31 +225,46 @@ export const episodes: TlozEpisode[] = [
 export const projects: TlozProject[] = [
   {
     id: "project-core",
+    slug: "core",
     name: "Core",
     description: "Base compartida de navegación, datos y vistas.",
+    descriptionDetail: "",
     color: "#d72228",
     icon: "Sword",
     status: "active",
+    type: "normal",
+    ownerId: "benji",
+    startDate: "2026-06-01",
     createdAt: now,
     updatedAt: now
   },
   {
     id: "project-growth",
+    slug: "growth",
     name: "Growth",
     description: "Mejoras de visibilidad, adopción y comunicación del roadmap.",
+    descriptionDetail: "",
     color: "#2f7d4f",
     icon: "Sparkles",
     status: "active",
+    type: "normal",
+    ownerId: "raul",
+    startDate: "2026-06-08",
     createdAt: now,
     updatedAt: now
   },
   {
     id: "project-ops",
+    slug: "operations",
     name: "Operations",
     description: "Rutinas de mantenimiento, recursos y salud del producto.",
+    descriptionDetail: "",
     color: "#8a6f2a",
     icon: "Shield",
     status: "planned",
+    type: "normal",
+    ownerId: "benji",
+    startDate: "2026-07-01",
     createdAt: now,
     updatedAt: now
   }
@@ -260,8 +275,11 @@ export const questItems: TlozQuestItem[] = [
     id: "quest-item-db",
     name: "Selected Provider",
     description: "Proveedor de persistencia elegido para reemplazar el driver mock.",
+    descriptionDetail: "",
     icon: "Database",
-    status: "planned",
+    status: "locked",
+    category: "tool",
+    ownerId: "benji",
     createdAt: now,
     updatedAt: now
   },
@@ -269,8 +287,10 @@ export const questItems: TlozQuestItem[] = [
     id: "quest-item-auth",
     name: "Auth Baseline",
     description: "Identidad compartida lista para ownership real.",
+    descriptionDetail: "",
     icon: "KeyRound",
-    status: "active",
+    status: "locked",
+    category: "access",
     createdAt: now,
     updatedAt: now
   },
@@ -278,8 +298,11 @@ export const questItems: TlozQuestItem[] = [
     id: "quest-item-copy",
     name: "Approved Copy",
     description: "Lenguaje de producto revisado para el equipo.",
+    descriptionDetail: "",
     icon: "FileCheck",
-    status: "completed",
+    status: "unlocked",
+    category: "document",
+    ownerId: "raul",
     acquiredAt: "2026-06-18",
     createdAt: now,
     updatedAt: now
@@ -289,8 +312,9 @@ export const questItems: TlozQuestItem[] = [
 export const missions: TlozMission[] = [
   {
     id: "mission-dashboard",
+    displayId: "COR-0001",
     title: "Publicar dashboard operativo de TLOZ",
-    description: "Reemplazar el placeholder con vistas reales de Missions, Proyectos y Quest Items usando datos mock.",
+    description: "Reemplazar el placeholder con vistas reales de Missions, Projects e Inventory usando datos mock.",
     icon: "LayoutDashboard",
     type: "main_quest",
     status: "now",
@@ -306,8 +330,9 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-search",
+    displayId: "GRO-0001",
     title: "Definir navegación por búsqueda global",
-    description: "Alinear cómo búsqueda abre Missions, Proyectos, Quest Items y Recursos desde una sola entrada.",
+    description: "Alinear cómo búsqueda abre Missions, Projects, Inventory y Recursos desde una sola entrada.",
     icon: "Search",
     type: "exploration_quest",
     status: "now",
@@ -324,6 +349,7 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-db-driver",
+    displayId: "COR-0002",
     title: "Diseñar driver persistente de Missions",
     description: "Preparar contratos para reemplazar el mock sin cambiar las páginas de TLOZ.",
     icon: "Database",
@@ -340,6 +366,7 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-resources",
+    displayId: "OPE-0001",
     title: "Modelar recursos adjuntos",
     description: "Definir comportamiento de links, documentos, imágenes, archivos y notas dentro de Mission Detail.",
     icon: "FileText",
@@ -356,8 +383,9 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-maintenance",
+    displayId: "OPE-0002",
     title: "Auditar checklist y estados bloqueados",
-    description: "Validar que dependencias y Quest Items se entiendan sin reglas persistentes todavía.",
+    description: "Validar que dependencias e Inventory se entiendan con reglas persistentes.",
     icon: "Wrench",
     type: "farming_quest",
     status: "later",
@@ -370,6 +398,7 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-activity",
+    displayId: "GRO-0002",
     title: "Especificar actividad de Missions",
     description: "Resolver qué eventos se muestran en el historial básico y cuáles pertenecen a auditoría.",
     icon: "History",
@@ -385,6 +414,7 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-wallet",
+    displayId: "COR-0003",
     title: "Integrar Wallet API",
     description: "Conectar con el proveedor de wallets para soporte multi-moneda en pagos.",
     icon: "Copy",
@@ -402,6 +432,7 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-notifications",
+    displayId: "GRO-0003",
     title: "Diseñar sistema de notificaciones",
     description: "Definir eventos, canales y preferencias de notificación para el equipo.",
     icon: "History",
@@ -418,6 +449,7 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-login",
+    displayId: "COR-0004",
     title: "Implementar login con Google",
     description: "Agregar OAuth de Google como método de autenticación alternativo.",
     icon: "Database",
@@ -434,12 +466,13 @@ export const missions: TlozMission[] = [
   },
   {
     id: "mission-copy",
+    displayId: "GRO-0004",
     title: "Cerrar lenguaje de primera versión",
     description: "Normalizar español de UI y conservar términos RPG en English.",
     icon: "Copy",
     type: "side_quest",
     status: "completed",
-    conclusion: "La guía base queda en español con Main Quest, Side Quest, Farming Quest, Exploration Quest y Quest Item en English.",
+    conclusion: "La guía base queda en español con Main Quest, Side Quest, Farming Quest, Exploration Quest e Inventory en English.",
     ownerId: "benji",
     projectId: "project-growth",
     seasonId: "season-1",
@@ -462,7 +495,7 @@ export const missionDependencies: TlozMissionDependency[] = [
   {
     id: "dependency-resources-driver",
     missionId: "mission-resources",
-    dependsOnMissionId: "mission-db-driver",
+    dependsOnMissionId: "mission-maintenance",
     createdAt: now
   }
 ];
@@ -538,7 +571,7 @@ export const userMissionStates: TlozUserMissionState[] = [
 ];
 
 export const recentActivity = [
-  { user: "Raúl", action: "completó el Quest Item", target: "Selected Provider", time: "hace 12 min", dotColor: "#1E8E5A" },
+  { user: "Raúl", action: "completó el item de Inventory", target: "Selected Provider", time: "hace 12 min", dotColor: "#1E8E5A" },
   { user: "Benji", action: "movió", target: "Publicar dashboard operativo de TLOZ", time: "hace 1 h", dotColor: "#D72228" },
   { user: "Raúl", action: "creó la Mission", target: "Integrar Wallet API", time: "hace 3 h", dotColor: "#7A4ED9" },
   { user: "Sistema", action: "Owner de", target: "Diseñar driver persistente de Missions", time: "ayer", dotColor: "#2D6CDF" }

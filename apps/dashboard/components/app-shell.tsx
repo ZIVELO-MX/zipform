@@ -3,6 +3,7 @@
 import {
   ArrowLeft,
   FileText,
+  FolderKanban,
   Home,
   LayoutDashboard,
   Menu,
@@ -20,8 +21,9 @@ import {
   NavSection,
   TooltipProvider,
 } from "@zipform/ui";
-import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { resolveMissionIcon } from "./tloz/tloz-utils";
+import { projectHref } from "../lib/tloz-routes";
 
 type AppShellProps = {
   children: ReactNode;
@@ -50,7 +52,7 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
     const Icon = resolveMissionIcon(project.icon);
     return {
       label: project.name,
-      href: `/tloz/projects/${project.id}`,
+      href: projectHref(project),
       icon: Icon,
       badge: projectActiveCounts.get(project.id) ?? 0,
     };
@@ -59,7 +61,7 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
   return [
     {
       items: [
-        { label: "Missions", href: "/tloz", icon: LayoutDashboard },
+        { label: "Lobby", href: "/tloz", icon: LayoutDashboard, exact: true },
       ],
     },
     {
@@ -68,6 +70,7 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
       defaultCollapsed: false,
       items: [
         { label: "Inventory", href: "/tloz/inventory", icon: PackageOpen },
+        { label: "Projects", href: "/tloz/projects", icon: FolderKanban },
       ],
     },
     ...(projectItems.length > 0
@@ -86,9 +89,11 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
 export function AppShell({ children, user, tlozProjects = [], projectActiveCounts = new Map() }: AppShellProps) {
   return (
     <TooltipProvider delayDuration={180}>
-      <DashboardLayoutClient user={user} tlozProjects={tlozProjects} projectActiveCounts={projectActiveCounts}>
-        {children}
-      </DashboardLayoutClient>
+      <Suspense fallback={null}>
+        <DashboardLayoutClient user={user} tlozProjects={tlozProjects} projectActiveCounts={projectActiveCounts}>
+          {children}
+        </DashboardLayoutClient>
+      </Suspense>
     </TooltipProvider>
   );
 }
