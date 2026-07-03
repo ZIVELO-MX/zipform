@@ -11,6 +11,7 @@ import {
   Sword,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { signOut } from "next-auth/react";
 import type { TlozProject, UserProfile } from "@zipform/types";
 import {
   DesktopSidebar,
@@ -87,6 +88,9 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
 }
 
 export function AppShell({ children, user, tlozProjects = [], projectActiveCounts = new Map() }: AppShellProps) {
+  const pathname = usePathname();
+  if (pathname === "/login") return children;
+
   return (
     <TooltipProvider delayDuration={180}>
       <Suspense fallback={null}>
@@ -183,6 +187,7 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
         sidebarWidth={sidebarWidth}
         onResize={handleResize}
         onToggleCollapsed={() => setCollapsed((current) => !current)}
+        onSignOut={() => signOut({ callbackUrl: "/login" })}
       />
 
       <main className={`main-surface min-w-0${isTloz ? " tloz-main-surface" : ""}`}>{children}</main>
@@ -196,6 +201,7 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
         sections={isTloz ? tlozSections : undefined}
         contextItem={isTloz ? tlozContextItem : undefined}
         onClose={() => setMobileMenuOpen(false)}
+        onSignOut={() => signOut({ callbackUrl: "/login" })}
       />
 
           {!isTloz ? <div className="fixed inset-x-0 top-0 z-20 flex h-12 items-center border-b border-carbon/10 bg-paper/90 backdrop-blur md:hidden">

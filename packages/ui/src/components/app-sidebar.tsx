@@ -79,7 +79,8 @@ export function DesktopSidebar({
   contextItem,
   sidebarWidth,
   onResize,
-  onToggleCollapsed
+  onToggleCollapsed,
+  onSignOut
 }: {
   collapsed: boolean;
   pathname: string;
@@ -90,6 +91,7 @@ export function DesktopSidebar({
   sidebarWidth: number;
   onResize: (width: number) => void;
   onToggleCollapsed: () => void;
+  onSignOut: () => void;
 }) {
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -190,7 +192,7 @@ export function DesktopSidebar({
             <TooltipContent side="right">Expandir barra</TooltipContent>
           </Tooltip>
         ) : null}
-        <ProfileDropdown collapsed={collapsed} user={user} />
+        <ProfileDropdown collapsed={collapsed} user={user} onSignOut={onSignOut} />
       </div>
 
       {!collapsed ? (
@@ -321,7 +323,8 @@ export function MobileMenuPanel({
   items,
   sections,
   contextItem,
-  onClose
+  onClose,
+  onSignOut
 }: {
   open: boolean;
   pathname: string;
@@ -330,6 +333,7 @@ export function MobileMenuPanel({
   sections?: NavSection[];
   contextItem?: NavItem;
   onClose: () => void;
+  onSignOut: () => void;
 }) {
   return (
     <div
@@ -372,7 +376,7 @@ export function MobileMenuPanel({
         </nav>
 
         <div className="border-t border-carbon/10 px-4 py-4">
-          <ProfileDropdown collapsed={false} user={user} mobile />
+          <ProfileDropdown collapsed={false} user={user} mobile onSignOut={onSignOut} />
         </div>
       </div>
     </div>
@@ -409,7 +413,7 @@ function MobileNavLink({
   );
 }
 
-export function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed: boolean; user: SidebarUser; mobile?: boolean }) {
+export function ProfileDropdown({ collapsed, user, mobile = false, onSignOut }: { collapsed: boolean; user: SidebarUser; mobile?: boolean; onSignOut: () => void }) {
   const initials = user.name
     .split(" ")
     .map((part) => part[0])
@@ -468,15 +472,14 @@ export function ProfileDropdown({ collapsed, user, mobile = false }: { collapsed
       </DropdownMenu>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Autenticación pendiente</AlertDialogTitle>
+          <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
           <AlertDialogDescription>
-            El cierre de sesión todavía es un mock visual. Cuando la autenticación esté conectada, esta acción finalizará
-            la sesión compartida de Zipform.
+            Tendrás que volver a identificarte para acceder a Zipform.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Volver</AlertDialogCancel>
-          <AlertDialogAction>Entendido</AlertDialogAction>
+          <AlertDialogAction onClick={onSignOut}>Cerrar sesión</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
