@@ -32,6 +32,16 @@ function byId<T extends { id: string }>(items: T[], id?: string) {
   return id ? items.find((item) => item.id === id) : undefined;
 }
 
+function computeDisplayId(data: TlozDataSet, mission: TlozMission): string {
+  const project = byId(data.projects, mission.projectId);
+  const abbr = project ? project.name.slice(0, 3).toUpperCase() : "ZZZ";
+  const siblings = data.missions
+    .filter((m) => m.projectId === mission.projectId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const index = siblings.findIndex((m) => m.id === mission.id);
+  return `${abbr}-${String(index + 1).padStart(4, "0")}`;
+}
+
 export function hydrateMission(data: TlozDataSet, mission: TlozMission): TlozMissionRecord {
   const project = byId(data.projects, mission.projectId);
 
@@ -46,6 +56,7 @@ export function hydrateMission(data: TlozDataSet, mission: TlozMission): TlozMis
 
   return {
     ...mission,
+    displayId: computeDisplayId(data, mission),
     project,
     season: byId(data.seasons, mission.seasonId),
     episode: byId(data.episodes, mission.episodeId),

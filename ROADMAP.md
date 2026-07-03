@@ -83,6 +83,15 @@ P2 — completar experiencia de producto:
 - [TLOZ][UX] Sincronizar el Mission slide-over con mutaciones optimistas y añadir loading boundaries específicos por vista
 - [TLOZ][BOARD] Implementar drag-and-drop accesible o retirar el atributo `draggable` hasta que exista comportamiento real
 - [TLOZ][ARCHITECTURE] Dividir `mission-views.tsx` por vista y consolidar configuración compartida de estados
+- [TLOZ][ARCHITECTURE] Separar navegación (sidebar por entidades) de visualización (Display switcher en header)
+- [TLOZ][ARCHITECTURE] Sidebar Sin categoría|Energía reemplazada por sección colapsable de proyectos con contadores
+- [TLOZ][ARCHITECTURE] Board: columnas sin fondo mixto, badges de tipo con icono+color como detail, owner como avatar+tooltip, botón abrir detalle
+- [TLOZ][ARCHITECTURE] Filters: deshabilitados project/season/episode selects
+- [TLOZ][ARCHITECTURE] Sidebar links de proyectos → `/tloz/projects/[id]` con vista detalle dedicada (dependencias+recursos)
+- [TLOZ][ARCHITECTURE] Breadcrumb con contexto de proyecto (Missions > ProjectName > detailLabel)
+- [TLOZ][ARCHITECTURE] Mission IDs con formato PRO-0001 (abreviatura proyecto + número secuencial)
+- [TLOZ][UX] Quest Items renombrado a Inventory, con página dedicada en `/tloz/quest-items` (Tabla/Lista + detail slide-over con markdown)
+- [TLOZ][UX] Project detail view en `/tloz/projects/[id]` con lista de misiones y recursos agregados
 - [TLOZ][DOCS] Sincronizar `apps/dashboard/app/tloz/ARQUITECTURE.md` con CRUD, filtros, tests y estados UX ya implementados
 
 **UI**

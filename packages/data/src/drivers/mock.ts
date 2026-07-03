@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { TlozMission } from "@zipform/types";
 import type { ZipformDataClient } from "../contracts";
 import {
@@ -92,21 +91,24 @@ export function createMockDataClient(): ZipformDataClient {
       async getQuestItems() {
         return questItems;
       },
+      async getResources() {
+        return tlozData.resources;
+      },
       async createProject(name) {
         const now = new Date().toISOString();
-        const project = { id: randomUUID(), name, description: "", color: "#6B6B6B", icon: "Folder", status: "active" as const, createdAt: now, updatedAt: now };
+        const project = { id: crypto.randomUUID(), name, description: "", color: "#6B6B6B", icon: "Folder", status: "active" as const, createdAt: now, updatedAt: now };
         tlozData.projects.push(project);
         return project;
       },
       async createSeason(name) {
         const now = new Date().toISOString();
-        const season = { id: randomUUID(), name, version: name, description: "", status: "active" as const, startDate: now.slice(0, 10), createdAt: now, updatedAt: now };
+        const season = { id: crypto.randomUUID(), name, version: name, description: "", status: "active" as const, startDate: now.slice(0, 10), createdAt: now, updatedAt: now };
         tlozData.seasons.push(season);
         return season;
       },
       async createEpisode(name, seasonId) {
         const now = new Date().toISOString();
-        const episode = { id: randomUUID(), seasonId, name, romanNumber: String(tlozData.episodes.filter((item) => item.seasonId === seasonId).length + 1), description: "", status: "active" as const, startDate: now.slice(0, 10), createdAt: now, updatedAt: now };
+        const episode = { id: crypto.randomUUID(), seasonId, name, romanNumber: String(tlozData.episodes.filter((item) => item.seasonId === seasonId).length + 1), description: "", status: "active" as const, startDate: now.slice(0, 10), createdAt: now, updatedAt: now };
         tlozData.episodes.push(episode);
         return episode;
       },
@@ -114,7 +116,7 @@ export function createMockDataClient(): ZipformDataClient {
         const now = new Date().toISOString();
         const mission: TlozMission = {
           ...input,
-          id: input.id ?? randomUUID(),
+          id: input.id ?? crypto.randomUUID(),
           createdAt: now,
           updatedAt: now
         };
@@ -138,14 +140,14 @@ export function createMockDataClient(): ZipformDataClient {
         const now = new Date().toISOString();
         tlozData.checklistItems = tlozData.checklistItems.filter((item) => item.missionId !== missionId);
         tlozData.checklistItems.push(...checklist.map((item, position) => ({
-          id: randomUUID(), missionId, title: item.title, completed: item.completed, position, createdAt: now, updatedAt: now
+          id: crypto.randomUUID(), missionId, title: item.title, completed: item.completed, position, createdAt: now, updatedAt: now
         })));
         return (await this.getMissionDetail(missionId))!;
       },
       async addMissionDependency(missionId, dependsOnMissionId) {
         if (missionId === dependsOnMissionId) throw new Error("A mission cannot depend on itself");
         if (!tlozData.missionDependencies.some((item) => item.missionId === missionId && item.dependsOnMissionId === dependsOnMissionId)) {
-          tlozData.missionDependencies.push({ id: randomUUID(), missionId, dependsOnMissionId, createdAt: new Date().toISOString() });
+          tlozData.missionDependencies.push({ id: crypto.randomUUID(), missionId, dependsOnMissionId, createdAt: new Date().toISOString() });
         }
         return (await this.getMissionDetail(missionId))!;
       },
@@ -156,7 +158,7 @@ export function createMockDataClient(): ZipformDataClient {
       async setMissionQuestItem(missionId, questItemId, required) {
         const current = tlozData.missionQuestItems.find((item) => item.missionId === missionId && item.questItemId === questItemId);
         if (current) current.required = required;
-        else tlozData.missionQuestItems.push({ id: randomUUID(), missionId, questItemId, required, createdAt: new Date().toISOString() });
+        else tlozData.missionQuestItems.push({ id: crypto.randomUUID(), missionId, questItemId, required, createdAt: new Date().toISOString() });
         return (await this.getMissionDetail(missionId))!;
       },
       async removeMissionQuestItem(missionId, questItemId) {
@@ -165,7 +167,7 @@ export function createMockDataClient(): ZipformDataClient {
       },
       async addMissionResource(missionId, input) {
         const now = new Date().toISOString();
-        tlozData.resources.push({ id: randomUUID(), missionId, ...input, createdAt: now, updatedAt: now });
+        tlozData.resources.push({ id: crypto.randomUUID(), missionId, ...input, createdAt: now, updatedAt: now });
         return (await this.getMissionDetail(missionId))!;
       },
       async removeMissionResource(missionId, resourceId) {

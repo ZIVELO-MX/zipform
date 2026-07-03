@@ -29,3 +29,4 @@ export const getTlozProjects = dataClient.tloz.getProjects;
 export const getTlozSeasons = dataClient.tloz.getSeasons;
 export const getTlozEpisodes = dataClient.tloz.getEpisodes;
 export const getTlozQuestItems = dataClient.tloz.getQuestItems;
+export const getTlozResources = dataClient.tloz.getResources;

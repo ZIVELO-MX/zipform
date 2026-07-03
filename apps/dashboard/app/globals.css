@@ -704,6 +704,13 @@ button {
   gap: 10px;
 }
 
+.tloz-header-trailing {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
 .tloz-command-trigger {
   display: flex;
   inline-size: min(430px, 48%);
@@ -1584,6 +1591,7 @@ button {
   background: rgba(215, 34, 40, 0.045);
   box-shadow: inset 0 0 0 1px rgba(215, 34, 40, 0.18);
 }
+
 
 .tloz-scrl::-webkit-scrollbar {
   width: 9px;

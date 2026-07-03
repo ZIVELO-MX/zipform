@@ -31,12 +31,13 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
 
 type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "conclusion" | "icon">;
 
-export function MissionDetail({ mission, options, onMissionChange, onNavigateMission, onNavigateQuestItem }: {
+export function MissionDetail({ mission, options, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
   onMissionChange?: (mission: TlozMissionDetail) => void;
   onNavigateMission?: (missionId: string) => void;
   onNavigateQuestItem?: (questItemId: string) => void;
+  variant?: "panel" | "full";
 }) {
   const [current, setCurrent] = useState(mission);
   const [markdown, setMarkdown] = useState(mission.description);
@@ -176,7 +177,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
             <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
               <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold ${typeBadgeClass}`}><Star className="size-[13px] fill-current" aria-hidden="true" />{missionTypeLabel[current.type]}</span>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold ${statusBadgeClass}`}><span className={`size-[7px] rounded-full bg-current ${current.status === "now" ? "animate-pulse" : ""}`} aria-hidden="true" />{missionStatusLabel[current.status]}</span>
-              <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.id}</span>
+              <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.displayId}</span>
             </div>
             <div className="flex items-start gap-2.5">
               <IconPicker icons={missionIcons} value={current.icon} color={tone} recentStorageKey="zipform-tloz-recent-icons" onValueChange={saveIcon} iconOnly className={`mt-0.5 size-8 shrink-0 justify-center rounded-lg border-0 p-0 shadow-none [&_svg]:size-[15px] ${iconSurfaceClass}`} />
@@ -229,6 +230,12 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
         </main>
 
         <aside className="mission-detail-properties flex self-start flex-col gap-3.5" aria-label="Información de la misión">
+          {variant === "panel" ? (
+            <Link href={`/tloz/missions/${current.id}`} className="flex items-center justify-center gap-2 rounded-xl border border-carbon/10 bg-white px-4 py-3 text-[13px] font-semibold text-carbon/60 no-underline transition-colors hover:border-carbon/20 hover:text-carbon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M9 8h6" /><path d="M9 12h6" /><path d="M9 16h4" /></svg>
+              Abrir en página completa
+            </Link>
+          ) : null}
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} /></div></section>
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]"><ActivityItem label={`Estado: ${missionStatusLabel[current.status]}`} date={current.updatedAt} tone={tone} /><ActivityItem label="Misión actualizada" date={current.updatedAt} tone={tone} /><ActivityItem label="Misión creada" date={current.createdAt} /></div></section>
           <Button className="min-h-11 rounded-xl" disabled={current.status === "completed"} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, "completed")) }))}><Check data-icon="inline-start" aria-hidden="true" />{current.status === "completed" ? "Misión completada" : "Marcar como completada"}</Button>
@@ -274,9 +281,9 @@ function QuestReference({ item, required, onNavigate, onRequiredChange, onRemove
     <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#FFF4DE] text-[#7A5A12] [&_svg]:size-3"><QuestIcon aria-hidden="true" /></span>
     <div className="min-w-0 flex-1"><p className="m-0 truncate text-[13.5px] font-semibold text-[#1D1D1B]">{item.name}</p><p className="m-0 mt-px truncate text-[11.5px] text-[#9A9A98]">{item.description || "Quest Item"}</p></div>
     <span className={unlocked ? "rounded-full bg-[#E6F4EA] px-[9px] py-1 text-[11px] font-bold text-[#1E6B3C]" : "rounded-full bg-[#FFF4DE] px-[9px] py-1 text-[11px] font-bold text-[#7A5A12]"}>{unlocked ? "Desbloqueado" : "Bloqueado"}</span>
-    <OpenReferenceButton label={`Abrir ${item.name}`} href={`/tloz?questItem=${item.id}#quest-items`} onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/quest:opacity-100 focus:opacity-100" />
+    <OpenReferenceButton label={`Abrir ${item.name}`} href="/tloz/inventory" onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/quest:opacity-100 focus:opacity-100" />
     <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md opacity-0 group-hover/quest:opacity-100 focus:opacity-100 [&_svg]:size-3" aria-label={`Acciones para ${item.name}`}><MoreHorizontal aria-hidden="true" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>
-      {onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir Quest Item</DropdownMenuItem> : <DropdownMenuItem asChild><Link href={`/tloz?questItem=${item.id}#quest-items`}><PanelRightOpen aria-hidden="true" />Abrir Quest Item</Link></DropdownMenuItem>}
+      {onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir Quest Item</DropdownMenuItem> : <DropdownMenuItem asChild><Link href="/tloz/inventory"><PanelRightOpen aria-hidden="true" />Abrir Quest Item</Link></DropdownMenuItem>}
       <DropdownMenuCheckboxItem checked={required} onCheckedChange={(checked) => onRequiredChange(Boolean(checked))}>Requerido</DropdownMenuCheckboxItem>
       <DropdownMenuSeparator />
       <DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={onRemove}><X aria-hidden="true" />Eliminar Quest Item</DropdownMenuItem>

@@ -58,7 +58,7 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
 
   return (
     <SlideOver open={Boolean(mission)} title={selectedQuestItem?.name ?? detail?.title ?? mission?.title ?? "Detalle de Mission"} onBack={selectedQuestItem || history.length ? navigateBack : undefined} onOpenChange={(open) => !open && onClose()}>
-      {selectedQuestItem ? <QuestItemPanel item={selectedQuestItem} /> : detail ? <div className="min-h-full bg-[#FAFAF9]"><MissionDetail mission={detail} options={options} onNavigateMission={(id) => void navigateToMission(id)} onNavigateQuestItem={(id) => { const item = options.questItems.find((quest) => quest.id === id); if (item) setSelectedQuestItem(item); }} onMissionChange={onMissionChange} /></div> : <p className="p-6 text-sm text-carbon/50">Cargando misión…</p>}
+      {selectedQuestItem ? <QuestItemPanel item={selectedQuestItem} /> : detail ? <div className="min-h-full bg-[#FAFAF9]"><MissionDetail variant="panel" mission={detail} options={options} onNavigateMission={(id) => void navigateToMission(id)} onNavigateQuestItem={(id) => { const item = options.questItems.find((quest) => quest.id === id); if (item) setSelectedQuestItem(item); }} onMissionChange={onMissionChange} /></div> : <p className="p-6 text-sm text-carbon/50">Cargando misión…</p>}
     </SlideOver>
   );
 }

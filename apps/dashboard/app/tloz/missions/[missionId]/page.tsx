@@ -29,7 +29,7 @@ export default async function MissionDetailPage({ params }: MissionDetailPagePro
   const users = Array.from(new Map(missions.map((item) => [item.owner.id, item.owner])).values());
 
   return (
-    <TlozPageShell title="Missions" currentView="Missions" detailLabel={mission.title}>
+    <TlozPageShell title="Missions" detailLabel={mission.title}>
       <div className="min-h-full bg-[#FAFAF9]">
         <MissionDetail mission={mission} options={{ projects, seasons, episodes, users, missions, questItems }} />
       </div>

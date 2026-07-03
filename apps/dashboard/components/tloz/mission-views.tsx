@@ -15,13 +15,12 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { Link2, PanelRightOpen, Plus } from "lucide-react";
+import { Link2, Plus } from "lucide-react";
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
   Badge,
-  BoardColumnShell,
   Button,
   EmptyState,
   MetricProgress,
@@ -107,11 +106,6 @@ export function DashboardNowSection({ missions, onSelect }: { missions: TlozMiss
   );
 }
 
-function OpenMissionButton({ mission, onSelect }: { mission: TlozMissionRecord; onSelect?: (mission: TlozMissionRecord) => void }) {
-  const label = `Abrir detalle de ${mission.title}`;
-  return <Tooltip><TooltipTrigger asChild>{onSelect ? <Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md [&_svg]:size-3" aria-label={label} onClick={(event) => { event.stopPropagation(); onSelect(mission); }}><PanelRightOpen aria-hidden="true" /></Button> : <Button asChild variant="ghost" size="icon-xs" className="size-6 rounded-md [&_svg]:size-3"><Link href={`/tloz/missions/${mission.id}`} aria-label={label} onClick={(event) => event.stopPropagation()}><PanelRightOpen aria-hidden="true" /></Link></Button>}</TooltipTrigger><TooltipContent>Abrir detalle</TooltipContent></Tooltip>;
-}
-
 function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionRecord; accent: string; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
 
@@ -159,9 +153,9 @@ function DashboardNowCard({ mission, accent, onSelect }: { mission: TlozMissionR
           </svg>
           {missionTypeLabel[mission.type]}
         </span>
-        <div className="flex items-center gap-2"><span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "#1E8E5A" }}>
+        <div className="flex items-center gap-2"><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span><span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: 600, color: "#1E8E5A" }}>
           <span style={{ width: "7px", height: "7px", borderRadius: "999px", background: "#1E8E5A", animation: "nowpulse 1.8s ease-in-out infinite" }} />Now
-        </span><OpenMissionButton mission={mission} onSelect={onSelect} /></div>
+        </span></div>
       </div>
       <h3 style={{ margin: "0 0 7px", fontSize: "19px", fontWeight: 700, letterSpacing: "-0.01em" }}>{mission.title}</h3>
       <p style={{ margin: "0 0 16px", fontSize: "13.5px", color: "#6B6B6B", lineHeight: 1.5, textWrap: "pretty" }}>{missionPreviewDescription(mission.description)}</p>
@@ -250,9 +244,9 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
           <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z" /></svg>
           Main
         </span>
-        <div className="flex items-center gap-2"><span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: 600, color: statusCfg.textColor }}>
+        <div className="flex items-center gap-2"><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span><span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "10.5px", fontWeight: 600, color: statusCfg.textColor }}>
           <span style={{ width: "6px", height: "6px", borderRadius: "999px", background: statusCfg.dotColor, animation: mission.status === "now" ? "nowpulse 1.8s ease-in-out infinite" : undefined }} />{statusCfg.label}
-        </span><OpenMissionButton mission={mission} onSelect={onSelect} /></div>
+        </span></div>
       </div>
       <h3 style={{ margin: "0 0 10px", fontSize: "15px", fontWeight: 700, lineHeight: 1.25 }}>{mission.title}</h3>
       <div style={{ display: "flex", gap: "7px", marginBottom: "13px" }}>
@@ -364,7 +358,7 @@ export function DashboardNextLaterSection({
                   )}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "13.5px", fontWeight: 600 }}>{mission.title}</div>
+                  <div style={{ fontSize: "13.5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span>{mission.title}</div>
                   <div style={{ fontSize: "11px", color: "#9a9a98", display: "flex", alignItems: "center", gap: "5px", marginTop: "2px" }}>
                     <span style={{ width: "6px", height: "6px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
                     {mission.project?.name ?? "Sin proyecto"} · {missionTypeLabel[mission.type]}
@@ -578,7 +572,7 @@ export function MissionTable({ missions, onSelect }: { missions: TlozMissionReco
                 style={{ cursor: "pointer", borderBottom: "1px solid rgba(29,29,27,0.06)" }}
                 onClick={() => onSelect?.(mission)}
               >
-                <td style={{ padding: "11px 14px", fontWeight: 600 }}>{mission.title}</td>
+                <td style={{ padding: "11px 14px", fontWeight: 600, display: "flex", alignItems: "center", gap: "8px" }}><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span>{mission.title}</td>
                 <td style={{ padding: "11px 14px" }}>
                   <StatusPill label={statusCfg.label} color={statusCfg.textColor} active={mission.status === "now"} />
                 </td>
@@ -684,6 +678,7 @@ export function MissionList({ missions, onSelect }: { missions: TlozMissionRecor
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></svg>
                         )}
                       </span>
+                      <span className="font-mono mr-1 text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span>
                       <span style={{ fontSize: "13.5px", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                         {mission.title}
                       </span>
@@ -792,11 +787,19 @@ function BoardDropColumn({ id, label, count, tone, active, children }: { id: Tlo
   const { isOver, setNodeRef } = useDroppable({ id: `status:${id}`, data: { status: id } });
   return (
     <div ref={setNodeRef} className="tloz-board-column" data-over={isOver}>
-      <BoardColumnShell title={label} count={count} tone={tone} active={active}>
-        <div className="tloz-droplist flex min-h-[84px] flex-1 flex-col gap-3 pb-2 pl-0.5 pr-0.5" data-group={id}>
+      <div className="flex flex-col" style={{ maxHeight: "100%" }}>
+        <div className="flex items-center gap-[9px] px-[6px] pb-3 pt-1">
+          <span
+            className="size-[9px] shrink-0 rounded-full"
+            style={{ background: tone, animation: active ? "nowpulse 1.8s ease-in-out infinite" : undefined }}
+          />
+          <span className="text-[13px] font-bold tracking-[0.02em]">{label}</span>
+          <span className="rounded-full bg-[#F1F0EE] px-[8px] py-[1px] font-mono text-[11px] font-medium text-[#6B6B6B]">{count}</span>
+        </div>
+        <div className="tloz-droplist flex min-h-[84px] flex-1 flex-col gap-3 overflow-auto pb-2 pl-0.5 pr-0.5" data-group={id} data-over={isOver}>
           {children}
         </div>
-      </BoardColumnShell>
+      </div>
     </div>
   );
 }
@@ -811,6 +814,9 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
   const dragStyle: CSSProperties = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : {};
+
+  const typeBadgeBg: Record<string, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
+  const typeBadgeText: Record<string, string> = { main_quest: "#B91C22", side_quest: "#2D6CDF", farming_quest: "#1E6B3C", exploration_quest: "#7A4ED9" };
 
   return (
     <div
@@ -846,15 +852,29 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
         {...attributes}
         {...listeners}
       />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-        <ToneBadge tone={{ color: tone }} className="text-[10.5px]">
+      <div className="flex items-center justify-between gap-2" style={{ marginBottom: "10px" }}>
+        <span
+          className="inline-flex items-center gap-1.5 rounded-full px-[9px] py-[3px] text-[10.5px] font-bold"
+          style={{ background: typeBadgeBg[mission.type], color: typeBadgeText[mission.type] }}
+        >
+          {mission.type === "main_quest" ? (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.4l2.64 5.35 5.9.86-4.27 4.16 1.01 5.88L12 15.73l-5.28 2.78 1.01-5.88L3.46 8.6l5.9-.86z" /></svg>
+          ) : mission.type === "exploration_quest" ? (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><polygon points="15.6 8.4 13.4 13.4 8.4 15.6 10.6 10.6" fill="currentColor" stroke="none" /></svg>
+          ) : mission.type === "side_quest" ? (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></svg>
+          ) : (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" /><path d="M3 21v-5h5" /></svg>
+          )}
           {missionTypeLabel[mission.type]}
-        </ToneBadge>
-        {isCompleted ? (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10.5px", color: "#1E6B3C", fontWeight: 700, background: "#E6F4EA", borderRadius: "999px", padding: "2px 8px" }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-          </span>
-        ) : null}
+        </span>
+        <div className="flex items-center gap-1.5">
+          {isCompleted ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#E6F4EA] px-[8px] py-[2px] text-[10.5px] font-bold text-[#1E6B3C]">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            </span>
+          ) : null}
+        </div>
       </div>
       <div
         style={{
@@ -869,32 +889,40 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
         {mission.title}
       </div>
       {!isCompleted && (
-        <>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", color: "#6B6B6B", fontWeight: 500 }}>
-              <span style={{ width: "6px", height: "6px", borderRadius: "2px", background: mission.project?.color || "#999" }} />
-              {mission.project?.name ?? "Sin proyecto"}
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              {blocked && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "10px", color: "#7A5A12", fontWeight: 600, background: "#FFF4DE", borderRadius: "999px", padding: "2px 7px" }}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                      </svg>
-                      {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="center">
-                    {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias
-                  </TooltipContent>
-                </Tooltip>
-              )}
-              <UserAvatarLabel name={mission.owner.name} label={mission.owner.username} imageUrl={mission.owner.avatarUrl} size="sm" />
-            </div>
+        <div className="flex items-center justify-between">
+          <span className="inline-flex items-center gap-[5px] text-[11px] font-medium text-[#6B6B6B]">
+            <span className="inline-block size-[6px] shrink-0 rounded-[2px]" style={{ background: mission.project?.color || "#999" }} />
+            {mission.displayId}
+          </span>
+          <div className="flex items-center gap-[6px]">
+            {blocked && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center gap-[3px] rounded-full bg-[#FFF4DE] px-[7px] py-[2px] text-[10px] font-semibold text-[#7A5A12]">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent side="top" align="center">
+                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "completed").length} dependencias
+                </TooltipContent>
+              </Tooltip>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Avatar className="size-6 rounded-full">
+                  <AvatarImage src={mission.owner.avatarUrl} alt="" />
+                  <AvatarFallback className="bg-carbon text-[0.55rem] font-medium text-white">
+                    {mission.owner.name.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent side="top">{mission.owner.name}</TooltipContent>
+            </Tooltip>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -903,7 +931,7 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
 function BoardDragPreview({ mission }: { mission?: TlozMissionRecord }) {
   if (!mission) return null;
   return <div className="w-[280px] rotate-1 rounded-[14px] border border-carbon/10 bg-white px-4 py-3 shadow-2xl">
-    <p className="m-0 text-[10px] font-bold uppercase text-carbon/45">{missionTypeLabel[mission.type]}</p>
+    <p className="m-0 text-[10px] font-bold uppercase text-carbon/45">{mission.displayId}</p>
     <p className="mb-3 mt-1 text-sm font-semibold">{mission.title}</p>
   </div>;
 }
