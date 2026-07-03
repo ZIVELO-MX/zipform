@@ -4,5 +4,12 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
-  "types": "./src/index.ts"
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
 }

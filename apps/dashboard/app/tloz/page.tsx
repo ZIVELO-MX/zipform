@@ -12,15 +12,15 @@ import { Suspense } from "react";
 import { TlozLoading } from "../../components/tloz/tloz-loading";
 
 async function TlozData() {
-  const [summary, missions, allMissions, projects, seasons, episodes, questItems] = await Promise.all([
+  const [summary, missions, projects, seasons, episodes, questItems] = await Promise.all([
     getTlozDashboardSummary(),
-    getTlozMissions(),
     getTlozMissions(),
     getTlozProjects(),
     getTlozSeasons(),
     getTlozEpisodes(),
     getTlozQuestItems(),
   ]);
+  const allMissions = missions;
 
   const users = Array.from(new Map(allMissions.map((m) => [m.owner.id, m.owner])).values());
 
