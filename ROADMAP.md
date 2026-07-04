@@ -5,165 +5,80 @@
 
 ---
 
-### NOW
+### ✅ DONE
 
-- [PLATFORM] Build functional dashboard shell with responsive sidebar
-- [PLATFORM] Create mock data modules that can be replaced by a real DB driver
-- [DOCUMENTATION] Create ROADMAP.md and keep README synchronized
-- [TLOZ] Ship initial dashboard module with Dashboard, Board, Lista, Tabla, Calendario, and Mission Detail views
-- [TLOZ] Card UI: shadcn Progress bar, type-colored right border, Lucide icon per mission, owner Avatar + username footer
-- [TLOZ] Visual consistency: icon + tone across all views (list, table, board, calendar, dashboard)
-- [TLOZ] Avatars as circles, progress bar solid black
-- [TLOZ] Icon + type + flow badges aligned horizontally in card header
-- [TLOZ] Owner Avatar uses real UserProfile (avatarUrl, username) from mock data layer
-- [TLOZ] Offset accent border (box-shadow) for card depth
-- [TLOZ] Tooltips on state icons, dependencies, quest items
-- [TLOZ] Badge color matches mission type tone on all views
-- [TLOZ] QuestItemDots: hidden when empty, overflow count (+N) when >3
-- [UI] Sidebar UserAvatar changed to circle (rounded-full) globally
-- [UI] Shared dashboard primitives extracted for TLOZ cards, view sections, slide-over drawers, and attachment metadata
+- [x] [PLATFORM] Dashboard shell with responsive sidebar
+- [x] [PLATFORM] Mock data modules replaceable by real DB driver
+- [x] [DOCUMENTATION] ROADMAP.md and README
+- [x] [TLOZ] Dashboard, Board, Lista, Tabla, Calendario, Mission Detail views
+- [x] [TLOZ] Card UI with shadcn Progress, type-colored border, Lucide icons, owner Avatar
+- [x] [TLOZ] Visual consistency across all views
+- [x] [TLOZ] Avatars as circles, solid black progress bars
+- [x] [TLOZ] Icon + type + flow badges in card header
+- [x] [TLOZ] Owner Avatar from UserProfile (avatarUrl, username)
+- [x] [TLOZ] Offset accent border, tooltips
+- [x] [TLOZ] Badge color matches mission type tone
+- [x] [TLOZ] QuestItemDots: hidden when empty, +N overflow
+- [x] [UI] Sidebar UserAvatar circle
+- [x] [UI] Shared dashboard primitives
+- [x] [DATA][DATABASE] Prisma migrated from SQLite to PostgreSQL. Clean baseline `20260703150000_init_pg` on Supabase.
+- [x] [DATA][DATABASE] Pooled (`DATABASE_URL`) + direct (`DIRECT_URL`) connection configured
+- [x] [DATA][DEPLOYMENT] `prisma migrate deploy` via `db:migrate:deploy` and `db:deploy`
+- [x] [DATA][SEED] Idempotent seed (deleteMany + createMany in transaction)
+- [x] [AUTH] Credentials login with NextAuth v5. Login page, middleware, session management
 
-Status:
-
-- Dashboard shell is functional in `apps/dashboard`.
-- TLOZ now has an implemented mock-backed module under `/tloz`.
-- TLOZ data still comes from replaceable async mock repositories.
-- Cards, list rows, and table rows use consistent icon + type-tone visuals.
-- Exploration Quest displays as **Explore** instead of "Exploration Quest".
-- `DashboardMissionList` extracted from page into components layer, respecting `docs/ui-guidelines.md`.
-- Owner display uses `UserProfile` with avatar image, username, and initials fallback.
-- All user avatars (sidebar + TLOZ) are circles.
-- Mission type badges use the same color as the right border accent.
-- TLOZ now uses shared UI primitives for dashboard presentation, slide-over panels, and attachment/resource rows.
-- Mission Detail reads persisted `TlozMission.startDate` and `TlozProject.color`; the database audit confirmed both already exist in Prisma and the current migration, so no duplicate columns are required.
-- Episode and Kano are hidden from Mission properties until their deferred data/UX work below is completed.
+**Status:** Dashboard, TLOZ views, and auth funcionan. TLOZ usa Prisma contra PostgreSQL por defecto (driver mock aún disponible con `ZIPFORM_DATA_DRIVER=mock`). Quotes es placeholder.
 
 ---
 
-### NEXT
+### P0 — BLOQUEANTES PARA RELEASE 1.0.0
 
-**Authentication**
+**Security — Server Actions sin protección**
 
-- [AUTH] Enable shared internal authentication
+- [ ] [TLOZ][SECURITY] Proteger las 20+ Server Actions en `apps/dashboard/app/tloz/actions.ts` con autenticación (`auth()`) y autorización por operación. Actualmente cualquier request sin auth puede crear/editar/eliminar Missions, proyectos, quest items, etc.
+
+**Deployment**
+
+- [ ] [PLATFORM][DEPLOYMENT] Crear `vercel.json` con build command, output config, y env vars setup
+- [ ] [PLATFORM][CI/CD] GitHub Actions para CI (lint, typecheck, test) y deploy
 
 **Quotes**
 
-- [QUOTES] Prepare Quotes integration path for daily-use readiness
-  Depends on: Enable shared internal authentication
-
-**TLOZ**
-
-- [TLOZ] Replace mock repositories with persistence, permissions, and global search
-  Depends on: Enable shared internal authentication
-- [TLOZ] Define creation and editing behavior for Missions, checklist items, resources, dependencies, and Quest Items
-- [TLOZ] Resolve activity semantics for Mission Detail
-
-**TLOZ hardening — pendientes auditados**
-
-P0 — bloqueantes antes de habilitar escritura en producción:
-
-- [TLOZ][SECURITY] Proteger Server Actions con autenticación, autorización por operación y validación runtime de IDs y payloads
-  Depends on: Enable shared internal authentication
-- [TLOZ][CORRECTNESS] Representar `blocked` como columna real del Board para que una Mission no desaparezca al cambiar de estado
-
-P1 — confiabilidad y escalabilidad:
-
-- [TLOZ][CORRECTNESS] Mostrar `blocked` correctamente en Tabla e incluir `completed` en Lista
-- [TLOZ][TESTS] Añadir integración del driver Prisma contra SQLite real; los tests actuales usan un stub de Prisma
-- [TLOZ][TESTS] Cubrir Server Actions, filtros, actualización optimista, rollback y estados loading/error
-- [TLOZ][DX] Migrar `next lint` a ESLint CLI y restaurar un comando de lint no interactivo
-- [TLOZ][PERFORMANCE] Aplicar filtros y paginación en Prisma, evitando cargar e hidratar el grafo TLOZ completo en cada listado
-
-P2 — completar experiencia de producto:
-
-- [TLOZ][DATA] Definir y persistir clasificación Kano antes de volver a mostrarla; no inferir `Basic` desde el tipo de Mission
-- [TLOZ][UX] Volver a mostrar Episode en propiedades cuando el selector Project → Season → Episode y sus estados vacíos estén cerrados
-- [TLOZ][UX] Conectar los flujos visibles de crear, editar y eliminar Mission al CRUD ya disponible
-- [TLOZ][SEARCH] Implementar búsqueda global sobre Missions, Projects, Quest Items y Resources
-- [TLOZ][UX] Sincronizar el Mission slide-over con mutaciones optimistas y añadir loading boundaries específicos por vista
-- [TLOZ][BOARD] Implementar drag-and-drop accesible o retirar el atributo `draggable` hasta que exista comportamiento real
-- [TLOZ][ARCHITECTURE] Dividir `mission-views.tsx` por vista y consolidar configuración compartida de estados
-- [TLOZ][ARCHITECTURE] Separar navegación (sidebar por entidades) de visualización (Display switcher en header)
-- [TLOZ][ARCHITECTURE] Sidebar Sin categoría|Energía reemplazada por sección colapsable de proyectos con contadores
-- [TLOZ][ARCHITECTURE] Board: columnas sin fondo mixto, badges de tipo con icono+color como detail, owner como avatar+tooltip, botón abrir detalle
-- [TLOZ][ARCHITECTURE] Filters: deshabilitados project/season/episode selects
-- [TLOZ][ARCHITECTURE] Sidebar links de proyectos → `/tloz/projects/[id]` con vista detalle dedicada (dependencias+recursos)
-- [TLOZ][ARCHITECTURE] Breadcrumb con contexto de proyecto (Missions > ProjectName > detailLabel)
-- [TLOZ][ARCHITECTURE] Mission IDs con formato PRO-0001 (abreviatura proyecto + número secuencial)
-- [TLOZ][UX] Quest Items renombrado a Inventory, con página dedicada en `/tloz/quest-items` (Tabla/Lista + detail slide-over con markdown)
-- [TLOZ][UX] Project detail view en `/tloz/projects/[id]` con lista de misiones y recursos agregados
-- [TLOZ][DOCS] Sincronizar `apps/dashboard/app/tloz/ARQUITECTURE.md` con CRUD, filtros, tests y estados UX ya implementados
-
-**UI**
-
-- [UI] Continue hardening shared primitives used by TLOZ and platform pages
-- [UI] Revisit the internal Attachment primitive when an official shadcn registry item is available
-
-**Infrastructure**
-
-- [PLATFORM] Prepare the dashboard deployment baseline
+- [ ] [QUOTES][DATA] Migrar tipos, driver, Server Actions y UI del módulo Quotes al monorepo
+- [ ] [QUOTES][UI] Portar componentes de UI de Quotes
 
 ---
 
-### PRE-1.0.0 RELEASE GATE — DATABASE AND DEPLOYMENT
+### P1 — RECOMENDADOS PRE-1.0.0
 
-These items must be completed before the `1.0.0` release. Authentication is
-tracked separately and is not part of this database-readiness gate.
+- [ ] [TLOZ][TESTS] Tests de integración Prisma contra PostgreSQL real
+- [ ] [TLOZ][CORRECTNESS] Slug/lave y displayId seguros bajo concurrencia
+- [ ] [TLOZ][CORRECTNESS] Multi-step updates en transacciones
+- [ ] [TLOZ][DEPLOYMENT] Eliminar build-time database coupling de `/tloz`
+- [ ] [TLOZ][CORRECTNESS] Mostrar `blocked` en Tabla, incluir `completed` en Lista
+- [ ] [TLOZ][CORRECTNESS] `blocked` como columna real del Board
+- [ ] [PLATFORM][DOCS] Documentar env vars, pooled vs direct connection, seed policy, deployment runbook
 
-P0 — PostgreSQL/Supabase migration:
+---
 
-- [DATA][DATABASE] Change the Prisma datasource from SQLite to PostgreSQL and
-  create a clean PostgreSQL migration baseline; do not run the existing
-  SQLite-specific migrations against Supabase
-- [DATA][DATABASE] Configure a pooled runtime connection and a direct migration
-  connection for serverless deployment
-- [DATA][DEPLOYMENT] Add a production migration command based on
-  `prisma migrate deploy`; keep `prisma migrate dev` for local development only
-- [DATA][SEED] Provide an idempotent, production-safe seed/bootstrap process for
-  required platform records and the initial internal user
+### P2 — POST-1.0.0
 
-P1 — production correctness:
-
-- [TLOZ][TESTS] Add PostgreSQL integration tests covering migrations, seed,
-  reads, CRUD, relations, constraints, transactions, and cascade behavior
-- [TLOZ][CORRECTNESS] Make project slug and Mission `displayId` allocation safe
-  under concurrent writes, with deterministic retry behavior for unique conflicts
-- [TLOZ][CORRECTNESS] Wrap multi-step Mission updates and dependency cleanup in
-  transactions so partial writes cannot leave inconsistent data
-- [TLOZ][DEPLOYMENT] Remove accidental build-time database coupling from `/tloz`;
-  make its runtime rendering and cache/revalidation policy explicit
-
-P2 — production scalability and validation:
-
-- [TLOZ][PERFORMANCE] Replace full-dataset hydration on list and detail requests
-  with scoped Prisma queries, database-level filters, and pagination
-- [PLATFORM][DEPLOYMENT] Validate the complete release sequence in a staging
-  environment: provision database, migrate, seed, build, deploy, execute TLOZ
-  CRUD smoke tests, and verify rollback/recovery instructions
-- [PLATFORM][DOCS] Document required environment variables, pooled versus direct
-  connection usage, migration ownership, seed policy, and deployment runbook
-
-Release acceptance criteria:
-
-- `pnpm check` passes with the PostgreSQL Prisma client
-- A clean Supabase/PostgreSQL database can be migrated and bootstrapped without
-  manual table edits
-- TLOZ read and write smoke tests pass against the deployed staging environment
-- The dashboard build does not require an already populated runtime database
-- No request path loads the complete TLOZ dataset when a scoped query is possible
+- [ ] [TLOZ][PERFORMANCE] Scoped queries, filtros en DB, paginación
+- [ ] [TLOZ][DATA] Kano classification
+- [ ] [TLOZ][UX] Episode selector, crear/editar Mission, Inventory page, Project detail
+- [ ] [TLOZ][SEARCH] Búsqueda global
+- [ ] [TLOZ][UX] Slide-over con optimistic mutations, drag-and-drop
+- [ ] [TLOZ][ARCHITECTURE] Dividir mission-views, separar navegación, sidebar colapsable
+- [ ] [TLOZ][TESTS] Server Actions, optimistic updates, loading/error states
+- [ ] [TLOZ][DX] ESLint CLI no interactivo
 
 ---
 
 ### LATER
 
-- Add Finance as an internal platform application
-- Add Security as an internal platform application
-- Add UI Preview for shared component validation
-- Expand TLOZ beyond Missions into deeper project, episode, resource, and Quest Item management after persistence and permissions exist
+- Finance, Security, UI Preview apps
+- TLOZ: episodes, resources, quest items deeper management
 
 ---
 
-Moving from 0.1 to 1.0 requires Quotes and TLOZ to both reach daily usability.
-TLOZ now has its own implementation roadmap in `imports/tloz/ROADMAP.md`.
-The platform roadmap tracks the shared foundations and integration gates, while
-the TLOZ roadmap tracks product-specific behavior and unresolved decisions.
+Moving from 0.1 to 1.0 requires TLOZ and Quotes to both reach daily usability. TLOZ has its own roadmap in `imports/tloz/ROADMAP.md`.

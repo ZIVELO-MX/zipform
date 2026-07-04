@@ -12,10 +12,13 @@
     "check": "pnpm db:generate && pnpm typecheck && pnpm test && pnpm build",
     "db:generate": "pnpm --filter @zipform/data db:generate",
     "db:migrate": "pnpm --filter @zipform/data db:migrate",
+    "db:migrate:deploy": "pnpm --filter @zipform/data db:migrate:deploy",
+    "db:deploy": "pnpm db:generate && pnpm db:migrate:deploy",
     "db:seed": "pnpm --filter @zipform/data db:seed",
     "db:studio": "pnpm --filter @zipform/data db:studio"
   },
   "devDependencies": {
+    "supabase": "^2.109.0",
     "typescript": "^5.8.3"
   }
 }

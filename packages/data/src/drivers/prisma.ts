@@ -25,25 +25,11 @@ import {
 import { assertProjectScopedDependency } from "../dependency-rules";
 import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 
-function ensureDatabaseUrl() {
-  if (!process.env.DATABASE_URL) {
-    const cwd = process.cwd();
-    const cwdEnd = cwd.replace(/\\/g, "/").replace(/\/+$/, "");
-    const dbPath = cwdEnd.endsWith("packages/data")
-      ? `${cwdEnd}/dev.db`
-      : cwdEnd.endsWith("apps/dashboard")
-        ? `${cwdEnd.slice(0, cwdEnd.lastIndexOf("apps/dashboard"))}packages/data/dev.db`
-        : `${cwdEnd}/packages/data/dev.db`;
-    process.env.DATABASE_URL = `file:${dbPath}`;
-  }
-}
-
 const globalForPrisma = globalThis as typeof globalThis & {
   zipformPrisma?: PrismaClient;
 };
 
 export function getPrismaClient() {
-  ensureDatabaseUrl();
   globalForPrisma.zipformPrisma ??= new PrismaClient();
   return globalForPrisma.zipformPrisma;
 }
