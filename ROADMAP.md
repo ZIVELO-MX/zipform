@@ -48,13 +48,13 @@
 
 ### P1 — RECOMENDADOS PRE-1.0.0
 
-- [ ] [TLOZ][TESTS] Tests de integración Prisma contra PostgreSQL real
-- [ ] [TLOZ][CORRECTNESS] Slug/lave y displayId seguros bajo concurrencia
-- [ ] [TLOZ][CORRECTNESS] Multi-step updates en transacciones
+- [x] [TLOZ][TESTS] Tests de integración Prisma contra PostgreSQL real
+- [x] [TLOZ][CORRECTNESS] Slug/lave y displayId seguros bajo concurrencia
+- [x] [TLOZ][CORRECTNESS] Multi-step updates en transacciones
 - [x] [TLOZ][DEPLOYMENT] Eliminar build-time database coupling de `/tloz`
 - [x] [TLOZ][CORRECTNESS] Mostrar `blocked` en Tabla, incluir `completed` en Lista
 - [x] [TLOZ][CORRECTNESS] `blocked` como columna real del Board
-- [ ] [PLATFORM][DOCS] Documentar env vars, pooled vs direct connection, seed policy, deployment runbook
+- [x] [PLATFORM][DOCS] Documentar env vars, pooled vs direct connection, seed policy, deployment runbook
 
 ---
 
