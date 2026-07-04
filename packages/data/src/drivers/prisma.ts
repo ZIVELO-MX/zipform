@@ -23,7 +23,7 @@ import {
   type TlozDataSet
 } from "../tloz-hydration";
 import { assertProjectScopedDependency } from "../dependency-rules";
-import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
+import { slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   zipformPrisma?: PrismaClient;
@@ -32,6 +32,26 @@ const globalForPrisma = globalThis as typeof globalThis & {
 export function getPrismaClient() {
   globalForPrisma.zipformPrisma ??= new PrismaClient();
   return globalForPrisma.zipformPrisma;
+}
+
+const UNIQUE_CONSTRAINT_CODE = "P2002";
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code: string }).code === UNIQUE_CONSTRAINT_CODE
+  );
+}
+
+function displayIdPrefix(projectName: string): string {
+  return projectName
+    .normalize("NFKD")
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .slice(0, 3)
+    .toUpperCase()
+    .padEnd(3, "X");
 }
 
 const toIso = (value: Date) => value.toISOString();
@@ -401,9 +421,24 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       },
       async createProject(input) {
         const valid = validateProjectCreate(input);
-        const existing = await prisma.tlozProject.findMany({ select: { slug: true } });
-        const row = await prisma.tlozProject.create({ data: { ...valid, id: crypto.randomUUID(), slug: uniqueSlug(valid.name, existing.map((item) => item.slug)), dueDate: valid.dueDate || null } });
-        return mapProject(row);
+        const base = slugify(valid.name);
+        let candidate = base;
+        let suffix = 2;
+        for (let i = 0; i < 20; i++) {
+          try {
+            const row = await prisma.tlozProject.create({
+              data: { ...valid, id: crypto.randomUUID(), slug: candidate, dueDate: valid.dueDate || null }
+            });
+            return mapProject(row);
+          } catch (error) {
+            if (isUniqueConstraintError(error)) {
+              candidate = `${base}-${suffix++}`;
+              continue;
+            }
+            throw error;
+          }
+        }
+        throw new Error("Could not create project with unique slug after 20 attempts");
       },
       async createQuestItem(input) {
         const valid = validateQuestItemCreate(input);
@@ -433,12 +468,32 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const valid = validateMissionCreate(input);
         const project = await prisma.tlozProject.findUnique({ where: { id: valid.projectId } });
         if (!project) throw new Error("TLOZ mission project was not found");
-        const existing = await prisma.tlozMission.findMany({ select: { displayId: true } });
-        const { id = crypto.randomUUID(), completedAt, ...data } = valid;
-        await prisma.tlozMission.create({
-          data: { ...data, id, displayId: nextMissionDisplayId(project.name, existing.map((item) => item.displayId)), completedAt: completedAt ? new Date(completedAt) : null }
-        });
-        return getHydratedMission(id);
+        const prefix = displayIdPrefix(project.name);
+        let suffix = 1;
+        for (let i = 0; i < 20; i++) {
+          try {
+            if (i === 0) {
+              const existing = await prisma.tlozMission.findMany({
+                where: { displayId: { startsWith: `${prefix}-` } },
+                select: { displayId: true }
+              });
+              suffix = existing.reduce((max, m) => Math.max(max, Number(m.displayId.slice(4)) || 0), 0) + 1;
+            }
+            const displayId = `${prefix}-${String(suffix).padStart(4, "0")}`;
+            const { id = crypto.randomUUID(), completedAt, ...data } = valid;
+            await prisma.tlozMission.create({
+              data: { ...data, id, displayId, completedAt: completedAt ? new Date(completedAt) : null }
+            });
+            return getHydratedMission(id);
+          } catch (error) {
+            if (isUniqueConstraintError(error)) {
+              suffix++;
+              continue;
+            }
+            throw error;
+          }
+        }
+        throw new Error("Could not create mission with unique display ID after 20 attempts");
       },
       async updateMission(missionId, input) {
         const { completedAt, ...data } = input;
@@ -446,26 +501,71 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           key,
           value === "" && ["conclusion", "projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? null : value
         ]));
-        let nextDisplayId: string | undefined;
-        if (input.projectId) {
-          const current = await prisma.tlozMission.findUnique({ where: { id: missionId }, select: { projectId: true } });
-          if (current?.projectId !== input.projectId) {
-            const [project, existing] = await Promise.all([prisma.tlozProject.findUnique({ where: { id: input.projectId } }), prisma.tlozMission.findMany({ select: { displayId: true } })]);
-            if (!project) throw new Error("TLOZ mission project was not found");
-            nextDisplayId = nextMissionDisplayId(project.name, existing.map((item) => item.displayId));
+        const projectChanged = input.projectId !== undefined;
+
+        await prisma.$transaction(async (tx) => {
+          if (projectChanged) {
+            const current = await tx.tlozMission.findUnique({
+              where: { id: missionId },
+              select: { projectId: true }
+            });
+            if (current?.projectId !== input.projectId) {
+              const project = await tx.tlozProject.findUnique({ where: { id: input.projectId! } });
+              if (!project) throw new Error("TLOZ mission project was not found");
+              const prefix = displayIdPrefix(project.name);
+              let displaySuffix = 1;
+              for (let i = 0; i < 20; i++) {
+                try {
+                  if (i === 0) {
+                    const existing = await tx.tlozMission.findMany({
+                      where: { displayId: { startsWith: `${prefix}-` } },
+                      select: { displayId: true }
+                    });
+                    displaySuffix = existing.reduce((max, m) => Math.max(max, Number(m.displayId.slice(4)) || 0), 0) + 1;
+                  }
+                  const nextDisplayId = `${prefix}-${String(displaySuffix).padStart(4, "0")}`;
+                  const updateData: Record<string, unknown> = {
+                    ...nullableData,
+                    displayId: nextDisplayId
+                  };
+                  if (Object.prototype.hasOwnProperty.call(input, "completedAt")) {
+                    updateData.completedAt = completedAt ? new Date(completedAt) : null;
+                  }
+                  await tx.tlozMission.update({
+                    where: { id: missionId },
+                    data: updateData
+                  });
+                  await tx.tlozMissionDependency.deleteMany({
+                    where: { OR: [{ missionId }, { dependsOnMissionId: missionId }] },
+                  });
+                  return;
+                } catch (error) {
+                  if (isUniqueConstraintError(error)) {
+                    displaySuffix++;
+                    continue;
+                  }
+                  throw error;
+                }
+              }
+              throw new Error("Could not update mission with unique display ID after 20 attempts");
+            }
           }
-        }
-        await prisma.tlozMission.update({
-          where: { id: missionId },
-          data: { ...nullableData, ...(nextDisplayId ? { displayId: nextDisplayId } : {}), ...(Object.prototype.hasOwnProperty.call(input, "completedAt")
-            ? { completedAt: completedAt ? new Date(completedAt) : null }
-            : {}) }
-        });
-        if (Object.prototype.hasOwnProperty.call(input, "projectId")) {
-          await prisma.tlozMissionDependency.deleteMany({
-            where: { OR: [{ missionId }, { dependsOnMissionId: missionId }] },
+
+          const updateData: Record<string, unknown> = { ...nullableData };
+          if (Object.prototype.hasOwnProperty.call(input, "completedAt")) {
+            updateData.completedAt = completedAt ? new Date(completedAt) : null;
+          }
+          await tx.tlozMission.update({
+            where: { id: missionId },
+            data: updateData
           });
-        }
+
+          if (projectChanged) {
+            await tx.tlozMissionDependency.deleteMany({
+              where: { OR: [{ missionId }, { dependsOnMissionId: missionId }] },
+            });
+          }
+        });
         return getHydratedMission(missionId);
       },
       async saveMissionDocument(missionId, markdown) {
@@ -546,7 +646,16 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         return getHydratedMission(missionId);
       },
       async deleteMission(missionId) {
-        await prisma.tlozMission.delete({ where: { id: missionId } });
+        await prisma.$transaction([
+          prisma.tlozUserMissionState.deleteMany({ where: { missionId } }),
+          prisma.tlozResource.deleteMany({ where: { missionId } }),
+          prisma.tlozChecklistItem.deleteMany({ where: { missionId } }),
+          prisma.tlozMissionQuestItem.deleteMany({ where: { missionId } }),
+          prisma.tlozMissionDependency.deleteMany({
+            where: { OR: [{ missionId }, { dependsOnMissionId: missionId }] }
+          }),
+          prisma.tlozMission.delete({ where: { id: missionId } }),
+        ]);
       }
     }
   };

@@ -21,7 +21,17 @@ function createPrismaStub() {
   });
   const findMany = <T>(rows: T[]) => vi.fn(async () => rows);
 
+  const deleteMany = vi.fn(async () => ({}));
+
   const prisma = {
+    $transaction: vi.fn(async (arg: unknown) => {
+      if (typeof arg === "function") {
+        return arg(prisma);
+      }
+      if (Array.isArray(arg)) {
+        return Promise.all(arg);
+      }
+    }),
     session: { findFirst: vi.fn(async () => ({ user: currentUser })) },
     user: { findFirst: vi.fn(async () => currentUser), findMany: findMany(users) },
     platformMetric: { findMany: vi.fn(async () => [{ label: "Health", value: "100", tone: "good" }]) },
@@ -34,12 +44,15 @@ function createPrismaStub() {
     tlozMission: {
       findMany: findMany(missionRows),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
-        missionRows.push({ ...data, createdAt: new Date(), updatedAt: new Date() } as never);
+        const newRow = { ...data, createdAt: new Date(), updatedAt: new Date() } as never;
+        missionRows.push(newRow);
+        return newRow;
       }),
       update: vi.fn(async ({ where, data }: { where: { id: string }; data: Record<string, unknown> }) => {
         const index = missionRows.findIndex((item) => item.id === where.id);
         if (index < 0) throw new Error("not found");
         missionRows[index] = { ...missionRows[index], ...data, updatedAt: new Date() } as never;
+        return missionRows[index];
       }),
       delete: vi.fn(async ({ where }: { where: { id: string } }) => {
         const index = missionRows.findIndex((item) => item.id === where.id);
@@ -47,12 +60,27 @@ function createPrismaStub() {
         missionRows.splice(index, 1);
       })
     },
-    tlozMissionDependency: { findMany: findMany(missionDependencies.map(withDates)) },
+    tlozMissionDependency: {
+      findMany: findMany(missionDependencies.map(withDates)),
+      deleteMany,
+    },
     tlozQuestItem: { findMany: findMany(questItems.map((item) => ({ ...withDates(item), acquiredAt: nullable(item.acquiredAt) }))) },
-    tlozMissionQuestItem: { findMany: findMany(missionQuestItems.map(withDates)) },
-    tlozChecklistItem: { findMany: findMany(checklistItems.map(withDates)) },
-    tlozResource: { findMany: findMany(resources.map((item) => ({ ...withDates(item), url: nullable(item.url), fileId: nullable(item.fileId) }))) },
-    tlozUserMissionState: { findMany: findMany(userMissionStates.map(withDates)) }
+    tlozMissionQuestItem: {
+      findMany: findMany(missionQuestItems.map(withDates)),
+      deleteMany,
+    },
+    tlozChecklistItem: {
+      findMany: findMany(checklistItems.map(withDates)),
+      deleteMany,
+    },
+    tlozResource: {
+      findMany: findMany(resources.map((item) => ({ ...withDates(item), url: nullable(item.url), fileId: nullable(item.fileId) }))),
+      deleteMany,
+    },
+    tlozUserMissionState: {
+      findMany: findMany(userMissionStates.map(withDates)),
+      deleteMany,
+    }
   };
 
   return prisma as unknown as PrismaClient;
