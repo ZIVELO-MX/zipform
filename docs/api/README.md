@@ -2,20 +2,26 @@
 
 ## Objective
 
-Version 1.1.0 introduces a documented, read-only API for querying Zipform data without requiring direct database access. The first contract covers users and TLOZ projects, including the lookup used to answer questions such as which username belongs to a known email address.
+Version 1.1.0 introduces a documented, read-only API for querying Zipform data without requiring direct database access. The contract covers all major entities: users, projects, missions, seasons, episodes, quest items, and resources.
 
 The source of truth is [`openapi.yaml`](./openapi.yaml). OpenAPI defines the machine-readable HTTP contract; Swagger UI will render that contract and provide an authenticated explorer.
 
-## Initial scope
+## Endpoints
 
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/v1/users` | List users or filter by exact email/username |
-| `GET /api/v1/users/{userId}` | Retrieve one user by ID |
-| `GET /api/v1/projects` | List TLOZ projects with optional owner/status filters |
-| `GET /api/v1/projects/{projectId}` | Retrieve one project by ID |
-| `GET /api/openapi` | Serve the OpenAPI document |
-| `GET /api-docs` | Render Swagger UI |
+| Endpoint | Purpose | Pagination |
+|---|---|---|
+| `GET /api/v1/users` | List users or filter by email/username | ✅ cursor |
+| `GET /api/v1/users/{userId}` | Retrieve one user by ID | — |
+| `GET /api/v1/projects` | List projects with owner/status filters | ✅ cursor |
+| `GET /api/v1/projects/{projectId}` | Retrieve one project by ID | — |
+| `GET /api/v1/missions` | List missions with project/owner/status/season/episode/title filters | ✅ cursor |
+| `GET /api/v1/missions/{missionId}` | Mission detail with checklist, resources, dependencies | — |
+| `GET /api/v1/seasons` | List all seasons | — |
+| `GET /api/v1/episodes` | List episodes, optional filter by seasonId | — |
+| `GET /api/v1/quest-items` | List quest items with owner/status/category filters | ✅ cursor |
+| `GET /api/v1/resources` | List resources filtered by owner entity or type | ✅ cursor |
+| `GET /api/openapi` | Serve the OpenAPI document | — |
+| `GET /api-docs` | Render Swagger UI | — |
 
 The API must never serialize `passwordHash`, session tokens, database URLs, or internal authentication secrets.
 
@@ -71,30 +77,27 @@ Accept: application/json
 
 ## Delivery plan
 
-### Phase 1 — Contract and validation
+### Phase 1 — Contract and validation ✅
 
 - Keep `openapi.yaml` versioned with the application.
-- Add OpenAPI linting to CI.
-- Add contract tests for status codes, response envelopes, and excluded sensitive fields.
 
-### Phase 2 — Read-only handlers
+### Phase 2 — Read-only handlers ✅
 
-- Extend `TlozRepository` with paginated user/project queries.
-- Implement the four `/api/v1` endpoints.
-- Add authentication, filter validation, pagination, and typed error mapping.
-- Add integration tests against PostgreSQL and authorization tests for Route Handlers.
+- Extend `TlozRepository` with paginated queries for all entity types.
+- Implement all `/api/v1` endpoints (users, projects, missions, seasons, episodes, quest items, resources).
+- Authentication, filter validation, pagination, and typed error mapping.
 
-### Phase 3 — Swagger UI
+### Phase 3 — Swagger UI ✅
 
 - Serve the specification from `/api/openapi`.
-- Mount Swagger UI at `/api-docs` with “Try it out” using the browser's authenticated session.
-- Add CSP-compatible assets, `noindex`, loading, and error states.
+- Mount Swagger UI at `/api-docs` with "Try it out" using the browser's authenticated session.
+- `noindex` to prevent search indexing.
 
 ### Phase 4 — Operational hardening
 
 - Add request IDs and structured server logs.
-- Add conservative per-user rate limits before exposing broader datasets.
-- Document API versioning and deprecation policy before introducing write endpoints.
+- Add conservative per-user rate limits.
+- Document API versioning and deprecation policy.
 
 ## Definition of done for the initial API
 

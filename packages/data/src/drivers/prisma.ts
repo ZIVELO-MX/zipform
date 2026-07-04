@@ -13,7 +13,8 @@ import type {
   TlozUserMissionState,
   UserProfile
 } from "@zipform/types";
-import type { PaginatedResult, PaginationInput, ProjectFilters, UserFilters, ZipformDataClient } from "../contracts";
+import type { TlozMissionRecord } from "../contracts";
+import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
 import { apps, roadmap } from "../seed-data";
 import {
   buildTlozDashboardSummary,
@@ -412,6 +413,43 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         if (filters?.status) where.status = filters.status;
         const rows = await prisma.tlozProject.findMany({ where, orderBy: { createdAt: "asc" }, take: limit + 1 });
         const data = rows.slice(0, limit).map(mapProject);
+        const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
+        return { data, nextCursor };
+      },
+      async findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>> {
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const hydrated = hydrateMissions(await loadTlozDataSet(prisma));
+        const filtered = hydrated.filter((mission) =>
+          (!filters?.projectId || mission.projectId === filters.projectId) &&
+          (!filters?.seasonId || mission.seasonId === filters.seasonId) &&
+          (!filters?.episodeId || mission.episodeId === filters.episodeId) &&
+          (!filters?.ownerId || mission.ownerId === filters.ownerId) &&
+          (!filters?.status || mission.status === filters.status) &&
+          (!filters?.title || mission.title.toLowerCase().includes(filters.title.toLowerCase()))
+        );
+        const data = filtered.slice(0, limit);
+        return { data, nextCursor: filtered.length > limit ? data[data.length - 1]?.id ?? null : null };
+      },
+      async findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>> {
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const where: Record<string, unknown> = {};
+        if (filters?.ownerId) where.ownerId = filters.ownerId;
+        if (filters?.status) where.status = filters.status;
+        if (filters?.category) where.category = filters.category;
+        const rows = await prisma.tlozQuestItem.findMany({ where, orderBy: { createdAt: "asc" }, take: limit + 1 });
+        const data = rows.slice(0, limit).map(mapQuestItem);
+        const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
+        return { data, nextCursor };
+      },
+      async findResources(filters?: ResourceFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozResource>> {
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const where: Record<string, unknown> = {};
+        if (filters?.missionId) where.missionId = filters.missionId;
+        if (filters?.projectId) where.projectId = filters.projectId;
+        if (filters?.questItemId) where.questItemId = filters.questItemId;
+        if (filters?.type) where.type = filters.type;
+        const rows = await prisma.tlozResource.findMany({ where, orderBy: { createdAt: "asc" }, take: limit + 1 });
+        const data = rows.slice(0, limit).map(mapResource);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };
       },

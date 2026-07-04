@@ -82,6 +82,21 @@ export type TlozMissionFilters = {
   seasonId?: string;
   episodeId?: string;
   ownerId?: string;
+  status?: TlozMission["status"];
+  title?: string;
+};
+
+export type QuestItemFilters = {
+  ownerId?: string;
+  status?: TlozQuestItem["status"];
+  category?: TlozQuestItem["category"];
+};
+
+export type ResourceFilters = {
+  missionId?: string;
+  projectId?: string;
+  questItemId?: string;
+  type?: TlozResource["type"];
 };
 
 export type TlozDashboardSummary = {
@@ -102,6 +117,9 @@ export type TlozRepository = {
   getMissionDetail(missionId: string): Promise<TlozMissionDetail | null>;
   findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>>;
   findProjects(filters?: ProjectFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozProject>>;
+  findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>>;
+  findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>>;
+  findResources(filters?: ResourceFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozResource>>;
   getProjects(): Promise<TlozProject[]>;
   getSeasons(): Promise<TlozSeason[]>;
   getEpisodes(): Promise<TlozEpisode[]>;

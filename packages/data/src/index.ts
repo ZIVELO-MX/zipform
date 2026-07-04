@@ -9,6 +9,8 @@ export type {
   PaginatedResult,
   PaginationInput,
   ProjectFilters,
+  QuestItemFilters,
+  ResourceFilters,
   TlozDashboardSummary,
   TlozMissionDetail,
   TlozMissionFilters,

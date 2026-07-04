@@ -1,5 +1,6 @@
-import type { TlozMission, TlozProject, UserProfile } from "@zipform/types";
-import type { PaginatedResult, PaginationInput, ProjectFilters, UserFilters, ZipformDataClient } from "../contracts";
+import type { TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
+import type { TlozMissionRecord } from "../contracts";
+import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
 import {
   apps,
   checklistItems,
@@ -93,6 +94,37 @@ export function createMockDataClient(): ZipformDataClient {
         let data = [...tlozData.projects];
         if (filters?.ownerId) data = data.filter((p) => p.ownerId === filters.ownerId);
         if (filters?.status) data = data.filter((p) => p.status === filters.status);
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const sliced = data.slice(0, limit);
+        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+      },
+      async findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>> {
+        let data = hydrateMissions(tlozData);
+        if (filters?.projectId) data = data.filter((m) => m.projectId === filters.projectId);
+        if (filters?.seasonId) data = data.filter((m) => m.seasonId === filters.seasonId);
+        if (filters?.episodeId) data = data.filter((m) => m.episodeId === filters.episodeId);
+        if (filters?.ownerId) data = data.filter((m) => m.ownerId === filters.ownerId);
+        if (filters?.status) data = data.filter((m) => m.status === filters.status);
+        if (filters?.title) data = data.filter((m) => m.title.toLowerCase().includes(filters.title!.toLowerCase()));
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const sliced = data.slice(0, limit);
+        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+      },
+      async findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>> {
+        let data = [...tlozData.questItems];
+        if (filters?.ownerId) data = data.filter((q) => q.ownerId === filters.ownerId);
+        if (filters?.status) data = data.filter((q) => q.status === filters.status);
+        if (filters?.category) data = data.filter((q) => q.category === filters.category);
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const sliced = data.slice(0, limit);
+        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+      },
+      async findResources(filters?: ResourceFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozResource>> {
+        let data = [...tlozData.resources];
+        if (filters?.missionId) data = data.filter((r) => r.missionId === filters.missionId);
+        if (filters?.projectId) data = data.filter((r) => r.projectId === filters.projectId);
+        if (filters?.questItemId) data = data.filter((r) => r.questItemId === filters.questItemId);
+        if (filters?.type) data = data.filter((r) => r.type === filters.type);
         const limit = Math.min(pagination?.limit ?? 25, 100);
         const sliced = data.slice(0, limit);
         return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
