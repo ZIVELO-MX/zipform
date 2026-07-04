@@ -26,7 +26,7 @@ export const apps: AppModule[] = [
       "Quote workflow entry point. The product exists, but this section is a platform placeholder until integration work starts.",
     href: "/quotes",
     status: "external",
-    versionTarget: "1.0",
+    versionTarget: "1.1",
     owner: "quotes"
   },
   {
@@ -61,8 +61,8 @@ export const apps: AppModule[] = [
 ];
 
 export const roadmap: RoadmapSnapshot = {
-  currentVersion: "0.1",
-  targetVersion: "1.0",
+  currentVersion: "1.0",
+  targetVersion: "1.1",
   now: [
     {
       id: "platform-dashboard-shell",
@@ -167,9 +167,9 @@ export const raulUser: UserProfile = {
 export const users: UserProfile[] = [currentUser, raulUser];
 
 export const metrics: PlatformMetric[] = [
-  { label: "Current version", value: "0.1", tone: "good" },
-  { label: "Target version", value: "1.0", tone: "neutral" },
-  { label: "Auth", value: "Planned", tone: "warning" },
+  { label: "Current version", value: "1.0", tone: "good" },
+  { label: "Target version", value: "1.1", tone: "neutral" },
+  { label: "Auth", value: "Enabled", tone: "good" },
   { label: "Data", value: "Prisma PostgreSQL", tone: "good" }
 ];
 

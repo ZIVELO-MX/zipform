@@ -113,6 +113,14 @@ pnpm db:migrate:deploy
 
 This applies all pending migrations to the production database using `DIRECT_URL`.
 
+For the 1.0.0 baseline only, reset TLOZ work data while preserving users and sessions:
+
+```bash
+CONFIRM_RELEASE_DATA_RESET=RESET_TLOZ_FOR_1_0 pnpm db:prepare-release-1
+```
+
+This command is transactional, removes existing TLOZ missions and related entities, and creates the four release projects. Do not replace it with `pnpm db:seed`, which also replaces users.
+
 ### 3. Deploy
 
 Deploy the `apps/dashboard` Next.js application to Vercel:

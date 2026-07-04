@@ -14,7 +14,7 @@ ecosystem: authentication, navigation, design system, and infrastructure.
 Generates and manages client quotes. Currently exists as a functional product
 and is being refactored toward stability and long-term maintainability.
 
-Target: daily usable by v1.0.
+Target: daily usable by v1.1.
 
 ### TLOZ (The Legend of Zivelo)
 
@@ -61,8 +61,8 @@ See ROADMAP.md for the full NOW / NEXT / LATER breakdown.
 
 |                     |                           |
 | ------------------- | ------------------------- |
-| **Current version** | 0.1                       |
-| **Target version**  | 1.0                       |
+| **Current version** | 1.0.0                     |
+| **Target version**  | 1.1.0                     |
 
 ---
 
