@@ -79,8 +79,43 @@
 
 #### Platform
 
-- [ ] [ZOHO] Configurar OAuth login con Zoho
+- [ ] [ZOHO] Configurar OAuth login con Zoho (redirect URI, Zoho API Console)
 - [ ] [ZOHO] Login page con opción Zoho, callback, sesión unificada
+- [ ] [SETTINGS] Implementar página de configuración de usuario: perfil, preferencias de vista, tema
+- [ ] [SETTINGS] Persistir preferencias en `localStorage` bajo clave `zipform-`
+
+#### Mobile — Prioridades Kano
+
+La priorización sigue la clasificación Kano de `PRIORIDADES_KANO.md`. El objetivo es que **los recursos sean visibles en móvil** sin necesidad de soportar todas las vistas de escritorio.
+
+##### Must-have (Básicos)
+
+- [ ] [MOBILE][NAV] Navegación inferior funcional (`MobileBottomNav`) con icono activo y transición entre apps
+- [ ] [MOBILE][NAV] Menú lateral (`MobileMenuPanel`) accesible desde el hamburger
+- [ ] [MOBILE][READ] Dashboard responsivo: métricas, lista de misiones, secciones colapsables
+- [ ] [MOBILE][READ] Vista Lista responsiva: cards apiladas con información esencial
+- [ ] [MOBILE][READ] Detalle de Mission adaptado: propiedades, dependencias, Inventory relacionado
+- [ ] [MOBILE][READ] Vista Inventory responsiva con datos del item
+- [ ] [MOBILE][READ] Vista Project Detail responsiva: hero + lista de misiones filtrada
+- [ ] [MOBILE][LOAD] Estados de carga y error en todas las vistas móviles
+
+##### Performance (Easy Wins)
+
+Son refactors acotados que desbloquean el mayor valor con el menor esfuerzo.
+
+- [ ] [MOBILE][EASY] Header superior fijo con hamburguesa + título + spacer (`MobileTopBar`)
+- [ ] [MOBILE][EASY] Dashboard colapsable: ocultar secciones no esenciales en viewport <768px
+- [ ] [MOBILE][EASY] Tarjetas de misión responsivas: layout vertical, badges compactos, tooltips táctiles
+- [ ] [MOBILE][EASY] Sidebar colapsable automático en móvil con persistencia
+- [ ] [MOBILE][EASY] Breadcrumb responsivo: truncar niveles intermedios en móvil
+- [ ] [MOBILE][EASY] Filtros básicos: selector de proyecto y estado adaptado a viewport angosto
+
+##### Delighter (Futuro)
+
+- [ ] [MOBILE] Vista Board adaptada: columnas en scroll horizontal
+- [ ] [MOBILE] Vista Tabla responsiva con columnas prioritarias
+- [ ] [MOBILE] Drag-and-drop táctil en Board
+- [ ] [MOBILE] SlideOver y transiciones animadas
 
 ---
 
@@ -91,4 +126,4 @@
 
 ---
 
-Release 1.0.0 established TLOZ, authentication, PostgreSQL persistence, and Vercel production deployment. **1.1.0** adds the Data API contract, Zoho SSO, and Quotes migration. TLOZ has its own detailed roadmap in `imports/tloz/ROADMAP.md`.
+Release 1.0.0 established TLOZ, authentication, PostgreSQL persistence, and Vercel production deployment. **1.1.0** adds the Data API contract, Zoho SSO, Quotes migration, mobile responsiveness, and user settings. TLOZ has its own detailed roadmap in `imports/tloz/ROADMAP.md`.
