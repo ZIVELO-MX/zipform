@@ -16,7 +16,6 @@ import type { TlozProject, UserProfile } from "@zipform/types";
 import {
   DesktopSidebar,
   isActive,
-  MobileBottomNav,
   MobileMenuPanel,
   NavItem,
   NavSection,
@@ -198,7 +197,6 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
 
       <main className={`main-surface min-w-0${isTloz ? " tloz-main-surface" : ""}`}>{children}</main>
 
-      <MobileBottomNav pathname={pathname} user={user} items={navItems} onOpenMenu={() => setMobileMenuOpen(true)} />
       <MobileMenuPanel
         open={mobileMenuOpen}
         pathname={pathname}

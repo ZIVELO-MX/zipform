@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import {
   FolderKanban,
-  ListTodo,
   Menu,
   PackageOpen,
   Search,
@@ -16,7 +15,6 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Button,
   Command,
   CommandDialog,
 } from "@zipform/ui";
@@ -59,14 +57,9 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
   const router = useRouter();
 
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setCommandOpen((current) => !current);
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    function handleOpen() { setCommandOpen(true); }
+    window.addEventListener("open-command", handleOpen);
+    return () => window.removeEventListener("open-command", handleOpen);
   }, []);
 
   if (!showHeader) return null;
@@ -105,14 +98,6 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
             </Breadcrumb>
           ) : null}
         </div>
-
-        {showSearch ? (
-          <button className="tloz-command-trigger" type="button" onClick={() => setCommandOpen(true)}>
-            <Search aria-hidden="true" />
-            <span>Buscar misiones, proyectos e inventario...</span>
-            <kbd>⌘K / Ctrl+K</kbd>
-          </button>
-        ) : null}
 
         <div className="tloz-header-trailing">
           <TlozControl />

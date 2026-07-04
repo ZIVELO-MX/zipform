@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useIsMobile } from "../../hooks/use-is-mobile";
 import { Plus } from "lucide-react";
 import { Button, ColorPicker, DatePicker, EntityPicker, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, UserPicker, type IconPickerOption } from "@zipform/ui";
 import type { TlozInventoryCategory, TlozMissionStatus, TlozMissionType, TlozProject, UserProfile } from "@zipform/types";
@@ -16,8 +17,20 @@ const kindLabel = { mission: "Mission", project: "Project", inventory: "Inventor
 const icons: IconPickerOption[] = ["Sword", "Sparkles", "Target", "Search", "Database", "FileText", "FileCheck", "KeyRound", "Shield", "Wrench", "FolderKanban", "PackageOpen"].map((id) => ({ id, label: id, icon: resolveMissionIcon(id) }));
 
 export function TlozCreateProvider({ children, kind, projects, users, fixedProjectId }: { children: React.ReactNode; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; fixedProjectId?: string }) {
+  const router = useRouter();
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
-  const value = useMemo(() => ({ kind, label: kindLabel[kind], openCreate: () => setOpen(true) }), [kind]);
+  const value = useMemo(() => ({
+    kind,
+    label: kindLabel[kind],
+    openCreate: () => {
+      if (isMobile) {
+        router.push(`/tloz/new?kind=${kind}`);
+      } else {
+        setOpen(true);
+      }
+    },
+  }), [isMobile, kind, router]);
   return <CreateContext.Provider value={value}>{children}<CreateEntitySlideOver open={open} onOpenChange={setOpen} kind={kind} projects={projects} users={users} fixedProjectId={fixedProjectId} /></CreateContext.Provider>;
 }
 
@@ -34,7 +47,7 @@ export function CreateNewEntityButton({ variant = "row" }: { variant?: "row" | "
     : <button type="button" className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-carbon/15 bg-white/60 text-[13px] font-semibold text-carbon/55 transition-colors hover:border-zivelo/30 hover:text-zivelo" onClick={openCreate}><Plus className="size-3.5" />Crear nuevo {label}</button>;
 }
 
-function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, fixedProjectId }: { open: boolean; onOpenChange: (open: boolean) => void; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; fixedProjectId?: string }) {
+export function CreateForm({ kind, projects, users, fixedProjectId, onDone }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; fixedProjectId?: string; onDone?: () => void }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
@@ -56,12 +69,12 @@ function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, fixe
           if (kind === "mission") await createMission(input as never);
           else if (kind === "project") await createProject(input as never);
           else await createQuestItem(input as never);
-          toast.success(`${kindLabel[kind]} creado`, { id: toastId }); reset(); onOpenChange(false); router.refresh();
+          toast.success(`${kindLabel[kind]} creado`, { id: toastId }); reset(); onDone?.(); router.refresh();
         } catch { toast.error("No se pudo crear. Revisa los datos e intenta de nuevo.", { id: toastId }); }
       });
     } catch (error) { if (error instanceof TlozValidationError) setErrors(error.fields); else throw error; }
   }
-  return <SlideOver open={open} title={`Crear ${kindLabel[kind]}`} onOpenChange={(next) => { onOpenChange(next); if (!next) reset(); }} footer={<><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button><Button type="submit" form={formId} disabled={pending}>Guardar</Button></>}>
+  return (
     <form id={formId} onSubmit={submit} className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6" noValidate>
       <div><h3 className="mb-1 text-xl font-bold text-carbon">Nuevo {kindLabel[kind]}</h3><p className="m-0 text-sm text-carbon/55">Completa los datos requeridos antes de guardar.</p></div>
       <FormField label={kind === "mission" ? "Título" : "Nombre"} error={errors[kind === "mission" ? "title" : "name"]} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField>
@@ -73,6 +86,12 @@ function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, fixe
       <FormField label="Responsable" error={errors.ownerId} required={kind !== "inventory"}><UserPicker users={users} value={draft.ownerId || undefined} allowEmpty={kind === "inventory"} onValueChange={(ownerId) => field("ownerId", ownerId)} /></FormField>
       {kind !== "inventory" ? <div className="grid gap-4 sm:grid-cols-2"><FormField label="Inicio" error={errors.startDate} required={kind === "project"}><DatePicker value={draft.startDate || undefined} label="Fecha de inicio" clearable={kind !== "project"} onValueChange={(value) => field("startDate", value ?? "")} /></FormField><FormField label="Vence" error={errors.dueDate}><DatePicker value={draft.dueDate || undefined} label="Fecha límite" onValueChange={(value) => field("dueDate", value ?? "")} /></FormField></div> : null}
     </form>
+  );
+}
+
+function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, fixedProjectId }: { open: boolean; onOpenChange: (open: boolean) => void; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; fixedProjectId?: string }) {
+  return <SlideOver open={open} title={`Crear ${kindLabel[kind]}`} onOpenChange={onOpenChange} footer={<><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button><Button type="submit" form={`create-${kind}-form`}>Guardar</Button></>}>
+    <CreateForm key={String(open)} kind={kind} projects={projects} users={users} fixedProjectId={fixedProjectId} onDone={() => onOpenChange(false)} />
   </SlideOver>;
 }
 
