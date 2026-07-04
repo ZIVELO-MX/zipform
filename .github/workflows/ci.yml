@@ -18,7 +18,10 @@ jobs:
     timeout-minutes: 20
     env:
       ZIPFORM_DATA_DRIVER: mock
-      DATABASE_URL: "file:./dev.db"
+      # Prisma validates both datasource URLs while loading prisma.config.ts,
+      # even though client generation and mock-driver tests do not connect.
+      DATABASE_URL: "postgresql://zipform:zipform@localhost:5432/zipform_ci"
+      DIRECT_URL: "postgresql://zipform:zipform@localhost:5432/zipform_ci"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
