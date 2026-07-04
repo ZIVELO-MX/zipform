@@ -8,7 +8,7 @@
     "build": "pnpm --filter @zipform/dashboard build",
     "lint": "pnpm --filter @zipform/dashboard lint",
     "typecheck": "pnpm -r --if-present typecheck",
-    "test": "pnpm -r --if-present test",
+    "test": "pnpm -r --if-present test && node --test scripts/deployment-config.test.mjs",
     "check": "pnpm db:generate && pnpm typecheck && pnpm test && pnpm build",
     "db:generate": "pnpm --filter @zipform/data db:generate",
     "db:migrate": "pnpm --filter @zipform/data db:migrate",
