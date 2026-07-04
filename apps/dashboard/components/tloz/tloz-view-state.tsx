@@ -2,6 +2,7 @@
 
 import type { TlozEpisode, TlozProject, TlozSeason, UserProfile } from "@zipform/types";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { useIsMobile } from "../../hooks/use-is-mobile";
 import { resolveTlozView, type TlozView } from "../../lib/tloz-routes";
 
 export type TlozSort = "default" | "due-date" | "title";
@@ -55,8 +56,13 @@ export function TlozViewStateProvider({
   showMissionControls?: boolean;
   storageScope?: string;
 }) {
+  const isMobile = useIsMobile();
+  const mobileViews: TlozView[] = ["list", "table"];
+  const effectiveViews = isMobile ? mobileViews : supportedViews;
+  const effectiveDefault = isMobile ? (mobileViews.includes(defaultView) ? defaultView : "list") : defaultView;
+
   const storageKey = `tloz:${storageScope}-controls`;
-  const [preferredState, replaceState] = useState<TlozUiState>(() => sharedUiState ?? initialState(defaultView));
+  const [preferredState, replaceState] = useState<TlozUiState>(() => sharedUiState ?? initialState(effectiveDefault));
   const [storageLoaded, setStorageLoaded] = useState(false);
 
   useEffect(() => {
@@ -83,7 +89,7 @@ export function TlozViewStateProvider({
     setStorageLoaded(true);
     // State is intentionally loaded only when this route scope mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultView, storageKey, supportedViews]);
+  }, [effectiveDefault, storageKey, effectiveViews]);
 
   useEffect(() => {
     if (storageLoaded) window.localStorage.setItem(storageKey, JSON.stringify(preferredState));
@@ -91,8 +97,8 @@ export function TlozViewStateProvider({
 
   const state = useMemo<TlozUiState>(() => ({
     ...preferredState,
-    view: resolveTlozView(preferredState.view, supportedViews, defaultView),
-  }), [defaultView, preferredState, supportedViews]);
+    view: resolveTlozView(preferredState.view, effectiveViews, effectiveDefault),
+  }), [effectiveDefault, preferredState, effectiveViews]);
 
   const value = useMemo<TlozViewStateContextValue>(() => ({
     state,
@@ -101,13 +107,13 @@ export function TlozViewStateProvider({
       sharedUiState = next;
       return next;
     }),
-    supportedViews,
+    supportedViews: effectiveViews,
     projects,
     seasons,
     episodes,
     users,
     showMissionControls,
-  }), [episodes, projects, seasons, showMissionControls, state, supportedViews, users]);
+  }), [episodes, projects, seasons, showMissionControls, state, effectiveViews, users]);
 
   return <TlozViewStateContext.Provider value={value}>{children}</TlozViewStateContext.Provider>;
 }

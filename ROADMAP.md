@@ -90,25 +90,29 @@ La priorización sigue la clasificación Kano de `PRIORIDADES_KANO.md`. El objet
 
 ##### Must-have (Básicos)
 
-- [ ] [MOBILE][NAV] Navegación inferior funcional (`MobileBottomNav`) con icono activo y transición entre apps
-- [ ] [MOBILE][NAV] Menú lateral (`MobileMenuPanel`) accesible desde el hamburger
-- [ ] [MOBILE][READ] Dashboard responsivo: métricas, lista de misiones, secciones colapsables
-- [ ] [MOBILE][READ] Vista Lista responsiva: cards apiladas con información esencial
-- [ ] [MOBILE][READ] Detalle de Mission adaptado: propiedades, dependencias, Inventory relacionado
-- [ ] [MOBILE][READ] Vista Inventory responsiva con datos del item
-- [ ] [MOBILE][READ] Vista Project Detail responsiva: hero + lista de misiones filtrada
-- [ ] [MOBILE][LOAD] Estados de carga y error en todas las vistas móviles
+- [x] [MOBILE][NAV] Menú lateral (`MobileMenuPanel`) accesible desde el hamburger
+- [x] [MOBILE][NAV] Navegación simplificada sin bottom nav (solo hamburger)
+- [x] [MOBILE][READ] Dashboard responsivo: métricas, lista de misiones, secciones colapsables
+- [x] [MOBILE][READ] Vista Lista responsiva: cards apiladas con información esencial
+- [x] [MOBILE][READ] Detalle de Mission adaptado: propiedades, dependencias, Inventory relacionado
+- [x] [MOBILE][READ] Vista Inventory responsiva con datos del item
+- [x] [MOBILE][READ] Vista Project Detail responsiva: hero + lista de misiones filtrada
+- [x] [MOBILE][READ] Vista Tabla responsiva con scroll horizontal
+- [x] [MOBILE][LOAD] Estados de carga y error en todas las vistas móviles
 
 ##### Performance (Easy Wins)
 
 Son refactors acotados que desbloquean el mayor valor con el menor esfuerzo.
 
-- [ ] [MOBILE][EASY] Header superior fijo con hamburguesa + título + spacer (`MobileTopBar`)
-- [ ] [MOBILE][EASY] Dashboard colapsable: ocultar secciones no esenciales en viewport <768px
-- [ ] [MOBILE][EASY] Tarjetas de misión responsivas: layout vertical, badges compactos, tooltips táctiles
-- [ ] [MOBILE][EASY] Sidebar colapsable automático en móvil con persistencia
-- [ ] [MOBILE][EASY] Breadcrumb responsivo: truncar niveles intermedios en móvil
-- [ ] [MOBILE][EASY] Filtros básicos: selector de proyecto y estado adaptado a viewport angosto
+- [x] [MOBILE][EASY] Header superior fijo con hamburguesa + título + breadcrumb truncado
+- [x] [MOBILE][EASY] Búsqueda movida al sidebar, sin atajo ⌘K
+- [x] [MOBILE][EASY] Crear entidades en pantalla completa (`/tloz/new`)
+- [x] [MOBILE][EASY] Detalle de misión navega a página completa en móvil
+- [x] [MOBILE][EASY] Solo vistas Lista y Tabla disponibles en móvil
+- [x] [MOBILE][EASY] Tarjetas de misión responsivas: layout vertical, badges compactos, tooltips táctiles
+- [x] [MOBILE][EASY] Sidebar colapsable automático en móvil con persistencia
+- [x] [MOBILE][EASY] Breadcrumb responsivo: truncar niveles intermedios en móvil
+- [x] [MOBILE][EASY] Filtros básicos: selector de proyecto y estado adaptado a viewport angosto
 
 ##### Delighter (Futuro)
 

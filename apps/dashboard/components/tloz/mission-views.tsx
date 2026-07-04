@@ -223,7 +223,7 @@ export function DashboardMainQuests({ missions, onSelect }: { missions: TlozMiss
           Ver todas →
         </button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
         {missions.slice(0, 3).map((mission) => <DashboardMainQuestCard key={mission.id} mission={mission} onSelect={onSelect} />)}
       </div>
     </section>
