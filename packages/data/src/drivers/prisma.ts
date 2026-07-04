@@ -13,7 +13,7 @@ import type {
   TlozUserMissionState,
   UserProfile
 } from "@zipform/types";
-import type { ZipformDataClient } from "../contracts";
+import type { PaginatedResult, PaginationInput, ProjectFilters, UserFilters, ZipformDataClient } from "../contracts";
 import { apps, roadmap } from "../seed-data";
 import {
   buildTlozDashboardSummary,
@@ -394,6 +394,26 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       },
       async getMissionDetail(missionId) {
         return buildTlozMissionDetail(await loadTlozDataSet(prisma), missionId);
+      },
+      async findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>> {
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const where: Record<string, unknown> = {};
+        if (filters?.email) where.email = filters.email.toLowerCase();
+        if (filters?.username) where.username = filters.username;
+        const rows = await prisma.user.findMany({ where, orderBy: { name: "asc" }, take: limit + 1 });
+        const data = rows.slice(0, limit).map(mapUser);
+        const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
+        return { data, nextCursor };
+      },
+      async findProjects(filters?: ProjectFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozProject>> {
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const where: Record<string, unknown> = {};
+        if (filters?.ownerId) where.ownerId = filters.ownerId;
+        if (filters?.status) where.status = filters.status;
+        const rows = await prisma.tlozProject.findMany({ where, orderBy: { createdAt: "asc" }, take: limit + 1 });
+        const data = rows.slice(0, limit).map(mapProject);
+        const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
+        return { data, nextCursor };
       },
       async getProjects() {
         const rows = await prisma.tlozProject.findMany({ orderBy: { createdAt: "asc" } });

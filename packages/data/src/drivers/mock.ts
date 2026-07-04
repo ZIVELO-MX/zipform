@@ -1,5 +1,5 @@
-import type { TlozMission } from "@zipform/types";
-import type { ZipformDataClient } from "../contracts";
+import type { TlozMission, TlozProject, UserProfile } from "@zipform/types";
+import type { PaginatedResult, PaginationInput, ProjectFilters, UserFilters, ZipformDataClient } from "../contracts";
 import {
   apps,
   checklistItems,
@@ -80,6 +80,22 @@ export function createMockDataClient(): ZipformDataClient {
       },
       async getMissionDetail(missionId) {
         return buildTlozMissionDetail(tlozData, missionId);
+      },
+      async findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>> {
+        let data = [...tlozData.users];
+        if (filters?.email) data = data.filter((u) => u.email.toLowerCase() === filters.email!.toLowerCase());
+        if (filters?.username) data = data.filter((u) => u.username === filters.username);
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const sliced = data.slice(0, limit);
+        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+      },
+      async findProjects(filters?: ProjectFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozProject>> {
+        let data = [...tlozData.projects];
+        if (filters?.ownerId) data = data.filter((p) => p.ownerId === filters.ownerId);
+        if (filters?.status) data = data.filter((p) => p.status === filters.status);
+        const limit = Math.min(pagination?.limit ?? 25, 100);
+        const sliced = data.slice(0, limit);
+        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
       },
       async getProjects() {
         return tlozData.projects;
