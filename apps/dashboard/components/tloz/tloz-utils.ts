@@ -4,6 +4,7 @@ import {
   Database,
   FileCheck,
   FileText,
+  Globe2,
   History,
   KeyRound,
   LayoutDashboard,
@@ -11,7 +12,9 @@ import {
   Search,
   Shield,
   Sparkles,
+  Star,
   Sword,
+  Utensils,
   Wrench
 } from "lucide-react";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
@@ -44,13 +47,16 @@ const iconRegistry: Record<string, LucideIcon> = {
   Database,
   FileCheck,
   FileText,
+  Globe2,
   History,
   KeyRound,
   LayoutDashboard,
   Search,
   Shield,
   Sparkles,
+  Star,
   Sword,
+  Utensils,
   Wrench
 };
 

@@ -1,7 +1,7 @@
 # Zipform Roadmap
 
-**Current Version:** 0.1
-**Target Version:** 1.0
+**Current Version:** 1.0.0
+**Target Version:** 1.1.0
 
 ---
 
@@ -32,21 +32,14 @@
 
 ---
 
-### P0 — BLOQUEANTES PARA RELEASE 1.0.0
+### RELEASE 1.0.0
 
 **Deployment**
 
 - [x] [PLATFORM][DEPLOYMENT] Crear `vercel.json` con build command, output config, y env vars setup
 - [x] [PLATFORM][CI/CD] GitHub Actions para CI y Vercel Git integration para deploy
 
-**Quotes**
-
-- [ ] [QUOTES][DATA] Migrar tipos, driver, Server Actions y UI del módulo Quotes al monorepo
-- [ ] [QUOTES][UI] Portar componentes de UI de Quotes
-
----
-
-### P1 — RECOMENDADOS PRE-1.0.0
+### INCLUIDO EN 1.0.0
 
 - [x] [TLOZ][TESTS] Tests de integración Prisma contra PostgreSQL real
 - [x] [TLOZ][CORRECTNESS] Slug/lave y displayId seguros bajo concurrencia
@@ -58,7 +51,10 @@
 
 ---
 
-### P2 — POST-1.0.0
+### 1.1.0
+
+- [ ] [QUOTES][DATA] Migrar tipos, driver, Server Actions y UI del módulo Quotes al monorepo
+- [ ] [QUOTES][UI] Portar componentes de UI de Quotes
 
 - [ ] [TLOZ][PERFORMANCE] Scoped queries, filtros en DB, paginación
 - [ ] [TLOZ][DATA] Kano classification
@@ -78,4 +74,4 @@
 
 ---
 
-Moving from 0.1 to 1.0 requires TLOZ and Quotes to both reach daily usability. TLOZ has its own roadmap in `imports/tloz/ROADMAP.md`.
+Release 1.0.0 establishes TLOZ, authentication, PostgreSQL persistence, and production deployment. Quotes is planned for 1.1.0. TLOZ has its own roadmap in `imports/tloz/ROADMAP.md`.

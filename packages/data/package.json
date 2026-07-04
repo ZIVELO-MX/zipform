@@ -1,6 +1,6 @@
 {
   "name": "@zipform/data",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev --schema prisma",
     "db:migrate:deploy": "prisma migrate deploy --schema prisma",
     "db:seed": "prisma db seed --schema prisma",
+    "db:prepare-release-1": "tsx prisma/prepare-release-1.ts",
     "db:studio": "prisma studio --schema prisma",
     "check": "pnpm db:generate && pnpm typecheck && pnpm test"
   },

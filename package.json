@@ -1,6 +1,6 @@
 {
   "name": "zipform",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@11.9.0+sha512.bd682d5d03fe525ef7c9fd6780c6884d1e756ac4c9c9fe00c538782824310dcf90e3ddc4f53835f06dfaebd5085e41855e0bcbb3b60de2ac5bbab89e5036f03b",
   "scripts": {
@@ -15,6 +15,7 @@
     "db:migrate:deploy": "pnpm --filter @zipform/data db:migrate:deploy",
     "db:deploy": "pnpm db:generate && pnpm db:migrate:deploy",
     "db:seed": "pnpm --filter @zipform/data db:seed",
+    "db:prepare-release-1": "pnpm --filter @zipform/data db:prepare-release-1",
     "db:studio": "pnpm --filter @zipform/data db:studio"
   },
   "devDependencies": {
