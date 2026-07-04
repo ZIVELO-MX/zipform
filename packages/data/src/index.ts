@@ -52,4 +52,10 @@ export function createDataClient(options: DataClientOptions | DataDriver = {}): 
   throw new Error(`Unsupported data driver: ${driver satisfies never}`);
 }
 
-export const dataClient = createDataClient();
+let _dataClient: ZipformDataClient | undefined;
+export const dataClient = new Proxy({} as ZipformDataClient, {
+  get(_, prop) {
+    _dataClient ??= createDataClient();
+    return Reflect.get(_dataClient, prop, _dataClient);
+  }
+});

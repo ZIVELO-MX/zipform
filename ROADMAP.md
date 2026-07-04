@@ -26,16 +26,13 @@
 - [x] [DATA][DEPLOYMENT] `prisma migrate deploy` via `db:migrate:deploy` and `db:deploy`
 - [x] [DATA][SEED] Idempotent seed (deleteMany + createMany in transaction)
 - [x] [AUTH] Credentials login with NextAuth v5. Login page, middleware, session management
+- [x] [TLOZ][SECURITY] Proteger las 20+ Server Actions en `apps/dashboard/app/tloz/actions.ts` con autenticación (`auth()`)
 
 **Status:** Dashboard, TLOZ views, and auth funcionan. TLOZ usa Prisma contra PostgreSQL por defecto (driver mock aún disponible con `ZIPFORM_DATA_DRIVER=mock`). Quotes es placeholder.
 
 ---
 
 ### P0 — BLOQUEANTES PARA RELEASE 1.0.0
-
-**Security — Server Actions sin protección**
-
-- [ ] [TLOZ][SECURITY] Proteger las 20+ Server Actions en `apps/dashboard/app/tloz/actions.ts` con autenticación (`auth()`) y autorización por operación. Actualmente cualquier request sin auth puede crear/editar/eliminar Missions, proyectos, quest items, etc.
 
 **Deployment**
 
@@ -54,9 +51,9 @@
 - [ ] [TLOZ][TESTS] Tests de integración Prisma contra PostgreSQL real
 - [ ] [TLOZ][CORRECTNESS] Slug/lave y displayId seguros bajo concurrencia
 - [ ] [TLOZ][CORRECTNESS] Multi-step updates en transacciones
-- [ ] [TLOZ][DEPLOYMENT] Eliminar build-time database coupling de `/tloz`
-- [ ] [TLOZ][CORRECTNESS] Mostrar `blocked` en Tabla, incluir `completed` en Lista
-- [ ] [TLOZ][CORRECTNESS] `blocked` como columna real del Board
+- [x] [TLOZ][DEPLOYMENT] Eliminar build-time database coupling de `/tloz`
+- [x] [TLOZ][CORRECTNESS] Mostrar `blocked` en Tabla, incluir `completed` en Lista
+- [x] [TLOZ][CORRECTNESS] `blocked` como columna real del Board
 - [ ] [PLATFORM][DOCS] Documentar env vars, pooled vs direct connection, seed policy, deployment runbook
 
 ---
