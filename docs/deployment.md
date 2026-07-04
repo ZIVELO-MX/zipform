@@ -141,17 +141,9 @@ Or connect the GitHub repository to Vercel for automatic deployments.
 
 ## CI/CD
 
-The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `pnpm check` on every push to `main` and on pull requests. After verification succeeds, internal pull requests deploy a Vercel Preview and pushes to `main` deploy to Vercel Production.
+The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `pnpm check` on every push to `main` and on pull requests.
 
-Configure these GitHub Actions secrets before enabling deployments:
-
-| Secret | Description |
-|---|---|
-| `VERCEL_TOKEN` | Vercel access token used by the CLI |
-| `VERCEL_ORG_ID` | Team or account ID that owns the project |
-| `VERCEL_PROJECT_ID` | Vercel project ID linked to this repository |
-
-The Production job uses the GitHub `production` environment. Add required reviewers there if production deployments need manual approval. Preview deployments are skipped for pull requests from forks because GitHub does not expose repository secrets to forked workflows.
+Deployments are managed by the Vercel Git integration. Pull requests receive Preview deployments and pushes to `main` deploy to Production. Vercel credentials are not stored in GitHub Actions because the Git integration authenticates deployments directly.
 
 ### Integration Tests
 

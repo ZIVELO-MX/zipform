@@ -36,8 +36,8 @@
 
 **Deployment**
 
-- [ ] [PLATFORM][DEPLOYMENT] Crear `vercel.json` con build command, output config, y env vars setup
-- [ ] [PLATFORM][CI/CD] GitHub Actions para CI (lint, typecheck, test) y deploy
+- [x] [PLATFORM][DEPLOYMENT] Crear `vercel.json` con build command, output config, y env vars setup
+- [x] [PLATFORM][CI/CD] GitHub Actions para CI y Vercel Git integration para deploy
 
 **Quotes**
 

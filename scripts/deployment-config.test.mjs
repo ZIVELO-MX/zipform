@@ -22,15 +22,12 @@ test("Vercel builds the dashboard from the workspace root", async () => {
   assert.match(config.buildCommand, /@zipform\/dashboard build/);
 });
 
-test("CI gates preview and production deployments on verification", async () => {
+test("CI delegates deployments to the Vercel Git integration", async () => {
   const workflow = await readProjectFile(".github/workflows/ci.yml");
 
-  assert.match(workflow, /deploy-preview:[\s\S]*?needs: verify/);
-  assert.match(workflow, /deploy-production:[\s\S]*?needs: verify/);
-  assert.match(workflow, /environment=preview/);
-  assert.match(workflow, /environment=production/);
-  assert.match(workflow, /deploy --prebuilt --prod/);
-  assert.match(workflow, /secrets\.VERCEL_TOKEN/);
-  assert.match(workflow, /secrets\.VERCEL_ORG_ID/);
-  assert.match(workflow, /secrets\.VERCEL_PROJECT_ID/);
+  assert.match(workflow, /verify:/);
+  assert.match(workflow, /run: pnpm check/);
+  assert.doesNotMatch(workflow, /deploy-preview:/);
+  assert.doesNotMatch(workflow, /deploy-production:/);
+  assert.doesNotMatch(workflow, /secrets\.VERCEL_/);
 });
