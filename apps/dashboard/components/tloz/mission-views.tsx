@@ -544,7 +544,7 @@ export function DashboardActivitySection({ activities }: { activities: Array<{ u
 export function MissionTable({ missions, onSelect }: { missions: TlozMissionRecord[]; onSelect?: (m: TlozMissionRecord) => void }) {
   const columns: EntityColumn<TlozMissionRecord>[] = [
     { id: "mission", label: "Mission", render: (mission) => <span className="flex items-center gap-2 font-semibold"><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span>{mission.title}</span> },
-    { id: "status", label: "Estado", render: (mission) => { const cfg = statusConfig[mission.status === "blocked" ? "now" : mission.status]; return <StatusPill label={cfg.label} color={cfg.textColor} active={mission.status === "now"} />; } },
+    { id: "status", label: "Estado", render: (mission) => { const cfg = statusConfig[mission.status] ?? statusConfig.now; return <StatusPill label={cfg.label} color={cfg.textColor} active={mission.status === "now"} />; } },
     { id: "type", label: "Tipo", render: (mission) => <ToneBadge tone={{ color: missionTypeTone[mission.type] }} className="text-[11px]">{missionTypeLabel[mission.type]}</ToneBadge> },
     { id: "project", label: "Proyecto", render: (mission) => <span className="inline-flex items-center gap-1.5 text-xs text-carbon/75"><span className="size-[7px] rounded-sm" style={{ background: mission.project?.color || "#999" }} />{mission.project?.name ?? "Sin proyecto"}</span> },
     { id: "owner", label: "Responsable", render: (mission) => <UserAvatarLabel name={mission.owner.name} label={mission.owner.username ?? mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" /> },
@@ -562,7 +562,8 @@ export function MissionList({ missions, grouping = "status", onSelect }: { missi
     : grouping === "none"
       ? [{ id: "all", label: "Todas", missions }]
       : [
-        { id: "now", label: "Now", missions: missions.filter((mission) => mission.status === "now" || mission.status === "blocked") },
+        { id: "now", label: "Now", missions: missions.filter((mission) => mission.status === "now") },
+        { id: "blocked", label: "Blocked", missions: missions.filter((mission) => mission.status === "blocked") },
         { id: "next", label: "Next", missions: missions.filter((mission) => mission.status === "next") },
         { id: "later", label: "Later", missions: missions.filter((mission) => mission.status === "later") },
         { id: "completed", label: "Completed", missions: missions.filter((mission) => mission.status === "completed") },
@@ -574,7 +575,7 @@ export function MissionList({ missions, grouping = "status", onSelect }: { missi
       const tone = missionTypeTone[mission.type];
       const Icon = resolveMissionIcon(mission.icon);
       const blockedCount = mission.dependencies.length + mission.requiredQuestItems.filter((item) => item.status !== "unlocked").length;
-      return <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_130px_132px_96px] items-center gap-3.5"><span className="flex min-w-0 items-center gap-2.5"><span className="grid size-6 shrink-0 place-items-center rounded-[7px] [&_svg]:size-3" style={{ color: tone, background: `${tone}18` }}><Icon /></span><span className="font-mono text-[10.5px] text-carbon/40">{mission.displayId}</span><strong className="truncate text-[13.5px]">{mission.title}</strong>{blockedCount ? <span className="rounded-full bg-[#FFF4DE] px-2 py-0.5 text-[9.5px] font-semibold text-[#7A5A12]">{blockedCount}</span> : null}</span><span className="truncate rounded-full px-[9px] py-[3px] text-[11px] font-bold" style={{ background: `${mission.project?.color || "#999"}18`, color: mission.project?.color || "#999" }}>{mission.project?.name ?? "Sin proyecto"}</span><UserAvatarLabel name={mission.owner.name} label={mission.owner.username ?? mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" /><span className="text-right font-mono text-[11.5px]" style={{ color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>{formatDate(mission.dueDate)}</span></span>;
+      return <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_130px_132px_96px] items-center gap-3.5"><span className="flex min-w-0 items-center gap-2.5"><span className="grid size-6 shrink-0 place-items-center rounded-[7px] [&_svg]:size-3" style={{ color: tone, background: `${tone}18` }}><Icon /></span><span className="font-mono text-[10.5px] text-carbon/40">{mission.displayId}</span><strong className="truncate text-[13.5px]">{mission.title}</strong>{blockedCount ? <span className="rounded-full bg-[#FFF4DE] px-2 py-0.5 text-[9.5px] font-semibold text-[#7A5A12]">{blockedCount}</span> : null}{mission.status === "completed" ? <span className="rounded-full bg-[#E6F4EA] px-2 py-0.5 text-[9.5px] font-semibold text-[#1E6B3C]">✓</span> : null}</span><span className="truncate rounded-full px-[9px] py-[3px] text-[11px] font-bold" style={{ background: `${mission.project?.color || "#999"}18`, color: mission.project?.color || "#999" }}>{mission.project?.name ?? "Sin proyecto"}</span><UserAvatarLabel name={mission.owner.name} label={mission.owner.username ?? mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" /><span className="text-right font-mono text-[11.5px]" style={{ color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>{formatDate(mission.dueDate)}</span></span>;
     }} />;
   })}</div>;
 }
