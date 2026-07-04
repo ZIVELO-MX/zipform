@@ -1,6 +1,6 @@
 # TLOZ Roadmap
 
-**Current state:** mock-backed dashboard module inside Zipform
+**Current state:** PostgreSQL-backed dashboard module inside Zipform
 **Target state:** daily-usable Mission operating system for Zivelo
 
 This roadmap is product-specific. The Zipform platform roadmap remains in
@@ -40,30 +40,26 @@ This roadmap is product-specific. The Zipform platform roadmap remains in
 - [IMPLEMENTED] Shared slide-over drawer primitive used by Mission detail previews
 - [IMPLEMENTED] Internal Attachment primitive for resource metadata rows and action affordances
 
+### Post-1.0.0 additions
+
+- [IMPLEMENTED] Persistence via Prisma + PostgreSQL with pooled/direct connections
+- [IMPLEMENTED] `TlozRepository` contract in `@zipform/data` replacing mock data layer
+- [IMPLEMENTED] Stable IDs (CUID2), timestamps, and ownership from authenticated user session
+- [IMPLEMENTED] All Server Actions protected with `auth()`
+- [IMPLEMENTED] Integration tests against real PostgreSQL
+- [IMPLEMENTED] Concurrency-safe slug/key and displayId generation
+- [IMPLEMENTED] Multi-step updates in transactions
+- [IMPLEMENTED] `blocked` and `completed` states visible across all views
+- [IMPLEMENTED] Deployment build no longer requires database access for `/tloz`
+
 Current limitations:
 
-- Creation and editing are visible but non-persistent.
-- Search and filters are placeholders backed by mock data.
-- Activity history is a placeholder.
+- Creation and editing use real persistence but still lack full validation and error UX.
+- Search and filters are backed by Prisma queries but global search is not implemented.
+- Activity history is not implemented.
 - Resources render as attachment metadata rows; uploads, previews, storage, and permissions are not implemented.
-- Permissions are not defined.
-
-Recent additions:
-
-- [IMPLEMENTED] Board cards: owner avatar+tooltip, type badge icon+color, detail button removed (click card opens SlideOver)
-- [IMPLEMENTED] Board columns: clean flex layout, no background
-- [IMPLEMENTED] Filters: selects deshabilitados (project/season/episode)
-- [IMPLEMENTED] Sidebar: Quest Items renamed to Inventory, project links point to dedicated pages
-- [IMPLEMENTED] Breadcrumb with project context (Missions > Core)
-- [IMPLEMENTED] Mission display IDs in PRO-0001 format
-- [IMPLEMENTED] /tloz/inventory page with table/list views, SlideOver detail (markdown + properties)
-- [IMPLEMENTED] /tloz/projects page: table of all projects (name, status, mission count)
-- [IMPLEMENTED] /tloz/projects/[id]: dashboard filtrado por proyecto con hero + view switcher + filtered views
-- [IMPLEMENTED] MissionDetail variant="panel" mode with "Abrir en página completa" link in properties sidebar
-- [IMPLEMENTED] getResources() in TlozRepository contract
-- [IMPLEMENTED] Editable fields show a visual field indicator (border + edit icon on hover) in DetailPropertyRow
-- [IMPLEMENTED] Description and DescriptionDetail editing moved behind three-dots menu with explicit Cancel/Guardar buttons in Projects and Inventory
-- [IMPLEMENTED] Markdown editor defaults to text mode instead of visual
+- Permissions are not defined beyond auth gate.
+- Kano classification not persisted (removed until UX is defined).
 
 ---
 
@@ -82,13 +78,6 @@ Recent additions:
 - Define and persist Kano classification before exposing it again; never derive `Basic` from Mission type.
 - Re-enable Episode in Mission properties after the Project → Season → Episode selector and empty-state behavior are finalized.
 
-### Persistence
-
-- Choose the database driver and migration strategy.
-- Replace `apps/dashboard/lib/tloz-data.ts` with a real repository implementation without changing page/component contracts.
-- Persist Missions, Projects, Seasons, Episodes, dependencies, Quest Items, checklist items, resources, and user mission state.
-- Add stable IDs, timestamps, and ownership from authenticated user context.
-
 ### Search And Navigation
 
 - Implement global command/search across Missions, Proyectos, Quest Items, Recursos, and views.
@@ -100,6 +89,14 @@ Recent additions:
 - Define who can create, edit, complete, block, delete, and assign Missions.
 - Define role-based visibility for resources and activity.
 - Connect ownership and user mission state to shared authentication.
+
+### Performance & Architecture
+
+- Scoped queries, DB-level filtering, cursor pagination
+- Split mission-views into separate modules
+- Collapsible sidebar
+- Drag-and-drop with optimistic mutations
+- Server Action tests, loading/error state coverage
 
 ---
 
