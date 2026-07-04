@@ -124,6 +124,8 @@ vercel --prod
 
 Or connect the GitHub repository to Vercel for automatic deployments.
 
+For the Vercel project settings, use `apps/dashboard` as the Root Directory and enable access to source files outside the Root Directory so the dashboard can consume the shared workspace packages. The application-level `vercel.json` supplies the install, build, and output settings.
+
 ### 4. Post-Deployment Verification
 
 - Confirm the dashboard loads and shows platform metrics

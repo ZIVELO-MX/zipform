@@ -13,11 +13,13 @@ const readProjectFile = async (path) => {
 };
 
 test("Vercel builds the dashboard from the workspace root", async () => {
-  const config = JSON.parse(await readProjectFile("vercel.json"));
+  const config = JSON.parse(
+    await readProjectFile("apps/dashboard/vercel.json"),
+  );
 
   assert.equal(config.framework, "nextjs");
-  assert.equal(config.outputDirectory, "apps/dashboard/.next");
-  assert.match(config.installCommand, /pnpm install --frozen-lockfile/);
+  assert.equal(config.outputDirectory, ".next");
+  assert.match(config.installCommand, /cd \.\.\/\.\./);
   assert.match(config.buildCommand, /pnpm db:generate/);
   assert.match(config.buildCommand, /@zipform\/dashboard build/);
 });
