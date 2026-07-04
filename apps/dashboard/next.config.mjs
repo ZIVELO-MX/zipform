@@ -1,5 +1,15 @@
+import { fileURLToPath } from "node:url";
+
+const monorepoRoot = fileURLToPath(new URL("../..", import.meta.url));
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: monorepoRoot,
+  outputFileTracingIncludes: {
+    "/*": [
+      "../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**/*"
+    ]
+  },
   transpilePackages: ["@zipform/data", "@zipform/types"],
   webpack: (config, { isServer }) => {
     if (!isServer) {

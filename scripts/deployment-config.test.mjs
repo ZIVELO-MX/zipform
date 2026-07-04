@@ -33,3 +33,10 @@ test("CI delegates deployments to the Vercel Git integration", async () => {
   assert.doesNotMatch(workflow, /deploy-production:/);
   assert.doesNotMatch(workflow, /secrets\.VERCEL_/);
 });
+
+test("Next.js traces the generated Prisma engine from the monorepo", async () => {
+  const config = await readProjectFile("apps/dashboard/next.config.mjs");
+
+  assert.match(config, /outputFileTracingRoot: monorepoRoot/);
+  assert.match(config, /@prisma\+client@\*\/node_modules\/\.prisma\/client\/\*\*\/\*/);
+});
