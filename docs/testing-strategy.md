@@ -156,10 +156,10 @@ describe("prisma integration", () => {
 
 | Step | What | When |
 |------|------|------|
-| 1 | Keep `pnpm check` database-independent with the mock driver | Now |
-| 2 | Create `prisma.integration.test.ts` with testcontainers setup | Next PR |
-| 3 | Add a `test:integration` script to package.json | Next PR |
-| 4 | Add PostgreSQL service to CI workflow | Next PR |
-| 5 | Convert 2 key read tests + 3 mutation tests | Next PR |
+| 1 | Keep `pnpm check` database-independent with the mock driver | ✅ Done |
+| 2 | Create `prisma.integration.test.ts` with testcontainers setup | ✅ Done |
+| 3 | Add a `test:integration` script to package.json | ✅ Done |
+| 4 | Add PostgreSQL service to CI workflow | Pending |
+| 5 | Convert 2 key read tests + 3 mutation tests | ✅ Done |
 | 6 | Expand to cover concurrency, FK errors, transactions | Ongoing |
 | 7 | Add e2e tests with Playwright | Post-1.0 |
