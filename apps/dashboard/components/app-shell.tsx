@@ -156,6 +156,12 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
   }, [pathname]);
 
   useEffect(() => {
+    function onToggle() { setMobileMenuOpen((prev) => !prev); }
+    window.addEventListener("toggle-mobile-menu", onToggle);
+    return () => window.removeEventListener("toggle-mobile-menu", onToggle);
+  }, []);
+
+  useEffect(() => {
     if (mobileMenuOpen) {
       document.body.style.overflow = "hidden";
     } else {

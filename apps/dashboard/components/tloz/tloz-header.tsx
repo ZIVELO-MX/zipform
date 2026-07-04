@@ -5,6 +5,7 @@ import { Fragment, useEffect, useState } from "react";
 import {
   FolderKanban,
   ListTodo,
+  Menu,
   PackageOpen,
   Search,
   Sword,
@@ -81,13 +82,21 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
     <>
       <header className="tloz-main-header">
         <div className="tloz-header-leading">
+          <button
+            type="button"
+            className="mr-1 grid size-8 shrink-0 place-items-center rounded-lg text-carbon/60 hover:bg-carbon/5 md:hidden"
+            aria-label="Abrir menú"
+            onClick={() => window.dispatchEvent(new CustomEvent("toggle-mobile-menu"))}
+          >
+            <Menu size={18} aria-hidden="true" />
+          </button>
           {segments.length ? (
             <Breadcrumb>
               <BreadcrumbList className="flex-nowrap text-carbon/60">
                 {segments.map((segment, index) => (
                   <Fragment key={`${segment}-${index}`}>
                     {index > 0 ? <BreadcrumbSeparator /> : null}
-                    <BreadcrumbItem className="min-w-0">
+                    <BreadcrumbItem className={`min-w-0 ${index > 1 ? "hidden md:flex" : ""}`}>
                       <BreadcrumbPage className="truncate">{segment}</BreadcrumbPage>
                     </BreadcrumbItem>
                   </Fragment>

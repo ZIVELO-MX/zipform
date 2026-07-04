@@ -22,7 +22,7 @@ export function DashboardClient({ summary, detailOptions, hideProjectSections = 
 
   return (
     <>
-      <div style={{ maxWidth: "1180px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "26px", padding: "24px 26px 48px" }}>
+      <div className="px-4 pb-12 pt-6 md:px-[26px]" style={{ maxWidth: "1180px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "26px" }}>
         <PageSubHeader
           className="px-0 pb-0 pt-0"
           title="Dashboard"
@@ -43,7 +43,7 @@ export function DashboardClient({ summary, detailOptions, hideProjectSections = 
 
         <DashboardMainQuests missions={summary.mainQuests} onSelect={setSelectedMission} />
 
-        <section style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DashboardNextLaterSection
             title="Próximas · Next"
             subtitle="Validadas, esperando capacidad"
@@ -60,7 +60,7 @@ export function DashboardClient({ summary, detailOptions, hideProjectSections = 
           />
         </section>
 
-        <section style={{ display: "grid", gridTemplateColumns: hideProjectSections ? "1fr" : "1.5fr 1fr", gap: "16px" }}>
+        <section className={`grid grid-cols-1 gap-4 ${hideProjectSections ? "md:grid-cols-1" : "md:grid-cols-[1.5fr_1fr]"}`}>
           {hideProjectSections ? null : <DashboardProjectsSection projects={summary.projects} missions={summary.nowMissions} />}
           <DashboardActivitySection activities={summary.recentActivity} />
         </section>
