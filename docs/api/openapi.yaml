@@ -1,0 +1,299 @@
+openapi: 3.1.0
+info:
+  title: Zipform Data API
+  version: 1.1.0-draft
+  description: |
+    Authenticated, read-only access to Zipform users and TLOZ projects.
+    This draft is the implementation contract planned for release 1.1.0.
+  contact:
+    name: Zivelo Platform
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Zivelo-Proprietary
+servers:
+  - url: /api/v1
+    description: Current Zipform deployment
+security:
+  - sessionCookie: []
+tags:
+  - name: Users
+    description: Read-only access to non-sensitive user profile data.
+  - name: Projects
+    description: Read-only access to TLOZ project metadata.
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      summary: List or find users
+      description: Filters are exact and case-insensitive. Password and session data are never returned.
+      tags: [Users]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: email
+          in: query
+          description: Exact email address.
+          schema:
+            type: string
+            format: email
+        - name: username
+          in: query
+          description: Exact username.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+      responses:
+        "200":
+          description: Matching users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /users/{userId}:
+    get:
+      operationId: getUser
+      summary: Get a user by ID
+      tags: [Users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /projects:
+    get:
+      operationId: listProjects
+      summary: List TLOZ projects
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: ownerId
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ProjectStatus"
+      responses:
+        "200":
+          description: Matching projects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      summary: Get a TLOZ project by ID
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Project"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: authjs.session-token
+      description: Existing NextAuth browser session. Production may use the secure cookie prefix.
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        minLength: 1
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+  responses:
+    BadRequest:
+      description: Invalid path or query input.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthorized:
+      description: An authenticated Zipform session is required.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    InternalError:
+      description: Unexpected server error. Details are recorded server-side.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  schemas:
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, name, username, email, role, avatarUrl]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+    ProjectStatus:
+      type: string
+      enum: [planned, active, archived]
+    Project:
+      type: object
+      additionalProperties: false
+      required: [id, slug, name, description, color, icon, status, ownerId, startDate]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        descriptionDetail:
+          type: string
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+        icon:
+          type: string
+        status:
+          $ref: "#/components/schemas/ProjectStatus"
+        ownerId:
+          type: string
+        startDate:
+          type: string
+          format: date
+        dueDate:
+          type: [string, "null"]
+          format: date
+    PageInfo:
+      type: object
+      additionalProperties: false
+      required: [nextCursor]
+      properties:
+        nextCursor:
+          type: [string, "null"]
+    UserListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+    ProjectListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR]
+            message:
+              type: string
+            requestId:
+              type: string
