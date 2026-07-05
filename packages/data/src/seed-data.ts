@@ -150,6 +150,7 @@ export const currentUser: UserProfile = {
   username: "benrod",
   email: "benjamin.rodriguez@zivelo.dev",
   role: "Platform Owner",
+  type: "human",
   avatarUrl:
     "https://i.pinimg.com/736x/2c/ed/94/2ced942397c59e2e4dd88aee36ce9b0b.jpg"
 };
@@ -160,11 +161,47 @@ export const raulUser: UserProfile = {
   username: "Raúl",
   email: "raul.hernandez@zivelo.dev",
   role: "Full Stack Developer",
+  type: "human",
   avatarUrl:
     "https://i.pinimg.com/736x/a1/8c/8b/a18c8b13eb8a48aa9cb4786ded38d591.jpg"
 };
 
-export const users: UserProfile[] = [currentUser, raulUser];
+export const zibotUser: UserProfile = {
+  id: "zibot",
+  name: "Zibot",
+  username: "zibot",
+  email: "zibot@zipform.dev",
+  role: "agent:operative",
+  type: "agent",
+  avatarUrl: ""
+};
+
+export const users: UserProfile[] = [currentUser, raulUser, zibotUser];
+
+import { hashApiKey } from "./lib/crypto";
+
+const _zibotKey = `zaf_zb_dev_${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
+export const zibotApiKeyRaw = _zibotKey;
+
+export const agentApiKeys: Array<{
+  id: string;
+  userId: string;
+  name: string;
+  keyPrefix: string;
+  keyHash: string;
+  createdAt: string;
+  updatedAt: string;
+}> = [
+  {
+    id: "api-key-zibot-default",
+    userId: "zibot",
+    name: "default",
+    keyPrefix: _zibotKey.slice(0, 12),
+    keyHash: hashApiKey(_zibotKey),
+    createdAt: now,
+    updatedAt: now
+  }
+];
 
 export const metrics: PlatformMetric[] = [
   { label: "Current version", value: "1.0", tone: "good" },

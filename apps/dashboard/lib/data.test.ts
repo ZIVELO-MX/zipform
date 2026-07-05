@@ -24,6 +24,7 @@ const authenticatedUser: UserProfile = {
   username: "authenticated",
   email: "user@example.com",
   role: "member",
+  type: "human",
   avatarUrl: ""
 };
 
@@ -33,6 +34,7 @@ const fallbackUser: UserProfile = {
   username: "fallback",
   email: "fallback@example.com",
   role: "member",
+  type: "human",
   avatarUrl: ""
 };
 

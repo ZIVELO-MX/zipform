@@ -1,21 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "../../../../auth";
 import { dataClient } from "@zipform/data";
 import type { TlozProjectStatus } from "@zipform/types";
-
-async function authenticate() {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Se requiere una sesión activa.", requestId: crypto.randomUUID() } },
-      { status: 401 }
-    );
-  }
-}
+import { authenticateRequest } from "../../../../lib/api-auth";
 
 export async function GET(request: NextRequest) {
-  const unauthorized = await authenticate();
-  if (unauthorized) return unauthorized;
+  const auth = await authenticateRequest(request);
+  if (auth instanceof Response) return auth;
 
   const { searchParams } = new URL(request.url);
   const ownerId = searchParams.get("ownerId");

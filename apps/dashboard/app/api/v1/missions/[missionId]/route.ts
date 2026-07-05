@@ -1,15 +1,10 @@
 import { NextResponse } from "next/server";
-import { auth } from "../../../../../auth";
 import { dataClient } from "@zipform/data";
+import { authenticateRequest } from "../../../../../lib/api-auth";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ missionId: string }> }) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Se requiere una sesión activa.", requestId: crypto.randomUUID() } },
-      { status: 401 }
-    );
-  }
+  const auth = await authenticateRequest(_request as Parameters<typeof authenticateRequest>[0]);
+  if (auth instanceof Response) return auth;
 
   const { missionId } = await params;
 

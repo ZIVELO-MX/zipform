@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import type {
+  ApiKey,
   PlatformMetric,
   TlozChecklistItem,
   TlozEpisode,
@@ -13,8 +14,9 @@ import type {
   TlozUserMissionState,
   UserProfile
 } from "@zipform/types";
-import type { TlozMissionRecord } from "../contracts";
+import type { TlozMissionRecord, ApiKeyCreateResult, AgentCreateInput } from "../contracts";
 import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
+import { hashApiKey, verifyApiKey, generateApiKey } from "../lib/crypto";
 import { apps, roadmap } from "../seed-data";
 import {
   buildTlozDashboardSummary,
@@ -63,9 +65,33 @@ function mapUser(user: {
   username: string;
   email: string;
   role: string;
+  type: string;
   avatarUrl: string;
 }): UserProfile {
-  return user;
+  return { ...user, type: user.type as UserProfile["type"] };
+}
+
+function mapApiKey(key: {
+  id: string;
+  userId: string;
+  name: string;
+  keyPrefix: string;
+  keyHash: string;
+  lastUsedAt: Date | null;
+  expiresAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}): ApiKey {
+  return {
+    id: key.id,
+    userId: key.userId,
+    name: key.name,
+    keyPrefix: key.keyPrefix,
+    lastUsedAt: key.lastUsedAt?.toISOString() ?? undefined,
+    expiresAt: key.expiresAt?.toISOString() ?? undefined,
+    createdAt: toIso(key.createdAt),
+    updatedAt: toIso(key.updatedAt)
+  };
 }
 
 function mapMetric(metric: { label: string; value: string; tone: string }): PlatformMetric {
@@ -378,6 +404,70 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       async getMetrics() {
         const rows = await prisma.platformMetric.findMany({ orderBy: { position: "asc" } });
         return rows.map(mapMetric);
+      }
+    },
+    agent: {
+      async list() {
+        const rows = await prisma.user.findMany({ where: { type: "agent" }, orderBy: { name: "asc" } });
+        return rows.map(mapUser);
+      },
+      async create(input: AgentCreateInput) {
+        const id = crypto.randomUUID();
+        const now = new Date();
+        const user = await prisma.user.create({
+          data: {
+            id,
+            name: input.name,
+            username: input.username,
+            email: input.email,
+            role: input.role,
+            type: "agent",
+            avatarUrl: "",
+            createdAt: now,
+            updatedAt: now
+          }
+        });
+        const apiKeyResult = await this.createApiKey(id, "default");
+        return { user: mapUser(user), apiKey: apiKeyResult };
+      },
+      async listApiKeys(userId: string) {
+        const rows = await prisma.apiKey.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
+        return rows.map(mapApiKey);
+      },
+      async createApiKey(userId: string, name: string) {
+        const rawKey = generateApiKey();
+        const keyHash = hashApiKey(rawKey);
+        const keyPrefix = rawKey.slice(0, 12);
+        const now = new Date();
+        const row = await prisma.apiKey.create({
+          data: {
+            id: crypto.randomUUID(),
+            userId,
+            name,
+            keyPrefix,
+            keyHash,
+            createdAt: now,
+            updatedAt: now
+          }
+        });
+        return { key: rawKey, apiKey: mapApiKey(row) } satisfies ApiKeyCreateResult;
+      },
+      async revokeApiKey(keyId: string) {
+        await prisma.apiKey.delete({ where: { id: keyId } });
+      },
+      async authenticateWithApiKey(key: string) {
+        const rows = await prisma.apiKey.findMany();
+        for (const row of rows) {
+          if (verifyApiKey(key, row.keyHash)) {
+            await prisma.apiKey.update({
+              where: { id: row.id },
+              data: { lastUsedAt: new Date() }
+            });
+            const user = await prisma.user.findUnique({ where: { id: row.userId } });
+            return user ? mapUser(user) : null;
+          }
+        }
+        return null;
       }
     },
     tloz: {

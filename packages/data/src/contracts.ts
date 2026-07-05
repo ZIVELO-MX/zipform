@@ -1,4 +1,5 @@
 import type {
+  ApiKey,
   AppModule,
   PlatformMetric,
   RoadmapSnapshot,
@@ -149,6 +150,18 @@ export type TlozRepository = {
   deleteMission(missionId: string): Promise<void>;
 };
 
+export type AgentCreateInput = {
+  name: string;
+  username: string;
+  email: string;
+  role: string;
+};
+
+export type ApiKeyCreateResult = {
+  key: string;
+  apiKey: ApiKey;
+};
+
 export type ZipformDataClient = {
   apps: {
     list(): Promise<AppModule[]>;
@@ -162,6 +175,14 @@ export type ZipformDataClient = {
   };
   platform: {
     getMetrics(): Promise<PlatformMetric[]>;
+  };
+  agent: {
+    list(): Promise<UserProfile[]>;
+    create(input: AgentCreateInput): Promise<{ user: UserProfile; apiKey: ApiKeyCreateResult }>;
+    listApiKeys(userId: string): Promise<ApiKey[]>;
+    createApiKey(userId: string, name: string): Promise<ApiKeyCreateResult>;
+    revokeApiKey(keyId: string): Promise<void>;
+    authenticateWithApiKey(key: string): Promise<UserProfile | null>;
   };
   tloz: TlozRepository;
 };

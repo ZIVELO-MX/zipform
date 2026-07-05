@@ -31,13 +31,27 @@ export type RoadmapSnapshot = {
   later: RoadmapTask[];
 };
 
+export type UserType = "human" | "agent";
+
 export type UserProfile = {
   id: string;
   name: string;
   username: string;
   email: string;
   role: string;
+  type: UserType;
   avatarUrl: string;
+};
+
+export type ApiKey = {
+  id: string;
+  userId: string;
+  name: string;
+  keyPrefix: string;
+  lastUsedAt?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type PlatformMetric = {
