@@ -68,35 +68,3 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 }
 
-export async function DELETE(request: NextRequest) {
-  const auth = await authenticateRequest(request);
-  if (auth instanceof Response) return auth;
-
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
-    );
-  }
-
-  const keyId = (body as { keyId?: string }).keyId;
-  if (!keyId) {
-    return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "keyId es requerido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
-    );
-  }
-
-  try {
-    await dataClient.agent.revokeApiKey(keyId);
-    return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
-      { status: 500 }
-    );
-  }
-}

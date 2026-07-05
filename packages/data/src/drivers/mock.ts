@@ -18,7 +18,9 @@ import {
   roadmap,
   seasons,
   userMissionStates,
-  users
+  users,
+  zibotUser,
+  zibotApiKeyRaw
 } from "../seed-data";
 import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions, parseMarkdownChecklist } from "../tloz-hydration";
 import { assertProjectScopedDependency } from "../dependency-rules";
@@ -47,7 +49,15 @@ export function createMockDataClient(): ZipformDataClient {
 
   const agentMethods = (() => {
     const agentUsers: UserProfile[] = [];
-    let apiKeysStore: Array<{ key: string } & ApiKey> = [];
+    let apiKeysStore: Array<{ key: string } & ApiKey> = agentApiKeys.map((k) => ({
+      id: k.id,
+      userId: k.userId,
+      name: k.name,
+      keyPrefix: k.keyPrefix,
+      key: k.rawKey,
+      createdAt: k.createdAt,
+      updatedAt: k.updatedAt
+    }));
 
     return {
       async list() {

@@ -178,7 +178,7 @@ export const zibotUser: UserProfile = {
 
 export const users: UserProfile[] = [currentUser, raulUser, zibotUser];
 
-export const zibotApiKeyRaw = `zaf_zb_dev_${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
+export const zibotApiKeyRaw = "zaf_zb_dev_6ba05db1205906d5fdd29974828dceee";
 
 export type AgentApiKeySeed = {
   id: string;
