@@ -35,11 +35,10 @@
 
 ### Branches
 
-- Never commit directly to `main` or `dev`.
+- Never commit directly to `main` (except when the only changes are to docs).
 - Create a dedicated branch for every logical change.
-- Open pull requests against `dev` by default.
-- Use `main` only as the target for release promotion pull requests from `dev`.
-- Keep `dev` as the integration branch for the next planned release.
+- Open pull requests against `main` by default.
+- `dev` está inhabilitado — todos los cambios van directo a `main` mediante PR.
 
 ### Safety Rules
 
