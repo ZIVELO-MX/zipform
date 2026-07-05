@@ -65,6 +65,7 @@
 - [ ] [API][DOCS] Endpoints `/api/v1/users` y `/api/v1/projects` (OpenAPI spec + Route Handlers)
 - [ ] [API][AUTH] Autenticar cada request con sesión NextAuth existente
 - [ ] [API][UI] Swagger UI en `/api-docs` con sesión autenticada
+- [ ] [API][WRITE] Incorporar endpoints autenticados para crear proyectos y missions, incluyendo carga atómica de checklists, recursos y dependencias. Actualmente la API v1 es de solo lectura y estas operaciones requieren Server Actions o acceso directo al repositorio de datos.
 
 #### TLOZ
 
