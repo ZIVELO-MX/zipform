@@ -57,11 +57,46 @@ export type TlozMissionUpdateInput = Partial<
 export type TlozProjectUpdateInput = Partial<Pick<TlozProject, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "type" | "ownerId" | "startDate" | "dueDate">>;
 export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "status" | "category" | "ownerId" | "acquiredAt">>;
 
+export type PaginatedResult<T> = {
+  data: T[];
+  nextCursor: string | null;
+};
+
+export type UserFilters = {
+  email?: string;
+  username?: string;
+};
+
+export type ProjectFilters = {
+  ownerId?: string;
+  status?: TlozProject["status"];
+};
+
+export type PaginationInput = {
+  limit?: number;
+  cursor?: string;
+};
+
 export type TlozMissionFilters = {
   projectId?: string;
   seasonId?: string;
   episodeId?: string;
   ownerId?: string;
+  status?: TlozMission["status"];
+  title?: string;
+};
+
+export type QuestItemFilters = {
+  ownerId?: string;
+  status?: TlozQuestItem["status"];
+  category?: TlozQuestItem["category"];
+};
+
+export type ResourceFilters = {
+  missionId?: string;
+  projectId?: string;
+  questItemId?: string;
+  type?: TlozResource["type"];
 };
 
 export type TlozDashboardSummary = {
@@ -80,6 +115,11 @@ export type TlozRepository = {
   getDashboardSummary(): Promise<TlozDashboardSummary>;
   getMissions(filters?: TlozMissionFilters): Promise<TlozMissionRecord[]>;
   getMissionDetail(missionId: string): Promise<TlozMissionDetail | null>;
+  findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>>;
+  findProjects(filters?: ProjectFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozProject>>;
+  findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>>;
+  findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>>;
+  findResources(filters?: ResourceFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozResource>>;
   getProjects(): Promise<TlozProject[]>;
   getSeasons(): Promise<TlozSeason[]>;
   getEpisodes(): Promise<TlozEpisode[]>;

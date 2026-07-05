@@ -1,0 +1,735 @@
+openapi: 3.1.0
+info:
+  title: Zipform Data API
+  version: 1.1.0-draft
+  description: |
+    Authenticated, read-only access to Zipform platform data:
+    users, projects, missions, seasons, episodes, quest items, and resources.
+  contact:
+    name: Zivelo Platform
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Zivelo-Proprietary
+servers:
+  - url: /api/v1
+    description: Current Zipform deployment
+security:
+  - sessionCookie: []
+tags:
+  - name: Users
+    description: Read-only access to user profile data (no passwords or sessions).
+  - name: Projects
+    description: Read-only access to TLOZ project metadata.
+  - name: Missions
+    description: Read-only access to missions with filters and detail.
+  - name: Seasons
+    description: Read-only access to TLOZ seasons.
+  - name: Episodes
+    description: Read-only access to TLOZ episodes.
+  - name: Quest Items
+    description: Read-only access to inventory / quest items.
+  - name: Resources
+    description: Read-only access to attached resources (docs, links, notes).
+paths:
+  /users:
+    get:
+      operationId: listUsers
+      summary: List or find users
+      description: Filters are exact and case-insensitive.
+      tags: [Users]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: email
+          in: query
+          description: Exact email address.
+          schema:
+            type: string
+            format: email
+        - name: username
+          in: query
+          description: Exact username.
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+      responses:
+        "200":
+          description: Matching users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /users/{userId}:
+    get:
+      operationId: getUser
+      summary: Get a user by ID
+      tags: [Users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /projects:
+    get:
+      operationId: listProjects
+      summary: List TLOZ projects
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: ownerId
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ProjectStatus"
+      responses:
+        "200":
+          description: Matching projects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /projects/{projectId}:
+    get:
+      operationId: getProject
+      summary: Get a TLOZ project by ID
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Project"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions:
+    get:
+      operationId: listMissions
+      summary: List or find missions
+      description: Supports pagination, text search on title, and filtering by project, owner, status, season, and episode.
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: projectId
+          in: query
+          schema:
+            type: string
+        - name: ownerId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/MissionStatus"
+        - name: seasonId
+          in: query
+          schema:
+            type: string
+        - name: episodeId
+          in: query
+          schema:
+            type: string
+        - name: title
+          in: query
+          description: Case-insensitive partial text search on title.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching missions with hydrated relations.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissionListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}:
+    get:
+      operationId: getMissionDetail
+      summary: Get mission detail by ID
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      responses:
+        "200":
+          description: Mission detail with checklist, resources, dependencies.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MissionDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /seasons:
+    get:
+      operationId: listSeasons
+      summary: List all seasons
+      tags: [Seasons]
+      responses:
+        "200":
+          description: All seasons.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Season"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /episodes:
+    get:
+      operationId: listEpisodes
+      summary: List episodes (optional filter by seasonId)
+      tags: [Episodes]
+      parameters:
+        - name: seasonId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching episodes.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Episode"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /quest-items:
+    get:
+      operationId: listQuestItems
+      summary: List or find quest items
+      tags: [Quest Items]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: ownerId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/InventoryStatus"
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/InventoryCategory"
+      responses:
+        "200":
+          description: Matching quest items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestItemListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /resources:
+    get:
+      operationId: listResources
+      summary: List resources filtered by owner entity or type
+      tags: [Resources]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: missionId
+          in: query
+          schema:
+            type: string
+        - name: projectId
+          in: query
+          schema:
+            type: string
+        - name: questItemId
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/ResourceType"
+      responses:
+        "200":
+          description: Matching resources.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: authjs.session-token
+      description: Existing NextAuth browser session. Production may use the secure cookie prefix.
+  parameters:
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+    Cursor:
+      name: cursor
+      in: query
+      schema:
+        type: string
+        minLength: 1
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    ProjectId:
+      name: projectId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    MissionId:
+      name: missionId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+  responses:
+    BadRequest:
+      description: Invalid path or query input.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthorized:
+      description: An authenticated Zipform session is required.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: The requested resource does not exist.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    InternalError:
+      description: Unexpected server error. Details are recorded server-side.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  schemas:
+    # ── Users ──────────────────────────────────────────────────────
+    User:
+      type: object
+      additionalProperties: false
+      required: [id, name, username, email, role, avatarUrl]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+        avatarUrl:
+          type: string
+          format: uri
+    UserListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+
+    # ── Projects ───────────────────────────────────────────────────
+    ProjectStatus:
+      type: string
+      enum: [planned, active, archived]
+    Project:
+      type: object
+      additionalProperties: false
+      required: [id, slug, name, description, color, icon, status, ownerId, startDate]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        descriptionDetail:
+          type: string
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+        icon:
+          type: string
+        status:
+          $ref: "#/components/schemas/ProjectStatus"
+        ownerId:
+          type: string
+        startDate:
+          type: string
+          format: date
+        dueDate:
+          type: [string, "null"]
+          format: date
+    ProjectListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Project"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+
+    # ── Missions ───────────────────────────────────────────────────
+    MissionStatus:
+      type: string
+      enum: [now, next, later, completed, blocked]
+    MissionType:
+      type: string
+      enum: [main_quest, side_quest, farming_quest, exploration_quest]
+    Mission:
+      type: object
+      additionalProperties: false
+      required: [id, displayId, title, description, icon, type, status, ownerId, progress]
+      properties:
+        id:
+          type: string
+        displayId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        type:
+          $ref: "#/components/schemas/MissionType"
+        status:
+          $ref: "#/components/schemas/MissionStatus"
+        ownerId:
+          type: string
+        projectId:
+          type: string
+        seasonId:
+          type: string
+        episodeId:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        completedAt:
+          type: string
+          format: date-time
+        blockedReason:
+          type: string
+    MissionDetail:
+      allOf:
+        - $ref: "#/components/schemas/Mission"
+        - type: object
+          properties:
+            project:
+              $ref: "#/components/schemas/Project"
+            dependencies:
+              type: array
+              items:
+                $ref: "#/components/schemas/Mission"
+            questItems:
+              type: array
+              items:
+                $ref: "#/components/schemas/QuestItem"
+            checklist:
+              type: array
+              items:
+                $ref: "#/components/schemas/ChecklistItem"
+            resources:
+              type: array
+              items:
+                $ref: "#/components/schemas/Resource"
+    MissionListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/MissionDetail"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+
+    # ── Seasons ────────────────────────────────────────────────────
+    Season:
+      type: object
+      additionalProperties: false
+      required: [id, name, version, description, status, startDate]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: [string, "null"]
+          format: date
+
+    # ── Episodes ───────────────────────────────────────────────────
+    Episode:
+      type: object
+      additionalProperties: false
+      required: [id, seasonId, name, romanNumber, description, status, startDate]
+      properties:
+        id:
+          type: string
+        seasonId:
+          type: string
+        name:
+          type: string
+        romanNumber:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: [string, "null"]
+          format: date
+
+    # ── Quest Items ────────────────────────────────────────────────
+    InventoryStatus:
+      type: string
+      enum: [locked, unlocked]
+    InventoryCategory:
+      type: string
+      enum: [tool, access, asset, document, other]
+    QuestItem:
+      type: object
+      additionalProperties: false
+      required: [id, name, description, icon, status, category]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        status:
+          $ref: "#/components/schemas/InventoryStatus"
+        category:
+          $ref: "#/components/schemas/InventoryCategory"
+        ownerId:
+          type: string
+        acquiredAt:
+          type: string
+          format: date
+    QuestItemListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuestItem"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+
+    # ── Resources ──────────────────────────────────────────────────
+    ResourceType:
+      type: string
+      enum: [link, document, image, file, note]
+    Resource:
+      type: object
+      additionalProperties: false
+      required: [id, type, title]
+      properties:
+        id:
+          type: string
+        missionId:
+          type: string
+        projectId:
+          type: string
+        questItemId:
+          type: string
+        type:
+          $ref: "#/components/schemas/ResourceType"
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        fileId:
+          type: string
+    ResourceListResponse:
+      type: object
+      additionalProperties: false
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Resource"
+        page:
+          $ref: "#/components/schemas/PageInfo"
+
+    # ── Shared ─────────────────────────────────────────────────────
+    ChecklistItem:
+      type: object
+      additionalProperties: false
+      required: [id, missionId, title, completed, position]
+      properties:
+        id:
+          type: string
+        missionId:
+          type: string
+        title:
+          type: string
+        completed:
+          type: boolean
+        position:
+          type: integer
+    PageInfo:
+      type: object
+      additionalProperties: false
+      required: [nextCursor]
+      properties:
+        nextCursor:
+          type: [string, "null"]
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR]
+            message:
+              type: string
+            requestId:
+              type: string

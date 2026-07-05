@@ -18,3 +18,5 @@ coverage
 *.sqlite
 *.sqlite-journal
 .DS_Store
+.claude
+.playwright

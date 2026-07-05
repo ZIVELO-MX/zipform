@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import {
   FolderKanban,
-  ListTodo,
+  Menu,
   PackageOpen,
   Search,
   Sword,
@@ -15,7 +15,6 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Button,
   Command,
   CommandDialog,
 } from "@zipform/ui";
@@ -58,14 +57,9 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
   const router = useRouter();
 
   useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        setCommandOpen((current) => !current);
-      }
-    }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    function handleOpen() { setCommandOpen(true); }
+    window.addEventListener("open-command", handleOpen);
+    return () => window.removeEventListener("open-command", handleOpen);
   }, []);
 
   if (!showHeader) return null;
@@ -81,13 +75,21 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
     <>
       <header className="tloz-main-header">
         <div className="tloz-header-leading">
+          <button
+            type="button"
+            className="mr-1 grid size-8 shrink-0 place-items-center rounded-lg text-carbon/60 hover:bg-carbon/5 md:hidden"
+            aria-label="Abrir menú"
+            onClick={() => window.dispatchEvent(new CustomEvent("toggle-mobile-menu"))}
+          >
+            <Menu size={18} aria-hidden="true" />
+          </button>
           {segments.length ? (
             <Breadcrumb>
               <BreadcrumbList className="flex-nowrap text-carbon/60">
                 {segments.map((segment, index) => (
                   <Fragment key={`${segment}-${index}`}>
                     {index > 0 ? <BreadcrumbSeparator /> : null}
-                    <BreadcrumbItem className="min-w-0">
+                    <BreadcrumbItem className={`min-w-0 ${index > 1 ? "hidden md:flex" : ""}`}>
                       <BreadcrumbPage className="truncate">{segment}</BreadcrumbPage>
                     </BreadcrumbItem>
                   </Fragment>
@@ -96,14 +98,6 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
             </Breadcrumb>
           ) : null}
         </div>
-
-        {showSearch ? (
-          <button className="tloz-command-trigger" type="button" onClick={() => setCommandOpen(true)}>
-            <Search aria-hidden="true" />
-            <span>Buscar misiones, proyectos e inventario...</span>
-            <kbd>⌘K / Ctrl+K</kbd>
-          </button>
-        ) : null}
 
         <div className="tloz-header-trailing">
           <TlozControl />

@@ -6,6 +6,11 @@ export { getPrismaClient } from "./drivers/prisma";
 export type {
   DataClientOptions,
   DataDriver,
+  PaginatedResult,
+  PaginationInput,
+  ProjectFilters,
+  QuestItemFilters,
+  ResourceFilters,
   TlozDashboardSummary,
   TlozMissionDetail,
   TlozMissionFilters,
@@ -18,6 +23,7 @@ export type {
   TlozQuestItemUpdateInput,
   TlozResourceInput,
   TlozRepository,
+  UserFilters,
   ZipformDataClient
 } from "./contracts";
 export { currentUser, raulUser } from "./seed-data";
