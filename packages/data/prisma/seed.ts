@@ -26,6 +26,11 @@ function hashPassword(password: string) {
   return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
 }
 
+function hashKey(key: string) {
+  const salt = randomBytes(16).toString("hex");
+  return `${salt}:${scryptSync(key, salt, 64).toString("hex")}`;
+}
+
 async function main() {
   await prisma.$transaction([
     prisma.tlozUserMissionState.deleteMany(),
@@ -63,7 +68,11 @@ async function main() {
 
   await prisma.apiKey.createMany({
     data: agentApiKeys.map((key) => ({
-      ...key,
+      id: key.id,
+      userId: key.userId,
+      name: key.name,
+      keyPrefix: key.keyPrefix,
+      keyHash: hashKey(key.rawKey),
       lastUsedAt: null,
       expiresAt: null,
       createdAt: date(key.createdAt),

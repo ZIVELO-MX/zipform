@@ -30,7 +30,6 @@ export type {
 } from "./contracts";
 export { currentUser, raulUser, zibotUser } from "./seed-data";
 export { assertProjectScopedDependency } from "./dependency-rules";
-export { hashApiKey, verifyApiKey, generateApiKey } from "./lib/crypto";
 export { TlozValidationError, nextMissionDisplayId, slugify, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
 
 function resolveDataDriver(driver?: DataDriver): DataDriver {

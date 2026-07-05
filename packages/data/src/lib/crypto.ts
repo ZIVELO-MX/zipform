@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { randomBytes, scryptSync, timingSafeEqual } from "crypto";
 
 export function hashApiKey(key: string): string {
   const salt = randomBytes(16).toString("hex");

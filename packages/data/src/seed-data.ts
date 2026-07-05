@@ -178,26 +178,25 @@ export const zibotUser: UserProfile = {
 
 export const users: UserProfile[] = [currentUser, raulUser, zibotUser];
 
-import { hashApiKey } from "./lib/crypto";
+export const zibotApiKeyRaw = `zaf_zb_dev_${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
 
-const _zibotKey = `zaf_zb_dev_${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
-export const zibotApiKeyRaw = _zibotKey;
-
-export const agentApiKeys: Array<{
+export type AgentApiKeySeed = {
   id: string;
   userId: string;
   name: string;
   keyPrefix: string;
-  keyHash: string;
+  rawKey: string;
   createdAt: string;
   updatedAt: string;
-}> = [
+};
+
+export const agentApiKeys: AgentApiKeySeed[] = [
   {
     id: "api-key-zibot-default",
     userId: "zibot",
     name: "default",
-    keyPrefix: _zibotKey.slice(0, 12),
-    keyHash: hashApiKey(_zibotKey),
+    keyPrefix: zibotApiKeyRaw.slice(0, 12),
+    rawKey: zibotApiKeyRaw,
     createdAt: now,
     updatedAt: now
   }
