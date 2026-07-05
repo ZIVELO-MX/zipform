@@ -7,6 +7,7 @@ import { Button } from "./button";
 import { Input } from "./input";
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 import { cn } from "../lib/utils";
+import { matchesUserSearch } from "../lib/user-search";
 
 export type UserPickerOption = {
   id: string;
@@ -26,7 +27,7 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const selected = users.find((user) => user.id === value);
-  const filtered = users.filter((user) => `${user.name} ${user.username ?? ""}`.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es")));
+  const filtered = users.filter((user) => matchesUserSearch(user, query));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
