@@ -64,12 +64,11 @@ export default async function ProjectDetailPage({ params }: Props) {
     recentActivity: [],
     questItems: projectInventory,
   };
-  const users = Array.from(new Map(missions.map((mission) => [mission.owner.id, mission.owner])).values());
-  const detailOptions = { missions, projects: [project], seasons, episodes, questItems: projectInventory, users };
+  const detailOptions = { missions, projects: [project], seasons, episodes, questItems: projectInventory, users: allUsers };
 
   return (
     <TlozPageShell title="Lobby" breadcrumb={[project.name]} fullWidth controlProjectId={project.id}>
-      <TlozViewRenderer summary={projectSummary} missions={missions} allMissions={missions} projects={[project]} seasons={seasons} episodes={episodes} users={users} questItems={projectInventory} detailOptions={detailOptions} hideProjectSections />
+      <TlozViewRenderer summary={projectSummary} missions={missions} allMissions={missions} projects={[project]} seasons={seasons} episodes={episodes} users={allUsers} questItems={projectInventory} detailOptions={detailOptions} hideProjectSections />
     </TlozPageShell>
   );
 }

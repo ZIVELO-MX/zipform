@@ -20,3 +20,4 @@ coverage
 .DS_Store
 .claude
 .playwright
+.playwright-cli
