@@ -1,4 +1,9 @@
 import { fileURLToPath } from "node:url";
+import { resolve, dirname } from "node:path";
+import { loadEnvConfig } from "@next/env";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+loadEnvConfig(resolve(__dirname, "../../"));
 
 const monorepoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
