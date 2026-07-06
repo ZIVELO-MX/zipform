@@ -6,6 +6,7 @@ import { MissionTable } from "../../../components/tloz/mission-views";
 import { MissionSlideOver } from "../../../components/tloz/mission-slide-over";
 import { useIsMobile } from "../../../hooks/use-is-mobile";
 import type { TlozMissionRecord } from "../../../lib/tloz-data";
+import { missionHref } from "../../../lib/tloz-routes";
 
 export function TableClient({ missions }: { missions: TlozMissionRecord[] }) {
   const router = useRouter();
@@ -14,8 +15,8 @@ export function TableClient({ missions }: { missions: TlozMissionRecord[] }) {
 
   const handleSelect = useCallback((mission: TlozMissionRecord | null) => {
     if (!mission) return;
-    if (isMobile) {
-      router.push(`/tloz/${mission.project?.slug ?? mission.projectId}/${mission.id}`);
+    if (isMobile && mission.project) {
+      router.push(missionHref(mission.project, mission.displayId));
     } else {
       setSelectedMission(mission);
     }

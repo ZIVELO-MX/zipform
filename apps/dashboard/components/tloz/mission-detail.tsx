@@ -172,7 +172,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
   const statusBadgeClass = current.status === "now" ? "bg-[#E6F4EA] text-[#1E8E5A]" : current.status === "next" ? "bg-[#EEF2FF] text-[#2D6CDF]" : current.status === "later" ? "bg-[#F2EAFE] text-[#7A4ED9]" : current.status === "blocked" ? "bg-[#FDECEC] text-[#B91C22]" : "bg-[#F0EFED] text-[#6B6B6B]";
 
   return (
-    <article className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-[26px] py-7" aria-busy={isPending}>
+    <article className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-[26px] md:py-7" aria-busy={isPending}>
       {variant === "full" && current.project ? (
         <Breadcrumb className="mb-5">
           <BreadcrumbList className="flex-nowrap text-carbon/60">
