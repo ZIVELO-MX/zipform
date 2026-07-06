@@ -98,6 +98,87 @@ describe("mock data driver", () => {
     expect(await client.tloz.updateMission(mission.id, { projectId: "", seasonId: "", episodeId: "" })).toMatchObject({ projectId: undefined, seasonId: undefined, episodeId: undefined });
   });
 
+  it("supports agent authentication and mission assignment", async () => {
+    const client = createMockDataClient();
+    const agent = await client.agent.create({ name: "TestAgent", username: "testagent", email: "agent@test.com", role: "agent:operative" });
+    const keyResult = await client.agent.createApiKey(agent.user.id, "test-key");
+    const authenticated = await client.agent.authenticateWithApiKey(keyResult.key);
+    expect(authenticated?.id).toBe(agent.user.id);
+    expect(authenticated?.type).toBe("agent");
+
+    const mission = missions[0];
+    const assigned = await client.tloz.updateMission(mission.id, { ownerId: agent.user.id });
+    expect(assigned.ownerId).toBe(agent.user.id);
+    expect((await client.tloz.getMissionDetail(mission.id))?.owner.id).toBe(agent.user.id);
+  });
+
+  it("allows agents to patch mission status and manage sub-resources", async () => {
+    const client = createMockDataClient();
+    const mission = missions[0];
+    const agentUser = (await client.agent.list()).find((u) => u.type === "agent")
+      ?? (await client.agent.create({ name: "Bot", username: "bot", email: "bot@test.com", role: "agent:operative" })).user;
+
+    const completed = await client.tloz.patchMissionStatus(mission.id, "completed");
+    expect(completed.status).toBe("completed");
+
+    const uncompleted = await client.tloz.updateMission(mission.id, { status: "now", completedAt: undefined });
+    expect(uncompleted.status).toBe("now");
+
+    const dep = missions.find((item) => item.id !== mission.id && item.projectId === mission.projectId)!;
+    await client.tloz.addMissionDependency(mission.id, dep.id);
+    expect((await client.tloz.getMissionDetail(mission.id))?.dependencies).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: dep.id })])
+    );
+    await client.tloz.removeMissionDependency(mission.id, dep.id);
+    expect((await client.tloz.getMissionDetail(mission.id))?.dependencies).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: dep.id })])
+    );
+
+    const resource = (await client.tloz.addMissionResource(mission.id, { type: "link", title: "Spec", url: "https://spec.com" })).resources.at(-1)!;
+    expect(resource.title).toBe("Spec");
+    await client.tloz.removeMissionResource(mission.id, resource.id);
+
+    const qi = (await client.tloz.getQuestItems())[0];
+    await client.tloz.setMissionQuestItem(mission.id, qi.id, true);
+    expect((await client.tloz.getMissionDetail(mission.id))?.missionQuestItems).toEqual(
+      expect.arrayContaining([expect.objectContaining({ questItemId: qi.id, required: true })])
+    );
+    await client.tloz.removeMissionQuestItem(mission.id, qi.id);
+
+    const saved = await client.tloz.saveMissionDocument(mission.id, "# Doc\n- [ ] Task");
+    expect(saved.description).toContain("- [ ] Task");
+    expect(saved.checklist).toHaveLength(1);
+  });
+
+  it("supports create, update, and delete for projects and quest-items", async () => {
+    const client = createMockDataClient();
+    const project = await client.tloz.createProject({
+      name: "New Project", description: "desc", icon: "Box", color: "#3366FF",
+      status: "active", type: "system", ownerId: currentUser.id, startDate: "2026-07-01"
+    });
+    expect(project.name).toBe("New Project");
+
+    const updatedProject = await client.tloz.updateProject(project.id, { name: "Updated Project" });
+    expect(updatedProject.name).toBe("Updated Project");
+
+    const qi = await client.tloz.createQuestItem({
+      name: "New Item", description: "", icon: "Key", status: "locked", category: "tool"
+    });
+    expect(qi.name).toBe("New Item");
+
+    const updatedQi = await client.tloz.updateQuestItem(qi.id, { name: "Updated Item" });
+    expect(updatedQi.name).toBe("Updated Item");
+  });
+
+  it("handles mission document save with checklist parsing and progress", async () => {
+    const client = createMockDataClient();
+    const mission = missions[0];
+    const detail = await client.tloz.saveMissionDocument(mission.id, "- [x] Done\n- [ ] Todo");
+    expect(detail.progress).toBe(50);
+    expect(detail.checklist).toHaveLength(2);
+    expect(detail.checklist[0].completed).toBe(true);
+  });
+
   it("updates system-project entities and keeps resources scoped to one owner", async () => {
     const client = createMockDataClient();
     const project = (await client.tloz.getProjects())[0];

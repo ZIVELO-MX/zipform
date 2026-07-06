@@ -2,34 +2,34 @@ import { NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 
-const VALID_PROJECT_FIELDS = new Set([
-  "name", "description", "descriptionDetail", "icon", "color",
-  "status", "type", "ownerId", "startDate", "dueDate"
+const VALID_QUESTITEM_FIELDS = new Set([
+  "name", "description", "descriptionDetail", "icon", "status",
+  "category", "ownerId", "acquiredAt"
 ]);
 
-export async function GET(_request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+export async function GET(_request: Request, { params }: { params: Promise<{ questItemId: string }> }) {
   const auth = await authenticateRequest(_request as Parameters<typeof authenticateRequest>[0]);
   if (auth instanceof Response) return auth;
 
-  const { projectId } = await params;
+  const { questItemId } = await params;
 
-  if (!projectId || projectId.length < 1 || projectId.length > 128) {
+  if (!questItemId || questItemId.length < 1 || questItemId.length > 128) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "projectId inválido.", requestId: crypto.randomUUID() } },
+      { error: { code: "INVALID_REQUEST", message: "questItemId inválido.", requestId: crypto.randomUUID() } },
       { status: 400 }
     );
   }
 
   try {
-    const projects = await dataClient.tloz.getProjects();
-    const project = projects.find((p) => p.id === projectId);
-    if (!project) {
+    const items = await dataClient.tloz.getQuestItems();
+    const item = items.find((q) => q.id === questItemId);
+    if (!item) {
       return NextResponse.json(
-        { error: { code: "NOT_FOUND", message: "Proyecto no encontrado.", requestId: crypto.randomUUID() } },
+        { error: { code: "NOT_FOUND", message: "Quest item no encontrado.", requestId: crypto.randomUUID() } },
         { status: 404 }
       );
     }
-    return NextResponse.json({ data: project });
+    return NextResponse.json({ data: item });
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
@@ -38,14 +38,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pro
   }
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ questItemId: string }> }) {
   const auth = await authenticateRequest(request as Parameters<typeof authenticateRequest>[0]);
   if (auth instanceof Response) return auth;
 
-  const { projectId } = await params;
-  if (!projectId || projectId.length < 1 || projectId.length > 128) {
+  const { questItemId } = await params;
+  if (!questItemId || questItemId.length < 1 || questItemId.length > 128) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "projectId inválido.", requestId: crypto.randomUUID() } },
+      { error: { code: "INVALID_REQUEST", message: "questItemId inválido.", requestId: crypto.randomUUID() } },
       { status: 400 }
     );
   }
@@ -61,7 +61,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
   }
 
   const allowedFields = Object.fromEntries(
-    Object.entries(body).filter(([key]) => VALID_PROJECT_FIELDS.has(key))
+    Object.entries(body).filter(([key]) => VALID_QUESTITEM_FIELDS.has(key))
   );
 
   if (Object.keys(allowedFields).length === 0) {
@@ -72,7 +72,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
   }
 
   try {
-    const updated = await dataClient.tloz.updateProject(projectId, allowedFields as Parameters<typeof dataClient.tloz.updateProject>[1]);
+    const updated = await dataClient.tloz.updateQuestItem(questItemId, allowedFields as Parameters<typeof dataClient.tloz.updateQuestItem>[1]);
     return NextResponse.json({ data: updated });
   } catch (e) {
     return NextResponse.json(

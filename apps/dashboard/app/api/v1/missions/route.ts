@@ -3,6 +3,12 @@ import { dataClient } from "@zipform/data";
 import type { TlozMissionStatus } from "@zipform/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
 
+const VALID_CREATE_FIELDS = new Set([
+  "id", "title", "description", "icon", "type", "status",
+  "conclusion", "ownerId", "projectId", "seasonId", "episodeId",
+  "dueDate", "startDate", "completedAt", "blockedReason", "progress"
+]);
+
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
@@ -42,6 +48,42 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth instanceof Response) return auth;
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
+      { status: 400 }
+    );
+  }
+
+  const allowedFields = Object.fromEntries(
+    Object.entries(body).filter(([key]) => VALID_CREATE_FIELDS.has(key))
+  );
+
+  if (!allowedFields.title || !allowedFields.ownerId || !allowedFields.type) {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "title, ownerId y type son requeridos.", requestId: crypto.randomUUID() } },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const created = await dataClient.tloz.createMission(allowedFields as Parameters<typeof dataClient.tloz.createMission>[0]);
+    return NextResponse.json({ data: created }, { status: 201 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }
