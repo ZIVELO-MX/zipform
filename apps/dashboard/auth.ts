@@ -59,6 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.sub = dbUser.id;
         token.name = dbUser.name;
         token.role = dbUser.role;
+        token.type = dbUser.type;
         token.username = dbUser.username;
         token.avatarUrl = dbUser.avatarUrl;
       }

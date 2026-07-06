@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { randomBytes, scryptSync } from "node:crypto";
 import {
+  agentApiKeys,
   checklistItems,
   currentUser,
   episodes,
@@ -23,6 +24,11 @@ const date = (value: string) => new Date(value);
 function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
+}
+
+function hashKey(key: string) {
+  const salt = randomBytes(16).toString("hex");
+  return `${salt}:${scryptSync(key, salt, 64).toString("hex")}`;
 }
 
 async function main() {
@@ -58,6 +64,20 @@ async function main() {
       createdAt: date("2026-06-24T16:00:00.000Z"),
       updatedAt: date("2026-06-24T16:00:00.000Z")
     }
+  });
+
+  await prisma.apiKey.createMany({
+    data: agentApiKeys.map((key) => ({
+      id: key.id,
+      userId: key.userId,
+      name: key.name,
+      keyPrefix: key.keyPrefix,
+      keyHash: hashKey(key.rawKey),
+      lastUsedAt: null,
+      expiresAt: null,
+      createdAt: date(key.createdAt),
+      updatedAt: date(key.updatedAt)
+    }))
   });
 
   await prisma.platformMetric.createMany({

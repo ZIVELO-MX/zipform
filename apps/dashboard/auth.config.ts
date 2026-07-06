@@ -8,6 +8,7 @@ export const authConfig: NextAuthConfig = {
       if (session.user) {
         session.user.id = token.sub ?? "";
         session.user.role = typeof token.role === "string" ? token.role : "";
+        session.user.type = typeof token.type === "string" ? token.type : "";
         session.user.username = typeof token.username === "string" ? token.username : "";
         session.user.avatarUrl = typeof token.avatarUrl === "string" ? token.avatarUrl : "";
       }

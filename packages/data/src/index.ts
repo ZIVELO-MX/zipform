@@ -4,6 +4,8 @@ import { createPrismaDataClient } from "./drivers/prisma";
 export { getPrismaClient } from "./drivers/prisma";
 
 export type {
+  AgentCreateInput,
+  ApiKeyCreateResult,
   DataClientOptions,
   DataDriver,
   PaginatedResult,
@@ -58,10 +60,15 @@ export function createDataClient(options: DataClientOptions | DataDriver = {}): 
   throw new Error(`Unsupported data driver: ${driver satisfies never}`);
 }
 
-let _dataClient: ZipformDataClient | undefined;
+const globalForData = globalThis as typeof globalThis & {
+  __zipformDataClient?: ZipformDataClient;
+};
+
 export const dataClient = new Proxy({} as ZipformDataClient, {
   get(_, prop) {
-    _dataClient ??= createDataClient();
-    return Reflect.get(_dataClient, prop, _dataClient);
+    if (!globalForData.__zipformDataClient) {
+      globalForData.__zipformDataClient = createDataClient();
+    }
+    return Reflect.get(globalForData.__zipformDataClient, prop, globalForData.__zipformDataClient);
   }
 });

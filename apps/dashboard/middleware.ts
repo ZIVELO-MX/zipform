@@ -9,13 +9,9 @@ export default auth((request) => {
   const isLogin = request.nextUrl.pathname === "/login";
   const isApi = request.nextUrl.pathname.startsWith("/api/");
 
+  if (isApi) return;
+
   if (!isLoggedIn && !isLogin) {
-    if (isApi) {
-      return NextResponse.json(
-        { error: { code: "UNAUTHORIZED", message: "Se requiere una sesión activa.", requestId: crypto.randomUUID() } },
-        { status: 401 }
-      );
-    }
     const loginUrl = new URL("/login", request.nextUrl);
     loginUrl.searchParams.set("callbackUrl", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.redirect(loginUrl);

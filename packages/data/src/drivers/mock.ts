@@ -1,6 +1,7 @@
-import type { TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
+import type { ApiKey, TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
 import type { TlozMissionRecord } from "../contracts";
 import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
+import type { AgentCreateInput, ApiKeyCreateResult } from "../contracts";
 import {
   apps,
   checklistItems,
@@ -43,6 +44,59 @@ export function createMockDataClient(): ZipformDataClient {
     return mission;
   };
 
+  const agentMethods = (() => {
+    const agentUsers: UserProfile[] = [];
+    let apiKeysStore: Array<{ key: string } & ApiKey> = [];
+
+    return {
+      async list() {
+        return [...users.filter((u) => u.type === "agent"), ...agentUsers];
+      },
+      async create(input: AgentCreateInput) {
+        const now = new Date().toISOString();
+        const user: UserProfile = {
+          id: crypto.randomUUID(),
+          name: input.name,
+          username: input.username,
+          email: input.email,
+          role: input.role,
+          type: "agent",
+          avatarUrl: ""
+        };
+        agentUsers.push(user);
+        const apiKeyResult = await this.createApiKey(user.id, "default");
+        return { user, apiKey: apiKeyResult };
+      },
+      async listApiKeys(userId: string) {
+        return apiKeysStore.filter((k) => k.userId === userId);
+      },
+      async createApiKey(userId: string, name: string) {
+        const rawKey = `zaf_${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
+        const keyPrefix = rawKey.slice(0, 12);
+        const now = new Date().toISOString();
+        const apiKey: ApiKey = {
+          id: crypto.randomUUID(),
+          userId,
+          name,
+          keyPrefix,
+          createdAt: now,
+          updatedAt: now
+        };
+        apiKeysStore.push({ key: rawKey, ...apiKey });
+        return { key: rawKey, apiKey } satisfies ApiKeyCreateResult;
+      },
+      async revokeApiKey(keyId: string) {
+        apiKeysStore = apiKeysStore.filter((k) => k.id !== keyId);
+      },
+      async authenticateWithApiKey(key: string) {
+        const stored = apiKeysStore.find((k) => k.key === key);
+        if (!stored) return null;
+        const allUsers = [...users, ...agentUsers];
+        return allUsers.find((u) => u.id === stored.userId) ?? null;
+      }
+    };
+  })();
+
   return {
     apps: {
       async list() {
@@ -67,6 +121,7 @@ export function createMockDataClient(): ZipformDataClient {
         return metrics;
       }
     },
+    agent: agentMethods,
     tloz: {
       async getDashboardSummary() {
         return buildTlozDashboardSummary(tlozData, currentUser.id);
