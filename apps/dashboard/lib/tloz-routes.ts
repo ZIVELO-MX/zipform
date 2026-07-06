@@ -7,6 +7,21 @@ export function resolveTlozView(preferredView: TlozView, supportedViews: readonl
   return supportedViews.includes(preferredView) ? preferredView : defaultView;
 }
 
+export const TLOZ_MOBILE_VIEWS = ["list", "table"] as const satisfies readonly TlozView[];
+
+export function resolveResponsiveTlozViews(
+  isMobile: boolean,
+  supportedViews: readonly TlozView[],
+  defaultView: TlozView,
+): { views: readonly TlozView[]; defaultView: TlozView } {
+  if (!isMobile) return { views: supportedViews, defaultView };
+
+  return {
+    views: TLOZ_MOBILE_VIEWS,
+    defaultView: TLOZ_MOBILE_VIEWS.includes(defaultView as (typeof TLOZ_MOBILE_VIEWS)[number]) ? defaultView : "list",
+  };
+}
+
 export const SYSTEM_PROJECTS = {
   inventory: {
     slug: "inventory",

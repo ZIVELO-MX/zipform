@@ -3,7 +3,7 @@
 import type { TlozEpisode, TlozProject, TlozSeason, UserProfile } from "@zipform/types";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../../hooks/use-is-mobile";
-import { resolveTlozView, type TlozView } from "../../lib/tloz-routes";
+import { resolveResponsiveTlozViews, resolveTlozView, type TlozView } from "../../lib/tloz-routes";
 
 export type TlozSort = "default" | "due-date" | "title";
 export type TlozGrouping = "status" | "project" | "none";
@@ -22,7 +22,7 @@ export type TlozUiState = {
 type TlozViewStateContextValue = {
   state: TlozUiState;
   setState: (update: Partial<TlozUiState>) => void;
-  supportedViews: TlozView[];
+  supportedViews: readonly TlozView[];
   projects: TlozProject[];
   seasons: TlozSeason[];
   episodes: TlozEpisode[];
@@ -57,9 +57,9 @@ export function TlozViewStateProvider({
   storageScope?: string;
 }) {
   const isMobile = useIsMobile();
-  const mobileViews: TlozView[] = ["list", "table"];
-  const effectiveViews = isMobile ? mobileViews : supportedViews;
-  const effectiveDefault = isMobile ? (mobileViews.includes(defaultView) ? defaultView : "list") : defaultView;
+  const responsiveViews = resolveResponsiveTlozViews(isMobile, supportedViews, defaultView);
+  const effectiveViews = responsiveViews.views;
+  const effectiveDefault = responsiveViews.defaultView;
 
   const storageKey = `tloz:${storageScope}-controls`;
   const [preferredState, replaceState] = useState<TlozUiState>(() => sharedUiState ?? initialState(effectiveDefault));

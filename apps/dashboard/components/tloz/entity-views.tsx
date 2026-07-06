@@ -17,7 +17,7 @@ export function EntityTable<T extends { id: string }>({ items, columns, onSelect
     <div style={{ minWidth }}>
     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
       <thead><tr style={{ textAlign: "left" }}>{columns.map((column) => <th key={column.id} className="tloz-th" style={{ padding: "11px 14px", fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9a9a98", borderBottom: "1px solid rgba(29,29,27,0.10)", textAlign: column.align ?? "left" }}>{column.label}</th>)}</tr></thead>
-      <tbody>{items.map((item) => <tr key={item.id} className="tloz-trow" style={{ cursor: onSelect ? "pointer" : undefined, borderBottom: "1px solid rgba(29,29,27,0.06)" }} onClick={() => onSelect?.(item)}>{columns.map((column) => <td key={column.id} style={{ padding: "11px 14px", textAlign: column.align ?? "left" }}>{column.render(item)}</td>)}</tr>)}</tbody>
+      <tbody>{items.map((item) => <tr key={item.id} className="tloz-trow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zivelo" style={{ cursor: onSelect ? "pointer" : undefined, borderBottom: "1px solid rgba(29,29,27,0.06)" }} tabIndex={onSelect ? 0 : undefined} onClick={() => onSelect?.(item)} onKeyDown={(event) => { if (onSelect && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onSelect(item); } }}>{columns.map((column) => <td key={column.id} style={{ padding: "11px 14px", textAlign: column.align ?? "left" }}>{column.render(item)}</td>)}</tr>)}</tbody>
     </table>
     </div>
   </div>;

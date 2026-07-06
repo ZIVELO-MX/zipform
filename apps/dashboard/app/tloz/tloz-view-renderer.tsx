@@ -84,7 +84,7 @@ export function TlozViewRenderer(props: ViewRendererProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <TlozViewHeader title={config.title} description={config.description} />
-      <div className={view === "board" ? "min-h-0 min-w-0 flex-1 overflow-hidden px-[26px] pb-[26px] pt-1" : "tloz-scrl flex-1 overflow-auto px-[26px] pb-[26px]"}>
+      <div className={view === "board" ? "min-h-0 min-w-0 flex-1 overflow-hidden px-[26px] pb-[26px] pt-1" : "tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]"}>
         {view === "board" ? (
           <BoardClient
             missions={visibleMissions}
