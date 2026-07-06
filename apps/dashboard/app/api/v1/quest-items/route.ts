@@ -5,6 +5,10 @@ import { authenticateRequest } from "../../../../lib/api-auth";
 
 const validStatuses: TlozInventoryStatus[] = ["locked", "unlocked"];
 const validCategories: TlozInventoryCategory[] = ["tool", "access", "asset", "document", "other"];
+const VALID_CREATE_FIELDS = new Set([
+  "name", "description", "descriptionDetail", "icon", "status",
+  "category", "ownerId", "acquiredAt"
+]);
 
 export async function GET(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -48,6 +52,42 @@ export async function GET(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await authenticateRequest(request);
+  if (auth instanceof Response) return auth;
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
+      { status: 400 }
+    );
+  }
+
+  const allowedFields = Object.fromEntries(
+    Object.entries(body).filter(([key]) => VALID_CREATE_FIELDS.has(key))
+  );
+
+  if (!allowedFields.name) {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "name es requerido.", requestId: crypto.randomUUID() } },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const created = await dataClient.tloz.createQuestItem(allowedFields as Parameters<typeof dataClient.tloz.createQuestItem>[0]);
+    return NextResponse.json({ data: created }, { status: 201 });
+  } catch (e) {
+    return NextResponse.json(
+      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }
