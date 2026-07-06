@@ -1,4 +1,10 @@
 import { fileURLToPath } from "node:url";
+import { resolve, dirname } from "node:path";
+
+// Load environment variables from monorepo root .env
+import { config } from "dotenv";
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: resolve(__dirname, "../../.env") });
 
 const monorepoRoot = fileURLToPath(new URL("../..", import.meta.url));
 
