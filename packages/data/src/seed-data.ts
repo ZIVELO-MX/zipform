@@ -155,7 +155,18 @@ export const currentUser: UserProfile = {
     "https://i.pinimg.com/736x/2c/ed/94/2ced942397c59e2e4dd88aee36ce9b0b.jpg"
 };
 
-export const users: UserProfile[] = [currentUser];
+export const raulUser: UserProfile = {
+  id: "raul",
+  name: "Raúl Méndez",
+  username: "raul",
+  email: "raul.mendez@zivelo.dev",
+  role: "Full Stack Developer",
+  type: "human",
+  avatarUrl:
+    "https://i.pinimg.com/736x/a1/8c/8b/a18c8b13eb8a48aa9cb4786ded38d591.jpg"
+};
+
+export const users: UserProfile[] = [currentUser, raulUser];
 
 export type AgentApiKeySeed = {
   id: string;
