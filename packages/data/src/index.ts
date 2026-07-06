@@ -28,7 +28,7 @@ export type {
   UserFilters,
   ZipformDataClient
 } from "./contracts";
-export { currentUser, raulUser, zibotUser } from "./seed-data";
+export { currentUser } from "./seed-data";
 export { assertProjectScopedDependency } from "./dependency-rules";
 export { TlozValidationError, nextMissionDisplayId, slugify, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
 

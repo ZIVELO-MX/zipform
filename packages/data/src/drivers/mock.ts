@@ -3,7 +3,6 @@ import type { TlozMissionRecord } from "../contracts";
 import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
 import type { AgentCreateInput, ApiKeyCreateResult } from "../contracts";
 import {
-  agentApiKeys,
   apps,
   checklistItems,
   currentUser,
@@ -18,9 +17,7 @@ import {
   roadmap,
   seasons,
   userMissionStates,
-  users,
-  zibotUser,
-  zibotApiKeyRaw
+  users
 } from "../seed-data";
 import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions, parseMarkdownChecklist } from "../tloz-hydration";
 import { assertProjectScopedDependency } from "../dependency-rules";
@@ -49,15 +46,7 @@ export function createMockDataClient(): ZipformDataClient {
 
   const agentMethods = (() => {
     const agentUsers: UserProfile[] = [];
-    let apiKeysStore: Array<{ key: string } & ApiKey> = agentApiKeys.map((k) => ({
-      id: k.id,
-      userId: k.userId,
-      name: k.name,
-      keyPrefix: k.keyPrefix,
-      key: k.rawKey,
-      createdAt: k.createdAt,
-      updatedAt: k.updatedAt
-    }));
+    let apiKeysStore: Array<{ key: string } & ApiKey> = [];
 
     return {
       async list() {

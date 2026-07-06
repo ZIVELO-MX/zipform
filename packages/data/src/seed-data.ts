@@ -155,30 +155,7 @@ export const currentUser: UserProfile = {
     "https://i.pinimg.com/736x/2c/ed/94/2ced942397c59e2e4dd88aee36ce9b0b.jpg"
 };
 
-export const raulUser: UserProfile = {
-  id: "raul",
-  name: "Raúl Hernández",
-  username: "Raúl",
-  email: "raul.hernandez@zivelo.dev",
-  role: "Full Stack Developer",
-  type: "human",
-  avatarUrl:
-    "https://i.pinimg.com/736x/a1/8c/8b/a18c8b13eb8a48aa9cb4786ded38d591.jpg"
-};
-
-export const zibotUser: UserProfile = {
-  id: "zibot",
-  name: "Zibot",
-  username: "zibot",
-  email: "zibot@zipform.dev",
-  role: "agent:operative",
-  type: "agent",
-  avatarUrl: ""
-};
-
-export const users: UserProfile[] = [currentUser, raulUser, zibotUser];
-
-export const zibotApiKeyRaw = "zaf_zb_dev_6ba05db1205906d5fdd29974828dceee";
+export const users: UserProfile[] = [currentUser];
 
 export type AgentApiKeySeed = {
   id: string;
@@ -190,17 +167,7 @@ export type AgentApiKeySeed = {
   updatedAt: string;
 };
 
-export const agentApiKeys: AgentApiKeySeed[] = [
-  {
-    id: "api-key-zibot-default",
-    userId: "zibot",
-    name: "default",
-    keyPrefix: zibotApiKeyRaw.slice(0, 12),
-    rawKey: zibotApiKeyRaw,
-    createdAt: now,
-    updatedAt: now
-  }
-];
+export const agentApiKeys: AgentApiKeySeed[] = [];
 
 export const metrics: PlatformMetric[] = [
   { label: "Current version", value: "1.0", tone: "good" },
@@ -276,7 +243,7 @@ export const projects: TlozProject[] = [
     icon: "Sparkles",
     status: "active",
     type: "normal",
-    ownerId: "raul",
+    ownerId: "benji",
     startDate: "2026-06-08",
     createdAt: now,
     updatedAt: now
@@ -330,7 +297,7 @@ export const questItems: TlozQuestItem[] = [
     icon: "FileCheck",
     status: "unlocked",
     category: "document",
-    ownerId: "raul",
+    ownerId: "benji",
     acquiredAt: "2026-06-18",
     createdAt: now,
     updatedAt: now
@@ -448,7 +415,7 @@ export const missions: TlozMission[] = [
     icon: "Copy",
     type: "main_quest",
     status: "now",
-    ownerId: "raul",
+    ownerId: "benji",
     projectId: "project-core",
     seasonId: "season-1",
     episodeId: "episode-auth",
@@ -466,7 +433,7 @@ export const missions: TlozMission[] = [
     icon: "History",
     type: "exploration_quest",
     status: "next",
-    ownerId: "raul",
+    ownerId: "benji",
     projectId: "project-growth",
     seasonId: "season-1",
     episodeId: "episode-ops",
@@ -483,7 +450,7 @@ export const missions: TlozMission[] = [
     icon: "Database",
     type: "side_quest",
     status: "later",
-    ownerId: "raul",
+    ownerId: "benji",
     projectId: "project-core",
     seasonId: "season-1",
     episodeId: "episode-ops",
@@ -590,7 +557,7 @@ export const userMissionStates: TlozUserMissionState[] = [
   },
   {
     id: "state-raul-active",
-    userId: "raul",
+    userId: "benji",
     missionId: "mission-wallet",
     slot: "active_quest",
     createdAt: now,
