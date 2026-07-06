@@ -145,25 +145,23 @@ export const roadmap: RoadmapSnapshot = {
 };
 
 export const currentUser: UserProfile = {
-  id: "benji",
-  name: "Benji Rodriguez",
-  username: "benrod",
-  email: "benjamin.rodriguez@zivelo.dev",
+  id: "owner",
+  name: "Owner",
+  username: "owner",
+  email: "owner@zipform.dev",
   role: "Platform Owner",
   type: "human",
-  avatarUrl:
-    "https://i.pinimg.com/736x/2c/ed/94/2ced942397c59e2e4dd88aee36ce9b0b.jpg"
+  avatarUrl: ""
 };
 
 export const raulUser: UserProfile = {
-  id: "raul",
-  name: "Raúl Méndez",
-  username: "raul",
-  email: "raul.mendez@zivelo.dev",
-  role: "Full Stack Developer",
+  id: "developer",
+  name: "Developer",
+  username: "developer",
+  email: "developer@zipform.dev",
+  role: "Developer",
   type: "human",
-  avatarUrl:
-    "https://i.pinimg.com/736x/a1/8c/8b/a18c8b13eb8a48aa9cb4786ded38d591.jpg"
+  avatarUrl: ""
 };
 
 export const users: UserProfile[] = [currentUser, raulUser];
@@ -239,7 +237,7 @@ export const projects: TlozProject[] = [
     icon: "Sword",
     status: "active",
     type: "normal",
-    ownerId: "benji",
+    ownerId: "owner",
     startDate: "2026-06-01",
     createdAt: now,
     updatedAt: now
@@ -254,7 +252,7 @@ export const projects: TlozProject[] = [
     icon: "Sparkles",
     status: "active",
     type: "normal",
-    ownerId: "benji",
+    ownerId: "owner",
     startDate: "2026-06-08",
     createdAt: now,
     updatedAt: now
@@ -269,7 +267,7 @@ export const projects: TlozProject[] = [
     icon: "Shield",
     status: "planned",
     type: "normal",
-    ownerId: "benji",
+    ownerId: "owner",
     startDate: "2026-07-01",
     createdAt: now,
     updatedAt: now
@@ -285,7 +283,7 @@ export const questItems: TlozQuestItem[] = [
     icon: "Database",
     status: "locked",
     category: "tool",
-    ownerId: "benji",
+    ownerId: "owner",
     createdAt: now,
     updatedAt: now
   },
@@ -308,7 +306,7 @@ export const questItems: TlozQuestItem[] = [
     icon: "FileCheck",
     status: "unlocked",
     category: "document",
-    ownerId: "benji",
+    ownerId: "owner",
     acquiredAt: "2026-06-18",
     createdAt: now,
     updatedAt: now
@@ -324,7 +322,7 @@ export const missions: TlozMission[] = [
     icon: "LayoutDashboard",
     type: "main_quest",
     status: "now",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-core",
     seasonId: "season-1",
     episodeId: "episode-auth",
@@ -343,7 +341,7 @@ export const missions: TlozMission[] = [
     type: "exploration_quest",
     status: "now",
     conclusion: "Pendiente: el mock actual solo filtra localmente; falta command/search global.",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-growth",
     seasonId: "season-1",
     episodeId: "episode-auth",
@@ -361,7 +359,7 @@ export const missions: TlozMission[] = [
     icon: "Database",
     type: "main_quest",
     status: "next",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-core",
     seasonId: "season-1",
     episodeId: "episode-ops",
@@ -378,7 +376,7 @@ export const missions: TlozMission[] = [
     icon: "FileText",
     type: "side_quest",
     status: "next",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-ops",
     seasonId: "season-1",
     episodeId: "episode-ops",
@@ -395,7 +393,7 @@ export const missions: TlozMission[] = [
     icon: "Wrench",
     type: "farming_quest",
     status: "later",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-ops",
     seasonId: "season-1",
     progress: 8,
@@ -410,7 +408,7 @@ export const missions: TlozMission[] = [
     icon: "History",
     type: "exploration_quest",
     status: "later",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-growth",
     seasonId: "season-1",
     dueDate: "2026-08-04",
@@ -426,7 +424,7 @@ export const missions: TlozMission[] = [
     icon: "Copy",
     type: "main_quest",
     status: "now",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-core",
     seasonId: "season-1",
     episodeId: "episode-auth",
@@ -444,7 +442,7 @@ export const missions: TlozMission[] = [
     icon: "History",
     type: "exploration_quest",
     status: "next",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-growth",
     seasonId: "season-1",
     episodeId: "episode-ops",
@@ -461,7 +459,7 @@ export const missions: TlozMission[] = [
     icon: "Database",
     type: "side_quest",
     status: "later",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-core",
     seasonId: "season-1",
     episodeId: "episode-ops",
@@ -479,7 +477,7 @@ export const missions: TlozMission[] = [
     type: "side_quest",
     status: "completed",
     conclusion: "La guía base queda en español con Main Quest, Side Quest, Farming Quest, Exploration Quest e Inventory en English.",
-    ownerId: "benji",
+    ownerId: "owner",
     projectId: "project-growth",
     seasonId: "season-1",
     episodeId: "episode-auth",
@@ -552,7 +550,7 @@ export const resources: TlozResource[] = [
 export const userMissionStates: TlozUserMissionState[] = [
   {
     id: "state-active",
-    userId: "benji",
+    userId: "owner",
     missionId: "mission-dashboard",
     slot: "active_quest",
     createdAt: now,
@@ -560,7 +558,7 @@ export const userMissionStates: TlozUserMissionState[] = [
   },
   {
     id: "state-support",
-    userId: "benji",
+    userId: "owner",
     missionId: "mission-search",
     slot: "support_quest",
     createdAt: now,
@@ -568,7 +566,7 @@ export const userMissionStates: TlozUserMissionState[] = [
   },
   {
     id: "state-raul-active",
-    userId: "benji",
+    userId: "owner",
     missionId: "mission-wallet",
     slot: "active_quest",
     createdAt: now,
@@ -577,8 +575,8 @@ export const userMissionStates: TlozUserMissionState[] = [
 ];
 
 export const recentActivity = [
-  { user: "Raúl", action: "completó el item de Inventory", target: "Selected Provider", time: "hace 12 min", dotColor: "#1E8E5A" },
-  { user: "Benji", action: "movió", target: "Publicar dashboard operativo de TLOZ", time: "hace 1 h", dotColor: "#D72228" },
-  { user: "Raúl", action: "creó la Mission", target: "Integrar Wallet API", time: "hace 3 h", dotColor: "#7A4ED9" },
+  { user: "Developer", action: "completó el item de Inventory", target: "Selected Provider", time: "hace 12 min", dotColor: "#1E8E5A" },
+  { user: "Owner", action: "movió", target: "Publicar dashboard operativo de TLOZ", time: "hace 1 h", dotColor: "#D72228" },
+  { user: "Developer", action: "creó la Mission", target: "Integrar Wallet API", time: "hace 3 h", dotColor: "#7A4ED9" },
   { user: "Sistema", action: "Owner de", target: "Diseñar driver persistente de Missions", time: "ayer", dotColor: "#2D6CDF" }
 ];
