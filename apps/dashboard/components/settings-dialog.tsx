@@ -345,14 +345,6 @@ function ProfileSettings({
                                   {option.name}
                                 </span>
                               </div>
-                              <span
-                                className={cn(
-                                  "text-[11.5px]",
-                                  selected ? "font-bold text-zivelo" : "font-medium text-carbon/55"
-                                )}
-                              >
-                                {option.name}
-                              </span>
                             </button>
                           );
                         })}
