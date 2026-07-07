@@ -52,7 +52,7 @@ export function createMockDataClient(): ZipformDataClient {
       async list() {
         return [...users.filter((u) => u.type === "agent"), ...agentUsers];
       },
-      async create(input: AgentCreateInput) {
+      async create(input: AgentCreateInput, createdByUserId: string) {
         const now = new Date().toISOString();
         const user: UserProfile = {
           id: crypto.randomUUID(),
@@ -65,19 +65,20 @@ export function createMockDataClient(): ZipformDataClient {
           theme: "system"
         };
         agentUsers.push(user);
-        const apiKeyResult = await this.createApiKey(user.id, "default");
+        const apiKeyResult = await this.createApiKey(user.id, "default", createdByUserId);
         return { user, apiKey: apiKeyResult };
       },
       async listApiKeys(userId: string) {
         return apiKeysStore.filter((k) => k.userId === userId);
       },
-      async createApiKey(userId: string, name: string) {
+      async createApiKey(userId: string, name: string, createdByUserId: string) {
         const rawKey = `zaf_${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
         const keyPrefix = rawKey.slice(0, 12);
         const now = new Date().toISOString();
         const apiKey: ApiKey = {
           id: crypto.randomUUID(),
           userId,
+          createdByUserId,
           name,
           keyPrefix,
           createdAt: now,

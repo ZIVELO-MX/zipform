@@ -18,6 +18,10 @@ security:
 tags:
   - name: Users
     description: Read-only access to user profile data (no passwords or sessions).
+  - name: Agents
+    description: Automated agent accounts that act on behalf of the platform.
+  - name: API Keys
+    description: API key management for agent authentication.
   - name: Projects
     description: Read-only access to TLOZ project metadata.
   - name: Missions
@@ -335,6 +339,168 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+  /agents:
+    get:
+      operationId: listAgents
+      summary: List or find agent accounts
+      description: Returns all user profiles where type=agent. These are non-human accounts used for automation.
+      tags: [Agents]
+      responses:
+        "200":
+          description: Agent list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createAgent
+      summary: Create a new agent account
+      description: Creates a non-human user with type=agent and a default API key.
+      tags: [Agents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, username, email]
+              properties:
+                name:
+                  type: string
+                username:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                role:
+                  type: string
+                  default: "agent:operative"
+      responses:
+        "201":
+          description: Agent created with default API key.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user, apiKey]
+                properties:
+                  user:
+                    $ref: "#/components/schemas/User"
+                  apiKey:
+                    $ref: "#/components/schemas/ApiKeyCreateResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /agents/{agentId}/api-keys:
+    get:
+      operationId: listAgentApiKeys
+      summary: List API keys for an agent
+      tags: [API Keys]
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: API keys for the agent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ApiKey"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createAgentApiKey
+      summary: Create a new API key for an agent
+      description: Generates a new zaf_-prefixed key. The raw key is returned only once.
+      tags: [API Keys]
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+      responses:
+        "201":
+          description: API key created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreateResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /agents/{agentId}/api-keys/{keyId}:
+    delete:
+      operationId: revokeAgentApiKey
+      summary: Revoke (delete) an API key
+      tags: [API Keys]
+      parameters:
+        - name: agentId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "204":
+          description: Key revoked; no body returned.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
 components:
   securitySchemes:
     sessionCookie:
@@ -411,7 +577,7 @@ components:
     User:
       type: object
       additionalProperties: false
-      required: [id, name, username, email, role, avatarUrl]
+      required: [id, name, username, email, role, type, avatarUrl]
       properties:
         id:
           type: string
@@ -424,9 +590,54 @@ components:
           format: email
         role:
           type: string
+        type:
+          type: string
+          enum: [human, agent]
         avatarUrl:
           type: string
           format: uri
+        theme:
+          type: string
+          enum: [system, light, dark]
+
+    ApiKey:
+      type: object
+      additionalProperties: false
+      required: [id, userId, createdByUserId, name, keyPrefix, createdAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        createdByUserId:
+          type: string
+        name:
+          type: string
+        keyPrefix:
+          type: string
+        lastUsedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApiKeyCreateResult:
+      type: object
+      additionalProperties: false
+      required: [key, apiKey]
+      properties:
+        key:
+          type: string
+          description: "Raw API key (shown only once, begins with zaf_)"
+        apiKey:
+          $ref: "#/components/schemas/ApiKey"
     UserListResponse:
       type: object
       additionalProperties: false

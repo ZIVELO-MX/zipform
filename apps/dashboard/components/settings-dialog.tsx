@@ -17,7 +17,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -39,7 +39,9 @@ import {
   cn,
   toast,
 } from "@zipform/ui";
-import type { UserProfile } from "@zipform/types";
+import type { ApiKey, UserProfile } from "@zipform/types";
+import { createAgentApiKey, listAgentApiKeys, listAgents, revokeAgentApiKey } from "../lib/settings-actions";
+import type { CreateApiKeyResult } from "../lib/settings-actions";
 import { updateProfile } from "../lib/settings-actions";
 
 type SettingsSection = "profile" | "security";
@@ -183,7 +185,7 @@ export function SettingsDialog({
                 onCancel={handleCancel}
               />
             ) : (
-              <SecuritySettings />
+              <SecuritySettings currentUser={user} />
             )}
           </main>
         </div>
@@ -441,12 +443,27 @@ function ProfileSettings({
   );
 }
 
-function SecuritySettings() {
+function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
   const [keyName, setKeyName] = useState("Zibot production key");
   const [agent, setAgent] = useState("zibot");
-  const [apiKeys, setApiKeys] = useState<Array<{ id: string; name: string; agent: string; token: string }>>([]);
-  const [createdKey, setCreatedKey] = useState<{ id: string; name: string; agent: string; token: string } | null>(null);
+  const [agents, setAgents] = useState<UserProfile[]>([]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [createdKey, setCreatedKey] = useState<CreateApiKeyResult | null>(null);
   const [keyPopoverOpen, setKeyPopoverOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    listAgents().then(setAgents).catch(() => toast.error("Error al cargar agents"));
+  }, []);
+
+  useEffect(() => {
+    if (!agent) return;
+    listAgentApiKeys(agent).then(setApiKeys).catch(() => toast.error("Error al cargar API keys"));
+  }, [agent]);
+
+  const agentOptions = agents.map((a) => ({ id: a.id, name: a.name, username: a.username, avatarUrl: a.avatarUrl }));
+
+  const selectedAgentName = agents.find((a) => a.id === agent)?.name ?? agent;
 
   return (
     <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]">
@@ -471,7 +488,7 @@ function SecuritySettings() {
             </Field>
             <Field className="gap-1.5">
               <FieldLabel className="text-xs font-semibold text-[#454543]">Agente</FieldLabel>
-              <UserPicker users={agents} value={agent} onValueChange={setAgent} label="Agente" />
+              <UserPicker users={agentOptions} value={agent} onValueChange={setAgent} label="Agente" />
             </Field>
           </FieldGroup>
 
@@ -488,7 +505,7 @@ function SecuritySettings() {
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] font-semibold text-carbon">{key.name}</span>
-                      <span className="block truncate font-mono text-[11px] text-carbon/45">{key.agent} · {key.token}••••</span>
+                      <span className="block truncate font-mono text-[11px] text-carbon/45">{key.keyPrefix}••••</span>
                     </span>
                     <Button
                       type="button"
@@ -496,13 +513,18 @@ function SecuritySettings() {
                       size="icon-xs"
                       aria-label={`Eliminar ${key.name}`}
                       className="shrink-0 rounded-full text-carbon/45 hover:text-zivelo"
-                      onClick={() => {
-                        setApiKeys((current) => current.filter((k) => k.id !== key.id));
-                        if (createdKey?.id === key.id) {
-                          setCreatedKey(null);
-                          setKeyPopoverOpen(false);
+                      onClick={async () => {
+                        try {
+                          await revokeAgentApiKey(key.id);
+                          setApiKeys((current) => current.filter((k) => k.id !== key.id));
+                          if (createdKey?.apiKey.id === key.id) {
+                            setCreatedKey(null);
+                            setKeyPopoverOpen(false);
+                          }
+                          toast.success("API key eliminada");
+                        } catch {
+                          toast.error("Error al eliminar API key");
                         }
-                        toast.success("API key eliminada");
                       }}
                     >
                       <Trash2 className="size-3.5" aria-hidden="true" />
@@ -527,17 +549,24 @@ function SecuritySettings() {
               type="button"
               size="sm"
               className="h-[38px] rounded-[11px] text-[13px]"
-              onClick={() => {
-                const suffix = Math.random().toString(16).slice(2, 8);
-                const nextKey = { id: crypto.randomUUID(), name: keyName.trim() || "API key", agent, token: `zaf_${suffix}f2a19e77c4b9a3` };
-                setApiKeys((current) => [nextKey, ...current]);
-                setCreatedKey(nextKey);
-                setKeyPopoverOpen(true);
-                toast.success("API key creada");
+              disabled={pending || !agent}
+              onClick={async () => {
+                setPending(true);
+                try {
+                  const result = await createAgentApiKey(agent, keyName.trim() || "API key");
+                  setApiKeys((current) => [result.apiKey, ...current]);
+                  setCreatedKey(result);
+                  setKeyPopoverOpen(true);
+                  toast.success("API key creada");
+                } catch {
+                  toast.error("Error al crear API key");
+                } finally {
+                  setPending(false);
+                }
               }}
             >
               <KeyRound className="size-3.5" aria-hidden="true" />
-              Crear API key
+              {pending ? "Creando…" : "Crear API key"}
             </Button>
           </PopoverTrigger>
           <PopoverContent align="end" side="top" className="z-50 w-[min(360px,calc(100vw-32px))] rounded-[18px] p-4">
@@ -546,9 +575,9 @@ function SecuritySettings() {
               <PopoverDescription>Cópiala ahora. Después no volverá a mostrarse completa.</PopoverDescription>
             </PopoverHeader>
             <div className="mt-3 rounded-xl border border-carbon/10 bg-[#FAFAF9] p-3">
-              <p className="m-0 text-[11px] font-bold uppercase tracking-[0.04em] text-carbon/45">{createdKey?.name ?? "API key"}</p>
+              <p className="m-0 text-[11px] font-bold uppercase tracking-[0.04em] text-carbon/45">{createdKey?.apiKey.name ?? "API key"}</p>
               <code className="mt-2 block overflow-x-auto whitespace-nowrap font-mono text-[12px] text-carbon">
-                {createdKey?.token ?? ""}
+                {createdKey?.key ?? ""}
               </code>
             </div>
             <div className="mt-4 flex justify-end gap-2">
@@ -560,7 +589,7 @@ function SecuritySettings() {
                 size="sm"
                 className="h-9 rounded-[10px] text-[13px]"
                 disabled={!createdKey}
-                onClick={() => createdKey ? copyText(createdKey.token) : undefined}
+                onClick={() => createdKey ? copyText(createdKey.key) : undefined}
               >
                 <Copy className="size-3.5" aria-hidden="true" />
                 Copiar

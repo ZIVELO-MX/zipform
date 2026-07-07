@@ -47,6 +47,7 @@ export type UserProfile = {
 export type ApiKey = {
   id: string;
   userId: string;
+  createdByUserId: string;
   name: string;
   keyPrefix: string;
   lastUsedAt?: string;

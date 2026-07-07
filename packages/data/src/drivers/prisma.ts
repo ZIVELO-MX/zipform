@@ -75,6 +75,7 @@ function mapUser(user: {
 function mapApiKey(key: {
   id: string;
   userId: string;
+  createdByUserId: string;
   name: string;
   keyPrefix: string;
   keyHash: string;
@@ -86,6 +87,7 @@ function mapApiKey(key: {
   return {
     id: key.id,
     userId: key.userId,
+    createdByUserId: key.createdByUserId,
     name: key.name,
     keyPrefix: key.keyPrefix,
     lastUsedAt: key.lastUsedAt?.toISOString() ?? undefined,
@@ -419,7 +421,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const rows = await prisma.user.findMany({ where: { type: "agent" }, orderBy: { name: "asc" } });
         return rows.map(mapUser);
       },
-      async create(input: AgentCreateInput) {
+      async create(input: AgentCreateInput, createdByUserId: string) {
         const id = crypto.randomUUID();
         const now = new Date();
         const user = await prisma.user.create({
@@ -435,14 +437,14 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
             updatedAt: now
           }
         });
-        const apiKeyResult = await this.createApiKey(id, "default");
+        const apiKeyResult = await this.createApiKey(id, "default", createdByUserId);
         return { user: mapUser(user), apiKey: apiKeyResult };
       },
       async listApiKeys(userId: string) {
         const rows = await prisma.apiKey.findMany({ where: { userId }, orderBy: { createdAt: "asc" } });
         return rows.map(mapApiKey);
       },
-      async createApiKey(userId: string, name: string) {
+      async createApiKey(userId: string, name: string, createdByUserId: string) {
         const rawKey = generateApiKey();
         const keyHash = hashApiKey(rawKey);
         const keyPrefix = rawKey.slice(0, 12);
@@ -451,6 +453,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           data: {
             id: crypto.randomUUID(),
             userId,
+            createdByUserId,
             name,
             keyPrefix,
             keyHash,

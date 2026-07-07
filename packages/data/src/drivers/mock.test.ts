@@ -100,8 +100,8 @@ describe("mock data driver", () => {
 
   it("supports agent authentication and mission assignment", async () => {
     const client = createMockDataClient();
-    const agent = await client.agent.create({ name: "TestAgent", username: "testagent", email: "agent@test.com", role: "agent:operative" });
-    const keyResult = await client.agent.createApiKey(agent.user.id, "test-key");
+    const agent = await client.agent.create({ name: "TestAgent", username: "testagent", email: "agent@test.com", role: "agent:operative" }, "owner");
+    const keyResult = await client.agent.createApiKey(agent.user.id, "test-key", "owner");
     const authenticated = await client.agent.authenticateWithApiKey(keyResult.key);
     expect(authenticated?.id).toBe(agent.user.id);
     expect(authenticated?.type).toBe("agent");
@@ -116,7 +116,7 @@ describe("mock data driver", () => {
     const client = createMockDataClient();
     const mission = missions[0];
     const agentUser = (await client.agent.list()).find((u) => u.type === "agent")
-      ?? (await client.agent.create({ name: "Bot", username: "bot", email: "bot@test.com", role: "agent:operative" })).user;
+      ?? (await client.agent.create({ name: "Bot", username: "bot", email: "bot@test.com", role: "agent:operative" }, "owner")).user;
 
     const completed = await client.tloz.patchMissionStatus(mission.id, "completed");
     expect(completed.status).toBe("completed");

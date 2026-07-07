@@ -186,9 +186,9 @@ export type ZipformDataClient = {
   };
   agent: {
     list(): Promise<UserProfile[]>;
-    create(input: AgentCreateInput): Promise<{ user: UserProfile; apiKey: ApiKeyCreateResult }>;
+    create(input: AgentCreateInput, createdByUserId: string): Promise<{ user: UserProfile; apiKey: ApiKeyCreateResult }>;
     listApiKeys(userId: string): Promise<ApiKey[]>;
-    createApiKey(userId: string, name: string): Promise<ApiKeyCreateResult>;
+    createApiKey(userId: string, name: string, createdByUserId: string): Promise<ApiKeyCreateResult>;
     revokeApiKey(keyId: string): Promise<void>;
     authenticateWithApiKey(key: string): Promise<UserProfile | null>;
   };

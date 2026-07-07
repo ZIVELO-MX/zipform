@@ -166,11 +166,23 @@ export const raulUser: UserProfile = {
   theme: "system"
 };
 
-export const users: UserProfile[] = [currentUser, raulUser];
+export const zibotUser: UserProfile = {
+  id: "zibot",
+  name: "Zibot",
+  username: "zibot",
+  email: "zibot@zipform.dev",
+  role: "agent:operative",
+  type: "agent",
+  avatarUrl: "",
+  theme: "system"
+};
+
+export const users: UserProfile[] = [currentUser, raulUser, zibotUser];
 
 export type AgentApiKeySeed = {
   id: string;
   userId: string;
+  createdByUserId: string;
   name: string;
   keyPrefix: string;
   rawKey: string;
@@ -178,7 +190,18 @@ export type AgentApiKeySeed = {
   updatedAt: string;
 };
 
-export const agentApiKeys: AgentApiKeySeed[] = [];
+export const agentApiKeys: AgentApiKeySeed[] = [
+  {
+    id: "api-key-zibot-default",
+    userId: "zibot",
+    createdByUserId: "owner",
+    name: "Zibot default key",
+    keyPrefix: "zaf_zibot_def",
+    rawKey: "zaf_zibot_default_development_key_do_not_use_in_production_0000",
+    createdAt: now,
+    updatedAt: now
+  }
+];
 
 export const metrics: PlatformMetric[] = [
   { label: "Current version", value: "1.0", tone: "good" },
