@@ -337,10 +337,10 @@ function ProfileSettings({
                                 )}
                                 <span
                                   className={cn(
-                                    "cfg-av-tip pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 translate-y-[-4px] whitespace-nowrap rounded-md bg-carbon px-2 py-[3px] text-[11px] font-medium text-white opacity-0 transition-all duration-[.16s]",
+                                    "cfg-av-tip pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 translate-y-[4px] whitespace-nowrap rounded-md bg-carbon px-2 py-[3px] text-[11px] font-medium text-white opacity-0 transition-all duration-[.16s]",
                                     "group-hover:translate-y-0 group-hover:opacity-100"
                                   )}
-                                  style={{ bottom: "-30px" }}
+                                  style={{ top: "-34px" }}
                                 >
                                   {option.name}
                                 </span>
