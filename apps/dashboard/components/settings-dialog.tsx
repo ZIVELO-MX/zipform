@@ -70,7 +70,12 @@ const avatars = [
 const agents = [{ id: "zibot", name: "zibot", username: "zibot" }];
 
 function findAvatar(emoji: string) {
+  if (!emoji) return null;
   return avatars.find((a) => a.emoji === emoji) ?? avatars[1];
+}
+
+function isEmoji(str: string) {
+  return /^\p{Extended_Pictographic}/u.test(str);
 }
 
 export function SettingsDialog({
@@ -86,7 +91,7 @@ export function SettingsDialog({
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
   const [theme, setTheme] = useState<ThemeValue>(user.theme || "system");
-  const [avatarEmoji, setAvatarEmoji] = useState(user.avatarUrl || "🦊");
+  const [avatarEmoji, setAvatarEmoji] = useState(user.avatarUrl && isEmoji(user.avatarUrl) ? user.avatarUrl : "");
   const [avatarSearch, setAvatarSearch] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -95,7 +100,7 @@ export function SettingsDialog({
     a.name.toLocaleLowerCase("es").includes(avatarSearch.trim().toLocaleLowerCase("es"))
   );
 
-  const hasChanges = name !== user.name || username !== user.username || theme !== (user.theme || "system") || avatarEmoji !== (user.avatarUrl || "🦊");
+  const hasChanges = name !== user.name || username !== user.username || theme !== (user.theme || "system") || avatarEmoji !== (user.avatarUrl && isEmoji(user.avatarUrl) ? user.avatarUrl : "");
 
   const handleSave = useCallback(() => {
     startTransition(async () => {
@@ -113,7 +118,7 @@ export function SettingsDialog({
     setName(user.name);
     setUsername(user.username);
     setTheme(user.theme || "system");
-    setAvatarEmoji(user.avatarUrl || "🦊");
+    setAvatarEmoji(user.avatarUrl && isEmoji(user.avatarUrl) ? user.avatarUrl : "");
     onOpenChange(false);
   }, [onOpenChange, user]);
 
@@ -205,7 +210,7 @@ function ProfileSettings({
   onSave,
   onCancel,
 }: {
-  avatar: { key: string; name: string; emoji: string; background: string };
+  avatar: { key: string; name: string; emoji: string; background: string } | null;
   avatarSearch: string;
   filteredAvatars: typeof avatars;
   name: string;
@@ -222,21 +227,34 @@ function ProfileSettings({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const [avatarPopoverOpen, setAvatarPopoverOpen] = useState(false);
+  const initials = name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
   return (
     <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]">
       <div className="flex min-h-0 flex-col items-center overflow-y-auto px-5 py-[22px]">
         <div className="flex w-full max-w-[360px] flex-col gap-5">
           <div className="flex items-center gap-4">
             <Avatar className="size-[72px] rounded-full shadow-[0_6px_16px_rgba(29,29,27,0.14)]">
-              <AvatarFallback className="text-2xl" style={{ backgroundColor: avatar.background }}>
-                {avatar.emoji}
-              </AvatarFallback>
+              {avatar ? (
+                <AvatarFallback className="text-2xl" style={{ backgroundColor: avatar.background }}>
+                  {avatar.emoji}
+                </AvatarFallback>
+              ) : (
+                <AvatarFallback className="bg-carbon text-lg font-semibold text-white">
+                  {initials}
+                </AvatarFallback>
+              )}
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="mb-[7px] mt-0 text-xs font-bold uppercase tracking-[0.05em] text-[#9a9a98]">
-                Avatar · {avatar.name}
+                Avatar · {avatar ? avatar.name : "Sin avatar"}
               </p>
-              <Popover>
+              <Popover open={avatarPopoverOpen} onOpenChange={setAvatarPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]">
                     <Pencil className="size-3.5" aria-hidden="true" />
@@ -259,13 +277,13 @@ function ProfileSettings({
                   </div>
                   <div className="mt-4 grid max-h-[300px] grid-cols-4 gap-x-3 gap-y-4 overflow-auto pr-1">
                     {filteredAvatars.map((option) => {
-                      const selected = option.key === avatar.key;
+                      const selected = !!avatar && option.key === avatar.key;
                       return (
                         <button
                           key={option.key}
                           type="button"
                           className="flex min-w-0 flex-col items-center gap-2 rounded-xl p-1 text-center transition-colors hover:bg-carbon/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/25"
-                          onClick={() => onAvatarChange(option.emoji)}
+                          onClick={() => { onAvatarChange(option.emoji); setAvatarPopoverOpen(false); }}
                         >
                           <span
                             className={cn(
@@ -335,28 +353,28 @@ function ProfileSettings({
         </div>
       </div>
 
-      {hasChanges ? (
-        <footer className="flex flex-col gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[15px] sm:flex-row sm:items-center sm:justify-between">
-          <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-zivelo">
+      <footer className="flex flex-col gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[15px] sm:flex-row sm:items-center">
+        {hasChanges ? (
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-zivelo sm:mr-auto">
             <span className="size-[7px] rounded-full bg-zivelo" aria-hidden="true" />
             Cambios sin guardar
           </span>
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" size="sm" className="h-[38px] flex-1 rounded-[11px] bg-white text-[13px] sm:flex-none" onClick={onCancel}>
-              <X className="size-3.5" aria-hidden="true" />
-              Cancelar
-            </Button>
-            <Button type="button" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending} onClick={onSave}>
-              {pending ? (
-                <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              ) : (
-                <Check className="size-3.5" />
-              )}
-              {pending ? "Guardando..." : "Guardar cambios"}
-            </Button>
-          </div>
-        </footer>
-      ) : null}
+        ) : null}
+        <div className="flex gap-2 sm:ml-auto">
+          <Button type="button" variant="outline" size="sm" className="h-[38px] flex-1 rounded-[11px] bg-white text-[13px] sm:flex-none" onClick={onCancel}>
+            <X className="size-3.5" aria-hidden="true" />
+            Cancelar
+          </Button>
+          <Button type="button" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending} onClick={onSave}>
+            {pending ? (
+              <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            ) : (
+              <Check className="size-3.5" />
+            )}
+            {pending ? "Guardando..." : "Guardar cambios"}
+          </Button>
+        </div>
+      </footer>
     </div>
   );
 }
