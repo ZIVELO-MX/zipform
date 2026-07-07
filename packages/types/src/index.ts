@@ -41,6 +41,7 @@ export type UserProfile = {
   role: string;
   type: UserType;
   avatarUrl: string;
+  theme: "system" | "light" | "dark";
 };
 
 export type ApiKey = {

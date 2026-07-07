@@ -6,6 +6,7 @@ model User {
   role              String
   type              String                 @default("human")
   avatarUrl         String
+  theme             String                 @default("system")
   passwordHash      String?
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt

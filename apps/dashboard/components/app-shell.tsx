@@ -24,6 +24,7 @@ import {
 import { Suspense, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { resolveMissionIcon } from "./tloz/tloz-utils";
 import { projectHref } from "../lib/tloz-routes";
+import { SettingsDialog } from "./settings-dialog";
 
 type AppShellProps = {
   children: ReactNode;
@@ -107,6 +108,7 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(284);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const tlozSections = useMemo(
     () => buildTlozSections(tlozProjects ?? [], projectActiveCounts ?? new Map()),
@@ -193,6 +195,7 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
         onResize={handleResize}
         onToggleCollapsed={() => setCollapsed((current) => !current)}
         onSignOut={() => signOut({ callbackUrl: "/login" })}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <main className={`main-surface min-w-0${isTloz ? " tloz-main-surface" : ""}`}>{children}</main>
@@ -206,7 +209,10 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
         contextItem={isTloz ? tlozContextItem : undefined}
         onClose={() => setMobileMenuOpen(false)}
         onSignOut={() => signOut({ callbackUrl: "/login" })}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} />
 
           {!isTloz ? <div className="fixed inset-x-0 top-0 z-20 flex h-12 items-center border-b border-carbon/10 bg-paper/90 backdrop-blur md:hidden">
         <button

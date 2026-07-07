@@ -26,6 +26,14 @@
 - Every new feature must include automated tests.
 - Follow the project's `error-handling-patterns` when writing tests.
 
+## UI Guidelines
+
+- Use the TLOZ interface as the baseline for product UI typography and density.
+- Prefer compact text: `font-bold` and `font-semibold`, with most UI text between 11px and 15px.
+- Keep surfaces, controls, and rows compact; avoid tall marketing-style layouts for app screens.
+- Keep copy short and functional. Do not add explanatory text unless it directly supports the workflow.
+- Navigation inside app panels should be simple and direct, using only the labels needed for orientation.
+
 ### Pull Requests
 
 - Create the PR automatically when the task is complete.
