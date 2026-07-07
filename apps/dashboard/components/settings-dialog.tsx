@@ -335,26 +335,28 @@ function ProfileSettings({
         </div>
       </div>
 
-      <footer className="flex flex-col gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[15px] sm:flex-row sm:items-center sm:justify-between">
-        <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-zivelo">
-          <span className="size-[7px] rounded-full bg-zivelo" aria-hidden="true" />
-          Cambios sin guardar
-        </span>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" className="h-[38px] flex-1 rounded-[11px] bg-white text-[13px] sm:flex-none" onClick={onCancel}>
-            <X className="size-3.5" aria-hidden="true" />
-            Cancelar
-          </Button>
-          <Button type="button" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending || !hasChanges} onClick={onSave}>
-            {pending ? (
-              <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-            ) : (
-              <Check className="size-3.5" />
-            )}
-            {pending ? "Guardando..." : "Guardar cambios"}
-          </Button>
-        </div>
-      </footer>
+      {hasChanges ? (
+        <footer className="flex flex-col gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[15px] sm:flex-row sm:items-center sm:justify-between">
+          <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-zivelo">
+            <span className="size-[7px] rounded-full bg-zivelo" aria-hidden="true" />
+            Cambios sin guardar
+          </span>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" className="h-[38px] flex-1 rounded-[11px] bg-white text-[13px] sm:flex-none" onClick={onCancel}>
+              <X className="size-3.5" aria-hidden="true" />
+              Cancelar
+            </Button>
+            <Button type="button" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending} onClick={onSave}>
+              {pending ? (
+                <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              ) : (
+                <Check className="size-3.5" />
+              )}
+              {pending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </div>
+        </footer>
+      ) : null}
     </div>
   );
 }

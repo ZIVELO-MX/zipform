@@ -162,7 +162,7 @@ export const raulUser: UserProfile = {
   email: "developer@zipform.dev",
   role: "Developer",
   type: "human",
-  avatarUrl: "👨‍💻",
+  avatarUrl: "⚔️",
   theme: "system"
 };
 
