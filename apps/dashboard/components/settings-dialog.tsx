@@ -128,7 +128,7 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Configuración" className="h-[min(680px,calc(100dvh-96px))] max-w-[620px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0">
+      <DialogContent title="Configuración" className="grid h-[min(680px,calc(100dvh-96px))] max-w-[620px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 md:grid-rows-[minmax(0,1fr)]">
         <header className="flex items-center justify-between border-b border-carbon/[0.08] px-5 py-[17px] md:hidden">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-tintred text-zivelo">
@@ -141,7 +141,7 @@ export function SettingsDialog({
           </Button>
         </header>
 
-        <div className="grid min-h-0 grid-cols-1 bg-[#FCFCFB] md:grid-cols-[142px_minmax(0,1fr)]">
+        <div className="grid h-full min-h-0 grid-cols-1 bg-[#FCFCFB] md:grid-cols-[142px_minmax(0,1fr)]">
           <aside className="border-b border-carbon/[0.08] bg-[#FAFAF9] p-2.5 md:border-b-0 md:border-r md:pt-5">
             <nav className="flex gap-2 md:flex-col" aria-label="Secciones de configuración">
               {sections.map((item) => {
