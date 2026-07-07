@@ -35,10 +35,6 @@ import {
   PopoverTitle,
   PopoverTrigger,
   Separator,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
   UserPicker,
   cn,
   toast,
@@ -231,7 +227,9 @@ function ProfileSettings({
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const [avatarPopoverOpen, setAvatarPopoverOpen] = useState(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [avatarTempKey, setAvatarTempKey] = useState(avatar?.key ?? avatars[0].key);
+  const tempAvatar = avatars.find((a) => a.key === avatarTempKey);
   const initials = name
     .split(" ")
     .map((part) => part[0])
@@ -258,72 +256,133 @@ function ProfileSettings({
               <p className="mb-[7px] mt-0 text-xs font-bold uppercase tracking-[0.05em] text-[#9a9a98]">
                 Avatar · {avatar ? avatar.name : "Sin avatar"}
               </p>
-              <Popover open={avatarPopoverOpen} onOpenChange={setAvatarPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]">
-                    <Pencil className="size-3.5" aria-hidden="true" />
-                    Cambiar avatar
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-[min(420px,calc(100vw-32px))] rounded-[18px] p-4">
-                  <PopoverHeader>
-                    <PopoverTitle>Elegir avatar</PopoverTitle>
-                    <PopoverDescription>Selecciona una imagen para tu perfil.</PopoverDescription>
-                  </PopoverHeader>
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-carbon/40" aria-hidden="true" />
-                    <Input
-                      value={avatarSearch}
-                      onChange={(event) => onAvatarSearchChange(event.target.value)}
-                      placeholder="Buscar avatar..."
-                      className="h-10 pl-9"
-                    />
+              <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]" onClick={() => { setAvatarTempKey(avatar?.key ?? avatars[0].key); setAvatarPickerOpen(true); }}>
+                <Pencil className="size-3.5" aria-hidden="true" />
+                Cambiar avatar
+              </Button>
+
+              {/* Avatar picker overlay */}
+              <div
+                className={cn(
+                  "fixed inset-0 z-[60] flex items-center justify-center bg-carbon/30 backdrop-blur-sm p-6 transition-all duration-200",
+                  avatarPickerOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                )}
+                onClick={() => setAvatarPickerOpen(false)}
+              >
+                <div
+                  className={cn(
+                    "flex w-[460px] max-w-full flex-col overflow-hidden rounded-[18px] border border-carbon/10 bg-paper shadow-[0_32px_80px_rgba(29,29,27,0.32)] transition-all duration-200",
+                    avatarPickerOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
+                  )}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Header */}
+                  <div className="flex items-start justify-between px-5 pb-[6px] pt-[17px]">
+                    <div>
+                      <h3 className="m-0 text-base font-bold">Elegir avatar</h3>
+                      <p className="m-0 mt-1 text-[12.5px] text-carbon/55">Selecciona una imagen para tu perfil.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setAvatarPickerOpen(false)}
+                      className="grid size-8 shrink-0 place-items-center rounded-full border border-carbon/12 bg-white text-carbon/55 transition-colors hover:border-zivelo hover:text-zivelo"
+                      aria-label="Cerrar"
+                    >
+                      <X className="size-4" />
+                    </button>
                   </div>
-                  <TooltipProvider>
-                    <div className="mt-4 grid max-h-[300px] grid-cols-4 gap-2 overflow-auto pr-1">
-                      {filteredAvatars.map((option) => {
-                        const selected = !!avatar && option.key === avatar.key;
-                        return (
-                          <Tooltip key={option.key}>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
+
+                  {/* Search */}
+                  <div className="px-5 py-3">
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-carbon/40" />
+                      <Input
+                        value={avatarSearch}
+                        onChange={(event) => onAvatarSearchChange(event.target.value)}
+                        placeholder="Buscar avatar..."
+                        className="h-10 pl-9"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Grid */}
+                  <div className="max-h-[300px] min-h-[150px] flex-1 overflow-y-auto px-5 pb-2">
+                    {filteredAvatars.length > 0 ? (
+                      <div className="grid grid-cols-4 gap-x-3 gap-y-4 py-2">
+                        {filteredAvatars.map((option) => {
+                          const selected = option.key === avatarTempKey;
+                          return (
+                            <button
+                              key={option.key}
+                              type="button"
+                              className="group relative flex flex-col items-center gap-[7px] border-none bg-transparent p-0 outline-none"
+                              onClick={() => setAvatarTempKey(option.key)}
+                            >
+                              <div
                                 className={cn(
-                                  "group relative grid aspect-square place-items-center rounded-xl transition-colors",
-                                  "hover:bg-carbon/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/25",
-                                  selected && "bg-carbon/[0.06]"
+                                  "relative size-[66px] rounded-full border-[2.5px] transition-all duration-[.16s]",
+                                  selected
+                                    ? "border-zivelo shadow-[0_0_0_3px_rgba(215,34,40,0.18)]"
+                                    : "border-carbon/10 shadow-[0_2px_8px_rgba(29,29,27,0.10)] group-hover:border-zivelo/50"
                                 )}
-                                onClick={() => { onAvatarChange(option.emoji); setAvatarPopoverOpen(false); }}
+                                style={{ backgroundColor: option.background }}
                               >
-                                <span
-                                  className={cn(
-                                    "grid size-[42px] place-items-center rounded-full text-lg shadow-[0_2px_8px_rgba(29,29,27,0.10)] transition-shadow",
-                                    selected ? "ring-2 ring-zivelo ring-offset-2" : ""
-                                  )}
-                                  style={{ backgroundColor: option.background }}
-                                >
+                                <span className="flex size-full items-center justify-center text-[27px]">
                                   {option.emoji}
                                 </span>
-                                {selected ? (
-                                  <span className="absolute right-2 top-2 grid size-[18px] place-items-center rounded-full bg-zivelo text-white">
-                                    <Check className="size-2.5" aria-hidden="true" />
+                                {selected && (
+                                  <span className="absolute -right-[5px] -top-[5px] grid size-[22px] place-items-center rounded-full bg-zivelo text-white ring-2 ring-paper">
+                                    <Check className="size-3" aria-hidden="true" />
                                   </span>
-                                ) : null}
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">{option.name}</TooltipContent>
-                          </Tooltip>
-                        );
-                      })}
+                                )}
+                                <span
+                                  className={cn(
+                                    "cfg-av-tip pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 translate-y-[-4px] whitespace-nowrap rounded-md bg-carbon px-2 py-[3px] text-[11px] font-medium text-white opacity-0 transition-all duration-[.16s]",
+                                    "group-hover:translate-y-0 group-hover:opacity-100"
+                                  )}
+                                  style={{ bottom: "-30px" }}
+                                >
+                                  {option.name}
+                                </span>
+                              </div>
+                              <span
+                                className={cn(
+                                  "text-[11.5px]",
+                                  selected ? "font-bold text-zivelo" : "font-medium text-carbon/55"
+                                )}
+                              >
+                                {option.name}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center gap-[10px] py-[38px] text-center">
+                        <span className="grid size-11 place-items-center rounded-xl bg-carbon/5 text-carbon/45">
+                          <Search className="size-5" />
+                        </span>
+                        <div className="text-[13.5px] font-medium text-carbon/55">No se encontraron avatares.</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[14px]">
+                    <span className="text-[12.5px] text-carbon/55">
+                      Seleccionado: <b className="font-bold text-carbon">{tempAvatar?.name ?? ""}</b>
+                    </span>
+                    <div className="flex gap-[9px]">
+                      <Button type="button" variant="outline" size="sm" className="h-[38px] rounded-[11px] bg-white px-[15px] text-[13px]" onClick={() => setAvatarPickerOpen(false)}>
+                        Cancelar
+                      </Button>
+                      <Button type="button" size="sm" className="h-[38px] rounded-[11px] px-[17px] text-[13px] shadow-[0_10px_22px_rgba(215,34,40,0.20)]" onClick={() => { const s = avatars.find((a) => a.key === avatarTempKey); if (s) onAvatarChange(s.emoji); setAvatarPickerOpen(false); }}>
+                        Usar avatar
+                      </Button>
                     </div>
-                  </TooltipProvider>
-                  {filteredAvatars.length === 0 ? (
-                    <p className="m-0 mt-3 rounded-xl border border-dashed border-carbon/15 p-5 text-center text-sm text-carbon/55">
-                      No se encontraron avatares.
-                    </p>
-                  ) : null}
-                </PopoverContent>
-              </Popover>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
