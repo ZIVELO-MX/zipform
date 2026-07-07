@@ -35,6 +35,10 @@ import {
   PopoverTitle,
   PopoverTrigger,
   Separator,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
   UserPicker,
   cn,
   toast,
@@ -100,19 +104,19 @@ export function SettingsDialog({
     a.name.toLocaleLowerCase("es").includes(avatarSearch.trim().toLocaleLowerCase("es"))
   );
 
-  const hasChanges = name !== user.name || username !== user.username || theme !== (user.theme || "system") || avatarEmoji !== (user.avatarUrl && isEmoji(user.avatarUrl) ? user.avatarUrl : "");
+  const hasChanges = name !== user.name || username !== user.username || theme !== (user.theme || "system");
 
   const handleSave = useCallback(() => {
     startTransition(async () => {
       try {
-        await updateProfile({ name, username, theme, avatarUrl: avatarEmoji });
+        await updateProfile({ name, username, theme });
         toast.success("Perfil actualizado");
         onOpenChange(false);
       } catch {
         toast.error("Error al guardar los cambios");
       }
     });
-  }, [name, username, theme, avatarEmoji, onOpenChange]);
+  }, [name, username, theme, onOpenChange]);
 
   const handleCancel = useCallback(() => {
     setName(user.name);
@@ -275,37 +279,44 @@ function ProfileSettings({
                       className="h-10 pl-9"
                     />
                   </div>
-                  <div className="mt-4 grid max-h-[300px] grid-cols-4 gap-x-3 gap-y-4 overflow-auto pr-1">
-                    {filteredAvatars.map((option) => {
-                      const selected = !!avatar && option.key === avatar.key;
-                      return (
-                        <button
-                          key={option.key}
-                          type="button"
-                          className="flex min-w-0 flex-col items-center gap-2 rounded-xl p-1 text-center transition-colors hover:bg-carbon/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/25"
-                          onClick={() => { onAvatarChange(option.emoji); setAvatarPopoverOpen(false); }}
-                        >
-                          <span
-                            className={cn(
-                              "relative grid size-[66px] place-items-center rounded-full border-[2.5px] text-2xl shadow-[0_6px_16px_rgba(29,29,27,0.10)]",
-                              selected ? "border-zivelo" : "border-transparent"
-                            )}
-                            style={{ backgroundColor: option.background }}
-                          >
-                            {option.emoji}
-                            {selected ? (
-                              <span className="absolute -right-1 -top-1 grid size-[22px] place-items-center rounded-full bg-zivelo text-white ring-2 ring-paper">
-                                <Check className="size-3" aria-hidden="true" />
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className={cn("w-full truncate text-[11.5px] font-semibold", selected ? "text-carbon" : "text-carbon/55")}>
-                            {option.name}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <TooltipProvider>
+                    <div className="mt-4 grid max-h-[300px] grid-cols-4 gap-2 overflow-auto pr-1">
+                      {filteredAvatars.map((option) => {
+                        const selected = !!avatar && option.key === avatar.key;
+                        return (
+                          <Tooltip key={option.key}>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                className={cn(
+                                  "group relative grid aspect-square place-items-center rounded-xl transition-colors",
+                                  "hover:bg-carbon/[0.06] focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/25",
+                                  selected && "bg-carbon/[0.06]"
+                                )}
+                                onClick={() => { onAvatarChange(option.emoji); setAvatarPopoverOpen(false); }}
+                              >
+                                <span
+                                  className={cn(
+                                    "grid size-[42px] place-items-center rounded-full text-lg shadow-[0_2px_8px_rgba(29,29,27,0.10)] transition-shadow",
+                                    selected ? "ring-2 ring-zivelo ring-offset-2" : ""
+                                  )}
+                                  style={{ backgroundColor: option.background }}
+                                >
+                                  {option.emoji}
+                                </span>
+                                {selected ? (
+                                  <span className="absolute right-2 top-2 grid size-[18px] place-items-center rounded-full bg-zivelo text-white">
+                                    <Check className="size-2.5" aria-hidden="true" />
+                                  </span>
+                                ) : null}
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">{option.name}</TooltipContent>
+                          </Tooltip>
+                        );
+                      })}
+                    </div>
+                  </TooltipProvider>
                   {filteredAvatars.length === 0 ? (
                     <p className="m-0 mt-3 rounded-xl border border-dashed border-carbon/15 p-5 text-center text-sm text-carbon/55">
                       No se encontraron avatares.
