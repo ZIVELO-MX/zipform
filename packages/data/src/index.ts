@@ -26,6 +26,7 @@ export type {
   TlozResourceInput,
   TlozRepository,
   UserFilters,
+  UserUpdateInput,
   ZipformDataClient
 } from "./contracts";
 export { currentUser, raulUser } from "./seed-data";

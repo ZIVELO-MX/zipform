@@ -59,7 +59,19 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
   useEffect(() => {
     function handleOpen() { setCommandOpen(true); }
     window.addEventListener("open-command", handleOpen);
-    return () => window.removeEventListener("open-command", handleOpen);
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandOpen(true);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("open-command", handleOpen);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   if (!showHeader) return null;
@@ -97,6 +109,18 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
               </BreadcrumbList>
             </Breadcrumb>
           ) : null}
+        </div>
+
+        <div className="hidden md:flex flex-1 justify-center">
+          <button
+            type="button"
+            className="tloz-command-trigger"
+            onClick={() => setCommandOpen(true)}
+          >
+            <Search size={14} aria-hidden="true" />
+            <span>Buscar misiones, proyectos e inventario...</span>
+            <kbd>⌘K</kbd>
+          </button>
         </div>
 
         <div className="tloz-header-trailing">

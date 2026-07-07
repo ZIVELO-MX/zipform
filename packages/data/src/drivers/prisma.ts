@@ -67,8 +67,9 @@ function mapUser(user: {
   role: string;
   type: string;
   avatarUrl: string;
+  theme?: string | null;
 }): UserProfile {
-  return { ...user, type: user.type as UserProfile["type"] };
+  return { ...user, type: user.type as UserProfile["type"], theme: (user.theme ?? "system") as UserProfile["theme"] };
 }
 
 function mapApiKey(key: {
@@ -398,6 +399,13 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
     user: {
       async getCurrent() {
         return getCurrentUser(prisma);
+      },
+      async update(userId: string, input: import("../contracts").UserUpdateInput) {
+        const row = await prisma.user.update({
+          where: { id: userId },
+          data: { ...input, updatedAt: new Date() }
+        });
+        return mapUser(row);
       }
     },
     platform: {

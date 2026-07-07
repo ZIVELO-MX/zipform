@@ -40,6 +40,13 @@ export type TlozMissionDetail = TlozMissionRecord & {
 export type TlozResourceInput = Pick<TlozResource, "type" | "title"> &
   Partial<Pick<TlozResource, "url" | "fileId">>;
 
+export type UserUpdateInput = {
+  name?: string;
+  username?: string;
+  theme?: UserProfile["theme"];
+  avatarUrl?: string;
+};
+
 export type TlozMissionCreateInput = Omit<TlozMission, "id" | "displayId" | "createdAt" | "updatedAt" | "completedAt"> & {
   id?: string;
   completedAt?: string;
@@ -172,6 +179,7 @@ export type ZipformDataClient = {
   };
   user: {
     getCurrent(): Promise<UserProfile>;
+    update(userId: string, input: UserUpdateInput): Promise<UserProfile>;
   };
   platform: {
     getMetrics(): Promise<PlatformMetric[]>;

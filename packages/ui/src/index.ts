@@ -11,6 +11,7 @@ export * from "./components/card";
 export * from "./components/command";
 export * from "./components/color-picker";
 export * from "./components/date-picker";
+export * from "./components/dialog";
 export * from "./components/dropdown-menu";
 export * from "./components/entity-picker";
 export * from "./components/field";

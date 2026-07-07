@@ -25,7 +25,8 @@ const authenticatedUser: UserProfile = {
   email: "user@example.com",
   role: "member",
   type: "human",
-  avatarUrl: ""
+  avatarUrl: "",
+  theme: "system"
 };
 
 const fallbackUser: UserProfile = {
@@ -35,7 +36,8 @@ const fallbackUser: UserProfile = {
   email: "fallback@example.com",
   role: "member",
   type: "human",
-  avatarUrl: ""
+  avatarUrl: "",
+  theme: "system"
 };
 
 describe("getCurrentUser", () => {

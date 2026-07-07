@@ -61,7 +61,8 @@ export function createMockDataClient(): ZipformDataClient {
           email: input.email,
           role: input.role,
           type: "agent",
-          avatarUrl: ""
+          avatarUrl: "",
+          theme: "system"
         };
         agentUsers.push(user);
         const apiKeyResult = await this.createApiKey(user.id, "default");
@@ -114,6 +115,12 @@ export function createMockDataClient(): ZipformDataClient {
     user: {
       async getCurrent() {
         return currentUser;
+      },
+      async update(userId: string, input: import("../contracts").UserUpdateInput) {
+        const idx = tlozData.users.findIndex((u) => u.id === userId);
+        if (idx === -1) throw new Error("User not found");
+        tlozData.users[idx] = { ...tlozData.users[idx], ...input };
+        return tlozData.users[idx];
       }
     },
     platform: {

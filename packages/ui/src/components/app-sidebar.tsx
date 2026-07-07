@@ -81,7 +81,8 @@ export function DesktopSidebar({
   sidebarWidth,
   onResize,
   onToggleCollapsed,
-  onSignOut
+  onSignOut,
+  onOpenSettings
 }: {
   collapsed: boolean;
   pathname: string;
@@ -93,6 +94,7 @@ export function DesktopSidebar({
   onResize: (width: number) => void;
   onToggleCollapsed: () => void;
   onSignOut: () => void;
+  onOpenSettings?: () => void;
 }) {
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -154,15 +156,6 @@ export function DesktopSidebar({
       <div
         className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-2 py-3"
       >
-        <button
-          type="button"
-          className="flex h-10 items-center gap-3 rounded-lg px-3 text-sm text-carbon/50 hover:bg-carbon/5 transition-colors"
-          onClick={() => window.dispatchEvent(new CustomEvent("open-command"))}
-        >
-          <Search size={16} aria-hidden="true" />
-          {!collapsed && <span className="truncate">Buscar...</span>}
-        </button>
-
         <nav className="grid gap-4" aria-label="Principal">
           {contextItem ? (
             <div className="grid gap-2 border-b border-carbon/10 pb-3">
@@ -202,7 +195,7 @@ export function DesktopSidebar({
             <TooltipContent side="right">Expandir barra</TooltipContent>
           </Tooltip>
         ) : null}
-        <ProfileDropdown collapsed={collapsed} user={user} onSignOut={onSignOut} />
+        <ProfileDropdown collapsed={collapsed} user={user} onSignOut={onSignOut} onOpenSettings={onOpenSettings} />
       </div>
 
       {!collapsed ? (
@@ -334,7 +327,8 @@ export function MobileMenuPanel({
   sections,
   contextItem,
   onClose,
-  onSignOut
+  onSignOut,
+  onOpenSettings
 }: {
   open: boolean;
   pathname: string;
@@ -344,6 +338,7 @@ export function MobileMenuPanel({
   contextItem?: NavItem;
   onClose: () => void;
   onSignOut: () => void;
+  onOpenSettings?: () => void;
 }) {
   return (
     <div
@@ -369,18 +364,15 @@ export function MobileMenuPanel({
           </Button>
         </header>
 
-        <div className="px-4 pt-3">
+        <nav className="flex-1 overflow-y-auto px-4 py-5" aria-label="Navegación">
           <button
             type="button"
-            className="flex w-full items-center gap-3 rounded-lg border border-carbon/10 px-3 py-2.5 text-sm text-carbon/50 hover:border-carbon/20 transition-colors"
+            className="mb-3 flex w-full items-center gap-3 rounded-[12px] border border-carbon/10 px-3 py-2.5 text-sm font-medium text-carbon/50 hover:border-carbon/20 hover:text-carbon/70 transition-colors"
             onClick={() => { window.dispatchEvent(new CustomEvent("open-command")); onClose(); }}
           >
-            <Search size={16} aria-hidden="true" />
-            <span>Buscar misiones, proyectos e inventario...</span>
+            <Search size={18} aria-hidden="true" />
+            <span>Buscar...</span>
           </button>
-        </div>
-
-        <nav className="flex-1 overflow-y-auto px-4 py-5" aria-label="Navegación">
           {contextItem ? <MobileNavLink item={contextItem} active={false} onClose={onClose} subtle /> : null}
           {(sections ?? [{ items }]).map((section, sectionIndex) => (
             <div className="mt-4 grid gap-1" key={section.label ?? sectionIndex}>
@@ -397,7 +389,7 @@ export function MobileMenuPanel({
         </nav>
 
         <div className="border-t border-carbon/10 px-4 py-4">
-          <ProfileDropdown collapsed={false} user={user} mobile onSignOut={onSignOut} />
+          <ProfileDropdown collapsed={false} user={user} mobile onSignOut={onSignOut} onOpenSettings={onOpenSettings} />
         </div>
       </div>
     </div>
@@ -434,7 +426,7 @@ function MobileNavLink({
   );
 }
 
-export function ProfileDropdown({ collapsed, user, mobile = false, onSignOut }: { collapsed: boolean; user: SidebarUser; mobile?: boolean; onSignOut: () => void }) {
+export function ProfileDropdown({ collapsed, user, mobile = false, onSignOut, onOpenSettings }: { collapsed: boolean; user: SidebarUser; mobile?: boolean; onSignOut: () => void; onOpenSettings?: () => void }) {
   const initials = user.name
     .split(" ")
     .map((part) => part[0])
@@ -476,11 +468,9 @@ export function ProfileDropdown({ collapsed, user, mobile = false, onSignOut }: 
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem asChild>
-            <Link href="/settings">
-              <Settings size={16} />
-              Configuración
-            </Link>
+          <DropdownMenuItem onClick={onOpenSettings}>
+            <Settings size={16} />
+            Configuración
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <AlertDialogTrigger asChild>

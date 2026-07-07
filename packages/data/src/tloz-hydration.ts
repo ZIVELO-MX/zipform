@@ -59,7 +59,8 @@ export function hydrateMission(data: TlozDataSet, mission: TlozMission): TlozMis
       email: "",
       role: "",
       type: "human",
-      avatarUrl: ""
+      avatarUrl: "",
+      theme: "system"
     }
   };
 }
