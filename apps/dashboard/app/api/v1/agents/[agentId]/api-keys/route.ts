@@ -58,7 +58,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const result = await dataClient.agent.createApiKey(agentId, name);
+    const result = await dataClient.agent.createApiKey(agentId, name, auth.user.id);
     return NextResponse.json(result, { status: 201 });
   } catch {
     return NextResponse.json(

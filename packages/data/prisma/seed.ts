@@ -70,6 +70,7 @@ async function main() {
     data: agentApiKeys.map((key) => ({
       id: key.id,
       userId: key.userId,
+      createdByUserId: key.createdByUserId,
       name: key.name,
       keyPrefix: key.keyPrefix,
       keyHash: hashKey(key.rawKey),

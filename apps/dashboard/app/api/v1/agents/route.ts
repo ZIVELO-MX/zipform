@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       username: input.username,
       email: input.email,
       role: input.role ?? "agent:operative"
-    });
+    }, auth.user.id);
     return NextResponse.json(result, { status: 201 });
   } catch {
     return NextResponse.json(

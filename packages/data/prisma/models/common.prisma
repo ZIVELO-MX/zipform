@@ -11,7 +11,8 @@ model User {
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   sessions          Session[]
-  apiKeys           ApiKey[]
+  apiKeys           ApiKey[]      @relation("apiKeyOwner")
+  createdApiKeys    ApiKey[]      @relation("apiKeyCreator")
   missions          TlozMission[]
   projects          TlozProject[]
   questItems        TlozQuestItem[]
@@ -44,17 +45,20 @@ model PlatformMetric {
 }
 
 model ApiKey {
-  id         String    @id
-  userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name       String
-  keyPrefix  String
-  keyHash    String
-  lastUsedAt DateTime?
-  expiresAt  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id              String    @id
+  userId          String
+  user            User      @relation("apiKeyOwner", fields: [userId], references: [id], onDelete: Cascade)
+  createdByUserId String
+  createdBy       User      @relation("apiKeyCreator", fields: [createdByUserId], references: [id])
+  name            String
+  keyPrefix       String
+  keyHash         String
+  lastUsedAt      DateTime?
+  expiresAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   @@index([userId])
+  @@index([createdByUserId])
   @@map("api_keys")
 }
