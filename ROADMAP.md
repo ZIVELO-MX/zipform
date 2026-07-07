@@ -85,6 +85,15 @@
 - [ ] [SETTINGS] Implementar página de configuración de usuario: perfil, preferencias de vista, tema
 - [ ] [SETTINGS] Persistir preferencias en `localStorage` bajo clave `zipform-`
 
+#### Avatar Profile Photos
+
+- [ ] [DB] Crear tabla `avatars` (id, name, imageUrl) y agregar UNIQUE constraint en `users.username`
+- [ ] [STORAGE] Crear bucket `avatars` en Supabase Storage, instalar `@supabase/supabase-js` y configurar env vars
+- [ ] [DATA] Agregar tipo `Avatar`, método `listAvatars()` al data client, y helper de upload a Storage
+- [ ] [SETTINGS] Refactorizar avatar picker: reemplazar emojis hardcodeados con grid de imágenes desde la tabla `avatars`, agregar subida de foto personal, persistir `avatarUrl` al guardar
+- [ ] [UI] Eliminar lógica emoji-first en `UserAvatar` del sidebar — usar siempre `<AvatarImage>` con iniciales de fallback
+- [ ] [DB] Seed de avatares default (imágenes ilustrativas subidas a Storage)
+
 #### Mobile — Prioridades Kano
 
 La priorización sigue la clasificación Kano de `PRIORIDADES_KANO.md`. El objetivo es que **los recursos sean visibles en móvil** sin necesidad de soportar todas las vistas de escritorio.
