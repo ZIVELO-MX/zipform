@@ -7,6 +7,8 @@ import {
   Mail,
   Monitor,
   Moon,
+  Pencil,
+  Search,
   Settings,
   ShieldCheck,
   Sun,
@@ -54,13 +56,22 @@ const themeOptions: Array<{ label: string; value: ThemeValue; icon: LucideIcon }
   { label: "Oscuro", value: "dark", icon: Moon },
 ];
 
-const emojiAvatars = [
-  "🦊", "🐺", "🦁", "🐉", "🦅", "🐴", "🐸", "🐲",
-  "⚔️", "🛡️", "🧙", "🏹", "🧝", "🗡️", "🔮", "👑",
-  "🌟", "🔥", "💎", "🌙", "☀️", "🌊", "🌿", "❄️",
+const avatars = [
+  { key: "wolf", name: "Lobo", emoji: "🐺", background: "#454543" },
+  { key: "fox", name: "Zorro", emoji: "🦊", background: "#D72228" },
+  { key: "knight", name: "Caballero", emoji: "⚔️", background: "#2D6CDF" },
+  { key: "wizard", name: "Mago", emoji: "🧙", background: "#7A4ED9" },
+  { key: "archer", name: "Arquera", emoji: "🏹", background: "#1E8E5A" },
+  { key: "smith", name: "Herrero", emoji: "🔨", background: "#7A5A12" },
+  { key: "druid", name: "Druida", emoji: "🌿", background: "#1E6B3C" },
+  { key: "bard", name: "Bardo", emoji: "🎵", background: "#C0397A" },
 ];
 
 const agents = [{ id: "zibot", name: "zibot", username: "zibot" }];
+
+function findAvatar(emoji: string) {
+  return avatars.find((a) => a.emoji === emoji) ?? avatars[1];
+}
 
 export function SettingsDialog({
   open,
@@ -74,28 +85,42 @@ export function SettingsDialog({
   const [section, setSection] = useState<SettingsSection>("profile");
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
-  const [theme, setTheme] = useState<ThemeValue>(user.theme);
-  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || "🦊");
+  const [theme, setTheme] = useState<ThemeValue>(user.theme || "system");
+  const [avatarEmoji, setAvatarEmoji] = useState(user.avatarUrl || "🦊");
+  const [avatarSearch, setAvatarSearch] = useState("");
   const [pending, startTransition] = useTransition();
 
-  const hasChanges = name !== user.name || username !== user.username || theme !== user.theme || avatarUrl !== (user.avatarUrl || "🦊");
+  const currentAvatar = findAvatar(avatarEmoji);
+  const filteredAvatars = avatars.filter((a) =>
+    a.name.toLocaleLowerCase("es").includes(avatarSearch.trim().toLocaleLowerCase("es"))
+  );
+
+  const hasChanges = name !== user.name || username !== user.username || theme !== (user.theme || "system") || avatarEmoji !== (user.avatarUrl || "🦊");
 
   const handleSave = useCallback(() => {
     startTransition(async () => {
       try {
-        await updateProfile({ name, username, theme, avatarUrl });
+        await updateProfile({ name, username, theme, avatarUrl: avatarEmoji });
         toast.success("Perfil actualizado");
         onOpenChange(false);
       } catch {
         toast.error("Error al guardar los cambios");
       }
     });
-  }, [name, username, theme, avatarUrl, onOpenChange]);
+  }, [name, username, theme, avatarEmoji, onOpenChange]);
+
+  const handleCancel = useCallback(() => {
+    setName(user.name);
+    setUsername(user.username);
+    setTheme(user.theme || "system");
+    setAvatarEmoji(user.avatarUrl || "🦊");
+    onOpenChange(false);
+  }, [onOpenChange, user]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Configuración" className="h-[min(680px,calc(100dvh-96px))] max-w-[620px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden p-0">
-        <header className="flex items-center justify-between border-b border-carbon/[0.08] px-5 py-[17px]">
+      <DialogContent title="Configuración" className="h-[min(680px,calc(100dvh-96px))] max-w-[620px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0">
+        <header className="flex items-center justify-between border-b border-carbon/[0.08] px-5 py-[17px] md:hidden">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-tintred text-zivelo">
               <Settings className="size-4" aria-hidden="true" />
@@ -135,30 +160,192 @@ export function SettingsDialog({
           <main className="grid min-h-0 min-w-0 bg-white">
             {section === "profile" ? (
               <ProfileSettings
-                avatarUrl={avatarUrl}
+                avatar={currentAvatar}
+                avatarSearch={avatarSearch}
+                filteredAvatars={filteredAvatars}
                 name={name}
                 theme={theme}
                 username={username}
                 email={user.email}
-                onAvatarChange={setAvatarUrl}
+                hasChanges={hasChanges}
+                pending={pending}
+                onAvatarChange={setAvatarEmoji}
+                onAvatarSearchChange={setAvatarSearch}
                 onNameChange={setName}
                 onThemeChange={setTheme}
                 onUsernameChange={setUsername}
+                onSave={handleSave}
+                onCancel={handleCancel}
               />
             ) : (
               <SecuritySettings />
             )}
           </main>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-        <footer className="flex items-center justify-end gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[15px]">
-          <Button
-            type="button"
-            size="sm"
-            className="h-[38px] rounded-[11px] text-[13px] transition-transform duration-150 active:scale-[0.98]"
-            disabled={pending || !hasChanges}
-            onClick={handleSave}
-          >
+function ProfileSettings({
+  avatar,
+  avatarSearch,
+  filteredAvatars,
+  name,
+  theme,
+  username,
+  email,
+  hasChanges,
+  pending,
+  onAvatarChange,
+  onAvatarSearchChange,
+  onNameChange,
+  onThemeChange,
+  onUsernameChange,
+  onSave,
+  onCancel,
+}: {
+  avatar: { key: string; name: string; emoji: string; background: string };
+  avatarSearch: string;
+  filteredAvatars: typeof avatars;
+  name: string;
+  theme: ThemeValue;
+  username: string;
+  email: string;
+  hasChanges: boolean;
+  pending: boolean;
+  onAvatarChange: (value: string) => void;
+  onAvatarSearchChange: (value: string) => void;
+  onNameChange: (value: string) => void;
+  onThemeChange: (value: ThemeValue) => void;
+  onUsernameChange: (value: string) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]">
+      <div className="flex min-h-0 flex-col items-center overflow-y-auto px-5 py-[22px]">
+        <div className="flex w-full max-w-[360px] flex-col gap-5">
+          <div className="flex items-center gap-4">
+            <Avatar className="size-[72px] rounded-full shadow-[0_6px_16px_rgba(29,29,27,0.14)]">
+              <AvatarFallback className="text-2xl" style={{ backgroundColor: avatar.background }}>
+                {avatar.emoji}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <p className="mb-[7px] mt-0 text-xs font-bold uppercase tracking-[0.05em] text-[#9a9a98]">
+                Avatar · {avatar.name}
+              </p>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]">
+                    <Pencil className="size-3.5" aria-hidden="true" />
+                    Cambiar avatar
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-[min(420px,calc(100vw-32px))] rounded-[18px] p-4">
+                  <PopoverHeader>
+                    <PopoverTitle>Elegir avatar</PopoverTitle>
+                    <PopoverDescription>Selecciona una imagen para tu perfil.</PopoverDescription>
+                  </PopoverHeader>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-carbon/40" aria-hidden="true" />
+                    <Input
+                      value={avatarSearch}
+                      onChange={(event) => onAvatarSearchChange(event.target.value)}
+                      placeholder="Buscar avatar..."
+                      className="h-10 pl-9"
+                    />
+                  </div>
+                  <div className="mt-4 grid max-h-[300px] grid-cols-4 gap-x-3 gap-y-4 overflow-auto pr-1">
+                    {filteredAvatars.map((option) => {
+                      const selected = option.key === avatar.key;
+                      return (
+                        <button
+                          key={option.key}
+                          type="button"
+                          className="flex min-w-0 flex-col items-center gap-2 rounded-xl p-1 text-center transition-colors hover:bg-carbon/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/25"
+                          onClick={() => onAvatarChange(option.emoji)}
+                        >
+                          <span
+                            className={cn(
+                              "relative grid size-[66px] place-items-center rounded-full border-[2.5px] text-2xl shadow-[0_6px_16px_rgba(29,29,27,0.10)]",
+                              selected ? "border-zivelo" : "border-transparent"
+                            )}
+                            style={{ backgroundColor: option.background }}
+                          >
+                            {option.emoji}
+                            {selected ? (
+                              <span className="absolute -right-1 -top-1 grid size-[22px] place-items-center rounded-full bg-zivelo text-white ring-2 ring-paper">
+                                <Check className="size-3" aria-hidden="true" />
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className={cn("w-full truncate text-[11.5px] font-semibold", selected ? "text-carbon" : "text-carbon/55")}>
+                            {option.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {filteredAvatars.length === 0 ? (
+                    <p className="m-0 mt-3 rounded-xl border border-dashed border-carbon/15 p-5 text-center text-sm text-carbon/55">
+                      No se encontraron avatares.
+                    </p>
+                  ) : null}
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          <Separator />
+
+          <FieldGroup className="gap-[15px]">
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="settings-name" className="text-xs font-semibold text-[#454543]">Nombre</FieldLabel>
+              <Input id="settings-name" value={name} onChange={(event) => onNameChange(event.target.value)} className="h-10 rounded-[11px] bg-white text-[13.5px]" />
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="settings-username" className="text-xs font-semibold text-[#454543]">Username</FieldLabel>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[13.5px] text-carbon/40">@</span>
+                <Input
+                  id="settings-username"
+                  value={username}
+                  onChange={(event) => onUsernameChange(event.target.value)}
+                  className="h-10 rounded-[11px] bg-white pl-7 font-mono text-[13px]"
+                />
+              </div>
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel htmlFor="settings-email" className="items-center text-xs font-semibold text-[#454543]">
+                Correo electrónico
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF4DE] px-2 py-0.5 text-[10px] font-semibold text-[#7A5A12]">
+                  <Mail className="size-2.5" aria-hidden="true" />
+                  Gestionado por auth
+                </span>
+              </FieldLabel>
+              <Input id="settings-email" value={email} disabled className="h-10 rounded-[11px] bg-[#F5F5F4] text-[13.5px]" />
+            </Field>
+            <Field className="gap-1.5">
+              <FieldLabel className="text-xs font-semibold text-[#454543]">Tema</FieldLabel>
+              <ThemeSegmentedControl value={theme} onValueChange={onThemeChange} />
+            </Field>
+          </FieldGroup>
+        </div>
+      </div>
+
+      <footer className="flex flex-col gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[15px] sm:flex-row sm:items-center sm:justify-between">
+        <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-zivelo">
+          <span className="size-[7px] rounded-full bg-zivelo" aria-hidden="true" />
+          Cambios sin guardar
+        </span>
+        <div className="flex gap-2">
+          <Button type="button" variant="outline" size="sm" className="h-[38px] flex-1 rounded-[11px] bg-white text-[13px] sm:flex-none" onClick={onCancel}>
+            <X className="size-3.5" aria-hidden="true" />
+            Cancelar
+          </Button>
+          <Button type="button" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending || !hasChanges} onClick={onSave}>
             {pending ? (
               <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             ) : (
@@ -166,115 +353,8 @@ export function SettingsDialog({
             )}
             {pending ? "Guardando..." : "Guardar cambios"}
           </Button>
-        </footer>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ProfileSettings({
-  avatarUrl,
-  name,
-  theme,
-  username,
-  email,
-  onAvatarChange,
-  onNameChange,
-  onThemeChange,
-  onUsernameChange,
-}: {
-  avatarUrl: string;
-  name: string;
-  theme: ThemeValue;
-  username: string;
-  email: string;
-  onAvatarChange: (value: string) => void;
-  onNameChange: (value: string) => void;
-  onThemeChange: (value: ThemeValue) => void;
-  onUsernameChange: (value: string) => void;
-}) {
-  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
-
-  return (
-    <div className="flex min-h-0 flex-col items-center overflow-y-auto px-5 py-[22px]">
-      <div className="flex w-full max-w-[360px] flex-col gap-5">
-        <div className="flex items-center gap-4">
-          <Avatar className="size-[72px] rounded-full shadow-[0_6px_16px_rgba(29,29,27,0.14)]">
-            <AvatarFallback className="text-3xl">{avatarUrl}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0 flex-1">
-            <p className="mb-[7px] mt-0 text-xs font-bold uppercase tracking-[0.05em] text-[#9a9a98]">
-              Avatar
-            </p>
-            <Popover open={avatarPickerOpen} onOpenChange={setAvatarPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]">
-                  Cambiar avatar
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-[320px] rounded-[18px] p-4">
-                <PopoverHeader>
-                  <PopoverTitle>Elegir avatar</PopoverTitle>
-                  <PopoverDescription>Selecciona un emoji para tu perfil.</PopoverDescription>
-                </PopoverHeader>
-                <div className="mt-2 grid grid-cols-6 gap-1">
-                  {emojiAvatars.map((emoji) => {
-                    const selected = emoji === avatarUrl;
-                    return (
-                      <button
-                        key={emoji}
-                        type="button"
-                        className={cn(
-                          "grid size-10 place-items-center rounded-xl text-lg transition-colors hover:bg-carbon/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon/25",
-                          selected && "bg-carbon/10 ring-2 ring-carbon/20"
-                        )}
-                        onClick={() => { onAvatarChange(emoji); setAvatarPickerOpen(false); }}
-                      >
-                        {emoji}
-                      </button>
-                    );
-                  })}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
         </div>
-
-        <Separator />
-
-        <FieldGroup className="gap-[15px]">
-          <Field className="gap-1.5">
-            <FieldLabel htmlFor="settings-name" className="text-xs font-semibold text-[#454543]">Nombre</FieldLabel>
-            <Input id="settings-name" value={name} onChange={(event) => onNameChange(event.target.value)} className="h-10 rounded-[11px] bg-white text-[13.5px]" />
-          </Field>
-          <Field className="gap-1.5">
-            <FieldLabel htmlFor="settings-username" className="text-xs font-semibold text-[#454543]">Username</FieldLabel>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[13.5px] text-carbon/40">@</span>
-              <Input
-                id="settings-username"
-                value={username}
-                onChange={(event) => onUsernameChange(event.target.value)}
-                className="h-10 rounded-[11px] bg-white pl-7 font-mono text-[13px]"
-              />
-            </div>
-          </Field>
-          <Field className="gap-1.5">
-            <FieldLabel htmlFor="settings-email" className="items-center text-xs font-semibold text-[#454543]">
-              Correo electrónico
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF4DE] px-2 py-0.5 text-[10px] font-semibold text-[#7A5A12]">
-                <Mail className="size-2.5" aria-hidden="true" />
-                Gestionado por auth
-              </span>
-            </FieldLabel>
-            <Input id="settings-email" value={email} disabled className="h-10 rounded-[11px] bg-[#F5F5F4] text-[13.5px]" />
-          </Field>
-          <Field className="gap-1.5">
-            <FieldLabel className="text-xs font-semibold text-[#454543]">Tema</FieldLabel>
-            <ThemeSegmentedControl value={theme} onValueChange={onThemeChange} />
-          </Field>
-        </FieldGroup>
-      </div>
+      </footer>
     </div>
   );
 }
