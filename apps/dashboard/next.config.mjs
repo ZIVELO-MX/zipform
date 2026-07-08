@@ -13,7 +13,8 @@ const nextConfig = {
   outputFileTracingRoot: monorepoRoot,
   outputFileTracingIncludes: {
     "/*": [
-      "../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**/*"
+      "../../node_modules/.pnpm/@prisma+client@*/node_modules/.prisma/client/**/*",
+      "../../docs/api/openapi.yaml"
     ]
   },
   transpilePackages: ["@zipform/data", "@zipform/types"],
