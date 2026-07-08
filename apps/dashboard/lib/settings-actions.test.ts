@@ -26,7 +26,7 @@ vi.mock("@zipform/data", () => ({
 import { createAgentApiKey, listAgentApiKeys, listAgents, revokeAgentApiKey } from "./settings-actions";
 
 const agentUser: UserProfile = {
-  id: "zibot",
+  id: "d5ca1936-3240-4247-8c2b-a7152a681311",
   name: "Zibot",
   username: "zibot",
   email: "zibot@zipform.dev",
@@ -38,7 +38,7 @@ const agentUser: UserProfile = {
 
 const apiKey: ApiKey = {
   id: "key-1",
-  userId: "zibot",
+  userId: "d5ca1936-3240-4247-8c2b-a7152a681311",
   createdByUserId: "owner",
   name: "Zibot production key",
   keyPrefix: "zaf_zibot_pro",
@@ -72,14 +72,14 @@ describe("settings actions (agent)", () => {
       mocks.auth.mockResolvedValue({ user: { id: "owner" } });
       mocks.listApiKeys.mockResolvedValue([apiKey]);
 
-      await expect(listAgentApiKeys("zibot")).resolves.toEqual([apiKey]);
-      expect(mocks.listApiKeys).toHaveBeenCalledWith("zibot");
+      await expect(listAgentApiKeys("d5ca1936-3240-4247-8c2b-a7152a681311")).resolves.toEqual([apiKey]);
+      expect(mocks.listApiKeys).toHaveBeenCalledWith("d5ca1936-3240-4247-8c2b-a7152a681311");
     });
 
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 
-      await expect(listAgentApiKeys("zibot")).rejects.toThrow("No autorizado");
+      await expect(listAgentApiKeys("d5ca1936-3240-4247-8c2b-a7152a681311")).rejects.toThrow("No autorizado");
     });
   });
 
@@ -88,15 +88,15 @@ describe("settings actions (agent)", () => {
       mocks.auth.mockResolvedValue({ user: { id: "owner" } });
       mocks.createApiKey.mockResolvedValue({ key: "zaf_abc123", apiKey });
 
-      const result = await createAgentApiKey("zibot", "test key");
+      const result = await createAgentApiKey("d5ca1936-3240-4247-8c2b-a7152a681311", "test key");
       expect(result).toEqual({ key: "zaf_abc123", apiKey });
-      expect(mocks.createApiKey).toHaveBeenCalledWith("zibot", "test key", "owner");
+      expect(mocks.createApiKey).toHaveBeenCalledWith("d5ca1936-3240-4247-8c2b-a7152a681311", "test key", "owner");
     });
 
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 
-      await expect(createAgentApiKey("zibot", "test key")).rejects.toThrow("No autorizado");
+      await expect(createAgentApiKey("d5ca1936-3240-4247-8c2b-a7152a681311", "test key")).rejects.toThrow("No autorizado");
       expect(mocks.createApiKey).not.toHaveBeenCalled();
     });
   });
