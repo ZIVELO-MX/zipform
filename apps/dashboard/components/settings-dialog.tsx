@@ -69,7 +69,7 @@ const avatars = [
   { key: "bard", name: "Bardo", emoji: "🎵", background: "#C0397A" },
 ];
 
-const agents = [{ id: "zibot", name: "zibot", username: "zibot" }];
+const agents = [{ id: "d5ca1936-3240-4247-8c2b-a7152a681311", name: "zibot", username: "zibot" }];
 
 function findAvatar(emoji: string) {
   if (!emoji) return null;
@@ -445,7 +445,7 @@ function ProfileSettings({
 
 function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
   const [keyName, setKeyName] = useState("Zibot production key");
-  const [agent, setAgent] = useState("zibot");
+  const [agent, setAgent] = useState("d5ca1936-3240-4247-8c2b-a7152a681311");
   const [agents, setAgents] = useState<UserProfile[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [createdKey, setCreatedKey] = useState<CreateApiKeyResult | null>(null);

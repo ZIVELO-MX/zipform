@@ -1,5 +1,5 @@
 model User {
-  id                String                 @id
+  id                String                 @id @default(uuid()) @db.Uuid
   name              String
   username          String
   email             String                 @unique
@@ -22,8 +22,8 @@ model User {
 }
 
 model Session {
-  id        String   @id
-  userId    String
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -45,10 +45,10 @@ model PlatformMetric {
 }
 
 model ApiKey {
-  id              String    @id
-  userId          String
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @db.Uuid
   user            User      @relation("apiKeyOwner", fields: [userId], references: [id], onDelete: Cascade)
-  createdByUserId String
+  createdByUserId String    @db.Uuid
   createdBy       User      @relation("apiKeyCreator", fields: [createdByUserId], references: [id])
   name            String
   keyPrefix       String
