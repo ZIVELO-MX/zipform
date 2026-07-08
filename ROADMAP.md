@@ -84,6 +84,8 @@
 - [ ] [ZOHO] Login page con opción Zoho, callback, sesión unificada
 - [ ] [SETTINGS] Implementar página de configuración de usuario: perfil, preferencias de vista, tema
 - [ ] [SETTINGS] Persistir preferencias en `localStorage` bajo clave `zipform-`
+- [ ] [SETTINGS] Agregar skeleton/shimmer loading states en sección Seguridad para elementos que cargan (agentes, API keys)
+- [ ] [SETTINGS] El popover de copiar API key debe mostrarse centrado (no arriba del botón) y cerrarse solo al presionar "Cerrar"
 
 #### Avatar Profile Photos
 
