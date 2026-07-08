@@ -128,7 +128,7 @@ PostgreSQL
 ```
 
 - Implement endpoints as Next.js Route Handlers under `apps/dashboard/app/api/v1`.
-- Authenticate with `authenticateRequest()` in `lib/api-auth.ts`: checks NextAuth session first, then falls back to `Authorization: Bearer <key>`.
+- Authenticate with `authenticateRequest()` in `lib/api-auth.ts`: checks `Authorization: Bearer <key>` first, then falls back to NextAuth session cookie. This ensures an agent API key takes priority over any browser session attached to the same request.
 - API keys are hashed with scrypt (`salt:hash`), stored in the `api_keys` table, and verified with `timingSafeEqual`.
 - Route handlers validate inputs but delegate all business logic to `@zipform/data`.
 - Return the shared `ApiError` envelope for expected failures.

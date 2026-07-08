@@ -1,10 +1,13 @@
 openapi: 3.1.0
 info:
   title: Zipform Data API
-  version: 1.1.0-draft
+  version: 1.2.0-draft
   description: |
-    Authenticated, read-only access to Zipform platform data:
-    users, projects, missions, seasons, episodes, quest items, and resources.
+    Full CRUD access to Zipform platform data: users, projects, missions,
+    seasons, episodes, quest items, resources, agents, and API keys.
+
+    Authentication is via Bearer token (agent API key) or browser session cookie.
+    If both are present, the Bearer token takes priority.
   contact:
     name: Zivelo Platform
   license:
@@ -14,32 +17,34 @@ servers:
   - url: /api/v1
     description: Current Zipform deployment
 security:
+  - bearerToken: []
   - sessionCookie: []
 tags:
   - name: Users
-    description: Read-only access to user profile data (no passwords or sessions).
+    description: User profile data (no passwords or sessions exposed).
   - name: Agents
     description: Automated agent accounts that act on behalf of the platform.
   - name: API Keys
     description: API key management for agent authentication.
   - name: Projects
-    description: Read-only access to TLOZ project metadata.
+    description: TLOZ project metadata with full CRUD.
   - name: Missions
-    description: Read-only access to missions with filters and detail.
+    description: Missions with filters, detail, and full CRUD.
   - name: Seasons
-    description: Read-only access to TLOZ seasons.
+    description: TLOZ seasons.
   - name: Episodes
-    description: Read-only access to TLOZ episodes.
+    description: TLOZ episodes.
   - name: Quest Items
-    description: Read-only access to inventory / quest items.
+    description: Inventory / quest items with full CRUD.
   - name: Resources
-    description: Read-only access to attached resources (docs, links, notes).
+    description: Attached resources (docs, links, notes) with full CRUD.
 paths:
+  # ── Users ──────────────────────────────────────────────────────────
   /users:
     get:
       operationId: listUsers
       summary: List or find users
-      description: Filters are exact and case-insensitive.
+      description: Filters are exact and case-insensitive. Only one filter at a time.
       tags: [Users]
       parameters:
         - $ref: "#/components/parameters/Limit"
@@ -57,6 +62,43 @@ paths:
             type: string
             minLength: 1
             maxLength: 64
+      responses:
+        "200":
+          description: Matching users.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: queryUsers
+      summary: Query users by example
+      description: Like GET /users but filters are sent in the request body.
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 25
+                cursor:
+                  type: string
       responses:
         "200":
           description: Matching users.
@@ -94,6 +136,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  # ── Projects ───────────────────────────────────────────────────────
   /projects:
     get:
       operationId: listProjects
@@ -112,6 +156,96 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/ProjectStatus"
+      responses:
+        "200":
+          description: Matching projects.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createProject
+      summary: Create a TLOZ project
+      description: name is required; all other fields are optional.
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                descriptionDetail:
+                  type: string
+                icon:
+                  type: string
+                color:
+                  type: string
+                  pattern: "^#[0-9a-fA-F]{6}$"
+                status:
+                  $ref: "#/components/schemas/ProjectStatus"
+                type:
+                  type: string
+                ownerId:
+                  type: string
+                startDate:
+                  type: string
+                  format: date
+                dueDate:
+                  type: string
+                  format: date
+      responses:
+        "201":
+          description: Project created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Project"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /projects/query:
+    post:
+      operationId: queryProjects
+      summary: Query projects by example
+      description: Like GET /projects but filters are sent in the request body.
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ownerId:
+                  type: string
+                status:
+                  $ref: "#/components/schemas/ProjectStatus"
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 25
+                cursor:
+                  type: string
       responses:
         "200":
           description: Matching projects.
@@ -149,6 +283,63 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateProject
+      summary: Update a TLOZ project
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                descriptionDetail:
+                  type: string
+                icon:
+                  type: string
+                color:
+                  type: string
+                  pattern: "^#[0-9a-fA-F]{6}$"
+                status:
+                  $ref: "#/components/schemas/ProjectStatus"
+                type:
+                  type: string
+                ownerId:
+                  type: string
+                startDate:
+                  type: string
+                  format: date
+                dueDate:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Project updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Project"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Missions ───────────────────────────────────────────────────────
   /missions:
     get:
       operationId: listMissions
@@ -196,6 +387,119 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createMission
+      summary: Create a mission
+      description: title, ownerId, and type are required; all other fields optional.
+      tags: [Missions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, ownerId, type]
+              properties:
+                id:
+                  type: string
+                  description: Optional custom ID (auto-generated if omitted).
+                title:
+                  type: string
+                description:
+                  type: string
+                icon:
+                  type: string
+                type:
+                  $ref: "#/components/schemas/MissionType"
+                status:
+                  $ref: "#/components/schemas/MissionStatus"
+                conclusion:
+                  type: string
+                ownerId:
+                  type: string
+                projectId:
+                  type: string
+                seasonId:
+                  type: string
+                episodeId:
+                  type: string
+                dueDate:
+                  type: string
+                  format: date
+                startDate:
+                  type: string
+                  format: date
+                completedAt:
+                  type: string
+                  format: date-time
+                blockedReason:
+                  type: string
+                progress:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+      responses:
+        "201":
+          description: Mission created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Mission"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/query:
+    post:
+      operationId: queryMissions
+      summary: Query missions by example
+      description: Like GET /missions but filters are sent in the request body.
+      tags: [Missions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                projectId:
+                  type: string
+                ownerId:
+                  type: string
+                status:
+                  $ref: "#/components/schemas/MissionStatus"
+                seasonId:
+                  type: string
+                episodeId:
+                  type: string
+                title:
+                  type: string
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 25
+                cursor:
+                  type: string
+      responses:
+        "200":
+          description: Matching missions.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MissionListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /missions/{missionId}:
     get:
       operationId: getMissionDetail
@@ -220,6 +524,395 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateMission
+      summary: Update mission fields
+      description: Only the provided fields are updated. Valid fields: title, description, icon, type, status, conclusion, dueDate, startDate, completedAt, blockedReason, progress, seasonId, episodeId, ownerId, projectId.
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                icon:
+                  type: string
+                type:
+                  $ref: "#/components/schemas/MissionType"
+                status:
+                  $ref: "#/components/schemas/MissionStatus"
+                conclusion:
+                  type: string
+                dueDate:
+                  type: string
+                  format: date
+                startDate:
+                  type: string
+                  format: date
+                completedAt:
+                  type: string
+                  format: date-time
+                blockedReason:
+                  type: string
+                progress:
+                  type: integer
+                  minimum: 0
+                  maximum: 100
+                seasonId:
+                  type: string
+                episodeId:
+                  type: string
+                ownerId:
+                  type: string
+                projectId:
+                  type: string
+      responses:
+        "200":
+          description: Mission updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Mission"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteMission
+      summary: Delete a mission
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      responses:
+        "200":
+          description: Mission deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/status:
+    patch:
+      operationId: patchMissionStatus
+      summary: Change mission status only
+      description: Dedicated endpoint to update just the status field.
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: "#/components/schemas/MissionStatus"
+      responses:
+        "200":
+          description: Status updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Mission"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/dependencies:
+    post:
+      operationId: addMissionDependency
+      summary: Add a dependency to a mission
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dependsOnMissionId]
+              properties:
+                dependsOnMissionId:
+                  type: string
+                  description: ID of the mission this mission depends on.
+      responses:
+        "200":
+          description: Dependency added. Returns updated mission detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MissionDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/dependencies/{dependencyId}:
+    delete:
+      operationId: removeMissionDependency
+      summary: Remove a dependency from a mission
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+        - name: dependencyId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Dependency removed. Returns updated mission detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MissionDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/resources:
+    post:
+      operationId: addMissionResource
+      summary: Add a resource to a mission
+      tags: [Resources]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, title]
+              properties:
+                type:
+                  $ref: "#/components/schemas/ResourceType"
+                title:
+                  type: string
+                url:
+                  type: string
+                  format: uri
+                fileId:
+                  type: string
+      responses:
+        "200":
+          description: Resource added. Returns updated mission detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MissionDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/resources/{resourceId}:
+    delete:
+      operationId: removeMissionResource
+      summary: Remove a resource from a mission
+      tags: [Resources]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+        - name: resourceId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Resource removed. Returns updated mission detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MissionDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/quest-items:
+    post:
+      operationId: linkMissionQuestItem
+      summary: Link a quest item to a mission
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [questItemId]
+              properties:
+                questItemId:
+                  type: string
+                required:
+                  type: boolean
+                  description: Whether the quest item is required for this mission.
+                  default: false
+      responses:
+        "200":
+          description: Quest item linked. Returns updated mission detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MissionDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/quest-items/{questItemId}:
+    delete:
+      operationId: unlinkMissionQuestItem
+      summary: Unlink a quest item from a mission
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+        - name: questItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Quest item unlinked. Returns updated mission detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MissionDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/document:
+    put:
+      operationId: saveMissionDocument
+      summary: Save mission document (markdown with checklist)
+      description: The document text is parsed for embedded checklist items.
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [markdown]
+              properties:
+                markdown:
+                  type: string
+                  description: Full markdown content for the mission document. Checklist items are parsed from `- [ ]` / `- [x]` syntax.
+      responses:
+        "200":
+          description: Document saved. Returns updated mission detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/MissionDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Seasons ────────────────────────────────────────────────────────
   /seasons:
     get:
       operationId: listSeasons
@@ -242,6 +935,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  # ── Episodes ───────────────────────────────────────────────────────
   /episodes:
     get:
       operationId: listEpisodes
@@ -269,6 +964,8 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+
+  # ── Quest Items ────────────────────────────────────────────────────
   /quest-items:
     get:
       operationId: listQuestItems
@@ -302,6 +999,179 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createQuestItem
+      summary: Create a quest item
+      description: name is required; all other fields are optional.
+      tags: [Quest Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                descriptionDetail:
+                  type: string
+                icon:
+                  type: string
+                status:
+                  $ref: "#/components/schemas/InventoryStatus"
+                category:
+                  $ref: "#/components/schemas/InventoryCategory"
+                ownerId:
+                  type: string
+                acquiredAt:
+                  type: string
+                  format: date
+      responses:
+        "201":
+          description: Quest item created.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/QuestItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /quest-items/query:
+    post:
+      operationId: queryQuestItems
+      summary: Query quest items by example
+      description: Like GET /quest-items but filters are sent in the request body.
+      tags: [Quest Items]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ownerId:
+                  type: string
+                status:
+                  $ref: "#/components/schemas/InventoryStatus"
+                category:
+                  $ref: "#/components/schemas/InventoryCategory"
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 25
+                cursor:
+                  type: string
+      responses:
+        "200":
+          description: Matching quest items.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestItemListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /quest-items/{questItemId}:
+    get:
+      operationId: getQuestItem
+      summary: Get a quest item by ID
+      tags: [Quest Items]
+      parameters:
+        - name: questItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Quest item found.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/QuestItem"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateQuestItem
+      summary: Update a quest item
+      tags: [Quest Items]
+      parameters:
+        - name: questItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                descriptionDetail:
+                  type: string
+                icon:
+                  type: string
+                status:
+                  $ref: "#/components/schemas/InventoryStatus"
+                category:
+                  $ref: "#/components/schemas/InventoryCategory"
+                ownerId:
+                  type: string
+                acquiredAt:
+                  type: string
+                  format: date
+      responses:
+        "200":
+          description: Quest item updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/QuestItem"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Resources ──────────────────────────────────────────────────────
   /resources:
     get:
       operationId: listResources
@@ -339,6 +1209,49 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+  /resources/query:
+    post:
+      operationId: queryResources
+      summary: Query resources by example
+      description: Like GET /resources but filters are sent in the request body.
+      tags: [Resources]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                missionId:
+                  type: string
+                projectId:
+                  type: string
+                questItemId:
+                  type: string
+                type:
+                  $ref: "#/components/schemas/ResourceType"
+                limit:
+                  type: integer
+                  minimum: 1
+                  maximum: 100
+                  default: 25
+                cursor:
+                  type: string
+      responses:
+        "200":
+          description: Matching resources.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResourceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Agents ─────────────────────────────────────────────────────────
   /agents:
     get:
       operationId: listAgents
@@ -365,7 +1278,7 @@ paths:
     post:
       operationId: createAgent
       summary: Create a new agent account
-      description: Creates a non-human user with type=agent and a default API key.
+      description: Creates a non-human user with type=agent and a default API key. The raw key is returned only once.
       tags: [Agents]
       requestBody:
         required: true
@@ -493,14 +1406,23 @@ paths:
             minLength: 1
             maxLength: 128
       responses:
-        "204":
-          description: Key revoked; no body returned.
+        "200":
+          description: Key revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+
 components:
   securitySchemes:
     sessionCookie:
@@ -508,6 +1430,17 @@ components:
       in: cookie
       name: authjs.session-token
       description: Existing NextAuth browser session. Production may use the secure cookie prefix.
+    bearerToken:
+      type: http
+      scheme: bearer
+      bearerFormat: zaf_
+      description: |
+        Agent API key. Prefix is always `zaf_` followed by 64 hex characters.
+        To authenticate, include the header:
+        ```
+        Authorization: Bearer zaf_<64-hex-chars>
+        ```
+        If both Bearer token and session cookie are present, the Bearer token takes priority.
   parameters:
     Limit:
       name: limit
@@ -555,7 +1488,7 @@ components:
           schema:
             $ref: "#/components/schemas/ApiError"
     Unauthorized:
-      description: An authenticated Zipform session is required.
+      description: An authenticated session or valid API key is required.
       content:
         application/json:
           schema:
@@ -573,7 +1506,33 @@ components:
           schema:
             $ref: "#/components/schemas/ApiError"
   schemas:
-    # ── Users ──────────────────────────────────────────────────────
+    # ── Shared ───────────────────────────────────────────────────────
+    PageInfo:
+      type: object
+      additionalProperties: false
+      required: [nextCursor]
+      properties:
+        nextCursor:
+          type: [string, "null"]
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message, requestId]
+          properties:
+            code:
+              type: string
+              enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR]
+            message:
+              type: string
+            requestId:
+              type: string
+
+    # ── Users ────────────────────────────────────────────────────────
     User:
       type: object
       additionalProperties: false
@@ -599,45 +1558,6 @@ components:
         theme:
           type: string
           enum: [system, light, dark]
-
-    ApiKey:
-      type: object
-      additionalProperties: false
-      required: [id, userId, createdByUserId, name, keyPrefix, createdAt]
-      properties:
-        id:
-          type: string
-        userId:
-          type: string
-        createdByUserId:
-          type: string
-        name:
-          type: string
-        keyPrefix:
-          type: string
-        lastUsedAt:
-          type: string
-          format: date-time
-        expiresAt:
-          type: string
-          format: date-time
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    ApiKeyCreateResult:
-      type: object
-      additionalProperties: false
-      required: [key, apiKey]
-      properties:
-        key:
-          type: string
-          description: "Raw API key (shown only once, begins with zaf_)"
-        apiKey:
-          $ref: "#/components/schemas/ApiKey"
     UserListResponse:
       type: object
       additionalProperties: false
@@ -650,7 +1570,7 @@ components:
         page:
           $ref: "#/components/schemas/PageInfo"
 
-    # ── Projects ───────────────────────────────────────────────────
+    # ── Projects ─────────────────────────────────────────────────────
     ProjectStatus:
       type: string
       enum: [planned, active, archived]
@@ -696,7 +1616,7 @@ components:
         page:
           $ref: "#/components/schemas/PageInfo"
 
-    # ── Missions ───────────────────────────────────────────────────
+    # ── Missions ─────────────────────────────────────────────────────
     MissionStatus:
       type: string
       enum: [now, next, later, completed, blocked]
@@ -777,7 +1697,7 @@ components:
         page:
           $ref: "#/components/schemas/PageInfo"
 
-    # ── Seasons ────────────────────────────────────────────────────
+    # ── Seasons ──────────────────────────────────────────────────────
     Season:
       type: object
       additionalProperties: false
@@ -800,7 +1720,7 @@ components:
           type: [string, "null"]
           format: date
 
-    # ── Episodes ───────────────────────────────────────────────────
+    # ── Episodes ─────────────────────────────────────────────────────
     Episode:
       type: object
       additionalProperties: false
@@ -825,7 +1745,7 @@ components:
           type: [string, "null"]
           format: date
 
-    # ── Quest Items ────────────────────────────────────────────────
+    # ── Quest Items ──────────────────────────────────────────────────
     InventoryStatus:
       type: string
       enum: [locked, unlocked]
@@ -866,7 +1786,7 @@ components:
         page:
           $ref: "#/components/schemas/PageInfo"
 
-    # ── Resources ──────────────────────────────────────────────────
+    # ── Resources ────────────────────────────────────────────────────
     ResourceType:
       type: string
       enum: [link, document, image, file, note]
@@ -904,7 +1824,46 @@ components:
         page:
           $ref: "#/components/schemas/PageInfo"
 
-    # ── Shared ─────────────────────────────────────────────────────
+    # ── API Keys ─────────────────────────────────────────────────────
+    ApiKey:
+      type: object
+      additionalProperties: false
+      required: [id, userId, createdByUserId, name, keyPrefix, createdAt]
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        createdByUserId:
+          type: string
+        name:
+          type: string
+        keyPrefix:
+          type: string
+        lastUsedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ApiKeyCreateResult:
+      type: object
+      additionalProperties: false
+      required: [key, apiKey]
+      properties:
+        key:
+          type: string
+          description: "Raw API key (shown only once, begins with zaf_)"
+        apiKey:
+          $ref: "#/components/schemas/ApiKey"
+
+    # ── Checklist Items ──────────────────────────────────────────────
     ChecklistItem:
       type: object
       additionalProperties: false
@@ -920,27 +1879,3 @@ components:
           type: boolean
         position:
           type: integer
-    PageInfo:
-      type: object
-      additionalProperties: false
-      required: [nextCursor]
-      properties:
-        nextCursor:
-          type: [string, "null"]
-    ApiError:
-      type: object
-      additionalProperties: false
-      required: [error]
-      properties:
-        error:
-          type: object
-          additionalProperties: false
-          required: [code, message, requestId]
-          properties:
-            code:
-              type: string
-              enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR]
-            message:
-              type: string
-            requestId:
-              type: string
