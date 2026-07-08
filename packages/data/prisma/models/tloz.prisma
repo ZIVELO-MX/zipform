@@ -33,7 +33,7 @@ model TlozEpisode {
 }
 
 model TlozProject {
-  id                String        @id
+  id                String        @id @default(uuid()) @db.Uuid
   slug              String        @unique
   name              String
   description       String
@@ -42,8 +42,8 @@ model TlozProject {
   icon              String
   status            String
   type              String        @default("normal")
-  ownerId     String
-  owner       User          @relation(fields: [ownerId], references: [id])
+  ownerId     String    @db.Uuid
+  owner       User      @relation(fields: [ownerId], references: [id])
   startDate   String
   dueDate     String?
   createdAt   DateTime      @default(now())
@@ -57,7 +57,7 @@ model TlozProject {
 }
 
 model TlozMission {
-  id                 String                  @id
+  id                 String                  @id @default(uuid()) @db.Uuid
   displayId          String                  @unique
   title              String
   description        String
@@ -65,8 +65,8 @@ model TlozMission {
   type               String
   status             String
   conclusion         String?
-  ownerId            String
-  owner              User                    @relation(fields: [ownerId], references: [id])
+  ownerId            String    @db.Uuid
+  owner              User      @relation(fields: [ownerId], references: [id])
   projectId          String?
   project            TlozProject?            @relation(fields: [projectId], references: [id])
   seasonId           String?
@@ -108,15 +108,15 @@ model TlozMissionDependency {
 }
 
 model TlozQuestItem {
-  id                String                 @id
+  id                String                 @id @default(uuid()) @db.Uuid
   name              String
   description       String
   descriptionDetail String                 @default("")
   icon              String
   status            String
   category          String                 @default("other")
-  ownerId           String?
-  owner             User?                  @relation(fields: [ownerId], references: [id])
+  ownerId           String?   @db.Uuid
+  owner             User?     @relation(fields: [ownerId], references: [id])
   acquiredAt        String?
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
@@ -178,8 +178,8 @@ model TlozResource {
 }
 
 model TlozUserMissionState {
-  id        String      @id
-  userId    String
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @db.Uuid
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   missionId String
   mission   TlozMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
