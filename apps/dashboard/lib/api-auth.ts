@@ -8,6 +8,16 @@ type AuthResult =
   | Response;
 
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
+  const authHeader = request.headers.get("authorization");
+
+  if (authHeader?.startsWith("Bearer ")) {
+    const apiKey = authHeader.slice(7).trim();
+    if (apiKey) {
+      const user = await dataClient.agent.authenticateWithApiKey(apiKey);
+      if (user) return { user };
+    }
+  }
+
   const session = await auth();
   if (session?.user?.email) {
     const users = await dataClient.tloz.getUsers();
@@ -15,15 +25,6 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
       (candidate) => candidate.email.trim().toLowerCase() === session.user.email!.toLowerCase()
     );
     if (user) return { user };
-  }
-
-  const authHeader = request.headers.get("authorization");
-  if (authHeader?.startsWith("Bearer ")) {
-    const apiKey = authHeader.slice(7).trim();
-    if (apiKey) {
-      const user = await dataClient.agent.authenticateWithApiKey(apiKey);
-      if (user) return { user };
-    }
   }
 
   return NextResponse.json(
