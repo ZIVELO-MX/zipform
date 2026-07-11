@@ -552,7 +552,7 @@ paths:
     patch:
       operationId: updateMission
       summary: Update mission fields
-      description: Only the provided fields are updated. Valid fields: title, description, icon, type, status, conclusion, dueDate, startDate, completedAt, blockedReason, progress, seasonId, episodeId, ownerId, projectId.
+      description: "Only the provided fields are updated. Valid fields: title, description, icon, type, status, conclusion, dueDate, startDate, completedAt, blockedReason, progress, seasonId, episodeId, ownerId, projectId."
       tags: [Missions]
       parameters:
         - $ref: "#/components/parameters/MissionId"
