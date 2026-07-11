@@ -8,12 +8,12 @@ describe("mission document checklist", () => {
     expect(withChecklist(document, [
       { title: "Conservar este estado", completed: true },
       { title: "Nombre actualizado", completed: false },
-    ])).toBe("Objetivo\n\nReferencia: API\n\n- [x] Conservar este estado\n- [ ] Nombre actualizado");
+    ])).toBe("Objetivo\n\nReferencia: API\n- [x] Conservar este estado\n- [ ] Nombre actualizado");
   });
 
   it("removes only the selected checklist item", () => {
     expect(withChecklist(document, [{ title: "Conservar este estado", completed: true }]))
-      .toBe("Objetivo\n\nReferencia: API\n\n- [x] Conservar este estado");
+      .toBe("Objetivo\n\nReferencia: API\n- [x] Conservar este estado");
   });
 
   it("recognizes every supported markdown task marker", () => {
