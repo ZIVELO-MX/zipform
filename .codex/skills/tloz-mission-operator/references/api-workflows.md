@@ -21,7 +21,7 @@ Consult `GET https://zipform.zivelo.dev/api/openapi` before relying on this rout
 5. `POST /api/v1/missions` and read the returned internal ID.
 6. `GET /api/v1/missions/{id}` and verify persisted fields.
 
-Do not self-assign unless the ownership rules in `SKILL.md` apply.
+Set `ownerId` only when required by the current creation schema and authorized by the user. Follow the ownership and execution rules in `SKILL.md`; assigning a mission does not authorize the agent to perform another owner's primary deliverable.
 
 ## Relationships
 
