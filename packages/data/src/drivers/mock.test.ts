@@ -27,7 +27,8 @@ describe("mock data driver", () => {
     const created = await client.tloz.createMission({
       ...input,
       id: "test-mission",
-      title: "Created mission"
+      title: "Created mission",
+      projectId: template.projectId!,
     });
     expect(created.title).toBe("Created mission");
 
