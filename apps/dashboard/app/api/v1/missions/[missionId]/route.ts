@@ -90,8 +90,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mi
       );
     }
 
-    const updated = await dataClient.tloz.updateMission(missionId, allowedFields);
-    return NextResponse.json({ data: updated });
+    await dataClient.tloz.updateMission(missionId, allowedFields);
+    return NextResponse.json({ data: await dataClient.tloz.getMissionDetail(missionId) });
   } catch (e) {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },

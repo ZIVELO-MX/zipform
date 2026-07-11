@@ -106,11 +106,15 @@ export function buildTlozMissionDetail(data: TlozDataSet, missionId: string): Tl
     return null;
   }
 
+  const checklist = data.checklistItems
+    .filter((item) => item.missionId === mission.id)
+    .sort((a, b) => a.position - b.position);
+
   return {
     ...mission,
-    checklist: data.checklistItems
-      .filter((item) => item.missionId === mission.id)
-      .sort((a, b) => a.position - b.position),
+    checklist,
+    checklistCount: checklist.length,
+    completed: checklist.filter((item) => item.completed).length,
     resources: data.resources.filter((resource) => resource.missionId === mission.id),
     requiredBy: data.missionDependencies
       .filter((dependency) => dependency.dependsOnMissionId === mission.id)

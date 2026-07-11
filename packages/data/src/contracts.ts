@@ -33,6 +33,8 @@ export type TlozMissionRecord = TlozMission & {
 
 export type TlozMissionDetail = TlozMissionRecord & {
   checklist: TlozChecklistItem[];
+  checklistCount: number;
+  completed: number;
   resources: TlozResource[];
   requiredBy: TlozMission[];
   missionQuestItems: TlozMissionQuestItem[];

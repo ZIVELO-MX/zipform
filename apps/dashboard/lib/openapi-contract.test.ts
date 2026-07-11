@@ -25,3 +25,19 @@ describe("OpenAPI list responses", () => {
     expect(block).not.toContain("page:");
   });
 });
+
+describe("OpenAPI mission defaults and detail", () => {
+  it("documents optional stable mission defaults", () => {
+    const operation = spec.match(/^  \/missions:\n([\s\S]*?)(?=^  \/missions\/query:)/m)?.[1] ?? "";
+    expect(operation).toContain("required: [title, type]");
+    expect(operation).toContain("default: later");
+    expect(operation).toContain("Defaults to the Zibot user ID");
+    expect(operation).toContain("slug is zivelo");
+  });
+
+  it("documents checklist aggregates in MissionDetail", () => {
+    const block = schemaBlock("MissionDetail");
+    expect(block).toContain("checklistCount:");
+    expect(block).toContain("completed:");
+  });
+});

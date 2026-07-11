@@ -72,8 +72,14 @@ export async function POST(request: NextRequest) {
   );
 
   try {
-    const created = await dataClient.tloz.createMission(allowedFields as Parameters<typeof dataClient.tloz.createMission>[0]);
-    return NextResponse.json({ data: created }, { status: 201 });
+    const [users, projects] = await Promise.all([dataClient.tloz.getUsers(), dataClient.tloz.getProjects()]);
+    const zibot = users.find((user) => user.username === "zibot");
+    const zivelo = projects.find((project) => project.slug === "zivelo");
+    if (!zibot || !zivelo) throw new Error("Mission defaults are not configured");
+    const input = { ownerId: zibot.id, projectId: zivelo.id, status: "later", ...allowedFields };
+    const created = await dataClient.tloz.createMission(input as Parameters<typeof dataClient.tloz.createMission>[0]);
+    const detail = await dataClient.tloz.getMissionDetail(created.id);
+    return NextResponse.json({ data: detail }, { status: 201 });
   } catch (e) {
     if (e instanceof TlozValidationError) {
       return NextResponse.json(

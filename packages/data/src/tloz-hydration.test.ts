@@ -47,6 +47,8 @@ describe("TLOZ hydration", () => {
   it("builds sorted detail and returns null for unknown missions", () => {
     const detail = buildTlozMissionDetail(data, missions[0].id);
     expect(detail?.checklist).toEqual([...(detail?.checklist ?? [])].sort((a, b) => a.position - b.position));
+    expect(detail?.checklistCount).toBe(detail?.checklist.length);
+    expect(detail?.completed).toBe(detail?.checklist.filter((item) => item.completed).length);
     expect(detail?.resources.every((item) => item.missionId === missions[0].id)).toBe(true);
     expect(detail?.requiredBy.every((item) => item.id !== missions[0].id)).toBe(true);
     expect(buildTlozMissionDetail(data, "missing")).toBeNull();

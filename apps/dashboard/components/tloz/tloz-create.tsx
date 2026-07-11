@@ -9,6 +9,7 @@ import type { TlozInventoryCategory, TlozMissionStatus, TlozMissionType, TlozPro
 import { TlozValidationError, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "@zipform/data";
 import { createMission, createProject, createQuestItem } from "../../app/tloz/actions";
 import { resolveMissionIcon } from "./tloz-utils";
+import { initialDraft } from "./tloz-create-defaults";
 
 export type TlozCreateKind = "mission" | "project" | "inventory";
 type CreateContextValue = { kind: TlozCreateKind; label: string; openCreate: () => void };
@@ -52,11 +53,13 @@ export function CreateForm({ kind, projects, users, fixedProjectId, onDone }: { 
   const toasterId = useOverlayToasterId();
   const [pending, startTransition] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
-  const [draft, setDraft] = useState<Record<string, string>>(() => initialDraft(kind, users[0]?.id ?? "", fixedProjectId ?? projects[0]?.id ?? "", today));
+  const defaultOwnerId = users.find((user) => user.username === "zibot")?.id ?? users[0]?.id ?? "";
+  const defaultProjectId = fixedProjectId ?? projects.find((project) => project.slug === "zivelo")?.id ?? projects[0]?.id ?? "";
+  const [draft, setDraft] = useState<Record<string, string>>(() => initialDraft(kind, defaultOwnerId, defaultProjectId, today));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const formId = `create-${kind}-form`;
   function field(name: string, value: string) { setDraft((current) => ({ ...current, [name]: value })); setErrors((current) => ({ ...current, [name]: "" })); }
-  function reset() { setDraft(initialDraft(kind, users[0]?.id ?? "", fixedProjectId ?? projects[0]?.id ?? "", today)); setErrors({}); }
+  function reset() { setDraft(initialDraft(kind, defaultOwnerId, defaultProjectId, today)); setErrors({}); }
   function submit(event: React.FormEvent) {
     event.preventDefault();
     try {
@@ -97,7 +100,6 @@ function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, fixe
 }
 
 function FormField({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) { return <label className="flex flex-col gap-1.5"><span className="text-xs font-bold text-carbon/60">{label}{required ? <span className="text-zivelo"> *</span> : null}</span>{children}{error ? <span className="text-xs font-medium text-[#B91C22]">{error}</span> : null}</label>; }
-function initialDraft(kind: TlozCreateKind, ownerId: string, projectId: string, today: string) { return { name: "", description: "", icon: kind === "project" ? "FolderKanban" : kind === "inventory" ? "PackageOpen" : "Sword", ownerId, projectId, type: "side_quest", status: kind === "inventory" ? "locked" : kind === "project" ? "active" : "next", category: "other", color: "#2D6CDF", projectType: "normal", startDate: kind === "project" ? today : "", dueDate: "" }; }
 function buildInput(kind: TlozCreateKind, draft: Record<string, string>) {
   if (kind === "mission") return { title: draft.name, description: draft.description, icon: draft.icon, type: draft.type as TlozMissionType, status: draft.status as TlozMissionStatus, ownerId: draft.ownerId, projectId: draft.projectId, startDate: draft.startDate || undefined, dueDate: draft.dueDate || undefined, progress: 0 };
   if (kind === "project") return { name: draft.name, description: draft.description, icon: draft.icon, color: draft.color, status: "active" as const, type: "normal" as const, ownerId: draft.ownerId, startDate: draft.startDate, dueDate: draft.dueDate || undefined };
