@@ -1530,13 +1530,6 @@ components:
             $ref: "#/components/schemas/ApiError"
   schemas:
     # ── Shared ───────────────────────────────────────────────────────
-    PageInfo:
-      type: object
-      additionalProperties: false
-      required: [nextCursor]
-      properties:
-        nextCursor:
-          type: [string, "null"]
     ApiError:
       type: object
       additionalProperties: false
@@ -1590,14 +1583,14 @@ components:
     UserListResponse:
       type: object
       additionalProperties: false
-      required: [data, page]
+      required: [data, nextCursor]
       properties:
         data:
           type: array
           items:
             $ref: "#/components/schemas/User"
-        page:
-          $ref: "#/components/schemas/PageInfo"
+        nextCursor:
+          type: [string, "null"]
 
     # ── Projects ─────────────────────────────────────────────────────
     ProjectStatus:
@@ -1636,14 +1629,14 @@ components:
     ProjectListResponse:
       type: object
       additionalProperties: false
-      required: [data, page]
+      required: [data, nextCursor]
       properties:
         data:
           type: array
           items:
             $ref: "#/components/schemas/Project"
-        page:
-          $ref: "#/components/schemas/PageInfo"
+        nextCursor:
+          type: [string, "null"]
 
     # ── Missions ─────────────────────────────────────────────────────
     MissionStatus:
@@ -1717,14 +1710,14 @@ components:
     MissionListResponse:
       type: object
       additionalProperties: false
-      required: [data, page]
+      required: [data, nextCursor]
       properties:
         data:
           type: array
           items:
             $ref: "#/components/schemas/MissionDetail"
-        page:
-          $ref: "#/components/schemas/PageInfo"
+        nextCursor:
+          type: [string, "null"]
 
     # ── Seasons ──────────────────────────────────────────────────────
     Season:
@@ -1806,14 +1799,14 @@ components:
     QuestItemListResponse:
       type: object
       additionalProperties: false
-      required: [data, page]
+      required: [data, nextCursor]
       properties:
         data:
           type: array
           items:
             $ref: "#/components/schemas/QuestItem"
-        page:
-          $ref: "#/components/schemas/PageInfo"
+        nextCursor:
+          type: [string, "null"]
 
     # ── Resources ────────────────────────────────────────────────────
     ResourceType:
@@ -1844,14 +1837,14 @@ components:
     ResourceListResponse:
       type: object
       additionalProperties: false
-      required: [data, page]
+      required: [data, nextCursor]
       properties:
         data:
           type: array
           items:
             $ref: "#/components/schemas/Resource"
-        page:
-          $ref: "#/components/schemas/PageInfo"
+        nextCursor:
+          type: [string, "null"]
 
     # ── API Keys ─────────────────────────────────────────────────────
     ApiKey:
