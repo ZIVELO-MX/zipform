@@ -19,6 +19,10 @@ export function initialsFromName(name: string) {
     .toUpperCase();
 }
 
+export function displayUsername(username: string) {
+  return username ? username[0].toLocaleUpperCase("es") + username.slice(1) : username;
+}
+
 export type UserAvatarLabelProps = {
   name: string;
   label?: string;

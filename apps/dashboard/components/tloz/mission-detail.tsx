@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, Database, File, FileCheck, FileText, ImageIcon, KeyRound, LayoutDashboard, Link2, MoreHorizontal, PanelRightOpen, Plus, Search, Shield, Sparkles, Star, StickyNote, Sword, Target, Wrench, X } from "lucide-react";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, type EntityPickerOption, type IconPickerOption } from "@zipform/ui";
+import { Check, Database, File, FileCheck, FileText, ImageIcon, KeyRound, LayoutDashboard, Link2, MoreHorizontal, PanelRightOpen, Pencil, Plus, Search, Shield, Sparkles, Star, StickyNote, Sword, Target, Trash2, Wrench, X } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
 import {
@@ -20,6 +20,7 @@ import {
 import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 import { missionStatusLabel, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
+import { withChecklist, withoutTaskLines } from "./mission-document";
 
 const missionIcons: IconPickerOption[] = [
   { id: "Sword", label: "Misión", icon: Sword }, { id: "Sparkles", label: "Destacado", icon: Sparkles }, { id: "LayoutDashboard", label: "Dashboard", icon: LayoutDashboard }, { id: "Search", label: "Búsqueda", icon: Search }, { id: "Database", label: "Base de datos", icon: Database }, { id: "FileText", label: "Documento", icon: FileText }, { id: "FileCheck", label: "Validación", icon: FileCheck }, { id: "KeyRound", label: "Acceso", icon: KeyRound }, { id: "Shield", label: "Seguridad", icon: Shield }, { id: "Wrench", label: "Herramienta", icon: Wrench },
@@ -48,6 +49,9 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(mission.title);
   const [editingConclusion, setEditingConclusion] = useState(false);
+  const [renamingChecklist, setRenamingChecklist] = useState<number | null>(null);
+  const [checklistTitleDraft, setChecklistTitleDraft] = useState("");
+  const [deletingChecklist, setDeletingChecklist] = useState<number | null>(null);
   const [conclusionDraft, setConclusionDraft] = useState(mission.conclusion ?? "");
   const undoStack = useRef<EditableSnapshot[]>([]);
   const redoStack = useRef<EditableSnapshot[]>([]);
@@ -55,6 +59,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
   const skipDescriptionSave = useRef(false);
   const skipConclusionSave = useRef(false);
   const [isPending, startTransition] = useTransition();
+  const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const checklistProgress = current.checklist.length ? Math.round((current.checklist.filter((item) => item.completed).length / current.checklist.length) * 100) : 0;
 
@@ -87,10 +92,10 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
   }
 
   function mutate(label: string, operation: () => Promise<TlozMissionDetail>) {
-    const toastId = toast.loading(label);
+    const toastId = toast.loading(label, { toasterId });
     startTransition(async () => {
-      try { accept(await operation()); toast.success("Cambios guardados", { id: toastId }); }
-      catch { toast.error("No se pudieron guardar los cambios", { id: toastId }); }
+      try { accept(await operation()); toast.success("Cambios guardados", { id: toastId, toasterId }); }
+      catch { toast.error("No se pudieron guardar los cambios", { id: toastId, toasterId }); }
     });
   }
 
@@ -108,18 +113,18 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
         accept(restored);
         setTitleDraft(snapshot.title);
         setConclusionDraft(snapshot.conclusion ?? "");
-        toast.success(message);
-      } catch { toast.error("No se pudo restaurar el cambio"); }
+        toast.success(message, { toasterId });
+      } catch { toast.error("No se pudo restaurar el cambio", { toasterId }); }
     });
   }
 
   function saveIcon(value: string) {
     if (value === current.icon) return;
     remember();
-    const toastId = toast.loading("Actualizando icono…");
+    const toastId = toast.loading("Actualizando icono…", { toasterId });
     startTransition(async () => {
-      try { accept({ ...current, ...(await updateMission(current.id, { icon: value })) }); toast.success("Icono actualizado", { id: toastId }); }
-      catch { toast.error("No se pudo actualizar el icono", { id: toastId }); }
+      try { accept({ ...current, ...(await updateMission(current.id, { icon: value })) }); toast.success("Icono actualizado", { id: toastId, toasterId }); }
+      catch { toast.error("No se pudo actualizar el icono", { id: toastId, toasterId }); }
     });
   }
 
@@ -129,10 +134,10 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
     setEditingTitle(false);
     if (!title || title === current.title) { setTitleDraft(current.title); return; }
     remember();
-    const toastId = toast.loading("Actualizando título…");
+    const toastId = toast.loading("Actualizando título…", { toasterId });
     startTransition(async () => {
-      try { accept({ ...current, ...(await updateMission(current.id, { title })) }); toast.success("Título actualizado", { id: toastId }); }
-      catch { setTitleDraft(current.title); toast.error("No se pudo actualizar el título", { id: toastId }); }
+      try { accept({ ...current, ...(await updateMission(current.id, { title })) }); toast.success("Título actualizado", { id: toastId, toasterId }); }
+      catch { setTitleDraft(current.title); toast.error("No se pudo actualizar el título", { id: toastId, toasterId }); }
     });
   }
 
@@ -142,10 +147,10 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
     setEditingConclusion(false);
     if (conclusion === (current.conclusion ?? "")) return;
     remember();
-    const toastId = toast.loading("Actualizando resultado…");
+    const toastId = toast.loading("Actualizando resultado…", { toasterId });
     startTransition(async () => {
-      try { accept({ ...current, ...(await updateMission(current.id, { conclusion })) }); toast.success("Resultado actualizado", { id: toastId }); }
-      catch { setConclusionDraft(current.conclusion ?? ""); toast.error("No se pudo actualizar el resultado", { id: toastId }); }
+      try { accept({ ...current, ...(await updateMission(current.id, { conclusion })) }); toast.success("Resultado actualizado", { id: toastId, toasterId }); }
+      catch { setConclusionDraft(current.conclusion ?? ""); toast.error("No se pudo actualizar el resultado", { id: toastId, toasterId }); }
     });
   }
 
@@ -164,6 +169,18 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
     const nextChecklist = current.checklist.map((item, index) => index === position ? { ...item, completed: checked } : item);
     setCurrent((value) => ({ ...value, checklist: nextChecklist }));
     saveDocument(withChecklist(markdown, nextChecklist));
+  }
+
+  function renameChecklistItem(position: number) {
+    const title = checklistTitleDraft.trim();
+    setRenamingChecklist(null);
+    if (!title || title === current.checklist[position]?.title) return;
+    saveDocument(withChecklist(markdown, current.checklist.map((item, index) => index === position ? { ...item, title } : item)));
+  }
+
+  function deleteChecklistItem(position: number) {
+    saveDocument(withChecklist(markdown, current.checklist.filter((_, index) => index !== position)));
+    setDeletingChecklist(null);
   }
 
   const readableMarkdown = markdown.split(/\r?\n/).filter((line) => !/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line)).join("\n").trim();
@@ -217,7 +234,30 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
           <section className="mb-7" aria-labelledby="mission-conclusion-title"><div className="mb-[13px]"><h2 id="mission-conclusion-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-[#454543]">Definición de resultado</h2></div>{editingConclusion ? <textarea autoFocus className="min-h-24 w-full resize-y rounded-[14px] border border-[#1D1D1B]/15 bg-white px-[17px] py-[15px] text-sm leading-[1.55] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10" value={conclusionDraft} onChange={(event) => setConclusionDraft(event.target.value)} onBlur={saveConclusion} onKeyDown={(event) => { if (event.key === "Escape") { skipConclusionSave.current = true; setConclusionDraft(current.conclusion ?? ""); setEditingConclusion(false); } }} /> : <button type="button" className="flex w-full gap-[11px] rounded-[14px] border border-[#1D1D1B]/10 bg-white px-[17px] py-[15px] text-left text-sm leading-[1.55] text-[#454543] transition-colors hover:border-[#1D1D1B]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipConclusionSave.current = false; setEditingConclusion(true); }}><Target className="mt-px size-[18px] shrink-0" style={{ color: tone }} aria-hidden="true" /><span>{current.conclusion || "Definir el resultado esperado de esta misión"}</span></button>}</section>
 
-          <section className="mb-7" aria-labelledby="mission-checklist-title"><div className="mb-[13px] flex items-center justify-between"><h2 id="mission-checklist-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-[#454543]">Checklist</h2><span className="font-mono text-xs font-medium text-[#6B6B6B]">{current.checklist.filter((item) => item.completed).length} / {current.checklist.length}</span></div><MetricProgress className="mb-[15px]" value={checklistProgress} tone={tone} /><div className="rounded-[14px] border border-[#1D1D1B]/10 bg-white p-1.5">{current.checklist.map((item, position) => <label key={item.id} className="flex cursor-pointer items-center gap-[11px] rounded-[10px] px-3 py-2.5 transition-colors hover:bg-[#D72228]/[0.04]"><span className="relative grid size-[19px] shrink-0 place-items-center"><input type="checkbox" className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} /><Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" /></span><span className={item.completed ? "text-[13.5px] text-[#9A9A98] line-through" : "text-[13.5px] text-[#1D1D1B]"}>{item.title}</span></label>)}<AddChecklistTask onAdd={(title) => saveDocument(withChecklist(markdown, [...current.checklist, { title, completed: false }]))} /></div></section>
+          <section className="mb-7" aria-labelledby="mission-checklist-title">
+            <div className="mb-[13px] flex items-center justify-between"><h2 id="mission-checklist-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-[#454543]">Checklist</h2><span className="font-mono text-xs font-medium text-[#6B6B6B]">{current.checklist.filter((item) => item.completed).length} / {current.checklist.length}</span></div>
+            <MetricProgress className="mb-[15px]" value={checklistProgress} tone={tone} />
+            <div className="rounded-[14px] border border-[#1D1D1B]/10 bg-white p-1.5">
+              {current.checklist.map((item, position) => (
+                <div key={item.id} className="group flex items-center gap-[11px] rounded-[10px] px-3 py-2 transition-colors hover:bg-[#D72228]/[0.04]">
+                  <label className="relative grid size-[19px] shrink-0 cursor-pointer place-items-center">
+                    <input type="checkbox" className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} />
+                    <Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" />
+                    <span className="sr-only">{item.title}</span>
+                  </label>
+                  {renamingChecklist === position ? (
+                    <Input autoFocus className="h-8 min-w-0 flex-1 text-[13.5px]" value={checklistTitleDraft} aria-label="Nombre del checkbox" onChange={(event) => setChecklistTitleDraft(event.target.value)} onBlur={() => renameChecklistItem(position)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") setRenamingChecklist(null); }} />
+                  ) : <span className={`min-w-0 flex-1 text-[13.5px] ${item.completed ? "text-[#9A9A98] line-through" : "text-[#1D1D1B]"}`}>{item.title}</span>}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-7 shrink-0 rounded-md text-carbon/45 opacity-0 transition-opacity hover:text-carbon group-focus-within:opacity-100 group-hover:opacity-100" aria-label={`Acciones para ${item.title}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-36"><DropdownMenuItem onSelect={() => { setChecklistTitleDraft(item.title); setRenamingChecklist(position); }}><Pencil className="size-3.5" />Renombrar</DropdownMenuItem><DropdownMenuItem className="text-zivelo focus:text-zivelo" onSelect={() => setDeletingChecklist(position)}><Trash2 className="size-3.5" />Eliminar</DropdownMenuItem></DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+              <AddChecklistTask onAdd={(title) => saveDocument(withChecklist(markdown, [...current.checklist, { title, completed: false }]))} />
+            </div>
+            <AlertDialog open={deletingChecklist !== null} onOpenChange={(open) => !open && setDeletingChecklist(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Eliminar checkbox</AlertDialogTitle><AlertDialogDescription>Esta acción quitará “{deletingChecklist === null ? "" : current.checklist[deletingChecklist]?.title}” del documento de la misión.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletingChecklist !== null && deleteChecklistItem(deletingChecklist)}>Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+          </section>
 
           <div className="flex flex-col gap-7">
             <RelationsSection title="Dependencias">
@@ -340,5 +380,3 @@ const resourceIcon: Record<TlozResourceType, React.ElementType> = { link: Link2,
 const missionTypeBackground: Record<TlozMissionRecord["type"], string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
 const missionTypeSurfaceClass: Record<TlozMissionRecord["type"], string> = { main_quest: "bg-[#FDECEC] hover:bg-[#F9DDDE]", side_quest: "bg-[#EEF2FF] hover:bg-[#E1E8FF]", farming_quest: "bg-[#E6F4EA] hover:bg-[#D9EEDF]", exploration_quest: "bg-[#F2EAFE] hover:bg-[#E8DBFA]" };
 function snapshotOf(mission: TlozMissionDetail): EditableSnapshot { return { title: mission.title, description: mission.description, conclusion: mission.conclusion, icon: mission.icon }; }
-function withoutTaskLines(markdown: string) { return markdown.split(/\r?\n/).filter((line) => !/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line)).join("\n").trim(); }
-function withChecklist(markdown: string, checklist: Array<{ title: string; completed: boolean }>) { return [withoutTaskLines(markdown), checklist.map((item) => `- [${item.completed ? "x" : " "}] ${item.title}`).join("\n")].filter(Boolean).join("\n"); }

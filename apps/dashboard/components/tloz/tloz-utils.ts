@@ -35,6 +35,14 @@ export const missionStatusLabel: Record<TlozMissionStatus, string> = {
   blocked: "Bloqueada"
 };
 
+export const missionStatusTone: Record<TlozMissionStatus, string> = {
+  now: "#1E8E5A",
+  next: "#2D6CDF",
+  later: "#7A4ED9",
+  blocked: "#B91C22",
+  completed: "#6B6B6B"
+};
+
 export const missionTypeTone: Record<TlozMissionType, string> = {
   main_quest: "#d72228",
   side_quest: "#2d6cdf",
