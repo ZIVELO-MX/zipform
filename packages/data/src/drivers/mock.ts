@@ -4,6 +4,7 @@ import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters
 import type { AgentCreateInput, ApiKeyCreateResult } from "../contracts";
 import {
   apps,
+  avatars,
   checklistItems,
   currentUser,
   episodes,
@@ -127,6 +128,9 @@ export function createMockDataClient(): ZipformDataClient {
     platform: {
       async getMetrics() {
         return metrics;
+      },
+      async listAvatars() {
+        return avatars;
       }
     },
     agent: agentMethods,

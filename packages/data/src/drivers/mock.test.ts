@@ -239,4 +239,17 @@ describe("mock data driver", () => {
     await client.tloz.removeQuestItemResource(item.id, itemResources.at(-1)!.id);
     expect((await client.tloz.getResources()).filter((resource) => resource.projectId === project.id || resource.questItemId === item.id)).toEqual([]);
   });
+
+  it("lists the default avatars", async () => {
+    const client = createMockDataClient();
+    const result = await client.platform.listAvatars();
+    expect(result).toHaveLength(3);
+    expect(result).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" }),
+        expect.objectContaining({ name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" }),
+        expect.objectContaining({ name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" }),
+      ])
+    );
+  });
 });

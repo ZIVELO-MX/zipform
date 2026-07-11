@@ -1,7 +1,14 @@
+model Avatar {
+  id       String @id @default(uuid()) @db.Uuid
+  name     String
+  imageUrl String @default("")
+  @@map("avatars")
+}
+
 model User {
   id                String                 @id @default(uuid()) @db.Uuid
   name              String
-  username          String
+  username          String                 @unique
   email             String                 @unique
   role              String
   type              String                 @default("human")

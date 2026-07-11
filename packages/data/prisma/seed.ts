@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { randomBytes, scryptSync } from "node:crypto";
 import {
   agentApiKeys,
+  avatars,
   checklistItems,
   currentUser,
   episodes,
@@ -45,6 +46,7 @@ async function main() {
     prisma.tlozProject.deleteMany(),
     prisma.session.deleteMany(),
     prisma.platformMetric.deleteMany(),
+    prisma.avatar.deleteMany(),
     prisma.user.deleteMany()
   ]);
 
@@ -78,6 +80,14 @@ async function main() {
       expiresAt: null,
       createdAt: date(key.createdAt),
       updatedAt: date(key.updatedAt)
+    }))
+  });
+
+  await prisma.avatar.createMany({
+    data: avatars.map((avatar) => ({
+      id: avatar.id,
+      name: avatar.name,
+      imageUrl: avatar.imageUrl
     }))
   });
 

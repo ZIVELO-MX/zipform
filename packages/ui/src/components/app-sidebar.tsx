@@ -547,22 +547,11 @@ function SidebarSection({
   );
 }
 
-function isEmoji(str: string) {
-  return /^\p{Extended_Pictographic}/u.test(str);
-}
-
 export function UserAvatar({ user, initials, large = false }: { user: SidebarUser; initials: string; large?: boolean }) {
-  const avatarEmoji = user.avatarUrl && isEmoji(user.avatarUrl) ? user.avatarUrl : null;
   return (
     <Avatar className={cn(large ? "size-11 rounded-full" : "size-10 rounded-full")}>
-      {avatarEmoji ? (
-        <AvatarFallback className={cn(large ? "text-lg" : "text-base")}>{avatarEmoji}</AvatarFallback>
-      ) : (
-        <>
-          <AvatarImage src={user.avatarUrl} alt="" />
-          <AvatarFallback>{initials}</AvatarFallback>
-        </>
-      )}
+      <AvatarImage src={user.avatarUrl} alt="" />
+      <AvatarFallback>{initials}</AvatarFallback>
     </Avatar>
   );
 }

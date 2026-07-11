@@ -68,6 +68,12 @@ export type TlozProjectType = "normal" | "system";
 export type TlozInventoryStatus = "locked" | "unlocked";
 export type TlozInventoryCategory = "tool" | "access" | "asset" | "document" | "other";
 
+export type Avatar = {
+  id: string;
+  name: string;
+  imageUrl: string;
+};
+
 export type TlozMissionType =
   | "main_quest"
   | "side_quest"

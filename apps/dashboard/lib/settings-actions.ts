@@ -1,17 +1,24 @@
 "use server";
 
-import type { ApiKey, UserProfile } from "@zipform/types";
+import type { ApiKey, Avatar, UserProfile } from "@zipform/types";
 import { auth } from "../auth";
 import { dataClient, type UserUpdateInput } from "@zipform/data";
 import { revalidatePath } from "next/cache";
 
-export async function updateProfile(input: UserUpdateInput) {
+export async function updateProfile(input: UserUpdateInput & { avatarUrl?: string }) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autorizado");
 
   const user = await dataClient.user.update(session.user.id, input);
   revalidatePath("/", "layout");
   return user;
+}
+
+export async function listAvatars(): Promise<Avatar[]> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("No autorizado");
+
+  return dataClient.platform.listAvatars();
 }
 
 export async function listAgents(): Promise<UserProfile[]> {

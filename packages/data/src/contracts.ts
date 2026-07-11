@@ -1,6 +1,7 @@
 import type {
   ApiKey,
   AppModule,
+  Avatar,
   PlatformMetric,
   RoadmapSnapshot,
   TlozChecklistItem,
@@ -190,6 +191,7 @@ export type ZipformDataClient = {
   };
   platform: {
     getMetrics(): Promise<PlatformMetric[]>;
+    listAvatars(): Promise<Avatar[]>;
   };
   agent: {
     list(): Promise<UserProfile[]>;

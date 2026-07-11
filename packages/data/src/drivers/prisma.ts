@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import type {
   ApiKey,
+  Avatar,
   PlatformMetric,
   TlozChecklistItem,
   TlozEpisode,
@@ -111,6 +112,14 @@ function mapMetric(metric: { label: string; value: string; tone: string }): Plat
     label: metric.label,
     value: metric.value,
     tone: metric.tone as PlatformMetric["tone"]
+  };
+}
+
+function mapAvatar(avatar: { id: string; name: string; imageUrl: string }): Avatar {
+  return {
+    id: avatar.id,
+    name: avatar.name,
+    imageUrl: avatar.imageUrl
   };
 }
 
@@ -423,6 +432,10 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       async getMetrics() {
         const rows = await prisma.platformMetric.findMany({ orderBy: { position: "asc" } });
         return rows.map(mapMetric);
+      },
+      async listAvatars() {
+        const rows = await prisma.avatar.findMany({ orderBy: { name: "asc" } });
+        return rows.map(mapAvatar);
       }
     },
     agent: {

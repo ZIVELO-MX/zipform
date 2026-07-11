@@ -22,7 +22,9 @@ Read [references/authentication.md](references/authentication.md) when configuri
 
 ## Resolve a mission
 
-1. Confirm `ZIPFORM_TOKEN` exists without printing it.
+1. Confirm `ZIPFORM_TOKEN` exists without printing it:
+   - If the variable is not set, do not abort. Inform the user that they need to export it: `export ZIPFORM_TOKEN="zaf_..."` in their terminal, then wait for confirmation before continuing.
+   - Validate with `curl -s -H "Authorization: Bearer $ZIPFORM_TOKEN" "https://zipform.zivelo.dev/api/v1/projects"`; if 401, report that the token is invalid or expired and ask the user to provide a valid one.
 2. Call `GET /api/v1/projects` and resolve the project by slug, exact name, or unambiguous partial name.
 3. Call `GET /api/v1/missions?projectId={projectId}&limit=100`.
 4. Match the requested human-readable `displayId`; never use it as the internal ID.

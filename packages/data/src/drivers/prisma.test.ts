@@ -24,6 +24,12 @@ function createPrismaStub() {
 
   const deleteMany = vi.fn(async () => ({}));
 
+  const avatarRows = [
+    { id: "5372f758-a74b-4cad-b9b3-80e65760cdd1", name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" },
+    { id: "43dadd54-2dab-421d-9178-b7c12d03d0a9", name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" },
+    { id: "275f8102-716f-4e65-84b8-0995d2a1e69f", name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" },
+  ];
+
   const prisma = {
     $transaction: vi.fn(async (arg: unknown) => {
       if (typeof arg === "function") {
@@ -35,6 +41,7 @@ function createPrismaStub() {
     }),
     session: { findFirst: vi.fn(async () => ({ user: currentUser })) },
     user: { findFirst: vi.fn(async () => currentUser), findMany: findMany(users) },
+    avatar: { findMany: findMany(avatarRows) },
     platformMetric: { findMany: vi.fn(async () => [{ label: "Health", value: "100", tone: "good" }]) },
     tlozSeason: { findMany: findMany(seasons.map((item) => ({ ...withDates(item), endDate: nullable(item.endDate) }))) },
     tlozEpisode: { findMany: findMany(episodes.map((item) => ({ ...withDates(item), endDate: nullable(item.endDate) }))) },
@@ -98,6 +105,11 @@ describe("prisma data driver", () => {
     expect(await client.user.getCurrent()).toEqual(currentUser);
     expect(await client.tloz.getUsers()).toEqual(expect.arrayContaining([expect.objectContaining({ id: currentUser.id })]));
     expect(await client.platform.getMetrics()).toEqual([{ label: "Health", value: "100", tone: "good" }]);
+    expect(await client.platform.listAvatars()).toEqual([
+      expect.objectContaining({ name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" }),
+      expect.objectContaining({ name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" }),
+      expect.objectContaining({ name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" }),
+    ]);
     expect(await client.tloz.getMissions()).toHaveLength(missions.length);
     expect(await client.tloz.getMissionDetail(missions[0].id)).not.toBeNull();
     expect((await client.tloz.getDashboardSummary()).projects).toHaveLength(projects.length);

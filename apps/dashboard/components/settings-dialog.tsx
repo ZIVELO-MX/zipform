@@ -21,6 +21,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import {
   Avatar,
   AvatarFallback,
+  AvatarImage,
   Button,
   Dialog,
   DialogContent,
@@ -39,8 +40,8 @@ import {
   cn,
   toast,
 } from "@zipform/ui";
-import type { ApiKey, UserProfile } from "@zipform/types";
-import { createAgentApiKey, listAgentApiKeys, listAgents, revokeAgentApiKey } from "../lib/settings-actions";
+import type { ApiKey, Avatar as AvatarType, UserProfile } from "@zipform/types";
+import { createAgentApiKey, listAgentApiKeys, listAgents, listAvatars, revokeAgentApiKey } from "../lib/settings-actions";
 import type { CreateApiKeyResult } from "../lib/settings-actions";
 import { updateProfile } from "../lib/settings-actions";
 
@@ -58,27 +59,7 @@ const themeOptions: Array<{ label: string; value: ThemeValue; icon: LucideIcon }
   { label: "Oscuro", value: "dark", icon: Moon },
 ];
 
-const avatars = [
-  { key: "wolf", name: "Lobo", emoji: "🐺", background: "#454543" },
-  { key: "fox", name: "Zorro", emoji: "🦊", background: "#D72228" },
-  { key: "knight", name: "Caballero", emoji: "⚔️", background: "#2D6CDF" },
-  { key: "wizard", name: "Mago", emoji: "🧙", background: "#7A4ED9" },
-  { key: "archer", name: "Arquera", emoji: "🏹", background: "#1E8E5A" },
-  { key: "smith", name: "Herrero", emoji: "🔨", background: "#7A5A12" },
-  { key: "druid", name: "Druida", emoji: "🌿", background: "#1E6B3C" },
-  { key: "bard", name: "Bardo", emoji: "🎵", background: "#C0397A" },
-];
-
 const agents = [{ id: "d5ca1936-3240-4247-8c2b-a7152a681311", name: "zibot", username: "zibot" }];
-
-function findAvatar(emoji: string) {
-  if (!emoji) return null;
-  return avatars.find((a) => a.emoji === emoji) ?? avatars[1];
-}
-
-function isEmoji(str: string) {
-  return /^\p{Extended_Pictographic}/u.test(str);
-}
 
 export function SettingsDialog({
   open,
@@ -93,34 +74,39 @@ export function SettingsDialog({
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
   const [theme, setTheme] = useState<ThemeValue>(user.theme || "system");
-  const [avatarEmoji, setAvatarEmoji] = useState(user.avatarUrl && isEmoji(user.avatarUrl) ? user.avatarUrl : "");
+  const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || "");
   const [avatarSearch, setAvatarSearch] = useState("");
+  const [avatars, setAvatars] = useState<AvatarType[]>([]);
   const [pending, startTransition] = useTransition();
 
-  const currentAvatar = findAvatar(avatarEmoji);
+  useEffect(() => {
+    listAvatars().then(setAvatars).catch(() => toast.error("Error al cargar avatares"));
+  }, []);
+
+  const currentAvatar = avatars.find((a) => a.imageUrl && a.imageUrl === avatarUrl) ?? null;
   const filteredAvatars = avatars.filter((a) =>
     a.name.toLocaleLowerCase("es").includes(avatarSearch.trim().toLocaleLowerCase("es"))
   );
 
-  const hasChanges = name !== user.name || username !== user.username || theme !== (user.theme || "system");
+  const hasChanges = name !== user.name || username !== user.username || theme !== (user.theme || "system") || avatarUrl !== (user.avatarUrl || "");
 
   const handleSave = useCallback(() => {
     startTransition(async () => {
       try {
-        await updateProfile({ name, username, theme });
+        await updateProfile({ name, username, theme, avatarUrl: avatarUrl || undefined });
         toast.success("Perfil actualizado");
         onOpenChange(false);
       } catch {
         toast.error("Error al guardar los cambios");
       }
     });
-  }, [name, username, theme, onOpenChange]);
+  }, [name, username, theme, avatarUrl, onOpenChange]);
 
   const handleCancel = useCallback(() => {
     setName(user.name);
     setUsername(user.username);
     setTheme(user.theme || "system");
-    setAvatarEmoji(user.avatarUrl && isEmoji(user.avatarUrl) ? user.avatarUrl : "");
+    setAvatarUrl(user.avatarUrl || "");
     onOpenChange(false);
   }, [onOpenChange, user]);
 
@@ -167,7 +153,9 @@ export function SettingsDialog({
           <main className="grid min-h-0 min-w-0 bg-white">
             {section === "profile" ? (
               <ProfileSettings
-                avatar={currentAvatar}
+                currentAvatar={currentAvatar}
+                avatarUrl={avatarUrl}
+                avatars={avatars}
                 avatarSearch={avatarSearch}
                 filteredAvatars={filteredAvatars}
                 name={name}
@@ -176,7 +164,7 @@ export function SettingsDialog({
                 email={user.email}
                 hasChanges={hasChanges}
                 pending={pending}
-                onAvatarChange={setAvatarEmoji}
+                onAvatarChange={setAvatarUrl}
                 onAvatarSearchChange={setAvatarSearch}
                 onNameChange={setName}
                 onThemeChange={setTheme}
@@ -195,7 +183,9 @@ export function SettingsDialog({
 }
 
 function ProfileSettings({
-  avatar,
+  currentAvatar,
+  avatarUrl,
+  avatars,
   avatarSearch,
   filteredAvatars,
   name,
@@ -212,9 +202,11 @@ function ProfileSettings({
   onSave,
   onCancel,
 }: {
-  avatar: { key: string; name: string; emoji: string; background: string } | null;
+  currentAvatar: AvatarType | null;
+  avatarUrl: string;
+  avatars: AvatarType[];
   avatarSearch: string;
-  filteredAvatars: typeof avatars;
+  filteredAvatars: AvatarType[];
   name: string;
   theme: ThemeValue;
   username: string;
@@ -230,8 +222,8 @@ function ProfileSettings({
   onCancel: () => void;
 }) {
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
-  const [avatarTempKey, setAvatarTempKey] = useState(avatar?.key ?? avatars[0].key);
-  const tempAvatar = avatars.find((a) => a.key === avatarTempKey);
+  const [avatarTempId, setAvatarTempId] = useState(currentAvatar?.id ?? avatars[0]?.id ?? "");
+  const tempAvatar = avatars.find((a) => a.id === avatarTempId);
   const initials = name
     .split(" ")
     .map((part) => part[0])
@@ -244,21 +236,18 @@ function ProfileSettings({
         <div className="flex w-full max-w-[360px] flex-col gap-5">
           <div className="flex items-center gap-4">
             <Avatar className="size-[72px] rounded-full shadow-[0_6px_16px_rgba(29,29,27,0.14)]">
-              {avatar ? (
-                <AvatarFallback className="text-2xl" style={{ backgroundColor: avatar.background }}>
-                  {avatar.emoji}
-                </AvatarFallback>
-              ) : (
-                <AvatarFallback className="bg-carbon text-lg font-semibold text-white">
-                  {initials}
-                </AvatarFallback>
-              )}
+              {currentAvatar?.imageUrl ? (
+                <AvatarImage src={currentAvatar.imageUrl} alt={currentAvatar.name} />
+              ) : null}
+              <AvatarFallback className="bg-carbon text-lg font-semibold text-white">
+                {initials}
+              </AvatarFallback>
             </Avatar>
             <div className="min-w-0 flex-1">
               <p className="mb-[7px] mt-0 text-xs font-bold uppercase tracking-[0.05em] text-[#9a9a98]">
-                Avatar · {avatar ? avatar.name : "Sin avatar"}
+                Avatar · {currentAvatar ? currentAvatar.name : "Sin avatar"}
               </p>
-              <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]" onClick={() => { setAvatarTempKey(avatar?.key ?? avatars[0].key); setAvatarPickerOpen(true); }}>
+              <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]" onClick={() => { setAvatarTempId(currentAvatar?.id ?? avatars[0]?.id ?? ""); setAvatarPickerOpen(true); }}>
                 <Pencil className="size-3.5" aria-hidden="true" />
                 Cambiar avatar
               </Button>
@@ -312,26 +301,29 @@ function ProfileSettings({
                     {filteredAvatars.length > 0 ? (
                       <div className="grid grid-cols-4 gap-x-3 gap-y-4 py-2">
                         {filteredAvatars.map((option) => {
-                          const selected = option.key === avatarTempKey;
+                          const selected = option.id === avatarTempId;
                           return (
                             <button
-                              key={option.key}
+                              key={option.id}
                               type="button"
                               className="group relative flex flex-col items-center gap-[7px] border-none bg-transparent p-0 outline-none"
-                              onClick={() => setAvatarTempKey(option.key)}
+                              onClick={() => setAvatarTempId(option.id)}
                             >
                               <div
                                 className={cn(
-                                  "relative size-[66px] rounded-full border-[2.5px] transition-all duration-[.16s]",
+                                  "relative size-[66px] rounded-full border-[2.5px] transition-all duration-[.16s] overflow-hidden",
                                   selected
                                     ? "border-zivelo shadow-[0_0_0_3px_rgba(215,34,40,0.18)]"
                                     : "border-carbon/10 shadow-[0_2px_8px_rgba(29,29,27,0.10)] group-hover:border-zivelo/50"
                                 )}
-                                style={{ backgroundColor: option.background }}
                               >
-                                <span className="flex size-full items-center justify-center text-[27px]">
-                                  {option.emoji}
-                                </span>
+                                {option.imageUrl ? (
+                                  <AvatarImage src={option.imageUrl} alt={option.name} className="size-full object-cover" />
+                                ) : (
+                                  <span className="flex size-full items-center justify-center bg-carbon/10 text-sm font-semibold text-carbon/45">
+                                    ?
+                                  </span>
+                                )}
                                 {selected && (
                                   <span className="absolute -right-[5px] -top-[5px] grid size-[22px] place-items-center rounded-full bg-zivelo text-white ring-2 ring-paper">
                                     <Check className="size-3" aria-hidden="true" />
@@ -370,7 +362,7 @@ function ProfileSettings({
                       <Button type="button" variant="outline" size="sm" className="h-[38px] rounded-[11px] bg-white px-[15px] text-[13px]" onClick={() => setAvatarPickerOpen(false)}>
                         Cancelar
                       </Button>
-                      <Button type="button" size="sm" className="h-[38px] rounded-[11px] px-[17px] text-[13px] shadow-[0_10px_22px_rgba(215,34,40,0.20)]" onClick={() => { const s = avatars.find((a) => a.key === avatarTempKey); if (s) onAvatarChange(s.emoji); setAvatarPickerOpen(false); }}>
+                      <Button type="button" size="sm" className="h-[38px] rounded-[11px] px-[17px] text-[13px] shadow-[0_10px_22px_rgba(215,34,40,0.20)]" onClick={() => { const s = avatars.find((a) => a.id === avatarTempId); if (s) onAvatarChange(s.imageUrl); setAvatarPickerOpen(false); }}>
                         Usar avatar
                       </Button>
                     </div>
