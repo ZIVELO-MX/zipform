@@ -16,7 +16,7 @@ Operate TLOZ data only through `https://zipform.zivelo.dev`. Treat current API r
 - Use the smallest valid mutation and verify every mutation with a subsequent GET.
 - Report failed, ambiguous, or unverified changes honestly.
 - Do not delete a mission without an explicit request identifying that mission.
-- Do not change `ownerId` except to self-assign work the agent will perform, after explicit confirmation.
+- Change `ownerId` only when the user explicitly authorizes the assignment and the target user is resolved unambiguously through the API.
 
 Read [references/authentication.md](references/authentication.md) when configuring or troubleshooting authentication. Read [references/api-workflows.md](references/api-workflows.md) before creating or mutating missions or relationships.
 
@@ -60,9 +60,16 @@ For a server error, GET the resource when safe to determine whether the mutation
 
 ## Ownership
 
-Resolve the authenticated agent with `GET /api/v1/users/me`; never infer identity from the API key. Self-assignment is appropriate only when the agent will implement the code or produce the primary deliverable. It is not appropriate for consultation, grammar corrections, descriptions, checkboxes, references, or summaries.
+Resolve the authenticated agent with `GET /api/v1/users/me`; never infer identity from the API key. Resolve another owner through `GET /api/v1/users` using an exact username, email, or ID. Do not guess when multiple users match.
 
-Before self-assignment, explain why it is appropriate and obtain explicit confirmation. Never assign a mission to another human or agent.
+Assign a mission to another human or agent when the user explicitly requests it, the target exists, and the request identifies the target unambiguously. Read the mission before changing `ownerId`, use the smallest PATCH, and verify the assignment through a subsequent GET.
+
+Treat ownership and execution as separate concerns:
+
+- Consultation, refinement, documentation, status changes, relationships, checkbox maintenance, verification, and owner assignment are assistant operations and may be performed regardless of the current owner when the user authorizes them.
+- Implementing the mission's primary deliverable, completing its technical work, or representing that work as finished requires the mission to belong to the authenticated agent. If another owner is set, assist without taking over the underlying work, or ask the user to reassign it first.
+- Self-assignment is appropriate only when the authenticated agent will implement the code or produce the primary deliverable. Explain why and obtain explicit confirmation before changing `ownerId` to the authenticated agent.
+- Never change ownership implicitly merely because the agent consulted or edited mission metadata.
 
 ## Report results
 
