@@ -6,7 +6,8 @@ const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   listApiKeys: vi.fn(),
   createApiKey: vi.fn(),
-  revokeApiKey: vi.fn()
+  revokeApiKey: vi.fn(),
+  listAvatars: vi.fn()
 }));
 
 vi.mock("react", () => ({ cache: <T extends (...args: never[]) => unknown>(callback: T) => callback }));
@@ -19,11 +20,14 @@ vi.mock("@zipform/data", () => ({
       listApiKeys: mocks.listApiKeys,
       createApiKey: mocks.createApiKey,
       revokeApiKey: mocks.revokeApiKey
+    },
+    platform: {
+      listAvatars: mocks.listAvatars
     }
   }
 }));
 
-import { createAgentApiKey, listAgentApiKeys, listAgents, revokeAgentApiKey } from "./settings-actions";
+import { createAgentApiKey, listAgentApiKeys, listAgents, listAvatars, revokeAgentApiKey } from "./settings-actions";
 
 const agentUser: UserProfile = {
   id: "d5ca1936-3240-4247-8c2b-a7152a681311",
@@ -114,6 +118,28 @@ describe("settings actions (agent)", () => {
       mocks.auth.mockResolvedValue(null);
 
       await expect(revokeAgentApiKey("key-1")).rejects.toThrow("No autorizado");
+    });
+  });
+
+  describe("listAvatars", () => {
+    it("returns avatars when authenticated", async () => {
+      mocks.auth.mockResolvedValue({ user: { id: "owner" } });
+      mocks.listAvatars.mockResolvedValue([
+        { id: "5372f758-a74b-4cad-b9b3-80e65760cdd1", name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" },
+        { id: "43dadd54-2dab-421d-9178-b7c12d03d0a9", name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" },
+        { id: "275f8102-716f-4e65-84b8-0995d2a1e69f", name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" }
+      ]);
+
+      const result = await listAvatars();
+      expect(result).toHaveLength(3);
+      expect(result[0].name).toBe("Semielfo");
+    });
+
+    it("throws when not authenticated", async () => {
+      mocks.auth.mockResolvedValue(null);
+
+      await expect(listAvatars()).rejects.toThrow("No autorizado");
+      expect(mocks.listAvatars).not.toHaveBeenCalled();
     });
   });
 });
