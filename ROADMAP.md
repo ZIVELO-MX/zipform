@@ -90,12 +90,12 @@
 
 #### Avatar Profile Photos
 
-- [ ] [DB] Crear tabla `avatars` (id, name, imageUrl) y agregar UNIQUE constraint en `users.username`
-- [ ] [STORAGE] Crear bucket `avatars` en Supabase Storage, instalar `@supabase/supabase-js` y configurar env vars
-- [ ] [DATA] Agregar tipo `Avatar`, método `listAvatars()` al data client, y helper de upload a Storage
-- [ ] [SETTINGS] Refactorizar avatar picker: reemplazar emojis hardcodeados con grid de imágenes desde la tabla `avatars`, agregar subida de foto personal, persistir `avatarUrl` al guardar
-- [ ] [UI] Eliminar lógica emoji-first en `UserAvatar` del sidebar — usar siempre `<AvatarImage>` con iniciales de fallback
-- [ ] [DB] Seed de avatares default (imágenes ilustrativas subidas a Storage)
+- [x] [DB] Crear tabla `avatars` (id, name, imageUrl) y agregar UNIQUE constraint en `users.username`
+- [x] [STORAGE] Bucket `PFP` creado en Supabase Storage con imágenes de Semielfo, Dragon y ZIBOT
+- [x] [DATA] Agregar tipo `Avatar`, método `listAvatars()` al data client
+- [x] [SETTINGS] Refactorizar avatar picker: reemplazar emojis hardcodeados con grid de imágenes desde la tabla `avatars`
+- [x] [UI] Eliminar lógica emoji-first en `UserAvatar` del sidebar — usar siempre `<AvatarImage>` con iniciales de fallback
+- [x] [DB] Seed de avatares default con URLs a Supabase Storage
 
 #### Mobile — Prioridades Kano
 

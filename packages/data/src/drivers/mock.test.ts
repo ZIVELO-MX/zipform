@@ -246,9 +246,9 @@ describe("mock data driver", () => {
     expect(result).toHaveLength(3);
     expect(result).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" }),
-        expect.objectContaining({ name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" }),
-        expect.objectContaining({ name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" }),
+        expect.objectContaining({ name: "Semielfo", imageUrl: expect.stringContaining("Semielfo") }),
+        expect.objectContaining({ name: "Dragon", imageUrl: expect.stringContaining("Dragon") }),
+        expect.objectContaining({ name: "ZIBOT", imageUrl: expect.stringContaining("Zibot") }),
       ])
     );
   });

@@ -181,9 +181,9 @@ export const zibotUser: UserProfile = {
 export const users: UserProfile[] = [currentUser, raulUser, zibotUser];
 
 export const avatars: Avatar[] = [
-  { id: "5372f758-a74b-4cad-b9b3-80e65760cdd1", name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" },
-  { id: "43dadd54-2dab-421d-9178-b7c12d03d0a9", name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" },
-  { id: "275f8102-716f-4e65-84b8-0995d2a1e69f", name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" },
+  { id: "avatar-semielfo", name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" },
+  { id: "avatar-dragon", name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" },
+  { id: "avatar-zibot", name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" },
 ];
 
 export type AgentApiKeySeed = {
