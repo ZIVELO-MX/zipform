@@ -63,6 +63,24 @@ describe("mock data driver", () => {
     });
   });
 
+  it("materializes Markdown checkboxes during mission creation", async () => {
+    const client = createMockDataClient();
+    const template = missions[0];
+    const created = await client.tloz.createMission({
+      title: "Mission with outcomes",
+      description: "## Outcomes\n- [x] First outcome\n- [ ] Second outcome",
+      type: "side_quest",
+      ownerId: template.ownerId,
+      projectId: template.projectId!,
+    });
+
+    expect(created.progress).toBe(50);
+    expect((await client.tloz.getMissionDetail(created.id))?.checklist).toEqual([
+      expect.objectContaining({ title: "First outcome", completed: true, position: 0 }),
+      expect.objectContaining({ title: "Second outcome", completed: false, position: 1 }),
+    ]);
+  });
+
   it("uses Markdown as checklist source of truth and persists mission relations", async () => {
     const client = createMockDataClient();
     const mission = missions[0];

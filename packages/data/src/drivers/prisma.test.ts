@@ -19,6 +19,7 @@ function createPrismaStub() {
   const withDates = <T extends { createdAt: string; updatedAt?: string }>(item: T) => ({
     ...item, createdAt: date(item.createdAt), ...(item.updatedAt ? { updatedAt: date(item.updatedAt) } : {})
   });
+  const checklistRows = checklistItems.map(withDates);
   const findMany = <T>(rows: T[]) => vi.fn(async () => rows);
 
   const deleteMany = vi.fn(async () => ({}));
@@ -70,7 +71,12 @@ function createPrismaStub() {
       deleteMany,
     },
     tlozChecklistItem: {
-      findMany: findMany(checklistItems.map(withDates)),
+      findMany: findMany(checklistRows),
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+        const row = data as never;
+        checklistRows.push(row);
+        return row;
+      }),
       deleteMany,
     },
     tlozResource: {
@@ -121,5 +127,24 @@ describe("prisma data driver", () => {
     expect((await client.tloz.patchMissionStatus(created.id, "completed")).completedAt).toBeTruthy();
     await client.tloz.deleteMission(created.id);
     expect(await client.tloz.getMissionDetail(created.id)).toBeNull();
+  });
+
+  it("materializes Markdown checkboxes atomically during mission creation", async () => {
+    const client = createPrismaDataClient(createPrismaStub());
+    const template = missions[0];
+    const created = await client.tloz.createMission({
+      id: "prisma-checklist-test",
+      title: "Mission with outcomes",
+      description: "- [x] First outcome\n- [ ] Second outcome",
+      type: "side_quest",
+      ownerId: template.ownerId,
+      projectId: template.projectId!,
+    });
+
+    expect(created.progress).toBe(50);
+    expect((await client.tloz.getMissionDetail(created.id))?.checklist).toEqual([
+      expect.objectContaining({ title: "First outcome", completed: true, position: 0 }),
+      expect.objectContaining({ title: "Second outcome", completed: false, position: 1 }),
+    ]);
   });
 });
