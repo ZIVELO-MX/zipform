@@ -258,14 +258,27 @@ export function createMockDataClient(): ZipformDataClient {
         if (!project) throw new Error("TLOZ mission project was not found");
         if (!tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ mission owner was not found");
         const now = new Date().toISOString();
+        const checklist = parseMarkdownChecklist(valid.description);
         const mission: TlozMission = {
           ...valid,
           id: valid.id ?? crypto.randomUUID(),
           displayId: nextMissionDisplayId(project.name, tlozData.missions.map((item) => item.displayId)),
+          progress: checklist.length
+            ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100)
+            : valid.progress,
           createdAt: now,
           updatedAt: now
         };
         tlozData.missions.push(mission);
+        tlozData.checklistItems.push(...checklist.map((item, position) => ({
+          id: crypto.randomUUID(),
+          missionId: mission.id,
+          title: item.title,
+          completed: item.completed,
+          position,
+          createdAt: now,
+          updatedAt: now,
+        })));
         return getHydratedMission(mission.id);
       },
       async updateMission(missionId, input) {

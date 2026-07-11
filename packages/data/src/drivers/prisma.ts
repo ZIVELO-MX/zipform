@@ -649,8 +649,26 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
             }
             const displayId = `${prefix}-${String(suffix).padStart(4, "0")}`;
             const { id = crypto.randomUUID(), completedAt, ...data } = valid;
-            await prisma.tlozMission.create({
-              data: { ...data, id, displayId, completedAt: completedAt ? new Date(completedAt) : null }
+            const checklist = parseMarkdownChecklist(data.description);
+            const progress = checklist.length
+              ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100)
+              : data.progress;
+            const now = new Date();
+            await prisma.$transaction(async (tx) => {
+              await tx.tlozMission.create({
+                data: { ...data, id, displayId, progress, completedAt: completedAt ? new Date(completedAt) : null }
+              });
+              await Promise.all(checklist.map((item, position) => tx.tlozChecklistItem.create({
+                data: {
+                  id: crypto.randomUUID(),
+                  missionId: id,
+                  title: item.title,
+                  completed: item.completed,
+                  position,
+                  createdAt: now,
+                  updatedAt: now,
+                },
+              })));
             });
             return getHydratedMission(id);
           } catch (error) {
