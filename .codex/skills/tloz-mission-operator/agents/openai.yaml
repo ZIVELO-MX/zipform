@@ -1,0 +1,4 @@
+interface:
+  display_name: "TLOZ Mission Operator"
+  short_description: "Operate TLOZ missions through the Zipform Data API"
+  default_prompt: "Use $tloz-mission-operator to inspect or update a TLOZ mission through the Zipform Data API."

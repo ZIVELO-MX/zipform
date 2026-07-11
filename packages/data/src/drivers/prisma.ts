@@ -59,7 +59,7 @@ function displayIdPrefix(projectName: string): string {
 
 const toIso = (value: Date) => value.toISOString();
 
-function mapUser(user: {
+export function mapUser(user: {
   id: string;
   name: string;
   username: string;
@@ -69,7 +69,16 @@ function mapUser(user: {
   avatarUrl: string;
   theme?: string | null;
 }): UserProfile {
-  return { ...user, type: user.type as UserProfile["type"], theme: (user.theme ?? "system") as UserProfile["theme"] };
+  return {
+    id: user.id,
+    name: user.name,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    type: user.type as UserProfile["type"],
+    avatarUrl: user.avatarUrl,
+    theme: (user.theme ?? "system") as UserProfile["theme"],
+  };
 }
 
 function mapApiKey(key: {

@@ -47,10 +47,17 @@ export type UserUpdateInput = {
   avatarUrl?: string;
 };
 
-export type TlozMissionCreateInput = Omit<TlozMission, "id" | "displayId" | "createdAt" | "updatedAt" | "completedAt"> & {
-  id?: string;
-  completedAt?: string;
-};
+type TlozMissionCreateOptional = Omit<
+  TlozMission,
+  "id" | "displayId" | "createdAt" | "updatedAt" | "completedAt" | "title" | "type" | "ownerId" | "projectId"
+>;
+
+export type TlozMissionCreateInput = Pick<TlozMission, "title" | "type" | "ownerId"> &
+  Partial<TlozMissionCreateOptional> & {
+    projectId: string;
+    id?: string;
+    completedAt?: string;
+  };
 
 export type TlozProjectCreateInput = Omit<TlozProject, "id" | "slug" | "createdAt" | "updatedAt" | "descriptionDetail"> & { descriptionDetail?: string };
 export type TlozQuestItemCreateInput = Omit<TlozQuestItem, "id" | "createdAt" | "updatedAt" | "acquiredAt" | "descriptionDetail"> & { descriptionDetail?: string; acquiredAt?: string };

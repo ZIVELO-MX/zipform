@@ -114,7 +114,7 @@ describe("prisma data driver", () => {
   it("creates, updates, completes and deletes missions", async () => {
     const client = createPrismaDataClient(createPrismaStub());
     const { createdAt: _createdAt, updatedAt: _updatedAt, completedAt: _completedAt, displayId: _displayId, ...input } = missions[0];
-    const created = await client.tloz.createMission({ ...input, id: "prisma-test", title: "Created" });
+    const created = await client.tloz.createMission({ ...input, id: "prisma-test", title: "Created", projectId: missions[0].projectId! });
     expect(created.title).toBe("Created");
     const updated = await client.tloz.updateMission(created.id, { title: "Updated", startDate: "2026-07-01" });
     expect(updated).toMatchObject({ title: "Updated", startDate: "2026-07-01" });

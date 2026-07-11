@@ -1,0 +1,69 @@
+---
+name: tloz-mission-operator
+description: Consult, create, review, correct, document, or update TLOZ missions exclusively through the Zipform Data API. Use when a user references a mission display ID such as TLO-0001, asks to change its title, document, status, relationships, or checkboxes, wants Scrum-style refinement, or needs help with ZIPFORM_TOKEN authentication.
+---
+
+# TLOZ Mission Operator
+
+Operate TLOZ data only through `https://zipform.zivelo.dev`. Treat current API responses and `GET /api/openapi` as the source of truth because the service changes frequently.
+
+## Guardrails
+
+- Use the API instead of Prisma, PostgreSQL, seed files, or browser automation.
+- Read a resource before writing it and preserve unrelated content.
+- Inspect `GET /api/openapi` before using undocumented fields or operations.
+- Send the Bearer token only from `ZIPFORM_TOKEN`; never print, persist, commit, or place it in a payload.
+- Use the smallest valid mutation and verify every mutation with a subsequent GET.
+- Report failed, ambiguous, or unverified changes honestly.
+- Do not delete a mission without an explicit request identifying that mission.
+- Do not change `ownerId` except to self-assign work the agent will perform, after explicit confirmation.
+
+Read [references/authentication.md](references/authentication.md) when configuring or troubleshooting authentication. Read [references/api-workflows.md](references/api-workflows.md) before creating or mutating missions or relationships.
+
+## Resolve a mission
+
+1. Confirm `ZIPFORM_TOKEN` exists without printing it.
+2. Call `GET /api/v1/projects` and resolve the project by slug, exact name, or unambiguous partial name.
+3. Call `GET /api/v1/missions?projectId={projectId}&limit=100`.
+4. Match the requested human-readable `displayId`; never use it as the internal ID.
+5. Call `GET /api/v1/missions/{id}` and read the complete current detail.
+6. Inspect `GET /api/openapi` if a required field, response, enum, or route remains uncertain.
+
+Do not guess when multiple projects or missions match.
+
+## Write mission documents
+
+Store checkboxes in the complete Markdown document:
+
+```md
+- [ ] Pending verifiable outcome
+- [x] Completed verifiable outcome
+```
+
+Before `PUT /api/v1/missions/{id}/document`, preserve relevant descriptions, notes, references, and existing checkboxes. Send the complete desired `markdown`, not a fragment. Keep checkboxes brief, independently verifiable, ordered when sequence matters, and limited to the mission scope.
+
+Write concise, actionable titles. Describe the expected outcome, necessary context, scope boundaries, and how completion is verified. Apply Scrum or user-story language only when it improves clarity.
+
+## Mutate and verify
+
+1. Retrieve the current mission.
+2. Prepare the smallest payload using only documented fields and enum values.
+3. Execute the mutation once and inspect its status and error body.
+4. Call `GET /api/v1/missions/{id}`.
+5. Compare the persisted state with the intended result.
+6. For document changes, verify `displayId`, `progress`, checklist length, completed items, and returned Markdown.
+7. Do not claim success when persisted values differ.
+
+For a server error, GET the resource when safe to determine whether the mutation persisted. Do not retry automatically when that could duplicate or overwrite data.
+
+## Ownership
+
+Resolve the authenticated agent with `GET /api/v1/users/me`; never infer identity from the API key. Self-assignment is appropriate only when the agent will implement the code or produce the primary deliverable. It is not appropriate for consultation, grammar corrections, descriptions, checkboxes, references, or summaries.
+
+Before self-assignment, explain why it is appropriate and obtain explicit confirmation. Never assign a mission to another human or agent.
+
+## Report results
+
+State one result: `Consulted`, `Proposed`, `Created and verified`, `Updated and verified`, `Assigned and verified`, `Deleted and verified`, `Not changed`, `Blocked by authentication`, `Blocked by validation`, or `Could not be verified`.
+
+Include the mission `displayId`, title, project, changed elements, verification endpoint and values, and whether ownership remained unchanged. Include the internal ID only when operationally useful.

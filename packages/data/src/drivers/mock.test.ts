@@ -27,7 +27,8 @@ describe("mock data driver", () => {
     const created = await client.tloz.createMission({
       ...input,
       id: "test-mission",
-      title: "Created mission"
+      title: "Created mission",
+      projectId: template.projectId!,
     });
     expect(created.title).toBe("Created mission");
 
@@ -42,6 +43,24 @@ describe("mock data driver", () => {
     await expect(client.tloz.updateMission(created.id, { title: "nope" })).rejects.toThrow("was not found");
     await expect(client.tloz.deleteMission(created.id)).rejects.toThrow("was not found");
     expect(await createMockDataClient().tloz.getMissions()).toHaveLength(missions.length);
+  });
+
+  it("persists mission creation defaults", async () => {
+    const client = createMockDataClient();
+    const template = missions[0];
+    const created = await client.tloz.createMission({
+      title: "Minimal API mission",
+      type: "side_quest",
+      ownerId: template.ownerId,
+      projectId: template.projectId!,
+    });
+
+    expect(created).toMatchObject({
+      description: "",
+      icon: "Sword",
+      status: "next",
+      progress: 0,
+    });
   });
 
   it("uses Markdown as checklist source of truth and persists mission relations", async () => {
