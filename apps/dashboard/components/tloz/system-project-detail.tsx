@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Check, ClipboardCopy, Edit3, ExternalLink, File, FileText, ImageIcon, Link2, Lock, MoreHorizontal, Plus, StickyNote, Unlock, X } from "lucide-react";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, ColorPicker, DatePicker, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, UserAvatarLabel, UserPicker, type IconPickerOption } from "@zipform/ui";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, ColorPicker, DatePicker, displayUsername, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, useOverlayToasterId, UserAvatarLabel, UserPicker, type IconPickerOption } from "@zipform/ui";
 import type { TlozInventoryCategory, TlozProject, TlozProjectStatus, TlozProjectType, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { addProjectResource, addQuestItemResource, getEntityResources, removeProjectResource, removeQuestItemResource, updateProject, updateQuestItem } from "../../app/tloz/actions";
@@ -55,6 +55,7 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
   const [entity, setEntity] = useState<TlozProject | TlozQuestItem>(props.entity);
   const [resources, setResources] = useState(initialResources);
   const [pending, startTransition] = useTransition();
+  const toasterId = useOverlayToasterId();
   const { setState } = useTlozViewState();
   const router = useRouter();
   useEffect(() => setEntity(props.entity), [props.entity]);
@@ -70,12 +71,12 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
   const tone = project?.color ?? "#7A5A12";
 
   function persist(input: Record<string, string | undefined>, label = "Guardando cambios…") {
-    const toastId = toast.loading(label);
+    const toastId = toast.loading(label, { toasterId });
     startTransition(async () => {
       try {
         const next = variant === "project" ? await updateProject(entity.id, input) : await updateQuestItem(entity.id, input);
-        setEntity(next); onChange?.(next); toast.success("Cambios guardados", { id: toastId });
-      } catch { toast.error("No se pudieron guardar los cambios", { id: toastId }); }
+        setEntity(next); onChange?.(next); toast.success("Cambios guardados", { id: toastId, toasterId });
+      } catch { toast.error("No se pudieron guardar los cambios", { id: toastId, toasterId }); }
     });
   }
 
@@ -136,15 +137,16 @@ function EditableText({ value, onSave, className = "" }: { value: string; onSave
 }
 
 function DescriptionEditor({ value, onSave, placeholder }: { value: string; onSave: (value: string) => void; placeholder?: string }) {
+  const toasterId = useOverlayToasterId();
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   useEffect(() => { setDraft(value); setEditing(false); }, [value]);
-  function handleCopy() { navigator.clipboard.writeText(value).then(() => toast.success("Copiado al portapapeles")); }
+  function handleCopy() { navigator.clipboard.writeText(value).then(() => toast.success("Copiado al portapapeles", { toasterId })); }
   if (editing) return <div className="mb-2 space-y-2"><textarea autoFocus className="min-h-24 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10" value={draft} placeholder={placeholder} onChange={(event) => setDraft(event.target.value)} /><div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => { setDraft(value); setEditing(false); }}>Cancelar</Button><Button type="button" onClick={() => { if (draft !== value) onSave(draft); setEditing(false); }}>Guardar</Button></div></div>;
   return <div className="group relative mb-2"><button type="button" className="block w-full min-h-24 rounded-xl border border-transparent bg-[#FAF9F7] px-4 py-3 text-left text-[15px] leading-[1.6] text-[#454543] transition-colors hover:border-carbon/15 hover:bg-white" tabIndex={0}>{value || <span className="text-carbon/45">{placeholder}</span>}</button><div className="absolute right-2 top-2"><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-7 rounded-md text-carbon/45 hover:text-carbon" aria-label="Opciones de descripción"><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-40"><DropdownMenuItem onSelect={handleCopy}><ClipboardCopy className="size-3.5" />Copiar</DropdownMenuItem><DropdownMenuItem onSelect={() => setEditing(true)}><Edit3 className="size-3.5" />Editar</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div></div>;
 }
 function StatusDisplay({ label, tone }: { label: string; tone: string }) { return <span className="inline-flex items-center gap-1.5" style={{ color: tone }}><span className="size-[7px] rounded-full bg-current" />{label}</span>; }
-function OwnerDisplay({ ownerId, users }: { ownerId?: string; users: DetailUser[] }) { const user = users.find((candidate) => candidate.id === ownerId); return user ? <UserAvatarLabel name={user.name} label={user.username ?? user.name} labelOnly imageUrl={user.avatarUrl} size="sm" /> : <span className="text-carbon/45">Sin responsable</span>; }
+function OwnerDisplay({ ownerId, users }: { ownerId?: string; users: DetailUser[] }) { const user = users.find((candidate) => candidate.id === ownerId); return user ? <UserAvatarLabel name={user.name} label={user.username ? displayUsername(user.username) : user.name} labelOnly imageUrl={user.avatarUrl} size="sm" /> : <span className="text-carbon/45">Sin responsable</span>; }
 function DetailSection({ title, className = "", children }: { title: string; className?: string; children: React.ReactNode }) { return <section className={className}><h2 className="mb-[13px] text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">{title}</h2><div className="flex flex-col gap-2.5">{children}</div></section>; }
 function Activity({ label, date, tone = "#9a9a98" }: { label: string; date: string; tone?: string }) { return <div className="flex gap-2.5"><span className="mt-1 size-2 rounded-full" style={{ background: tone }} /><span><strong className="block text-carbon/75">{label}</strong><time className="font-mono text-[10.5px] text-carbon/40">{new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" }).format(new Date(date))}</time></span></div>; }
 const resourceIcon: Record<TlozResourceType, React.ElementType> = { link: Link2, document: FileText, image: ImageIcon, file: File, note: StickyNote };

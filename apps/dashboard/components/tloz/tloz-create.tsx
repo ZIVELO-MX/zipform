@@ -4,7 +4,7 @@ import { createContext, useContext, useMemo, useState, useTransition } from "rea
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { Plus } from "lucide-react";
-import { Button, ColorPicker, DatePicker, EntityPicker, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, UserPicker, type IconPickerOption } from "@zipform/ui";
+import { Button, ColorPicker, DatePicker, EntityPicker, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, useOverlayToasterId, UserPicker, type IconPickerOption } from "@zipform/ui";
 import type { TlozInventoryCategory, TlozMissionStatus, TlozMissionType, TlozProject, UserProfile } from "@zipform/types";
 import { TlozValidationError, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "@zipform/data";
 import { createMission, createProject, createQuestItem } from "../../app/tloz/actions";
@@ -49,6 +49,7 @@ export function CreateNewEntityButton({ variant = "row" }: { variant?: "row" | "
 
 export function CreateForm({ kind, projects, users, fixedProjectId, onDone }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; fixedProjectId?: string; onDone?: () => void }) {
   const router = useRouter();
+  const toasterId = useOverlayToasterId();
   const [pending, startTransition] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
   const [draft, setDraft] = useState<Record<string, string>>(() => initialDraft(kind, users[0]?.id ?? "", fixedProjectId ?? projects[0]?.id ?? "", today));
@@ -64,13 +65,13 @@ export function CreateForm({ kind, projects, users, fixedProjectId, onDone }: { 
       else if (kind === "project") validateProjectCreate(input as never);
       else validateQuestItemCreate(input as never);
       startTransition(async () => {
-        const toastId = toast.loading(`Creando ${kindLabel[kind]}…`);
+        const toastId = toast.loading(`Creando ${kindLabel[kind]}…`, { toasterId });
         try {
           if (kind === "mission") await createMission(input as never);
           else if (kind === "project") await createProject(input as never);
           else await createQuestItem(input as never);
-          toast.success(`${kindLabel[kind]} creado`, { id: toastId }); reset(); onDone?.(); router.refresh();
-        } catch { toast.error("No se pudo crear. Revisa los datos e intenta de nuevo.", { id: toastId }); }
+          toast.success(`${kindLabel[kind]} creado`, { id: toastId, toasterId }); reset(); onDone?.(); router.refresh();
+        } catch { toast.error("No se pudo crear. Revisa los datos e intenta de nuevo.", { id: toastId, toasterId }); }
       });
     } catch (error) { if (error instanceof TlozValidationError) setErrors(error.fields); else throw error; }
   }

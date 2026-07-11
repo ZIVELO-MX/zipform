@@ -36,6 +36,9 @@ import {
   PopoverTitle,
   PopoverTrigger,
   Separator,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
   UserPicker,
   cn,
   toast,
@@ -303,8 +306,8 @@ function ProfileSettings({
                         {filteredAvatars.map((option) => {
                           const selected = option.id === avatarTempId;
                           return (
-                            <button
-                              key={option.id}
+                            <Tooltip key={option.id}>
+                            <TooltipTrigger asChild><button
                               type="button"
                               className="group relative flex flex-col items-center gap-[7px] border-none bg-transparent p-0 outline-none"
                               onClick={() => setAvatarTempId(option.id)}
@@ -331,17 +334,10 @@ function ProfileSettings({
                                     <Check className="size-3" aria-hidden="true" />
                                   </span>
                                 )}
-                                <span
-                                  className={cn(
-                                    "cfg-av-tip pointer-events-none absolute left-1/2 z-10 -translate-x-1/2 translate-y-[4px] whitespace-nowrap rounded-md bg-carbon px-2 py-[3px] text-[11px] font-medium text-white opacity-0 transition-all duration-[.16s]",
-                                    "group-hover:translate-y-0 group-hover:opacity-100"
-                                  )}
-                                  style={{ top: "-34px" }}
-                                >
-                                  {option.name}
-                                </span>
                               </div>
-                            </button>
+                            </button></TooltipTrigger>
+                            <TooltipContent side="top">{option.name}</TooltipContent>
+                            </Tooltip>
                           );
                         })}
                       </div>

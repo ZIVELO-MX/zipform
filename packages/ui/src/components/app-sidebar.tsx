@@ -11,6 +11,7 @@ import {
   X
 } from "lucide-react";
 import { type ComponentType, useCallback, useState } from "react";
+import { displayUsername } from "./dashboard-primitives";
 
 export type SidebarUser = {
   name: string;
@@ -449,7 +450,7 @@ export function ProfileDropdown({ collapsed, user, mobile = false, onSignOut, on
             {!collapsed ? (
               <>
                 <span className="min-w-0 flex-1">
-                  <strong className="block truncate text-sm">{user.username}</strong>
+                  <strong className="block truncate text-sm">{displayUsername(user.username)}</strong>
                   <span className="block truncate text-[0.7rem] font-normal text-carbon/55">{user.email}</span>
                 </span>
                 <MoreHorizontal size={18} className="shrink-0 text-carbon/55" />
@@ -462,7 +463,7 @@ export function ProfileDropdown({ collapsed, user, mobile = false, onSignOut, on
             <div className="flex items-center gap-3">
               <UserAvatar user={user} initials={initials} large />
               <div className="min-w-0">
-                <span className="block truncate text-sm font-semibold">{user.username}</span>
+                <span className="block truncate text-sm font-semibold">{displayUsername(user.username)}</span>
                 <span className="block truncate text-[0.7rem] font-normal text-carbon/55">{user.email}</span>
               </div>
             </div>

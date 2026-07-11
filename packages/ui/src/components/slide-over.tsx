@@ -6,6 +6,7 @@ import { cn } from "../lib/utils";
 import { Button } from "./button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "./resizable";
 import { OverlayPortalProvider } from "./overlay-portal";
+import { OverlayToasterProvider, Toaster } from "./sonner";
 
 export type SlideOverProps = {
   open: boolean;
@@ -19,6 +20,7 @@ export type SlideOverProps = {
 
 export function SlideOver({ open, title, children, footer, onBack, onOpenChange, className }: SlideOverProps) {
   const dialogRef = React.useRef<HTMLDialogElement>(null);
+  const toasterId = React.useId();
   const [portalContainer, setPortalContainer] = React.useState<HTMLDialogElement | null>(null);
   const setDialogRef = React.useCallback((node: HTMLDialogElement | null) => { dialogRef.current = node; setPortalContainer(node); }, []);
 
@@ -53,6 +55,7 @@ export function SlideOver({ open, title, children, footer, onBack, onOpenChange,
       )}
     >
       <OverlayPortalProvider container={portalContainer}>
+      <OverlayToasterProvider toasterId={toasterId}>
       <ResizablePanelGroup orientation="horizontal" className="slide-over-panels">
         <ResizablePanel defaultSize="35%" minSize="5%" maxSize="55%" className="hidden sm:block" onPointerDown={() => dialogRef.current?.close()} aria-label="Cerrar panel" />
         <ResizableHandle className="hidden sm:flex" />
@@ -68,6 +71,8 @@ export function SlideOver({ open, title, children, footer, onBack, onOpenChange,
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
+      {open ? <Toaster id={toasterId} /> : null}
+      </OverlayToasterProvider>
       </OverlayPortalProvider>
     </dialog>
   );

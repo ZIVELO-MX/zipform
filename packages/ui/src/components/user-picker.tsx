@@ -7,6 +7,7 @@ import { Button } from "./button";
 import { Input } from "./input";
 import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from "./popover";
 import { cn } from "../lib/utils";
+import { displayUsername } from "./dashboard-primitives";
 
 export type UserPickerOption = {
   id: string;
@@ -33,7 +34,7 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" className={cn("w-full justify-start [&_svg]:size-3.5", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
           {selected ? <UserAvatar user={selected} /> : <UserRound aria-hidden="true" />}
-          <span className="min-w-0 truncate text-left">{selected?.username ?? selected?.name ?? `Seleccionar ${label.toLowerCase()}`}</span>
+          <span className="min-w-0 truncate text-left">{selected?.username ? displayUsername(selected.username) : selected?.name ?? `Seleccionar ${label.toLowerCase()}`}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[min(340px,calc(100vw-32px))]">
@@ -55,7 +56,7 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
               onClick={() => { onValueChange(user.id); setOpen(false); setQuery(""); }}
             >
               <UserAvatar user={user} />
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{user.username ?? user.name}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-semibold">{user.username ? displayUsername(user.username) : user.name}</span>
               {value === user.id ? <Check className="size-3.5" aria-hidden="true" /> : null}
             </button>
           ))}

@@ -8,7 +8,7 @@ import {
   LucideIcon,
   Plus
 } from "lucide-react";
-import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@zipform/ui";
+import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, displayUsername, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@zipform/types";
 import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
@@ -163,7 +163,7 @@ export function MissionIconAvatar({
 }
 
 export function OwnerAvatar({ user }: { user: Pick<UserProfile, "name" | "username" | "avatarUrl"> }) {
-  return <UserAvatarLabel className="tloz-owner" name={user.name} label={user.username} imageUrl={user.avatarUrl} />;
+  return <UserAvatarLabel className="tloz-owner" name={user.name} label={displayUsername(user.username)} imageUrl={user.avatarUrl} />;
 }
 
 export function QuestItemDots({ mission, max = MAX_VISIBLE_QUEST_ITEMS }: { mission: TlozMissionRecord; max?: number }) {
