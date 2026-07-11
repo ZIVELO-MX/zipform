@@ -125,9 +125,9 @@ describe("settings actions (agent)", () => {
     it("returns avatars when authenticated", async () => {
       mocks.auth.mockResolvedValue({ user: { id: "owner" } });
       mocks.listAvatars.mockResolvedValue([
-        { id: "5372f758-a74b-4cad-b9b3-80e65760cdd1", name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" },
-        { id: "43dadd54-2dab-421d-9178-b7c12d03d0a9", name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" },
-        { id: "275f8102-716f-4e65-84b8-0995d2a1e69f", name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" }
+        { id: "s1", name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" },
+        { id: "s2", name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" },
+        { id: "s3", name: "ZIBOT", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg" }
       ]);
 
       const result = await listAvatars();

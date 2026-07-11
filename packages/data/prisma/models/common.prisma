@@ -1,5 +1,5 @@
 model Avatar {
-  id       String @id @default(uuid()) @db.Uuid
+  id       String @id @default(uuid())
   name     String
   imageUrl String @default("")
   @@map("avatars")

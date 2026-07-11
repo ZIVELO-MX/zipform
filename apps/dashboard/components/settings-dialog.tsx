@@ -318,7 +318,9 @@ function ProfileSettings({
                                 )}
                               >
                                 {option.imageUrl ? (
-                                  <AvatarImage src={option.imageUrl} alt={option.name} className="size-full object-cover" />
+                                  <Avatar className="size-full rounded-full">
+                                    <AvatarImage src={option.imageUrl} alt={option.name} className="size-full object-cover" />
+                                  </Avatar>
                                 ) : (
                                   <span className="flex size-full items-center justify-center bg-carbon/10 text-sm font-semibold text-carbon/45">
                                     ?
