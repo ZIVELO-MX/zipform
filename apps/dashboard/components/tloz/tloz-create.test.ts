@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { initialDraft } from "./tloz-create";
+import { initialDraft } from "./tloz-create-defaults";
 
 describe("TLOZ mission creation defaults", () => {
   it("starts missions as later with the resolved owner and project", () => {
