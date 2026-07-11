@@ -12,7 +12,7 @@ vi.mock("@zipform/data", () => {
   }
 
   return {
-    dataClient: { tloz: { createMission: vi.fn(), findMissions: vi.fn() } },
+    dataClient: { tloz: { createMission: vi.fn(), findMissions: vi.fn(), getUsers: vi.fn(), getProjects: vi.fn(), getMissionDetail: vi.fn() } },
     TlozValidationError: ValidationError,
   };
 });
@@ -23,11 +23,17 @@ vi.mock("../../../../lib/api-auth", () => ({
 
 const mockedAuthenticateRequest = vi.mocked(authenticateRequest);
 const mockedCreateMission = vi.mocked(dataClient.tloz.createMission);
+const mockedGetUsers = vi.mocked(dataClient.tloz.getUsers);
+const mockedGetProjects = vi.mocked(dataClient.tloz.getProjects);
+const mockedGetMissionDetail = vi.mocked(dataClient.tloz.getMissionDetail);
 
 describe("POST /api/v1/missions", () => {
   beforeEach(() => {
     mockedAuthenticateRequest.mockReset();
     mockedCreateMission.mockReset();
+    mockedGetUsers.mockResolvedValue([{ id: "agent-1", username: "zibot" } as never]);
+    mockedGetProjects.mockResolvedValue([{ id: "project-zivelo", slug: "zivelo" } as never]);
+    mockedGetMissionDetail.mockResolvedValue({ id: "mission-1", checklistCount: 0, completed: 0 } as never);
     mockedAuthenticateRequest.mockResolvedValue({
       user: {
         id: "agent-1",
@@ -76,5 +82,25 @@ describe("POST /api/v1/missions", () => {
     expect(response.status).toBe(500);
     expect(body).toMatchObject({ error: { code: "INTERNAL_ERROR", message: "Error interno del servidor." } });
     expect(JSON.stringify(body)).not.toContain("database connection string");
+  });
+
+  it("applies stable defaults while preserving explicit values", async () => {
+    mockedCreateMission.mockResolvedValue({ id: "mission-1" } as never);
+
+    const response = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+      method: "POST",
+      body: JSON.stringify({ title: "Mission", type: "side_quest" }),
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    expect(response.status).toBe(201);
+    expect(mockedCreateMission).toHaveBeenCalledWith(expect.objectContaining({ ownerId: "agent-1", projectId: "project-zivelo", status: "later" }));
+
+    await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+      method: "POST",
+      body: JSON.stringify({ title: "Explicit", type: "side_quest", ownerId: "human-1", projectId: "project-1", status: "now" }),
+      headers: { "Content-Type": "application/json" },
+    }));
+    expect(mockedCreateMission).toHaveBeenLastCalledWith(expect.objectContaining({ ownerId: "human-1", projectId: "project-1", status: "now" }));
   });
 });

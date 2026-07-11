@@ -52,7 +52,10 @@ importers:
         version: 4.0.1
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.19(tsx@4.22.1))
+        version: 1.0.7(tailwindcss@3.4.19(tsx@4.22.1)(yaml@2.9.0))
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
@@ -80,13 +83,13 @@ importers:
         version: 8.5.14
       tailwindcss:
         specifier: ^3.4.16
-        version: 3.4.19(tsx@4.22.1)
+        version: 3.4.19(tsx@4.22.1)(yaml@2.9.0)
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
       vitest:
         specifier: ^4.1.9
-        version: 4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1))
+        version: 4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)(yaml@2.9.0))
 
   packages/data:
     dependencies:
@@ -117,7 +120,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.9
-        version: 4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1))
+        version: 4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)(yaml@2.9.0))
 
   packages/types:
     devDependencies:
@@ -214,7 +217,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.9
-        version: 4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1))
+        version: 4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)(yaml@2.9.0))
 
 packages:
 
@@ -4050,6 +4053,11 @@ packages:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
 
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
@@ -5495,7 +5503,7 @@ snapshots:
       obug: 2.1.3
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1))
+      vitest: 4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)(yaml@2.9.0))
 
   '@vitest/expect@4.1.9':
     dependencies:
@@ -5506,21 +5514,21 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.9(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1))':
+  '@vitest/mocker@4.1.9(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.9
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)
+      vite: 8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)(yaml@2.9.0)
 
-  '@vitest/mocker@4.1.9(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1))':
+  '@vitest/mocker@4.1.9(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.9
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)
+      vite: 8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.9':
     dependencies:
@@ -7344,13 +7352,14 @@ snapshots:
       camelcase-css: 2.0.1
       postcss: 8.5.14
 
-  postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.14)(tsx@4.22.1):
+  postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.14)(tsx@4.22.1)(yaml@2.9.0):
     dependencies:
       lilconfig: 3.1.3
     optionalDependencies:
       jiti: 1.21.7
       postcss: 8.5.14
       tsx: 4.22.1
+      yaml: 2.9.0
 
   postcss-nested@6.2.0(postcss@8.5.14):
     dependencies:
@@ -7836,11 +7845,11 @@ snapshots:
 
   tailwind-merge@3.6.0: {}
 
-  tailwindcss-animate@1.0.7(tailwindcss@3.4.19(tsx@4.22.1)):
+  tailwindcss-animate@1.0.7(tailwindcss@3.4.19(tsx@4.22.1)(yaml@2.9.0)):
     dependencies:
-      tailwindcss: 3.4.19(tsx@4.22.1)
+      tailwindcss: 3.4.19(tsx@4.22.1)(yaml@2.9.0)
 
-  tailwindcss@3.4.19(tsx@4.22.1):
+  tailwindcss@3.4.19(tsx@4.22.1)(yaml@2.9.0):
     dependencies:
       '@alloc/quick-lru': 5.2.0
       arg: 5.0.2
@@ -7859,7 +7868,7 @@ snapshots:
       postcss: 8.5.14
       postcss-import: 15.1.0(postcss@8.5.14)
       postcss-js: 4.1.0(postcss@8.5.14)
-      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.14)(tsx@4.22.1)
+      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.14)(tsx@4.22.1)(yaml@2.9.0)
       postcss-nested: 6.2.0(postcss@8.5.14)
       postcss-selector-parser: 6.1.4
       resolve: 1.22.12
@@ -8070,7 +8079,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1):
+  vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
@@ -8083,8 +8092,9 @@ snapshots:
       fsevents: 2.3.3
       jiti: 1.21.7
       tsx: 4.22.1
+      yaml: 2.9.0
 
-  vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1):
+  vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)(yaml@2.9.0):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
@@ -8097,11 +8107,12 @@ snapshots:
       fsevents: 2.3.3
       jiti: 2.7.0
       tsx: 4.22.1
+      yaml: 2.9.0
 
-  vitest@4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)):
+  vitest@4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.9
-      '@vitest/mocker': 4.1.9(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1))
+      '@vitest/mocker': 4.1.9(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.9
       '@vitest/runner': 4.1.9
       '@vitest/snapshot': 4.1.9
@@ -8118,7 +8129,7 @@ snapshots:
       tinyexec: 1.1.2
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)
+      vite: 8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@1.21.7)(tsx@4.22.1)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.19
@@ -8126,10 +8137,10 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)):
+  vitest@4.1.9(@types/node@22.19.19)(@vitest/coverage-v8@4.1.9)(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.9
-      '@vitest/mocker': 4.1.9(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1))
+      '@vitest/mocker': 4.1.9(vite@8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.9
       '@vitest/runner': 4.1.9
       '@vitest/snapshot': 4.1.9
@@ -8146,7 +8157,7 @@ snapshots:
       tinyexec: 1.1.2
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.0
-      vite: 8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)
+      vite: 8.1.0(@types/node@22.19.19)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.1)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 22.19.19
@@ -8205,6 +8216,8 @@ snapshots:
       stackback: 0.0.2
 
   word-wrap@1.2.5: {}
+
+  yaml@2.9.0: {}
 
   yocto-queue@0.1.0: {}
 

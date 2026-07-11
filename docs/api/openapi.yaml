@@ -409,7 +409,7 @@ paths:
     post:
       operationId: createMission
       summary: Create a mission
-      description: title, ownerId, type, and projectId are required; stable defaults are applied to omitted presentation and progress fields.
+      description: title and type are required. Omitted ownerId, projectId, and status default to Zibot, the Zivelo project, and later.
       tags: [Missions]
       requestBody:
         required: true
@@ -417,7 +417,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [title, ownerId, type, projectId]
+              required: [title, type]
               properties:
                 id:
                   type: string
@@ -434,13 +434,15 @@ paths:
                   $ref: "#/components/schemas/MissionType"
                 status:
                   $ref: "#/components/schemas/MissionStatus"
-                  default: next
+                  default: later
                 conclusion:
                   type: string
                 ownerId:
                   type: string
+                  description: Defaults to the Zibot user ID when omitted.
                 projectId:
                   type: string
+                  description: Defaults to the project whose slug is zivelo when omitted.
                 seasonId:
                   type: string
                 episodeId:
@@ -471,7 +473,7 @@ paths:
                 required: [data]
                 properties:
                   data:
-                    $ref: "#/components/schemas/Mission"
+                    $ref: "#/components/schemas/MissionDetail"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -606,7 +608,7 @@ paths:
                 required: [data]
                 properties:
                   data:
-                    $ref: "#/components/schemas/Mission"
+                    $ref: "#/components/schemas/MissionDetail"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -668,7 +670,7 @@ paths:
                 required: [data]
                 properties:
                   data:
-                    $ref: "#/components/schemas/Mission"
+                    $ref: "#/components/schemas/MissionDetail"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1688,6 +1690,7 @@ components:
       allOf:
         - $ref: "#/components/schemas/Mission"
         - type: object
+          required: [checklist, checklistCount, completed, resources]
           properties:
             project:
               $ref: "#/components/schemas/Project"
@@ -1703,6 +1706,12 @@ components:
               type: array
               items:
                 $ref: "#/components/schemas/ChecklistItem"
+            checklistCount:
+              type: integer
+              minimum: 0
+            completed:
+              type: integer
+              minimum: 0
             resources:
               type: array
               items:
