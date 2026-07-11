@@ -44,6 +44,24 @@ describe("mock data driver", () => {
     expect(await createMockDataClient().tloz.getMissions()).toHaveLength(missions.length);
   });
 
+  it("persists mission creation defaults", async () => {
+    const client = createMockDataClient();
+    const template = missions[0];
+    const created = await client.tloz.createMission({
+      title: "Minimal API mission",
+      type: "side_quest",
+      ownerId: template.ownerId,
+      projectId: template.projectId!,
+    });
+
+    expect(created).toMatchObject({
+      description: "",
+      icon: "Sword",
+      status: "next",
+      progress: 0,
+    });
+  });
+
   it("uses Markdown as checklist source of truth and persists mission relations", async () => {
     const client = createMockDataClient();
     const mission = missions[0];

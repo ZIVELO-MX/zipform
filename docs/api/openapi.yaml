@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Zipform Data API
-  version: 1.2.0-draft
+  version: 1.3.0-draft
   description: |
     Full CRUD access to Zipform platform data: users, projects, missions,
     seasons, episodes, quest items, resources, agents, and API keys.
@@ -112,6 +112,25 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "500":
           $ref: "#/components/responses/InternalError"
+  /users/me:
+    get:
+      operationId: getCurrentUser
+      summary: Get the authenticated user
+      description: Resolves the user associated with the Bearer API key or active browser session.
+      tags: [Users]
+      responses:
+        "200":
+          description: Authenticated public user profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /users/{userId}:
     get:
       operationId: getUser
@@ -390,7 +409,7 @@ paths:
     post:
       operationId: createMission
       summary: Create a mission
-      description: title, ownerId, and type are required; all other fields optional.
+      description: title, ownerId, type, and projectId are required; stable defaults are applied to omitted presentation and progress fields.
       tags: [Missions]
       requestBody:
         required: true
@@ -398,7 +417,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [title, ownerId, type]
+              required: [title, ownerId, type, projectId]
               properties:
                 id:
                   type: string
@@ -407,12 +426,15 @@ paths:
                   type: string
                 description:
                   type: string
+                  default: ""
                 icon:
                   type: string
+                  default: Sword
                 type:
                   $ref: "#/components/schemas/MissionType"
                 status:
                   $ref: "#/components/schemas/MissionStatus"
+                  default: next
                 conclusion:
                   type: string
                 ownerId:
@@ -438,6 +460,7 @@ paths:
                   type: integer
                   minimum: 0
                   maximum: 100
+                  default: 0
       responses:
         "201":
           description: Mission created.
@@ -1529,6 +1552,11 @@ components:
               enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR]
             message:
               type: string
+            fields:
+              type: object
+              description: Field-specific guidance for INVALID_REQUEST responses.
+              additionalProperties:
+                type: string
             requestId:
               type: string
 
@@ -1536,6 +1564,7 @@ components:
     User:
       type: object
       additionalProperties: false
+      description: Public profile. Password hashes, sessions, and other authentication secrets are never exposed.
       required: [id, name, username, email, role, type, avatarUrl]
       properties:
         id:
