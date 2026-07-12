@@ -314,7 +314,7 @@ function ProfileSettings({
                             >
                               <div
                                 className={cn(
-                                  "relative size-[66px] rounded-full border-[2.5px] transition-all duration-[.16s] overflow-hidden",
+                                  "relative size-[66px] rounded-full border-[2.5px] transition-all duration-[160ms] overflow-hidden",
                                   selected
                                     ? "border-zivelo shadow-[0_0_0_3px_rgba(215,34,40,0.18)]"
                                     : "border-carbon/10 shadow-[0_2px_8px_rgba(29,29,27,0.10)] group-hover:border-zivelo/50"
