@@ -29,9 +29,10 @@ test("CI delegates deployments to the Vercel Git integration", async () => {
 
   assert.match(workflow, /verify:/);
   assert.match(workflow, /run: pnpm check/);
+  assert.match(workflow, /secrets\.VERCEL_AUTOMATION_BYPASS_SECRET/);
   assert.doesNotMatch(workflow, /deploy-preview:/);
   assert.doesNotMatch(workflow, /deploy-production:/);
-  assert.doesNotMatch(workflow, /secrets\.VERCEL_/);
+  assert.doesNotMatch(workflow, /secrets\.VERCEL_(?!AUTOMATION_BYPASS_SECRET)/);
 });
 
 test("Next.js traces the generated Prisma engine from the monorepo", async () => {
