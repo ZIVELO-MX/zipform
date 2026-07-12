@@ -41,7 +41,7 @@ jobs:
       - name: Check workspace
         run: pnpm check
 
-      - name: Verify deployed OpenAPI and TLO-0004
+      - name: Verify deployed OpenAPI and TLO-0004 (performance informational)
         if: github.ref == 'refs/heads/main'
         env:
           OPENAPI_VERIFY_URL: ${{ vars.OPENAPI_VERIFY_URL || 'https://zipform.zivelo.dev' }}

@@ -33,6 +33,18 @@ Read [references/authentication.md](references/authentication.md) when configuri
 
 Do not guess when multiple projects or missions match.
 
+### Mission status enum
+
+The valid mission status values are:
+
+- `now`
+- `next`
+- `later`
+- `completed`
+- `blocked`
+
+Use these exact lowercase values with `PATCH /api/v1/missions/{missionId}/status`.
+
 ## Write mission documents
 
 Mission content uses two separate fields: `description` is the short summary shown in previews (maximum 280 characters), while `descriptionDetail` is the full Markdown document (maximum 20,000 characters). The legacy `conclusion` field is no longer part of the contract.
