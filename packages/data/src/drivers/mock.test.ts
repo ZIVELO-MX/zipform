@@ -68,7 +68,8 @@ describe("mock data driver", () => {
     const template = missions[0];
     const created = await client.tloz.createMission({
       title: "Mission with outcomes",
-      description: "## Outcomes\n- [x] First outcome\n- [ ] Second outcome",
+      description: "Short outcome",
+      descriptionDetail: "## Outcomes\n- [x] First outcome\n- [ ] Second outcome",
       type: "side_quest",
       ownerId: template.ownerId,
       projectId: template.projectId!,
@@ -88,7 +89,7 @@ describe("mock data driver", () => {
     const questItem = (await client.tloz.getQuestItems())[0];
 
     let detail = await client.tloz.saveMissionDocument(mission.id, "# Work\n- [ ] First\n- [x] Second");
-    expect(detail.description).toContain("- [x] Second");
+    expect(detail.descriptionDetail).toContain("- [x] Second");
     expect(detail.progress).toBe(50);
     expect(detail.checklist.map((item) => [item.title, item.completed, item.position])).toEqual([
       ["First", false, 0], ["Second", true, 1]
@@ -183,7 +184,7 @@ describe("mock data driver", () => {
     await client.tloz.removeMissionQuestItem(mission.id, qi.id);
 
     const saved = await client.tloz.saveMissionDocument(mission.id, "# Doc\n- [ ] Task");
-    expect(saved.description).toContain("- [ ] Task");
+    expect(saved.descriptionDetail).toContain("- [ ] Task");
     expect(saved.checklist).toHaveLength(1);
   });
 

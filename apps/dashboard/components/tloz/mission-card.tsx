@@ -68,7 +68,7 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 pt-2">
-        {!compact ? <p className="tloz-card-description">{missionPreviewDescription(mission.description)}</p> : null}
+        {!compact && mission.description ? <p className="tloz-card-description">{missionPreviewDescription(mission.description)}</p> : null}
         <div className="tloz-meta-row">
           <span>{mission.project?.name ?? "Sin proyecto"}</span>
           <span>{formatDate(mission.dueDate)}</span>
@@ -115,7 +115,7 @@ export function ActiveMissionPanel({ label, mission }: { label: string; mission:
       </div>
       {mission ? (
         <>
-          <p>{missionPreviewDescription(mission.description)}</p>
+          {mission.description ? <p>{missionPreviewDescription(mission.description)}</p> : null}
           <div className="tloz-active-actions">
           <OwnerAvatar user={mission.owner} />
             <Button asChild size="sm">

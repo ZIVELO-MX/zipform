@@ -20,6 +20,7 @@ describe("TLOZ creation validation", () => {
       projectId: "project-1",
     })).toMatchObject({
       description: "",
+      descriptionDetail: "",
       icon: "Sword",
       status: "next",
       progress: 0,
@@ -51,5 +52,10 @@ describe("TLOZ creation validation", () => {
   it("generates collision-free persistent route identifiers", () => {
     expect(uniqueSlug("Operación México", ["operacion-mexico"])).toBe("operacion-mexico-2");
     expect(nextMissionDisplayId("Core", ["COR-0001", "COR-0004", "GRO-0010"])).toBe("COR-0005");
+  });
+
+  it("enforces separate short description and Markdown detail limits", () => {
+    expect(() => validateMissionCreate({ title: "Valid title", type: "side_quest", ownerId: "user-1", projectId: "project-1", description: "x".repeat(281) })).toThrow(TlozValidationError);
+    expect(() => validateMissionCreate({ title: "Valid title", type: "side_quest", ownerId: "user-1", projectId: "project-1", descriptionDetail: "x".repeat(20001) })).toThrow(TlozValidationError);
   });
 });

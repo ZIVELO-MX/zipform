@@ -7,7 +7,7 @@ Consult `GET https://zipform.zivelo.dev/api/openapi` before relying on this rout
 - Projects: `GET/POST /api/v1/projects`, `GET/PATCH /api/v1/projects/{projectId}`.
 - Missions: `GET/POST /api/v1/missions`, `GET/PATCH/DELETE /api/v1/missions/{missionId}`.
 - Mission state: `PATCH /api/v1/missions/{missionId}/status`.
-- Mission document: `PUT /api/v1/missions/{missionId}/document` with `{ "markdown": "complete document" }`.
+- Mission detail: `PUT /api/v1/missions/{missionId}/document` with `{ "markdown": "complete Markdown detail" }`; it updates `descriptionDetail` and materializes checklist metrics.
 - Discovery: `GET /api/v1/users/me`, `GET /api/v1/agents`, `GET /api/v1/users`.
 - Supporting data: `GET /api/v1/seasons`, `/episodes`, `/quest-items`, and `/resources`.
 - Query by example: `POST /api/v1/{missions|projects|quest-items|resources|users}/query`.

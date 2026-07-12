@@ -89,13 +89,8 @@ export function formatDate(date?: string) {
   }).format(new Date(`${date}T12:00:00`));
 }
 
-export function missionPreviewDescription(markdown: string) {
-  return markdown
-    .split(/\r?\n/)
-    .filter((line) => !/^\s*[-*+]\s+/.test(line))
-    .map((line) => line.replace(/^\s{0,3}#{1,6}\s+/, "").trim())
-    .filter(Boolean)
-    .join(" ");
+export function missionPreviewDescription(description: string) {
+  return description.trim();
 }
 
 export function dependencyLabel(mission: TlozMissionRecord) {

@@ -4,7 +4,7 @@ import type { TlozMissionStatus } from "@zipform/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 
 const VALID_MISSION_FIELDS = new Set([
-  "title", "description", "icon", "type", "status", "conclusion",
+  "title", "description", "descriptionDetail", "icon", "type", "status",
   "dueDate", "startDate", "completedAt", "blockedReason", "progress",
   "seasonId", "episodeId", "ownerId", "projectId"
 ]);
@@ -79,6 +79,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mi
       { error: { code: "INVALID_REQUEST", message: "status debe ser: now, next, later, completed o blocked.", requestId: crypto.randomUUID() } },
       { status: 400 }
     );
+  }
+
+  if (typeof allowedFields.description === "string" && allowedFields.description.length > 280) {
+    return NextResponse.json({ error: { code: "INVALID_REQUEST", message: "description no puede superar 280 caracteres.", requestId: crypto.randomUUID() } }, { status: 400 });
+  }
+  if (typeof allowedFields.descriptionDetail === "string" && allowedFields.descriptionDetail.length > 20000) {
+    return NextResponse.json({ error: { code: "INVALID_REQUEST", message: "descriptionDetail no puede superar 20000 caracteres.", requestId: crypto.randomUUID() } }, { status: 400 });
   }
 
   try {

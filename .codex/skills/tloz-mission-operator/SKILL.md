@@ -35,14 +35,16 @@ Do not guess when multiple projects or missions match.
 
 ## Write mission documents
 
-Store checkboxes in the complete Markdown document:
+Mission content uses two separate fields: `description` is the short summary shown in previews (maximum 280 characters), while `descriptionDetail` is the full Markdown document (maximum 20,000 characters). The legacy `conclusion` field is no longer part of the contract.
+
+Store checkboxes in the complete Markdown detail document:
 
 ```md
 - [ ] Pending verifiable outcome
 - [x] Completed verifiable outcome
 ```
 
-Before `PUT /api/v1/missions/{id}/document`, preserve relevant descriptions, notes, references, and existing checkboxes. Send the complete desired `markdown`, not a fragment. Keep checkboxes brief, independently verifiable, ordered when sequence matters, and limited to the mission scope.
+Before `PUT /api/v1/missions/{id}/document`, preserve the short `description`, relevant detail notes, references, and existing checkboxes. Send the complete desired `markdown`, not a fragment. Keep checkboxes brief, independently verifiable, ordered when sequence matters, and limited to the mission scope.
 
 Write concise, actionable titles. Describe the expected outcome, necessary context, scope boundaries, and how completion is verified. Apply Scrum or user-story language only when it improves clarity.
 

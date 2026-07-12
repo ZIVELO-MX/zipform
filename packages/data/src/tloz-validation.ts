@@ -20,6 +20,7 @@ export function validateMissionCreate(input: TlozMissionCreateInput) {
   const normalized = {
     ...input,
     description: input.description ?? "",
+    descriptionDetail: input.descriptionDetail ?? "",
     icon: input.icon ?? "Sword",
     status: input.status ?? "next",
     progress: input.progress ?? 0,
@@ -35,13 +36,14 @@ export function validateMissionCreate(input: TlozMissionCreateInput) {
   if (normalized.status && !["now", "next", "later", "completed", "blocked"].includes(normalized.status)) {
     fields.status = "El estado de la misión no es válido.";
   }
-  if (normalized.description.length > 5000) fields.description = "La descripción no puede superar 5000 caracteres.";
+  if (normalized.description.length > 280) fields.description = "La descripción no puede superar 280 caracteres.";
+  if (normalized.descriptionDetail.length > 20000) fields.descriptionDetail = "El detalle no puede superar 20000 caracteres.";
   if (!Number.isInteger(normalized.progress) || normalized.progress < 0 || normalized.progress > 100) {
     fields.progress = "El progreso debe ser un entero entre 0 y 100.";
   }
   dates(input.startDate, input.dueDate, fields);
   finish(fields);
-  return { ...normalized, title: input.title.trim(), description: normalized.description.trim() };
+  return { ...normalized, title: input.title.trim(), description: normalized.description.trim(), descriptionDetail: normalized.descriptionDetail.trim() };
 }
 
 export function validateProjectCreate(input: TlozProjectCreateInput) {

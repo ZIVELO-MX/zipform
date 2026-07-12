@@ -195,10 +195,10 @@ function mapMission(mission: {
   displayId: string;
   title: string;
   description: string;
+  descriptionDetail: string;
   icon: string;
   type: string;
   status: string;
-  conclusion: string | null;
   ownerId: string;
   projectId: string | null;
   seasonId: string | null;
@@ -215,7 +215,6 @@ function mapMission(mission: {
     ...mission,
     type: mission.type as TlozMission["type"],
     status: mission.status as TlozMission["status"],
-    conclusion: mission.conclusion ?? undefined,
     projectId: mission.projectId ?? undefined,
     seasonId: mission.seasonId ?? undefined,
     episodeId: mission.episodeId ?? undefined,
@@ -662,7 +661,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
             }
             const displayId = `${prefix}-${String(suffix).padStart(4, "0")}`;
             const { id = crypto.randomUUID(), completedAt, ...data } = valid;
-            const checklist = parseMarkdownChecklist(data.description);
+            const checklist = parseMarkdownChecklist(data.descriptionDetail);
             const progress = checklist.length
               ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100)
               : data.progress;
@@ -698,7 +697,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const { completedAt, ...data } = input;
         const nullableData = Object.fromEntries(Object.entries(data).map(([key, value]) => [
           key,
-          value === "" && ["conclusion", "projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? null : value
+          value === "" && ["projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? null : value
         ]));
         const projectChanged = input.projectId !== undefined;
 
@@ -771,7 +770,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const items = parseMarkdownChecklist(markdown);
         const progress = items.length ? Math.round((items.filter((item) => item.completed).length / items.length) * 100) : 0;
         await prisma.$transaction([
-          prisma.tlozMission.update({ where: { id: missionId }, data: { description: markdown, progress } }),
+          prisma.tlozMission.update({ where: { id: missionId }, data: { descriptionDetail: markdown, progress } }),
           prisma.tlozChecklistItem.deleteMany({ where: { missionId } }),
           ...items.map((item, position) => prisma.tlozChecklistItem.create({
             data: { id: crypto.randomUUID(), missionId, title: item.title, completed: item.completed, position }

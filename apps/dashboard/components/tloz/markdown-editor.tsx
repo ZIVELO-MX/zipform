@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
+import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, SegmentedControl, toast } from "@zipform/ui";
@@ -9,10 +9,11 @@ import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMe
 type MarkdownEditorProps = {
   value: string;
   onSave: (value: string) => void;
+  onToggleTask?: (position: number, completed: boolean) => void;
   placeholder?: string;
 };
 
-export function MarkdownEditor({ value, onSave, placeholder = "Añadir descripción detallada con Markdown…" }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…" }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   const [mode, setMode] = useState<"visual" | "text">("text");
@@ -41,7 +42,7 @@ export function MarkdownEditor({ value, onSave, placeholder = "Añadir descripci
   return (
     <section className="mb-7">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Descripción</h2>
+        <h2 className="text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Detalle</h2>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="ghost" size="icon-xs" className="size-7 rounded-md text-carbon/45 hover:text-carbon" aria-label="Opciones de descripción">
@@ -88,7 +89,7 @@ export function MarkdownEditor({ value, onSave, placeholder = "Añadir descripci
               className="min-h-28 w-full cursor-text rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543]"
               onClick={() => textareaRef.current?.focus()}
             >
-              <MarkdownContent>{draft}</MarkdownContent>
+              <MarkdownContent onToggleTask={onToggleTask}>{draft}</MarkdownContent>
             </div>
           )}
           <div className="flex justify-end gap-2">
@@ -101,14 +102,15 @@ export function MarkdownEditor({ value, onSave, placeholder = "Añadir descripci
           className="min-h-24 w-full rounded-xl border border-transparent bg-[#FAF9F7] px-4 py-3 text-[15px] leading-[1.6] text-[#454543] transition-colors hover:border-carbon/15 hover:bg-white"
           tabIndex={0}
         >
-          {value ? <MarkdownContent>{value}</MarkdownContent> : <span className="text-carbon/45">{placeholder}</span>}
+          {value ? <MarkdownContent onToggleTask={onToggleTask}>{value}</MarkdownContent> : <span className="text-carbon/45">{placeholder}</span>}
         </div>
       )}
     </section>
   );
 }
 
-function MarkdownContent({ children }: { children: string }) {
+function MarkdownContent({ children, onToggleTask }: { children: string; onToggleTask?: (position: number, completed: boolean) => void }) {
+  let taskPosition = 0;
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -121,12 +123,11 @@ function MarkdownContent({ children }: { children: string }) {
           if (typeof first === "object" && first && "type" in first && (first as { type: string }).type === "input") {
             const input = first as { props: { checked?: boolean; disabled?: boolean } };
             const checked = input.props?.checked ?? false;
+            const position = taskPosition++;
             const rest = liChildren.slice(1);
             return (
               <li className="mb-1 flex items-start gap-2 last:mb-0" {...props}>
-                <span className="mt-0.5 grid size-[17px] shrink-0 place-items-center rounded-[5px] border-2 border-carbon/25 bg-white">
-                  {checked ? <Check className="size-3 text-carbon/60" strokeWidth={3} /> : null}
-                </span>
+                <input type="checkbox" checked={checked} disabled={!onToggleTask} onChange={(event) => onToggleTask?.(position, event.target.checked)} aria-label={`Task ${position + 1}`} className="mt-0.5 size-[17px] shrink-0 cursor-pointer accent-[#D72228] disabled:cursor-default" />
                 <span className="min-w-0 flex-1 text-[15px] leading-[1.6]">{rest}</span>
               </li>
             );

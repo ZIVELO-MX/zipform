@@ -133,10 +133,10 @@ export type TlozMission = {
   displayId: string;
   title: string;
   description: string;
+  descriptionDetail: string;
   icon: string;
   type: TlozMissionType;
   status: TlozMissionStatus;
-  conclusion?: string;
   ownerId: string;
   projectId?: string;
   seasonId?: string;

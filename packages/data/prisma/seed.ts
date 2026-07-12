@@ -137,7 +137,6 @@ async function main() {
   await prisma.tlozMission.createMany({
     data: missions.map((mission) => ({
       ...mission,
-      conclusion: mission.conclusion ?? null,
       seasonId: mission.seasonId ?? null,
       episodeId: mission.episodeId ?? null,
       dueDate: mission.dueDate ?? null,
