@@ -30,6 +30,12 @@ export async function PUT(request: Request, { params }: { params: Promise<{ miss
       { status: 400 }
     );
   }
+  if (body.markdown.length > 20000) {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "markdown no puede superar 20000 caracteres.", requestId: crypto.randomUUID() } },
+      { status: 400 },
+    );
+  }
 
   try {
     const detail = await dataClient.tloz.saveMissionDocument(missionId, body.markdown);

@@ -262,7 +262,7 @@ export function createMockDataClient(): ZipformDataClient {
         if (!project) throw new Error("TLOZ mission project was not found");
         if (!tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ mission owner was not found");
         const now = new Date().toISOString();
-        const checklist = parseMarkdownChecklist(valid.description);
+        const checklist = parseMarkdownChecklist(valid.descriptionDetail);
         const mission: TlozMission = {
           ...valid,
           id: valid.id ?? crypto.randomUUID(),
@@ -290,7 +290,7 @@ export function createMockDataClient(): ZipformDataClient {
         if (index < 0) throw new Error(`TLOZ mission ${missionId} was not found`);
         const normalized = Object.fromEntries(Object.entries(input).map(([key, value]) => [
           key,
-          value === "" && ["conclusion", "projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? undefined : value
+          value === "" && ["projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? undefined : value
         ]));
         if (input.projectId && input.projectId !== tlozData.missions[index].projectId) {
           const project = tlozData.projects.find((item) => item.id === input.projectId);
@@ -308,7 +308,7 @@ export function createMockDataClient(): ZipformDataClient {
       async saveMissionDocument(missionId, markdown) {
         const checklist = parseMarkdownChecklist(markdown);
         const progress = checklist.length ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100) : 0;
-        await this.updateMission(missionId, { description: markdown, progress });
+        await this.updateMission(missionId, { descriptionDetail: markdown, progress });
         const now = new Date().toISOString();
         tlozData.checklistItems = tlozData.checklistItems.filter((item) => item.missionId !== missionId);
         tlozData.checklistItems.push(...checklist.map((item, position) => ({

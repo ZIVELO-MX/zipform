@@ -170,7 +170,7 @@ function DashboardNowCard({ mission, onSelect }: { mission: TlozMissionRecord; o
         </span></div>
       </div>
       <h3 style={{ margin: "0 0 7px", fontSize: "19px", fontWeight: 700, letterSpacing: "-0.01em" }}>{mission.title}</h3>
-      <p style={{ margin: "0 0 16px", fontSize: "13.5px", color: "#6B6B6B", lineHeight: 1.5, textWrap: "pretty" }}>{missionPreviewDescription(mission.description)}</p>
+      {mission.description ? <p style={{ margin: "0 0 16px", fontSize: "13.5px", color: "#6B6B6B", lineHeight: 1.5, textWrap: "pretty" }}>{missionPreviewDescription(mission.description)}</p> : null}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px", flexWrap: "wrap" }}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#454543", background: "#F5F5F5", borderRadius: "999px", padding: "4px 10px", fontWeight: 500 }}>
           <span style={{ width: "7px", height: "7px", borderRadius: "2px", background: mission.project?.color || "#999" }} />

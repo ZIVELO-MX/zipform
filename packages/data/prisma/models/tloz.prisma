@@ -61,10 +61,10 @@ model TlozMission {
   displayId          String                  @unique
   title              String
   description        String
+  descriptionDetail  String                  @default("")
   icon               String
   type               String
   status             String
-  conclusion         String?
   ownerId            String    @db.Uuid
   owner              User      @relation(fields: [ownerId], references: [id])
   projectId          String?

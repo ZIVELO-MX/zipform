@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, Database, File, FileCheck, FileText, ImageIcon, KeyRound, LayoutDashboard, Link2, MoreHorizontal, PanelRightOpen, Pencil, Plus, Search, Shield, Sparkles, Star, StickyNote, Sword, Target, Trash2, Wrench, X } from "lucide-react";
+import { Check, Database, File, FileCheck, FileText, ImageIcon, KeyRound, LayoutDashboard, Link2, MoreHorizontal, PanelRightOpen, Pencil, Plus, Search, Shield, Sparkles, Star, StickyNote, Sword, Trash2, Wrench, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
@@ -20,7 +20,8 @@ import {
 import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 import { missionStatusLabel, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
-import { withChecklist, withoutTaskLines } from "./mission-document";
+import { appendTaskLine, updateTaskLine } from "./mission-document";
+import { MarkdownEditor } from "./markdown-editor";
 
 const missionIcons: IconPickerOption[] = [
   { id: "Sword", label: "Misión", icon: Sword }, { id: "Sparkles", label: "Destacado", icon: Sparkles }, { id: "LayoutDashboard", label: "Dashboard", icon: LayoutDashboard }, { id: "Search", label: "Búsqueda", icon: Search }, { id: "Database", label: "Base de datos", icon: Database }, { id: "FileText", label: "Documento", icon: FileText }, { id: "FileCheck", label: "Validación", icon: FileCheck }, { id: "KeyRound", label: "Acceso", icon: KeyRound }, { id: "Shield", label: "Seguridad", icon: Shield }, { id: "Wrench", label: "Herramienta", icon: Wrench },
@@ -31,7 +32,7 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
   questItems: TlozQuestItem[];
 };
 
-type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "conclusion" | "icon">;
+type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "descriptionDetail" | "icon">;
 
 export function MissionDetail({ mission, options, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
   mission: TlozMissionDetail;
@@ -43,27 +44,24 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 }) {
   const fullMissionHref = mission.project ? missionHref(mission.project, mission.displayId) : "/tloz";
   const [current, setCurrent] = useState(mission);
-  const [markdown, setMarkdown] = useState(mission.description);
-  const [descriptionDraft, setDescriptionDraft] = useState(withoutTaskLines(mission.description));
+  const [detailMarkdown, setDetailMarkdown] = useState(mission.descriptionDetail);
+  const [descriptionDraft, setDescriptionDraft] = useState(mission.description);
   const [editingDescription, setEditingDescription] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState(mission.title);
-  const [editingConclusion, setEditingConclusion] = useState(false);
   const [renamingChecklist, setRenamingChecklist] = useState<number | null>(null);
   const [checklistTitleDraft, setChecklistTitleDraft] = useState("");
   const [deletingChecklist, setDeletingChecklist] = useState<number | null>(null);
-  const [conclusionDraft, setConclusionDraft] = useState(mission.conclusion ?? "");
   const undoStack = useRef<EditableSnapshot[]>([]);
   const redoStack = useRef<EditableSnapshot[]>([]);
   const skipTitleSave = useRef(false);
   const skipDescriptionSave = useRef(false);
-  const skipConclusionSave = useRef(false);
   const [isPending, startTransition] = useTransition();
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const checklistProgress = current.checklist.length ? Math.round((current.checklist.filter((item) => item.completed).length / current.checklist.length) * 100) : 0;
 
-  useEffect(() => { setCurrent(mission); setMarkdown(mission.description); setDescriptionDraft(withoutTaskLines(mission.description)); setTitleDraft(mission.title); setConclusionDraft(mission.conclusion ?? ""); }, [mission]);
+  useEffect(() => { setCurrent(mission); setDetailMarkdown(mission.descriptionDetail); setDescriptionDraft(mission.description); setTitleDraft(mission.title); }, [mission]);
 
   useEffect(() => {
     function handleHistoryShortcut(event: KeyboardEvent) {
@@ -86,7 +84,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
   });
 
   function accept(next: TlozMissionDetail) {
-    if (next.description !== current.description) setMarkdown(next.description);
+    if (next.descriptionDetail !== current.descriptionDetail) setDetailMarkdown(next.descriptionDetail);
     setCurrent(next);
     onMissionChange?.(next);
   }
@@ -108,11 +106,10 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
   function restoreSnapshot(snapshot: EditableSnapshot, message: string) {
     startTransition(async () => {
       try {
-        await updateMission(current.id, { title: snapshot.title, conclusion: snapshot.conclusion ?? "", icon: snapshot.icon });
-        const restored = await saveMissionDocument(current.id, snapshot.description);
+        await updateMission(current.id, { title: snapshot.title, description: snapshot.description, icon: snapshot.icon });
+        const restored = await saveMissionDocument(current.id, snapshot.descriptionDetail);
         accept(restored);
         setTitleDraft(snapshot.title);
-        setConclusionDraft(snapshot.conclusion ?? "");
         toast.success(message, { toasterId });
       } catch { toast.error("No se pudo restaurar el cambio", { toasterId }); }
     });
@@ -141,49 +138,35 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
     });
   }
 
-  function saveConclusion() {
-    if (skipConclusionSave.current) { skipConclusionSave.current = false; setConclusionDraft(current.conclusion ?? ""); return; }
-    const conclusion = conclusionDraft.trim();
-    setEditingConclusion(false);
-    if (conclusion === (current.conclusion ?? "")) return;
+  function saveDocument(nextMarkdown = detailMarkdown) {
+    if (nextMarkdown === current.descriptionDetail) return;
     remember();
-    const toastId = toast.loading("Actualizando resultado…", { toasterId });
-    startTransition(async () => {
-      try { accept({ ...current, ...(await updateMission(current.id, { conclusion })) }); toast.success("Resultado actualizado", { id: toastId, toasterId }); }
-      catch { setConclusionDraft(current.conclusion ?? ""); toast.error("No se pudo actualizar el resultado", { id: toastId, toasterId }); }
-    });
-  }
-
-  function saveDocument(nextMarkdown = markdown) {
-    if (nextMarkdown === current.description) return;
-    remember();
-    setMarkdown(nextMarkdown);
+    setDetailMarkdown(nextMarkdown);
     mutate("Guardando documento…", () => saveMissionDocument(current.id, nextMarkdown));
   }
 
   function saveDescription() {
-    saveDocument(withChecklist(descriptionDraft, current.checklist));
+    if (descriptionDraft.trim() === current.description) return;
+    remember();
+    mutate("Guardando descripción…", async () => ({ ...current, ...(await updateMission(current.id, { description: descriptionDraft.trim() })) }));
   }
 
   function toggleChecklistItem(position: number, checked: boolean) {
-    const nextChecklist = current.checklist.map((item, index) => index === position ? { ...item, completed: checked } : item);
-    setCurrent((value) => ({ ...value, checklist: nextChecklist }));
-    saveDocument(withChecklist(markdown, nextChecklist));
+    saveDocument(updateTaskLine(detailMarkdown, position, { completed: checked }));
   }
 
   function renameChecklistItem(position: number) {
     const title = checklistTitleDraft.trim();
     setRenamingChecklist(null);
     if (!title || title === current.checklist[position]?.title) return;
-    saveDocument(withChecklist(markdown, current.checklist.map((item, index) => index === position ? { ...item, title } : item)));
+    saveDocument(updateTaskLine(detailMarkdown, position, { title }));
   }
 
   function deleteChecklistItem(position: number) {
-    saveDocument(withChecklist(markdown, current.checklist.filter((_, index) => index !== position)));
+    saveDocument(updateTaskLine(detailMarkdown, position, { remove: true }));
     setDeletingChecklist(null);
   }
 
-  const readableMarkdown = markdown.split(/\r?\n/).filter((line) => !/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line)).join("\n").trim();
   const typeBadgeClass = current.type === "main_quest" ? "bg-[#FDECEC] text-[#B91C22]" : current.type === "side_quest" ? "bg-[#EEF2FF] text-[#2D6CDF]" : current.type === "farming_quest" ? "bg-[#E6F4EA] text-[#1E6B3C]" : "bg-[#F2EAFE] text-[#7A4ED9]";
   const iconSurfaceClass = missionTypeSurfaceClass[current.type];
   const statusBadgeClass = current.status === "now" ? "bg-[#E6F4EA] text-[#1E8E5A]" : current.status === "next" ? "bg-[#EEF2FF] text-[#2D6CDF]" : current.status === "later" ? "bg-[#F2EAFE] text-[#7A4ED9]" : current.status === "blocked" ? "bg-[#FDECEC] text-[#B91C22]" : "bg-[#F0EFED] text-[#6B6B6B]";
@@ -222,17 +205,18 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
                 className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
                 aria-label="Descripción de la misión"
                 value={descriptionDraft}
+                maxLength={280}
                 onChange={(event) => setDescriptionDraft(event.target.value)}
-                onBlur={() => { if (skipDescriptionSave.current) { skipDescriptionSave.current = false; setDescriptionDraft(withoutTaskLines(current.description)); } else saveDescription(); setEditingDescription(false); }}
-                onKeyDown={(event) => { if (event.key === "Escape") { skipDescriptionSave.current = true; setDescriptionDraft(withoutTaskLines(current.description)); setEditingDescription(false); } }}
-                placeholder="Describe el objetivo y contexto de la misión."
+                onBlur={() => { if (skipDescriptionSave.current) { skipDescriptionSave.current = false; setDescriptionDraft(current.description); } else saveDescription(); setEditingDescription(false); }}
+                onKeyDown={(event) => { if (event.key === "Escape") { skipDescriptionSave.current = true; setDescriptionDraft(current.description); setEditingDescription(false); } }}
+                placeholder="Resumen breve del resultado esperado."
               />
             ) : (
-              <button type="button" className="block max-w-[62ch] rounded-md text-left text-[15px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(readableMarkdown); setEditingDescription(true); }}>{readableMarkdown || "Añadir descripción"}</button>
+              <button type="button" className="block max-w-[62ch] rounded-md text-left text-[15px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button>
             )}
           </section>
 
-          <section className="mb-7" aria-labelledby="mission-conclusion-title"><div className="mb-[13px]"><h2 id="mission-conclusion-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-[#454543]">Definición de resultado</h2></div>{editingConclusion ? <textarea autoFocus className="min-h-24 w-full resize-y rounded-[14px] border border-[#1D1D1B]/15 bg-white px-[17px] py-[15px] text-sm leading-[1.55] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10" value={conclusionDraft} onChange={(event) => setConclusionDraft(event.target.value)} onBlur={saveConclusion} onKeyDown={(event) => { if (event.key === "Escape") { skipConclusionSave.current = true; setConclusionDraft(current.conclusion ?? ""); setEditingConclusion(false); } }} /> : <button type="button" className="flex w-full gap-[11px] rounded-[14px] border border-[#1D1D1B]/10 bg-white px-[17px] py-[15px] text-left text-sm leading-[1.55] text-[#454543] transition-colors hover:border-[#1D1D1B]/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipConclusionSave.current = false; setEditingConclusion(true); }}><Target className="mt-px size-[18px] shrink-0" style={{ color: tone }} aria-hidden="true" /><span>{current.conclusion || "Definir el resultado esperado de esta misión"}</span></button>}</section>
+          <MarkdownEditor value={detailMarkdown} onSave={saveDocument} onToggleTask={toggleChecklistItem} />
 
           <section className="mb-7" aria-labelledby="mission-checklist-title">
             <div className="mb-[13px] flex items-center justify-between"><h2 id="mission-checklist-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-[#454543]">Checklist</h2><span className="font-mono text-xs font-medium text-[#6B6B6B]">{current.checklist.filter((item) => item.completed).length} / {current.checklist.length}</span></div>
@@ -254,7 +238,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
                   </DropdownMenu>
                 </div>
               ))}
-              <AddChecklistTask onAdd={(title) => saveDocument(withChecklist(markdown, [...current.checklist, { title, completed: false }]))} />
+              <AddChecklistTask onAdd={(title) => saveDocument(appendTaskLine(detailMarkdown, title))} />
             </div>
             <AlertDialog open={deletingChecklist !== null} onOpenChange={(open) => !open && setDeletingChecklist(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Eliminar checkbox</AlertDialogTitle><AlertDialogDescription>Esta acción quitará “{deletingChecklist === null ? "" : current.checklist[deletingChecklist]?.title}” del documento de la misión.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletingChecklist !== null && deleteChecklistItem(deletingChecklist)}>Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
           </section>
@@ -379,4 +363,4 @@ const resourceTypeLabel: Record<TlozResourceType, string> = { link: "Enlace", do
 const resourceIcon: Record<TlozResourceType, React.ElementType> = { link: Link2, document: FileText, image: ImageIcon, file: File, note: StickyNote };
 const missionTypeBackground: Record<TlozMissionRecord["type"], string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
 const missionTypeSurfaceClass: Record<TlozMissionRecord["type"], string> = { main_quest: "bg-[#FDECEC] hover:bg-[#F9DDDE]", side_quest: "bg-[#EEF2FF] hover:bg-[#E1E8FF]", farming_quest: "bg-[#E6F4EA] hover:bg-[#D9EEDF]", exploration_quest: "bg-[#F2EAFE] hover:bg-[#E8DBFA]" };
-function snapshotOf(mission: TlozMissionDetail): EditableSnapshot { return { title: mission.title, description: mission.description, conclusion: mission.conclusion, icon: mission.icon }; }
+function snapshotOf(mission: TlozMissionDetail): EditableSnapshot { return { title: mission.title, description: mission.description, descriptionDetail: mission.descriptionDetail, icon: mission.icon }; }

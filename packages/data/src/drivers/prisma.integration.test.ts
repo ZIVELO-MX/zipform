@@ -373,7 +373,7 @@ describe("prisma integration", () => {
         mission.id,
         markdown
       );
-      expect(detail.description).toBe(markdown);
+      expect(detail.descriptionDetail).toBe(markdown);
       expect(detail.checklist).toHaveLength(3);
       expect(detail.checklist[0].completed).toBe(true);
       expect(detail.checklist[1].completed).toBe(false);

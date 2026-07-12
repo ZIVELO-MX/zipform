@@ -427,6 +427,13 @@ paths:
                 description:
                   type: string
                   default: ""
+                  maxLength: 280
+                  description: Short mission summary shown in previews.
+                descriptionDetail:
+                  type: string
+                  default: ""
+                  maxLength: 20000
+                  description: Full Markdown detail; task items feed checklist metrics.
                 icon:
                   type: string
                   default: Sword
@@ -435,8 +442,6 @@ paths:
                 status:
                   $ref: "#/components/schemas/MissionStatus"
                   default: later
-                conclusion:
-                  type: string
                 ownerId:
                   type: string
                   description: Defaults to the Zibot user ID when omitted.
@@ -552,7 +557,7 @@ paths:
     patch:
       operationId: updateMission
       summary: Update mission fields
-      description: "Only the provided fields are updated. Valid fields: title, description, icon, type, status, conclusion, dueDate, startDate, completedAt, blockedReason, progress, seasonId, episodeId, ownerId, projectId."
+      description: "Only the provided fields are updated. Valid fields: title, description, descriptionDetail, icon, type, status, dueDate, startDate, completedAt, blockedReason, progress, seasonId, episodeId, ownerId, projectId."
       tags: [Missions]
       parameters:
         - $ref: "#/components/parameters/MissionId"
@@ -567,14 +572,16 @@ paths:
                   type: string
                 description:
                   type: string
+                  maxLength: 280
+                descriptionDetail:
+                  type: string
+                  maxLength: 20000
                 icon:
                   type: string
                 type:
                   $ref: "#/components/schemas/MissionType"
                 status:
                   $ref: "#/components/schemas/MissionStatus"
-                conclusion:
-                  type: string
                 dueDate:
                   type: string
                   format: date
@@ -901,8 +908,8 @@ paths:
   /missions/{missionId}/document:
     put:
       operationId: saveMissionDocument
-      summary: Save mission document (markdown with checklist)
-      description: The document text is parsed for embedded checklist items.
+      summary: Save mission detail (Markdown with checklist)
+      description: The Markdown detail is parsed for embedded checklist items.
       tags: [Missions]
       parameters:
         - $ref: "#/components/parameters/MissionId"
@@ -916,7 +923,8 @@ paths:
               properties:
                 markdown:
                   type: string
-                  description: Full markdown content for the mission document. Checklist items are parsed from `- [ ]` / `- [x]` syntax.
+                  maxLength: 20000
+                  description: Full Markdown detail for the mission. Checklist items are parsed from `- [ ]` / `- [x]` syntax.
       responses:
         "200":
           description: Document saved. Returns updated mission detail.
@@ -1650,7 +1658,7 @@ components:
     Mission:
       type: object
       additionalProperties: false
-      required: [id, displayId, title, description, icon, type, status, ownerId, progress]
+      required: [id, displayId, title, description, descriptionDetail, icon, type, status, ownerId, progress]
       properties:
         id:
           type: string
@@ -1660,6 +1668,10 @@ components:
           type: string
         description:
           type: string
+          maxLength: 280
+        descriptionDetail:
+          type: string
+          maxLength: 20000
         icon:
           type: string
         type:

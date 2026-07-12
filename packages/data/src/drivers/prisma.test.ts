@@ -13,7 +13,7 @@ function createPrismaStub() {
   const missionRows = missions.map((item) => ({
     ...item,
     seasonId: nullable(item.seasonId), episodeId: nullable(item.episodeId), dueDate: nullable(item.dueDate),
-    startDate: nullable(item.startDate), conclusion: nullable(item.conclusion), blockedReason: nullable(item.blockedReason),
+    startDate: nullable(item.startDate), descriptionDetail: item.descriptionDetail, blockedReason: nullable(item.blockedReason),
     completedAt: item.completedAt ? date(item.completedAt) : null, createdAt: date(item.createdAt), updatedAt: date(item.updatedAt)
   }));
   const withDates = <T extends { createdAt: string; updatedAt?: string }>(item: T) => ({
@@ -147,7 +147,8 @@ describe("prisma data driver", () => {
     const created = await client.tloz.createMission({
       id: "prisma-checklist-test",
       title: "Mission with outcomes",
-      description: "- [x] First outcome\n- [ ] Second outcome",
+      description: "Short outcome",
+      descriptionDetail: "- [x] First outcome\n- [ ] Second outcome",
       type: "side_quest",
       ownerId: template.ownerId,
       projectId: template.projectId!,

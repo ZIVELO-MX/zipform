@@ -4,8 +4,8 @@ import type { TlozMissionStatus } from "@zipform/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
 
 const VALID_CREATE_FIELDS = new Set([
-  "id", "title", "description", "icon", "type", "status",
-  "conclusion", "ownerId", "projectId", "seasonId", "episodeId",
+  "id", "title", "description", "descriptionDetail", "icon", "type", "status",
+  "ownerId", "projectId", "seasonId", "episodeId",
   "dueDate", "startDate", "completedAt", "blockedReason", "progress"
 ]);
 
