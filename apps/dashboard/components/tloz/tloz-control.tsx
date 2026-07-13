@@ -80,7 +80,7 @@ export function TlozControl() {
             <Separator className="my-4" />
             <div className={state.view === "list" ? "grid grid-cols-2 gap-3" : "grid gap-3"}>
               <ControlSection label="Orden">
-                <ControlSelect label="Orden" value={state.sort} onValueChange={(sort) => setState({ sort: sort as typeof state.sort })} options={[{ id: "default", name: "Predeterminado" }, { id: "due-date", name: "Fecha límite" }, { id: "title", name: "Título" }]} />
+                <ControlSelect label="Orden" value={state.sort} onValueChange={(sort) => setState({ sort: sort as typeof state.sort })} options={[{ id: "default", name: "Predeterminado" }, { id: "due-date", name: "Fecha límite" }, { id: "title", name: "Título" }, { id: "dependencies", name: "Dependencias" }]} />
               </ControlSection>
               {state.view === "list" ? <ControlSection label="Agrupar">
                 <ControlSelect label="Agrupación" value={state.grouping} onValueChange={(grouping) => setState({ grouping: grouping as typeof state.grouping })} options={[{ id: "status", name: "Estado" }, { id: "project", name: "Proyecto" }, { id: "none", name: "Sin agrupar" }]} />

@@ -11,12 +11,12 @@ import {
 import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, displayUsername, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@zipform/types";
-import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLabel, missionTypeLabel, missionTypeTone, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
+import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLabel, missionTypeLabel, missionTypeTone, pendingDependencyCount, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
 
 const MAX_VISIBLE_QUEST_ITEMS = 3;
 
 export function MissionCard({ mission, compact = false, onSelect }: { mission: TlozMissionRecord; compact?: boolean; onSelect?: (mission: TlozMissionRecord) => void }) {
-  const blocked = mission.requiredQuestItems.some((item) => item.status !== "unlocked") || mission.dependencies.length > 0;
+  const blocked = pendingDependencyCount(mission) > 0;
   const tone = missionTypeTone[mission.type];
   const Icon = resolveMissionIcon(mission.icon);
 

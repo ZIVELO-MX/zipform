@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { resolveResponsiveTlozViews, resolveTlozView, type TlozView } from "../../lib/tloz-routes";
 
-export type TlozSort = "default" | "due-date" | "title";
+export type TlozSort = "default" | "due-date" | "title" | "dependencies";
 export type TlozGrouping = "status" | "project" | "none";
 
 export type TlozUiState = {
@@ -139,7 +139,7 @@ function initialState(view: TlozView): TlozUiState {
 
 function normalizeStoredState(state: Partial<TlozUiState>): Partial<TlozUiState> {
   const views: TlozView[] = ["dashboard", "list", "board", "table", "calendar"];
-  const sorts: TlozSort[] = ["default", "due-date", "title"];
+  const sorts: TlozSort[] = ["default", "due-date", "title", "dependencies"];
   const groupings: TlozGrouping[] = ["status", "project", "none"];
   return {
     view: views.includes(state.view as TlozView) ? state.view : undefined,

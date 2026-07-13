@@ -98,3 +98,30 @@ export function dependencyLabel(mission: TlozMissionRecord) {
   if (mission.dependencies.length === 1) return "1 dependencia";
   return `${mission.dependencies.length} dependencias`;
 }
+
+export function pendingDependencyCount(mission: Pick<TlozMissionRecord, "dependencies" | "requiredQuestItems">) {
+  return mission.dependencies.filter((dependency) => dependency.status !== "completed").length
+    + mission.requiredQuestItems.filter((item) => item.status !== "unlocked").length;
+}
+
+/** Stable topological ordering where dependencies are rendered before dependents. */
+export function topologicalMissionOrder<T extends Pick<TlozMissionRecord, "id" | "dependencies">>(missions: T[]) {
+  const byId = new Map(missions.map((mission) => [mission.id, mission]));
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const result: T[] = [];
+  function visit(mission: T) {
+    if (visited.has(mission.id)) return;
+    if (visiting.has(mission.id)) return;
+    visiting.add(mission.id);
+    mission.dependencies.forEach((dependency) => {
+      const local = byId.get(dependency.id);
+      if (local) visit(local);
+    });
+    visiting.delete(mission.id);
+    visited.add(mission.id);
+    result.push(mission);
+  }
+  missions.forEach(visit);
+  return result;
+}

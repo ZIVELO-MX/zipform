@@ -21,7 +21,7 @@ import {
   users
 } from "../seed-data";
 import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions, parseMarkdownChecklist } from "../tloz-hydration";
-import { assertProjectScopedDependency } from "../dependency-rules";
+import { assertAcyclicDependency, assertProjectScopedDependency } from "../dependency-rules";
 import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 
 export function createMockDataClient(): ZipformDataClient {
@@ -258,9 +258,15 @@ export function createMockDataClient(): ZipformDataClient {
       },
       async createMission(input) {
         const valid = validateMissionCreate(input);
+        const dependencyIds = input.dependencyIds ?? [];
+        const requiredQuestItemIds = input.requiredQuestItemIds ?? [];
         const project = tlozData.projects.find((item) => item.id === valid.projectId);
         if (!project) throw new Error("TLOZ mission project was not found");
         if (!tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ mission owner was not found");
+        const dependencies = dependencyIds.map((id) => tlozData.missions.find((item) => item.id === id));
+        if (dependencies.some((item) => !item)) throw new Error("A mission dependency was not found");
+        dependencies.forEach((dependency) => assertProjectScopedDependency({ id: input.id ?? "new", projectId: valid.projectId }, dependency));
+        if (requiredQuestItemIds.some((id) => !tlozData.questItems.some((item) => item.id === id))) throw new Error("A required Quest Item was not found");
         const now = new Date().toISOString();
         const checklist = parseMarkdownChecklist(valid.descriptionDetail);
         const mission: TlozMission = {
@@ -283,6 +289,8 @@ export function createMockDataClient(): ZipformDataClient {
           createdAt: now,
           updatedAt: now,
         })));
+        tlozData.missionDependencies.push(...dependencyIds.map((dependsOnMissionId) => ({ id: crypto.randomUUID(), missionId: mission.id, dependsOnMissionId, createdAt: now })));
+        tlozData.missionQuestItems.push(...requiredQuestItemIds.map((questItemId) => ({ id: crypto.randomUUID(), missionId: mission.id, questItemId, required: true, createdAt: now })));
         return getHydratedMission(mission.id);
       },
       async updateMission(missionId, input) {
@@ -321,6 +329,7 @@ export function createMockDataClient(): ZipformDataClient {
           tlozData.missions.find((item) => item.id === missionId),
           tlozData.missions.find((item) => item.id === dependsOnMissionId),
         );
+        assertAcyclicDependency(missionId, dependsOnMissionId, tlozData.missionDependencies.map((edge) => ({ id: edge.missionId, dependsOnMissionId: edge.dependsOnMissionId })));
         if (!tlozData.missionDependencies.some((item) => item.missionId === missionId && item.dependsOnMissionId === dependsOnMissionId)) {
           tlozData.missionDependencies.push({ id: crypto.randomUUID(), missionId, dependsOnMissionId, createdAt: new Date().toISOString() });
         }

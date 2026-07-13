@@ -45,6 +45,7 @@ import {
   missionStatusLabel,
   missionTypeLabel,
   missionTypeTone,
+  pendingDependencyCount,
   resolveMissionIcon,
 } from "./tloz-utils";
 
@@ -233,7 +234,7 @@ export function DashboardMainQuests({ missions, onSelect }: { missions: TlozMiss
 
 function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRecord; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
-  const blocked = mission.requiredQuestItems.some((item) => item.status !== "unlocked") || mission.dependencies.length > 0;
+  const blocked = pendingDependencyCount(mission) > 0;
   const statusCfg = statusConfig[mission.status === "blocked" ? "now" : mission.status];
 
   return (
@@ -281,11 +282,11 @@ function DashboardMainQuestCard({ mission, onSelect }: { mission: TlozMissionRec
                   <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                   </svg>
-                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "unlocked").length}
+                  {pendingDependencyCount(mission)}
                 </span>
               </TooltipTrigger>
               <TooltipContent side="top" align="center">
-                {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "unlocked").length} dependencias
+                {pendingDependencyCount(mission)} dependencias pendientes
               </TooltipContent>
             </Tooltip>
           )}
@@ -575,7 +576,7 @@ export function MissionList({ missions, grouping = "status", onSelect }: { missi
     return <EntityList key={group.id} title={group.label} tone={cfg.dotColor} items={group.missions} onSelect={onSelect} render={(mission) => {
       const tone = missionTypeTone[mission.type];
       const Icon = resolveMissionIcon(mission.icon);
-      const blockedCount = mission.dependencies.length + mission.requiredQuestItems.filter((item) => item.status !== "unlocked").length;
+      const blockedCount = pendingDependencyCount(mission);
       return <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-3.5 md:grid-cols-[minmax(0,1fr)_130px_132px_96px]"><span className="flex min-w-0 items-center gap-2.5"><span className="grid size-6 shrink-0 place-items-center rounded-[7px] [&_svg]:size-3" style={{ color: tone, background: `${tone}18` }}><Icon aria-hidden="true" /></span><span className="font-mono text-[10.5px] text-carbon/40">{mission.displayId}</span><strong className="truncate text-[13.5px]">{mission.title}</strong>{blockedCount ? <span className="rounded-full bg-[#FFF4DE] px-2 py-0.5 text-[9.5px] font-semibold text-[#7A5A12]">{blockedCount}</span> : null}{mission.status === "completed" ? <span className="rounded-full bg-[#E6F4EA] px-2 py-0.5 text-[9.5px] font-semibold text-[#1E6B3C]">✓</span> : null}</span><span className="hidden truncate rounded-full px-[9px] py-[3px] text-[11px] font-bold md:block" style={{ background: `${mission.project?.color || "#999"}18`, color: mission.project?.color || "#999" }}>{mission.project?.name ?? "Sin proyecto"}</span><span className="hidden md:block"><UserAvatarLabel name={mission.owner.name} label={mission.owner.username ? displayUsername(mission.owner.username) : mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" /></span><span className="hidden text-right font-mono text-[11.5px] md:block" style={{ color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>{formatDate(mission.dueDate)}</span></span>;
     }} />;
   })}</div>;
@@ -670,7 +671,7 @@ function BoardDropColumn({ id, label, count, tone, active, children }: { id: Tlo
 
 function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRecord; isCompleted: boolean; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
-  const blocked = mission.requiredQuestItems.some((item) => item.status !== "unlocked") || mission.dependencies.length > 0;
+  const blocked = pendingDependencyCount(mission) > 0;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: mission.id,
     data: { title: mission.title, status: mission.status },
@@ -763,11 +764,11 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
                     </svg>
-                    {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "unlocked").length}
+                    {pendingDependencyCount(mission)}
                   </span>
                 </TooltipTrigger>
                 <TooltipContent side="top" align="center">
-                  {mission.dependencies.length + mission.requiredQuestItems.filter(i => i.status !== "unlocked").length} dependencias
+                  {pendingDependencyCount(mission)} dependencias pendientes
                 </TooltipContent>
               </Tooltip>
             )}

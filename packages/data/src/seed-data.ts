@@ -531,12 +531,6 @@ export const missions: TlozMission[] = [
 
 export const missionDependencies: TlozMissionDependency[] = [
   {
-    id: "dependency-db-provider",
-    missionId: "mission-db-driver",
-    dependsOnMissionId: "mission-dashboard",
-    createdAt: now
-  },
-  {
     id: "dependency-resources-driver",
     missionId: "mission-resources",
     dependsOnMissionId: "mission-maintenance",
