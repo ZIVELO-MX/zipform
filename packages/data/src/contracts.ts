@@ -62,6 +62,7 @@ export type TlozMissionCreateInput = Pick<TlozMission, "title" | "type" | "owner
     completedAt?: string;
     dependencyIds?: string[];
     requiredQuestItemIds?: string[];
+    resources?: TlozResourceInput[];
   };
 
 export type TlozProjectCreateInput = Omit<TlozProject, "id" | "slug" | "createdAt" | "updatedAt" | "descriptionDetail"> & { descriptionDetail?: string };

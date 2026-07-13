@@ -131,7 +131,7 @@ function initialState(view: TlozView): TlozUiState {
     seasonId: "all",
     episodeId: "all",
     ownerId: "all",
-    sort: "default",
+    sort: "dependencies",
     grouping: "status",
     showCompleted: true,
   };
@@ -147,7 +147,7 @@ function normalizeStoredState(state: Partial<TlozUiState>): Partial<TlozUiState>
     seasonId: typeof state.seasonId === "string" ? state.seasonId : "all",
     episodeId: typeof state.episodeId === "string" ? state.episodeId : "all",
     ownerId: typeof state.ownerId === "string" ? state.ownerId : "all",
-    sort: sorts.includes(state.sort as TlozSort) ? state.sort : "default",
+    sort: sorts.includes(state.sort as TlozSort) ? state.sort : "dependencies",
     grouping: groupings.includes(state.grouping as TlozGrouping) ? state.grouping : "status",
     showCompleted: typeof state.showCompleted === "boolean" ? state.showCompleted : true,
   };

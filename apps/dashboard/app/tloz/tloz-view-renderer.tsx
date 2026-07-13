@@ -59,7 +59,7 @@ export function TlozViewRenderer(props: ViewRendererProps) {
       && (state.showCompleted || mission.status !== "completed")
     ));
 
-    if (state.sort === "dependencies") return topologicalMissionOrder(visible);
+    if (state.sort === "dependencies" || state.sort === "default") return topologicalMissionOrder(visible);
     return visible.sort((left, right) => state.sort === "title"
       ? left.title.localeCompare(right.title)
       : state.sort === "due-date"

@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { Plus } from "lucide-react";
 import { Button, ColorPicker, DatePicker, EntityPicker, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, useOverlayToasterId, UserPicker, type IconPickerOption } from "@zipform/ui";
-import type { TlozInventoryCategory, TlozMissionStatus, TlozMissionType, TlozProject, UserProfile } from "@zipform/types";
-import { TlozValidationError, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "@zipform/data";
+import type { TlozInventoryCategory, TlozMissionStatus, TlozMissionType, TlozProject, TlozQuestItem, UserProfile } from "@zipform/types";
+import type { TlozMissionRecord } from "../../lib/tloz-data";
+import { TlozValidationError, validateMissionCreate, validateProjectCreate, validateQuestItemCreate, type TlozResourceInput } from "@zipform/data";
 import { createMission, createProject, createQuestItem } from "../../app/tloz/actions";
 import { resolveMissionIcon } from "./tloz-utils";
 import { initialDraft } from "./tloz-create-defaults";
@@ -17,7 +18,7 @@ const CreateContext = createContext<CreateContextValue | null>(null);
 const kindLabel = { mission: "Mission", project: "Project", inventory: "Inventory item" } as const;
 const icons: IconPickerOption[] = ["Sword", "Sparkles", "Target", "Search", "Database", "FileText", "FileCheck", "KeyRound", "Shield", "Wrench", "FolderKanban", "PackageOpen"].map((id) => ({ id, label: id, icon: resolveMissionIcon(id) }));
 
-export function TlozCreateProvider({ children, kind, projects, users, fixedProjectId }: { children: React.ReactNode; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; fixedProjectId?: string }) {
+export function TlozCreateProvider({ children, kind, projects, users, missions = [], questItems = [], fixedProjectId }: { children: React.ReactNode; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; fixedProjectId?: string }) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -32,7 +33,7 @@ export function TlozCreateProvider({ children, kind, projects, users, fixedProje
       }
     },
   }), [isMobile, kind, router]);
-  return <CreateContext.Provider value={value}>{children}<CreateEntitySlideOver open={open} onOpenChange={setOpen} kind={kind} projects={projects} users={users} fixedProjectId={fixedProjectId} /></CreateContext.Provider>;
+  return <CreateContext.Provider value={value}>{children}<CreateEntitySlideOver open={open} onOpenChange={setOpen} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} fixedProjectId={fixedProjectId} /></CreateContext.Provider>;
 }
 
 export function useTlozCreate() {
@@ -48,7 +49,7 @@ export function CreateNewEntityButton({ variant = "row" }: { variant?: "row" | "
     : <button type="button" className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-carbon/15 bg-white/60 text-[13px] font-semibold text-carbon/55 transition-colors hover:border-zivelo/30 hover:text-zivelo" onClick={openCreate}><Plus className="size-3.5" />Crear nuevo {label}</button>;
 }
 
-export function CreateForm({ kind, projects, users, fixedProjectId, onDone }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; fixedProjectId?: string; onDone?: () => void }) {
+export function CreateForm({ kind, projects, users, missions = [], questItems = [], fixedProjectId, onDone }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; fixedProjectId?: string; onDone?: () => void }) {
   const router = useRouter();
   const toasterId = useOverlayToasterId();
   const [pending, startTransition] = useTransition();
@@ -57,13 +58,14 @@ export function CreateForm({ kind, projects, users, fixedProjectId, onDone }: { 
   const defaultProjectId = fixedProjectId ?? projects.find((project) => project.slug === "zivelo")?.id ?? projects[0]?.id ?? "";
   const [draft, setDraft] = useState<Record<string, string>>(() => initialDraft(kind, defaultOwnerId, defaultProjectId, today));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [resources, setResources] = useState<TlozResourceInput[]>([]);
   const formId = `create-${kind}-form`;
   function field(name: string, value: string) { setDraft((current) => ({ ...current, [name]: value })); setErrors((current) => ({ ...current, [name]: "" })); }
   function reset() { setDraft(initialDraft(kind, defaultOwnerId, defaultProjectId, today)); setErrors({}); }
   function submit(event: React.FormEvent) {
     event.preventDefault();
     try {
-      const input = buildInput(kind, draft);
+      const input = buildInput(kind, draft, resources);
       if (kind === "mission") validateMissionCreate(input as never);
       else if (kind === "project") validateProjectCreate(input as never);
       else validateQuestItemCreate(input as never);
@@ -89,20 +91,28 @@ export function CreateForm({ kind, projects, users, fixedProjectId, onDone }: { 
       </div>
       {kind === "mission" ? <FormField label="Proyecto" error={errors.projectId} required>{fixedProjectId ? <div className="rounded-xl border border-carbon/10 bg-carbon/[0.03] px-3 py-2 text-sm font-semibold">{projects.find((project) => project.id === fixedProjectId)?.name}</div> : <EntityPicker label="Proyecto" options={projects.map((project) => ({ id: project.id, name: project.name, color: project.color }))} value={draft.projectId} allowEmpty={false} onValueChange={(projectId) => field("projectId", projectId)} />}</FormField> : null}
       <FormField label="Responsable" error={errors.ownerId} required={kind !== "inventory"}><UserPicker users={users} value={draft.ownerId || undefined} allowEmpty={kind === "inventory"} onValueChange={(ownerId) => field("ownerId", ownerId)} /></FormField>
+      {kind === "mission" ? <MissionRelations draft={draft} field={field} missions={missions} questItems={questItems} resources={resources} setResources={setResources} /> : null}
       {kind !== "inventory" ? <div className="grid gap-4 sm:grid-cols-2"><FormField label="Inicio" error={errors.startDate} required={kind === "project"}><DatePicker value={draft.startDate || undefined} label="Fecha de inicio" clearable={kind !== "project"} onValueChange={(value) => field("startDate", value ?? "")} /></FormField><FormField label="Vence" error={errors.dueDate}><DatePicker value={draft.dueDate || undefined} label="Fecha límite" onValueChange={(value) => field("dueDate", value ?? "")} /></FormField></div> : null}
     </form>
   );
 }
 
-function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, fixedProjectId }: { open: boolean; onOpenChange: (open: boolean) => void; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; fixedProjectId?: string }) {
+function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, missions, questItems, fixedProjectId }: { open: boolean; onOpenChange: (open: boolean) => void; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions: TlozMissionRecord[]; questItems: TlozQuestItem[]; fixedProjectId?: string }) {
   return <SlideOver open={open} title={`Crear ${kindLabel[kind]}`} onOpenChange={onOpenChange} footer={<><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button><Button type="submit" form={`create-${kind}-form`}>Guardar</Button></>}>
-    <CreateForm key={String(open)} kind={kind} projects={projects} users={users} fixedProjectId={fixedProjectId} onDone={() => onOpenChange(false)} />
+    <CreateForm key={String(open)} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} fixedProjectId={fixedProjectId} onDone={() => onOpenChange(false)} />
   </SlideOver>;
 }
 
 function FormField({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) { return <label className="flex flex-col gap-1.5"><span className="text-xs font-bold text-carbon/60">{label}{required ? <span className="text-zivelo"> *</span> : null}</span>{children}{error ? <span className="text-xs font-medium text-[#B91C22]">{error}</span> : null}</label>; }
-function buildInput(kind: TlozCreateKind, draft: Record<string, string>) {
-  if (kind === "mission") return { title: draft.name, description: draft.description, descriptionDetail: draft.descriptionDetail, icon: draft.icon, type: draft.type as TlozMissionType, status: draft.status as TlozMissionStatus, ownerId: draft.ownerId, projectId: draft.projectId, startDate: draft.startDate || undefined, dueDate: draft.dueDate || undefined, progress: 0 };
+function buildInput(kind: TlozCreateKind, draft: Record<string, string>, resources: TlozResourceInput[] = []) {
+  if (kind === "mission") return { title: draft.name, description: draft.description, descriptionDetail: draft.descriptionDetail, icon: draft.icon, type: draft.type as TlozMissionType, status: draft.status as TlozMissionStatus, ownerId: draft.ownerId, projectId: draft.projectId, startDate: draft.startDate || undefined, dueDate: draft.dueDate || undefined, progress: 0, dependencyIds: splitIds(draft.dependencyIds), requiredQuestItemIds: splitIds(draft.requiredQuestItemIds), resources };
   if (kind === "project") return { name: draft.name, description: draft.description, icon: draft.icon, color: draft.color, status: "active" as const, type: "normal" as const, ownerId: draft.ownerId, startDate: draft.startDate, dueDate: draft.dueDate || undefined };
   return { name: draft.name, description: draft.description, icon: draft.icon, status: "locked" as const, category: draft.category as TlozInventoryCategory, ownerId: draft.ownerId || undefined };
+}
+
+function splitIds(value?: string) { return value ? value.split(",").filter(Boolean) : []; }
+
+function MissionRelations({ draft, field, missions, questItems, resources, setResources }: { draft: Record<string, string>; field: (name: string, value: string) => void; missions: TlozMissionRecord[]; questItems: TlozQuestItem[]; resources: TlozResourceInput[]; setResources: React.Dispatch<React.SetStateAction<TlozResourceInput[]>> }) {
+  const toggle = (name: string, id: string) => { const ids = new Set(splitIds(draft[name])); ids.has(id) ? ids.delete(id) : ids.add(id); field(name, [...ids].join(",")); };
+  return <section className="space-y-4 rounded-xl border border-carbon/10 bg-carbon/[0.025] p-4"><h4 className="m-0 text-sm font-bold">Relaciones y recursos</h4><div><p className="mb-2 text-xs font-bold text-carbon/60">Dependencias</p><div className="grid gap-1 sm:grid-cols-2">{missions.filter((m) => m.id !== draft.id).map((m) => <label key={m.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={splitIds(draft.dependencyIds).includes(m.id)} onChange={() => toggle("dependencyIds", m.id)} />{m.displayId} · {m.title}</label>)}</div></div><div><p className="mb-2 text-xs font-bold text-carbon/60">Quest Items requeridos</p><div className="grid gap-1 sm:grid-cols-2">{questItems.map((item) => <label key={item.id} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={splitIds(draft.requiredQuestItemIds).includes(item.id)} onChange={() => toggle("requiredQuestItemIds", item.id)} />{item.name}</label>)}</div></div><div><div className="mb-2 flex items-center justify-between"><p className="m-0 text-xs font-bold text-carbon/60">Resources</p><Button type="button" variant="outline" size="sm" onClick={() => setResources((items) => [...items, { type: "link", title: "" }])}>Agregar recurso</Button></div>{resources.map((resource, index) => <div key={index} className="grid gap-2 sm:grid-cols-[130px_1fr_1fr_auto]"><Select value={resource.type} onValueChange={(type) => setResources((items) => items.map((item, i) => i === index ? { ...item, type: type as TlozResourceInput["type"] } : item))}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{["link","document","file","image","note"].map((type) => <SelectItem key={type} value={type}>{type}</SelectItem>)}</SelectGroup></SelectContent></Select><Input placeholder="Título" value={resource.title} onChange={(e) => setResources((items) => items.map((item, i) => i === index ? { ...item, title: e.target.value } : item))} /><Input placeholder="URL o ID" value={resource.url ?? resource.fileId ?? ""} onChange={(e) => setResources((items) => items.map((item, i) => i === index ? { ...item, url: e.target.value, fileId: undefined } : item))} /><Button type="button" variant="ghost" onClick={() => setResources((items) => items.filter((_, i) => i !== index))}>Eliminar</Button></div>)}</div></section>;
 }

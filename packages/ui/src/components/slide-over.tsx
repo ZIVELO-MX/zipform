@@ -60,7 +60,7 @@ export function SlideOver({ open, title, children, footer, onBack, onOpenChange,
       <OverlayPortalProvider container={portalContainer}>
       <OverlayToasterProvider toasterId={toasterId}>
       <ResizablePanelGroup orientation="horizontal" className="slide-over-panels">
-        <ResizablePanel defaultSize="35%" minSize="5%" maxSize="55%" className="hidden cursor-default sm:block" aria-label="Área lateral" />
+        <ResizablePanel defaultSize="35%" minSize="5%" maxSize="55%" className="hidden cursor-default sm:block" aria-label="Área lateral" onClick={() => dialogRef.current?.close()} />
         <ResizableHandle className="hidden sm:flex" />
         <ResizablePanel defaultSize="65%" minSize="45%" maxSize="95%" className="slide-over-content-panel min-w-0">
           <div className="flex h-dvh flex-col border-l border-carbon/10 bg-[#FAFAF9] shadow-[-12px_0_48px_rgba(29,29,27,0.16)]">

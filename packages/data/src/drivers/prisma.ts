@@ -660,7 +660,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
               suffix = existing.reduce((max, m) => Math.max(max, Number(m.displayId.slice(4)) || 0), 0) + 1;
             }
             const displayId = `${prefix}-${String(suffix).padStart(4, "0")}`;
-            const { id = crypto.randomUUID(), completedAt, ...data } = valid;
+            const { id = crypto.randomUUID(), completedAt, dependencyIds: _dependencyIds, requiredQuestItemIds: _requiredQuestItemIds, resources: _resources, ...data } = valid;
             const checklist = parseMarkdownChecklist(data.descriptionDetail);
             const progress = checklist.length
               ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100)
@@ -683,13 +683,16 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
               })));
               const dependencyIds = input.dependencyIds ?? [];
               const requiredQuestItemIds = input.requiredQuestItemIds ?? [];
+              const resourceInputs = input.resources ?? [];
               const dependencies = dependencyIds.length ? await tx.tlozMission.findMany({ where: { id: { in: dependencyIds } }, select: { id: true, projectId: true } }) : [];
               if (dependencies.length !== dependencyIds.length) throw new Error("A mission dependency was not found");
               dependencies.forEach((dependency) => assertProjectScopedDependency({ id, projectId: valid.projectId }, { id: dependency.id, projectId: dependency.projectId ?? undefined }));
               const questItems = requiredQuestItemIds.length ? await tx.tlozQuestItem.findMany({ where: { id: { in: requiredQuestItemIds } }, select: { id: true } }) : [];
               if (questItems.length !== requiredQuestItemIds.length) throw new Error("A required Quest Item was not found");
+              if (resourceInputs.some((resource) => !resource.title.trim() || !resource.type)) throw new Error("Mission resources require a type and title");
               await Promise.all(dependencyIds.map((dependsOnMissionId) => tx.tlozMissionDependency.create({ data: { id: crypto.randomUUID(), missionId: id, dependsOnMissionId } })));
               await Promise.all(requiredQuestItemIds.map((questItemId) => tx.tlozMissionQuestItem.create({ data: { id: crypto.randomUUID(), missionId: id, questItemId, required: true } })));
+              await Promise.all(resourceInputs.map((resource) => tx.tlozResource.create({ data: { id: crypto.randomUUID(), missionId: id, ...resource } })));
             });
             return getHydratedMission(id);
           } catch (error) {

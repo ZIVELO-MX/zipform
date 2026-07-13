@@ -6,7 +6,7 @@ import { authenticateRequest } from "../../../../lib/api-auth";
 const VALID_CREATE_FIELDS = new Set([
   "id", "title", "description", "descriptionDetail", "icon", "type", "status",
   "ownerId", "projectId", "seasonId", "episodeId",
-  "dueDate", "startDate", "completedAt", "blockedReason", "progress", "dependencyIds", "requiredQuestItemIds"
+  "dueDate", "startDate", "completedAt", "blockedReason", "progress", "dependencyIds", "requiredQuestItemIds", "resources"
 ]);
 
 export async function GET(request: NextRequest) {

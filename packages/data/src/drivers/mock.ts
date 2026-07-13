@@ -260,6 +260,7 @@ export function createMockDataClient(): ZipformDataClient {
         const valid = validateMissionCreate(input);
         const dependencyIds = input.dependencyIds ?? [];
         const requiredQuestItemIds = input.requiredQuestItemIds ?? [];
+        const resourceInputs = input.resources ?? [];
         const project = tlozData.projects.find((item) => item.id === valid.projectId);
         if (!project) throw new Error("TLOZ mission project was not found");
         if (!tlozData.users.some((user) => user.id === valid.ownerId)) throw new Error("TLOZ mission owner was not found");
@@ -267,6 +268,7 @@ export function createMockDataClient(): ZipformDataClient {
         if (dependencies.some((item) => !item)) throw new Error("A mission dependency was not found");
         dependencies.forEach((dependency) => assertProjectScopedDependency({ id: input.id ?? "new", projectId: valid.projectId }, dependency));
         if (requiredQuestItemIds.some((id) => !tlozData.questItems.some((item) => item.id === id))) throw new Error("A required Quest Item was not found");
+        if (resourceInputs.some((resource) => !resource.title.trim() || !resource.type)) throw new Error("Mission resources require a type and title");
         const now = new Date().toISOString();
         const checklist = parseMarkdownChecklist(valid.descriptionDetail);
         const mission: TlozMission = {
@@ -291,6 +293,7 @@ export function createMockDataClient(): ZipformDataClient {
         })));
         tlozData.missionDependencies.push(...dependencyIds.map((dependsOnMissionId) => ({ id: crypto.randomUUID(), missionId: mission.id, dependsOnMissionId, createdAt: now })));
         tlozData.missionQuestItems.push(...requiredQuestItemIds.map((questItemId) => ({ id: crypto.randomUUID(), missionId: mission.id, questItemId, required: true, createdAt: now })));
+        tlozData.resources.push(...resourceInputs.map((resource) => ({ id: crypto.randomUUID(), missionId: mission.id, ...resource, createdAt: now, updatedAt: now })));
         return getHydratedMission(mission.id);
       },
       async updateMission(missionId, input) {
