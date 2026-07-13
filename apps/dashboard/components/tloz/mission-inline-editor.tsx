@@ -17,6 +17,15 @@ export type MissionEditorOptions = {
   missions?: Array<{ id: string; projectId?: string; seasonId?: string }>;
 };
 
+export type MissionPropertyValues = {
+  status: TlozMissionStatus;
+  type: TlozMissionType;
+  ownerId: string;
+  projectId?: string;
+  startDate?: string;
+  dueDate?: string;
+};
+
 const statuses: TlozMissionStatus[] = ["now", "next", "later", "blocked", "completed"];
 const missionTypes: TlozMissionType[] = ["main_quest", "side_quest", "farming_quest", "exploration_quest"];
 
@@ -45,27 +54,25 @@ export function MissionInlineEditor({ mission, options, onMissionChange }: { mis
     });
   }
 
-  return <div className="flex flex-col" aria-busy={isPending}>
-    <DetailPropertyRow label="Estado" display={<StatusValue status={current.status} />}>
-      <Select value={current.status} onValueChange={(value) => changeStatus(value as TlozMissionStatus)}><SelectTrigger aria-label="Estado"><SelectValue><StatusValue status={current.status} /></SelectValue></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{statuses.map((value) => <SelectItem key={value} value={value}><StatusValue status={value} /></SelectItem>)}</SelectGroup></SelectContent></Select>
-    </DetailPropertyRow>
-    <DetailPropertyRow label="Categoría" display={(() => { const tone = missionTypeTone[current.type]; return <span className="inline-flex rounded-full px-[9px] py-[3px] text-xs font-bold" style={{ background: tone === "#d72228" ? "#FDECEC" : tone === "#2d6cdf" ? "#EEF2FF" : tone === "#1e8e5a" ? "#E6F4EA" : "#F2EAFE", color: tone }}>{missionTypeLabel[current.type]}</span>; })()}>
-      <Select value={current.type} onValueChange={(value) => persist({ type: value as TlozMissionType }, "Tipo actualizado")}><SelectTrigger aria-label="Tipo"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{missionTypes.map((value) => <SelectItem key={value} value={value}>{missionTypeLabel[value]}</SelectItem>)}</SelectGroup></SelectContent></Select>
-    </DetailPropertyRow>
-    {options?.users.length ? <DetailPropertyRow label="Responsable" display={<UserAvatarLabel name={current.owner.name} label={current.owner.username ? displayUsername(current.owner.username) : current.owner.name} labelOnly imageUrl={current.owner.avatarUrl} size="sm" />}>
-      <UserPicker users={options.users} value={current.ownerId} label="Responsable" onValueChange={(value) => persist({ ownerId: value }, "Responsable actualizado")} />
-    </DetailPropertyRow> : null}
-    <DetailPropertyRow label="Proyecto" display={<span className="inline-flex min-w-0 items-center gap-1.5"><span className="size-[7px] shrink-0 rounded-full" style={{ backgroundColor: current.project?.color ?? "#9a9a98" }} /><span className="truncate">{current.project?.name ?? "Sin proyecto"}</span></span>}>
-      <EntityPicker label="Proyecto" options={projects.map((project) => ({ ...project, color: project.color }))} value={current.projectId} onValueChange={(value) => persist({ projectId: value, seasonId: "", episodeId: "" }, "Proyecto actualizado")} onCreate={async (name) => { const project = await createProject(name); setProjects((items) => [...items, project]); return project; }} />
-    </DetailPropertyRow>
-    <DetailPropertyRow label="Inicio" display={<span className="font-mono text-[12.5px] font-semibold">{formatDate(current.startDate)}</span>}>
-      <DatePicker value={current.startDate} label="Fecha de inicio" onValueChange={(value) => persist({ startDate: value ?? "" }, "Fecha actualizada")} />
-    </DetailPropertyRow>
-    <DetailPropertyRow label="Vence" display={<span className="font-mono text-[12.5px] font-semibold text-[#B91C22]">{formatDate(current.dueDate)}</span>}>
-      <DatePicker value={current.dueDate} label="Fecha límite" onValueChange={(value) => persist({ dueDate: value ?? "" }, "Fecha actualizada")} />
-    </DetailPropertyRow>
+  return <MissionPropertyFields values={current} options={options} onChange={(field, value) => field === "status" ? changeStatus(value as TlozMissionStatus) : persist({ [field]: value, ...(field === "projectId" ? { seasonId: "", episodeId: "" } : {}) }, `${field === "type" ? "Tipo" : field === "ownerId" ? "Responsable" : field === "projectId" ? "Proyecto" : "Fecha"} actualizado`)} ariaBusy={isPending} />;
+}
+
+export function MissionPropertyFields({ values, options, onChange, ariaBusy = false }: { values: MissionPropertyValues & { owner?: { name: string; username?: string; avatarUrl?: string }; project?: { name: string; color?: string } }; options?: MissionEditorOptions; onChange: (field: keyof MissionPropertyValues, value: string) => void; ariaBusy?: boolean }) {
+  const projects = options?.projects ?? [];
+  const selectedOwner = options?.users.find((user) => user.id === values.ownerId);
+  const selectedProject = projects.find((project) => project.id === values.projectId);
+  const status = values.status;
+  return <div className="flex flex-col" aria-busy={ariaBusy}>
+    <DetailPropertyRow label="Estado" display={<StatusValue status={status} />}><Select value={status} onValueChange={(value) => onChange("status", value)}><SelectTrigger aria-label="Estado"><SelectValue><StatusValue status={status} /></SelectValue></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{statuses.map((value) => <SelectItem key={value} value={value}><StatusValue status={value} /></SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow>
+    <DetailPropertyRow label="Categoría" display={<TypeValue type={values.type} />}><Select value={values.type} onValueChange={(value) => onChange("type", value)}><SelectTrigger aria-label="Tipo"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{missionTypes.map((value) => <SelectItem key={value} value={value}>{missionTypeLabel[value]}</SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow>
+    {options?.users.length ? <DetailPropertyRow label="Responsable" display={<UserAvatarLabel name={values.owner?.name ?? selectedOwner?.name ?? "Sin responsable"} label={values.owner?.username ?? selectedOwner?.username ?? "Sin responsable"} labelOnly imageUrl={values.owner?.avatarUrl ?? selectedOwner?.avatarUrl} size="sm" />}><UserPicker users={options.users} value={values.ownerId} label="Responsable" onValueChange={(value) => onChange("ownerId", value)} /></DetailPropertyRow> : null}
+    <DetailPropertyRow label="Proyecto" display={<span className="inline-flex min-w-0 items-center gap-1.5"><span className="size-[7px] shrink-0 rounded-full" style={{ backgroundColor: values.project?.color ?? selectedProject?.color ?? "#9a9a98" }} /><span className="truncate">{values.project?.name ?? selectedProject?.name ?? "Sin proyecto"}</span></span>}><EntityPicker label="Proyecto" options={projects.map((project) => ({ ...project, color: project.color }))} value={values.projectId} onValueChange={(value) => onChange("projectId", value)} /></DetailPropertyRow>
+    <DetailPropertyRow label="Inicio" display={<span className="font-mono text-[12.5px] font-semibold">{formatDate(values.startDate)}</span>}><DatePicker value={values.startDate} label="Fecha de inicio" onValueChange={(value) => onChange("startDate", value ?? "")} /></DetailPropertyRow>
+    <DetailPropertyRow label="Vence" display={<span className="font-mono text-[12.5px] font-semibold text-[#B91C22]">{formatDate(values.dueDate)}</span>}><DatePicker value={values.dueDate} label="Fecha límite" onValueChange={(value) => onChange("dueDate", value ?? "")} /></DetailPropertyRow>
   </div>;
 }
+
+function TypeValue({ type }: { type: TlozMissionType }) { const tone = missionTypeTone[type]; return <span className="inline-flex rounded-full px-[9px] py-[3px] text-xs font-bold" style={{ background: tone === "#d72228" ? "#FDECEC" : tone === "#2d6cdf" ? "#EEF2FF" : tone === "#1e8e5a" ? "#E6F4EA" : "#F2EAFE", color: tone }}>{missionTypeLabel[type]}</span>; }
 
 function StatusValue({ status }: { status: TlozMissionStatus }) {
   const color = missionStatusTone[status];
