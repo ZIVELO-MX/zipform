@@ -31,6 +31,7 @@ type AppShellProps = {
   user: UserProfile;
   tlozProjects?: TlozProject[];
   projectActiveCounts?: Map<string, number>;
+  projectActivity?: Map<string, string>;
 };
 
 const SIDEBAR_STATE_KEY = "zipform-sidebar-state";
@@ -48,8 +49,8 @@ const navItems = getEnabledApps();
 
 const tlozContextItem: NavItem = { label: "TLOZ", href: "/", icon: ArrowLeft };
 
-function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<string, number>): NavSection[] {
-  const projectItems: NavItem[] = projects.map((project) => {
+function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<string, number>, projectActivity: Map<string, string>): NavSection[] {
+  const projectItems: NavItem[] = [...projects].sort((a, b) => (projectActivity.get(b.id) ?? b.updatedAt).localeCompare(projectActivity.get(a.id) ?? a.updatedAt)).slice(0, 4).map((project) => {
     const Icon = resolveMissionIcon(project.icon);
     return {
       label: project.name,
@@ -80,21 +81,21 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
           label: "Proyectos",
           collapsible: true,
           defaultCollapsed: false,
-          items: projectItems,
+        items: [...projectItems, ...(projects.length > 4 ? [{ label: "Ver más", href: "/tloz/projects", icon: FolderKanban }] : [])],
         } satisfies NavSection,
       ]
       : []),
   ];
 }
 
-export function AppShell({ children, user, tlozProjects = [], projectActiveCounts = new Map() }: AppShellProps) {
+export function AppShell({ children, user, tlozProjects = [], projectActiveCounts = new Map(), projectActivity = new Map() }: AppShellProps) {
   const pathname = usePathname();
   if (pathname === "/login") return children;
 
   return (
     <TooltipProvider delayDuration={180}>
       <Suspense fallback={null}>
-        <DashboardLayoutClient user={user} tlozProjects={tlozProjects} projectActiveCounts={projectActiveCounts}>
+        <DashboardLayoutClient user={user} tlozProjects={tlozProjects} projectActiveCounts={projectActiveCounts} projectActivity={projectActivity}>
           {children}
         </DashboardLayoutClient>
       </Suspense>
@@ -102,7 +103,7 @@ export function AppShell({ children, user, tlozProjects = [], projectActiveCount
   );
 }
 
-function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCounts }: AppShellProps) {
+function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCounts, projectActivity }: AppShellProps) {
   const pathname = usePathname();
   const isTloz = pathname === "/tloz" || pathname.startsWith("/tloz/");
   const [collapsed, setCollapsed] = useState(false);
@@ -111,8 +112,8 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const tlozSections = useMemo(
-    () => buildTlozSections(tlozProjects ?? [], projectActiveCounts ?? new Map()),
-    [tlozProjects, projectActiveCounts]
+    () => buildTlozSections(tlozProjects ?? [], projectActiveCounts ?? new Map(), projectActivity ?? new Map()),
+    [projectActivity, tlozProjects, projectActiveCounts]
   );
 
   useEffect(() => {

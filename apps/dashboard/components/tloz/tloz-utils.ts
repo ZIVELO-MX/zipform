@@ -1,9 +1,11 @@
 import {
   CircleDot,
+  Compass,
   Copy,
   Database,
   FileCheck,
   FileText,
+  Flag,
   Globe2,
   History,
   KeyRound,
@@ -48,6 +50,13 @@ export const missionTypeTone: Record<TlozMissionType, string> = {
   side_quest: "#2d6cdf",
   farming_quest: "#1e8e5a",
   exploration_quest: "#7a4ed9"
+};
+
+export const missionTypeIcon: Record<TlozMissionType, LucideIcon> = {
+  main_quest: Star,
+  side_quest: Flag,
+  farming_quest: CircleDot,
+  exploration_quest: Compass,
 };
 
 const iconRegistry: Record<string, LucideIcon> = {

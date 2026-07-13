@@ -18,6 +18,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   const [editing, setEditing] = useState(false);
   const [mode, setMode] = useState<"visual" | "text">("text");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const visualRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDraft(value);
@@ -37,6 +38,10 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
 
   function handleCopy() {
     navigator.clipboard.writeText(value).then(() => toast.success("Copiado al portapapeles"));
+  }
+
+  function handleVisualInput(event: React.FormEvent<HTMLDivElement>) {
+    setDraft(event.currentTarget.innerText.replace(/\u00a0/g, " "));
   }
 
   return (
@@ -86,11 +91,22 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
             />
           ) : (
             <div
-              className="min-h-28 w-full cursor-text rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543]"
-              onClick={() => textareaRef.current?.focus()}
-            >
-              <MarkdownContent onToggleTask={onToggleTask}>{draft}</MarkdownContent>
-            </div>
+              ref={visualRef}
+              contentEditable
+              suppressContentEditableWarning
+              role="textbox"
+              aria-label="Editor visual de Markdown"
+              className="min-h-[45dvh] w-full cursor-text rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543] outline-none focus:border-carbon/25 focus:ring-2 focus:ring-carbon/10"
+              onInput={handleVisualInput}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                const line = window.getSelection()?.anchorNode?.textContent?.split("\n").at(-1) ?? "";
+                const prefix = line.match(/^(\s*(?:[-*+]\s+|\d+[.)]\s+|>\s+))/)?.[1];
+                if (!prefix) return;
+                event.preventDefault();
+                document.execCommand("insertText", false, `\n${prefix}`);
+              }}
+            >{draft}</div>
           )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={cancel}>Cancelar</Button>

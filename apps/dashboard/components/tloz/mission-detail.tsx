@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, Database, File, FileCheck, FileText, ImageIcon, KeyRound, LayoutDashboard, Link2, MoreHorizontal, PanelRightOpen, Pencil, Plus, Search, Shield, Sparkles, Star, StickyNote, Sword, Trash2, Wrench, X } from "lucide-react";
+import { Check, Database, File, FileCheck, FileText, Github, ImageIcon, KeyRound, LayoutDashboard, Link2, MoreHorizontal, PanelRightOpen, Pencil, Plus, Search, Shield, Sparkles, Star, StickyNote, Sword, Trash2, Wrench, X } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
@@ -18,7 +18,7 @@ import {
   updateMission,
 } from "../../app/tloz/actions";
 import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
-import { missionStatusLabel, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
+import { missionStatusLabel, missionTypeIcon, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import { appendTaskLine, updateTaskLine } from "./mission-document";
 import { MarkdownEditor } from "./markdown-editor";
@@ -52,6 +52,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
   const [renamingChecklist, setRenamingChecklist] = useState<number | null>(null);
   const [checklistTitleDraft, setChecklistTitleDraft] = useState("");
   const [deletingChecklist, setDeletingChecklist] = useState<number | null>(null);
+  const [checklistFilter, setChecklistFilter] = useState<"all" | "pending">("all");
   const undoStack = useRef<EditableSnapshot[]>([]);
   const redoStack = useRef<EditableSnapshot[]>([]);
   const skipTitleSave = useRef(false);
@@ -188,7 +189,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
         <main className="min-w-0">
           <header>
             <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold ${typeBadgeClass}`}><Star className="size-[13px] fill-current" aria-hidden="true" />{missionTypeLabel[current.type]}</span>
+              {(() => { const TypeIcon = missionTypeIcon[current.type]; return <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold ${typeBadgeClass}`}><TypeIcon className="size-[13px]" aria-hidden="true" />{missionTypeLabel[current.type]}</span>; })()}
               <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold ${statusBadgeClass}`}><span className={`size-[7px] rounded-full bg-current ${current.status === "now" ? "animate-pulse" : ""}`} aria-hidden="true" />{missionStatusLabel[current.status]}</span>
               <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.displayId}</span>
             </div>
@@ -219,10 +220,10 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
           <MarkdownEditor value={detailMarkdown} onSave={saveDocument} onToggleTask={toggleChecklistItem} />
 
           <section className="mb-7" aria-labelledby="mission-checklist-title">
-            <div className="mb-[13px] flex items-center justify-between"><h2 id="mission-checklist-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-[#454543]">Checklist</h2><span className="font-mono text-xs font-medium text-[#6B6B6B]">{current.checklist.filter((item) => item.completed).length} / {current.checklist.length}</span></div>
+            <div className="mb-[13px] flex items-center justify-between"><h2 id="mission-checklist-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-[#454543]">Checklist</h2><div className="flex items-center gap-2"><SegmentedControl aria-label="Filtrar checklist" value={checklistFilter} onValueChange={(value) => setChecklistFilter(value as "all" | "pending")} options={[{ label: "Todos", value: "all" }, { label: "Pendientes", value: "pending" }]} /><span className="font-mono text-xs font-medium text-[#6B6B6B]">{current.checklist.filter((item) => item.completed).length} / {current.checklist.length}</span></div></div>
             <MetricProgress className="mb-[15px]" value={checklistProgress} tone={tone} />
             <div className="rounded-[14px] border border-[#1D1D1B]/10 bg-white p-1.5">
-              {current.checklist.map((item, position) => (
+              {current.checklist.map((item, position) => ({ item, position })).filter(({ item }) => checklistFilter === "all" || !item.completed).map(({ item, position }) => (
                 <div key={item.id} className="group flex items-center gap-[11px] rounded-[10px] px-3 py-2 transition-colors hover:bg-[#D72228]/[0.04]">
                   <label className="relative grid size-[19px] shrink-0 cursor-pointer place-items-center">
                     <input type="checkbox" className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} />
@@ -338,9 +339,10 @@ function MissionReferences({ missions, project, onRemove, onNavigate }: { missio
 }
 
 function ResourceReference({ resource, onRemove }: { resource: TlozResource; onRemove: () => void }) {
-  const ResourceIcon = resourceIcon[resource.type];
+  const isGithub = resource.url ? /^https?:\/\/(?:www\.)?github\.com(?:\/|$)/i.test(resource.url) : false;
+  const ResourceIcon = isGithub ? Github : resourceIcon[resource.type];
   const content = <><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-3"><ResourceIcon aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-sm font-semibold">{resource.title}</p><p className="m-0 truncate text-xs text-carbon/45">{resourceTypeLabel[resource.type]}{resource.fileId ? ` · ${resource.fileId}` : ""}</p></div></>;
-  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>}<IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} /></div>;
+  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}<IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} /></div>;
 }
 
 function OpenReferenceButton({ label, href, onOpen, className }: { label: string; href: string; onOpen?: () => void; className?: string }) {

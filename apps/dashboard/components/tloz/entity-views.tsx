@@ -32,6 +32,6 @@ export function EntityList<T extends { id: string }>({ title, tone = "#9a9a98", 
 }) {
   return <div className="px-4 md:px-0" style={{ maxWidth: "1180px", margin: "0 auto 16px" }}>
     <div style={{ display: "flex", alignItems: "center", gap: "9px", padding: "13px 16px 9px" }}><span style={{ width: 9, height: 9, borderRadius: 999, background: tone }} /><span style={{ fontWeight: 700, fontSize: 13 }}>{title}</span><span className="rounded-full bg-carbon/5 px-2 py-0.5 font-mono text-[11px] font-medium text-carbon/65">{items.length}</span></div>
-    <div style={{ background: "#fff", border: "1px solid rgba(29,29,27,0.10)", borderRadius: "14px", overflow: "hidden" }}>{items.map((item, index) => <button key={item.id} type="button" className="tloz-lrow flex w-full items-center gap-3 px-4 py-[13px] text-left" style={{ borderBottom: index === items.length - 1 ? "none" : "1px solid rgba(29,29,27,0.06)" }} onClick={() => onSelect?.(item)}>{render(item)}</button>)}</div>
+    <div className="tloz-list-cards" style={{ background: "#fff", border: "1px solid rgba(29,29,27,0.10)", borderRadius: "14px", overflow: "hidden" }}>{items.map((item, index) => <button key={item.id} type="button" className="tloz-lrow flex w-full items-center gap-3 px-4 py-[13px] text-left" style={{ borderBottom: index === items.length - 1 ? "none" : "1px solid rgba(29,29,27,0.06)" }} onClick={() => onSelect?.(item)}>{render(item)}</button>)}</div>
   </div>;
 }
