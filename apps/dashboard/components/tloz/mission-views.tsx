@@ -44,6 +44,7 @@ import {
   missionPreviewDescription,
   missionStatusLabel,
   missionTypeLabel,
+  missionTypeIcon,
   missionTypeTone,
   pendingDependencyCount,
   resolveMissionIcon,
@@ -547,7 +548,7 @@ export function MissionTable({ missions, onSelect }: { missions: TlozMissionReco
   const columns: EntityColumn<TlozMissionRecord>[] = [
     { id: "mission", label: "Mission", render: (mission) => <span className="flex items-center gap-2 font-semibold"><span className="font-mono text-[10.5px] font-medium text-carbon/40">{mission.displayId}</span>{mission.title}</span> },
     { id: "status", label: "Estado", render: (mission) => { const cfg = statusConfig[mission.status] ?? statusConfig.now; return <StatusPill label={cfg.label} color={cfg.textColor} active={mission.status === "now"} />; } },
-    { id: "type", label: "Tipo", render: (mission) => <ToneBadge tone={{ color: missionTypeTone[mission.type] }} className="text-[11px]">{missionTypeLabel[mission.type]}</ToneBadge> },
+    { id: "type", label: "Tipo", render: (mission) => { const TypeIcon = missionTypeIcon[mission.type]; return <ToneBadge tone={{ color: missionTypeTone[mission.type] }} className="text-[11px]"><TypeIcon className="mr-1 inline size-3" aria-hidden="true" />{missionTypeLabel[mission.type]}</ToneBadge>; } },
     { id: "project", label: "Proyecto", render: (mission) => <span className="inline-flex items-center gap-1.5 text-xs text-carbon/75"><span className="size-[7px] rounded-sm" style={{ background: mission.project?.color || "#999" }} />{mission.project?.name ?? "Sin proyecto"}</span> },
     { id: "owner", label: "Responsable", render: (mission) => <UserAvatarLabel name={mission.owner.name} label={mission.owner.username ? displayUsername(mission.owner.username) : mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" /> },
     { id: "episode", label: "Ep.", render: (mission) => <span className="text-xs text-carbon/65">{mission.episode?.romanNumber ?? "—"}</span> },
@@ -575,7 +576,7 @@ export function MissionList({ missions, grouping = "status", onSelect }: { missi
     const cfg = statusConfig[group.id] ?? { dotColor: "#9a9a98" };
     return <EntityList key={group.id} title={group.label} tone={cfg.dotColor} items={group.missions} onSelect={onSelect} render={(mission) => {
       const tone = missionTypeTone[mission.type];
-      const Icon = resolveMissionIcon(mission.icon);
+      const Icon = missionTypeIcon[mission.type];
       const blockedCount = pendingDependencyCount(mission);
       return <span className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)] items-center gap-3.5 md:grid-cols-[minmax(0,1fr)_130px_132px_96px]"><span className="flex min-w-0 items-center gap-2.5"><span className="grid size-6 shrink-0 place-items-center rounded-[7px] [&_svg]:size-3" style={{ color: tone, background: `${tone}18` }}><Icon aria-hidden="true" /></span><span className="font-mono text-[10.5px] text-carbon/40">{mission.displayId}</span><strong className="truncate text-[13.5px]">{mission.title}</strong>{blockedCount ? <span className="rounded-full bg-[#FFF4DE] px-2 py-0.5 text-[9.5px] font-semibold text-[#7A5A12]">{blockedCount}</span> : null}{mission.status === "completed" ? <span className="rounded-full bg-[#E6F4EA] px-2 py-0.5 text-[9.5px] font-semibold text-[#1E6B3C]">✓</span> : null}</span><span className="hidden truncate rounded-full px-[9px] py-[3px] text-[11px] font-bold md:block" style={{ background: `${mission.project?.color || "#999"}18`, color: mission.project?.color || "#999" }}>{mission.project?.name ?? "Sin proyecto"}</span><span className="hidden md:block"><UserAvatarLabel name={mission.owner.name} label={mission.owner.username ? displayUsername(mission.owner.username) : mission.owner.name} labelOnly imageUrl={mission.owner.avatarUrl} size="sm" /></span><span className="hidden text-right font-mono text-[11.5px] md:block" style={{ color: mission.dueDate ? "#B91C22" : "#9a9a98" }}>{formatDate(mission.dueDate)}</span></span>;
     }} />;

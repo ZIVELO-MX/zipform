@@ -1608,6 +1608,18 @@ button {
   background: transparent;
 }
 
+@media (max-width: 639px) {
+  .tloz-page-content > .tloz-scrl,
+  .tloz-page-content .tloz-scrl {
+    min-block-size: auto;
+    overflow: visible;
+    overscroll-behavior: auto;
+  }
+  .tloz-page-content {
+    scrollbar-gutter: stable;
+  }
+}
+
 /* --- TLOZ nav hover --- */
 .tloz-nav:hover {
   background: rgba(215, 34, 40, 0.05);

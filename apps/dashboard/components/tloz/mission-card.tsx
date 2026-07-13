@@ -11,7 +11,7 @@ import {
 import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, displayUsername, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@zipform/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@zipform/types";
-import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLabel, missionTypeLabel, missionTypeTone, pendingDependencyCount, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
+import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLabel, missionTypeIcon, missionTypeLabel, missionTypeTone, pendingDependencyCount, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
 
 const MAX_VISIBLE_QUEST_ITEMS = 3;
 
@@ -111,7 +111,7 @@ export function ActiveMissionPanel({ label, mission }: { label: string; mission:
           <p className="eyebrow">{label}</p>
           <h3>{mission?.title ?? "Sin Mission asignada"}</h3>
         </div>
-        {mission ? <ToneBadge tone={{ color: missionTypeTone[mission.type] }}>{missionTypeLabel[mission.type]}</ToneBadge> : null}
+        {mission ? (() => { const TypeIcon = missionTypeIcon[mission.type]; return <ToneBadge tone={{ color: missionTypeTone[mission.type] }}><TypeIcon className="mr-1 inline size-3" aria-hidden="true" />{missionTypeLabel[mission.type]}</ToneBadge>; })() : null}
       </div>
       {mission ? (
         <>
