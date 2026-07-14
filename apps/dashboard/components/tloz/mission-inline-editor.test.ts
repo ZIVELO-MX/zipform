@@ -16,4 +16,12 @@ describe("mission status selector", () => {
     expect(source).toContain('"grid grid-cols-1 gap-1 sm:grid-cols-2"');
     expect(source).toContain('data-layout={layout}');
   });
+
+  it("shows category color and project icon with color in triggers and options", () => {
+    const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
+    expect(source).toContain("<SelectValue><TypeValue type={values.type} /></SelectValue>");
+    expect(source).toContain("<TypeValue type={value} />");
+    expect(source).toContain("iconComponent: resolveMissionIcon(project.icon)");
+    expect(source).toContain("<ProjectValue project={values.project ?? selectedProject} />");
+  });
 });
