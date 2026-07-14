@@ -64,10 +64,17 @@ export function EntityPicker({ options, value, onValueChange, onCreate, label, t
 function EntityOptionIcon({ option, compact = false }: { option: EntityPickerOption; compact?: boolean }) {
   const Icon = option.iconComponent ?? FileText;
   if (option.iconComponent) {
-    return <span className={cn("grid shrink-0 place-items-center rounded-lg [&_svg]:size-3.5", compact ? "size-6 rounded-md" : "size-7")} style={{ color: option.iconColor ?? option.color ?? "#6B6B6B", backgroundColor: option.iconBackground ?? (option.color ? `${option.color}18` : "#F0EFED") }}><Icon aria-hidden="true" /></span>;
+    return <span className={cn("grid shrink-0 place-items-center rounded-lg [&_svg]:size-3.5", compact ? "size-6 rounded-md" : "size-7")} style={entityOptionColors(option)}><Icon aria-hidden="true" /></span>;
   }
   if (option.color) {
     return <span className={cn("grid shrink-0 place-items-center", compact ? "size-6" : "size-7")}><span className="size-[7px] rounded-full" style={{ backgroundColor: option.color }} /></span>;
   }
   return <span className={cn("grid shrink-0 place-items-center rounded-lg bg-[#F0EFED] text-[#6B6B6B] [&_svg]:size-3.5", compact ? "size-6 rounded-md" : "size-7")}><Icon aria-hidden="true" /></span>;
+}
+
+export function entityOptionColors(option: EntityPickerOption) {
+  return {
+    color: option.iconColor ?? option.color ?? "#6B6B6B",
+    backgroundColor: option.iconBackground ?? (option.color ? `${option.color}18` : "#F0EFED"),
+  };
 }
