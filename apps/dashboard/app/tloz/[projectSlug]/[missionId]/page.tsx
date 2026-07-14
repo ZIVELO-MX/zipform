@@ -3,7 +3,7 @@ import { TlozPageShell } from "../../../../components/tloz/tloz-shell";
 import { getTlozEpisodes, getTlozMissionDetail, getTlozMissions, getTlozProjects, getTlozQuestItems, getTlozResources, getTlozSeasons, getTlozUsers } from "../../../../lib/tloz-data";
 import { findProjectBySlug, projectHref } from "../../../../lib/tloz-routes";
 import { getSystemProject } from "../../../../lib/tloz-routes";
-import { SystemEntityDetail } from "../../../../components/tloz/system-project-detail";
+import { SystemEntityDetailPage } from "../../../../components/tloz/system-entity-detail-page";
 import { MissionDetailPage } from "../../../../components/tloz/mission-detail-page";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
@@ -17,12 +17,12 @@ export default async function ProjectMissionPage({ params }: { params: Promise<{
   if (systemProject?.detailVariant === "inventory") {
     const item = questItems.find((candidate) => candidate.id === missionId);
     if (!item) notFound();
-    return <TlozPageShell title="Lobby" showHeader={false}><div className="min-h-full bg-[#FAFAF9]"><SystemEntityDetail variant="inventory" entity={item} missions={missions} users={allUsers} resources={resources.filter((resource) => resource.questItemId === item.id)} /></div></TlozPageShell>;
+    return <TlozPageShell title="Lobby" showHeader={false}><div className="min-h-full bg-[#FAFAF9]"><SystemEntityDetailPage variant="inventory" entity={item} missions={missions} users={allUsers} resources={resources.filter((resource) => resource.questItemId === item.id)} /></div></TlozPageShell>;
   }
   if (systemProject?.detailVariant === "project") {
     const selectedProject = projects.find((candidate) => candidate.id === missionId) ?? findProjectBySlug(projects, missionId);
     if (!selectedProject) notFound();
-    return <TlozPageShell title="Lobby" showHeader={false}><div className="min-h-full bg-[#FAFAF9]"><SystemEntityDetail variant="project" entity={selectedProject} missions={missions} users={allUsers} resources={resources.filter((resource) => resource.projectId === selectedProject.id)} /></div></TlozPageShell>;
+    return <TlozPageShell title="Lobby" showHeader={false}><div className="min-h-full bg-[#FAFAF9]"><SystemEntityDetailPage variant="project" entity={selectedProject} missions={missions} users={allUsers} resources={resources.filter((resource) => resource.projectId === selectedProject.id)} /></div></TlozPageShell>;
   }
   const project = findProjectBySlug(projects, projectSlug);
   if (!project || !mission || mission.projectId !== project.id) notFound();
