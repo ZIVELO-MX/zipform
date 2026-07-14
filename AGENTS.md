@@ -37,13 +37,16 @@
 ### Pull Requests
 
 - Create the PR automatically when the task is complete.
+- Use `.github/pull_request_template.md` and replace every placeholder with verified information.
 - PR title must be written in English.
 - PR description must be written in Spanish.
 - Include manual testing steps only when they are relevant to the implemented change or feature.
+- Never merge a pull request, enable auto-merge, add it to a merge queue, or bypass branch protection.
+- Only the user may decide and execute a pull request merge. Agents stop after creating or updating the PR and reporting its checks.
 
 ### Branches
 
-- Never commit directly to `main` (except when the only changes are to docs).
+- Never commit directly to `main`, including documentation-only changes.
 - Create a dedicated branch for every logical change.
 - Open pull requests against `main` by default.
 - `dev` está inhabilitado — todos los cambios van directo a `main` mediante PR.
