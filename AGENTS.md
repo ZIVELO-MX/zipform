@@ -26,6 +26,12 @@
 - Every new feature must include automated tests.
 - Follow the project's `error-handling-patterns` when writing tests.
 
+### Testing
+
+- Prefer running the complete test and verification suite in the pull request, because the CI pipeline executes the full workspace check.
+- Use focused local checks only when they materially help implementation or debugging; do not duplicate the full PR pipeline locally by default.
+- Report whether verification evidence came from a local command or the pull request pipeline.
+
 ## UI Guidelines
 
 - Use the TLOZ interface as the baseline for product UI typography and density.
