@@ -571,7 +571,7 @@ paths:
     patch:
       operationId: updateMission
       summary: Update mission fields
-      description: "Only the provided fields are updated. Valid fields: title, description, descriptionDetail, icon, type, status, dueDate, startDate, completedAt, blockedReason, progress, seasonId, episodeId, ownerId, projectId."
+      description: "Only the provided fields are updated. When descriptionDetail is provided, Markdown tasks atomically replace the checklist and recalculate progress; the derived progress takes precedence over a supplied progress value. Valid fields: title, description, descriptionDetail, icon, type, status, dueDate, startDate, completedAt, blockedReason, progress, seasonId, episodeId, ownerId, projectId."
       tags: [Missions]
       parameters:
         - $ref: "#/components/parameters/MissionId"
@@ -590,6 +590,7 @@ paths:
                 descriptionDetail:
                   type: string
                   maxLength: 20000
+                  description: Full Markdown detail. Task items atomically replace the checklist and recalculate progress.
                 icon:
                   type: string
                 type:

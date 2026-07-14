@@ -116,6 +116,26 @@ describe("mock data driver", () => {
     expect((await client.tloz.removeMissionResource(mission.id, resource.id)).resources).not.toContainEqual(expect.objectContaining({ id: resource.id }));
   });
 
+  it("synchronizes checklist and derived progress from generic mission updates", async () => {
+    const client = createMockDataClient();
+    const mission = missions[0];
+
+    let updated = await client.tloz.updateMission(mission.id, {
+      title: "Updated with document",
+      descriptionDetail: "- [x] Added\n- [ ] Pending",
+      progress: 100,
+    });
+    expect(updated).toMatchObject({ title: "Updated with document", progress: 50 });
+    expect((await client.tloz.getMissionDetail(mission.id))?.checklist).toEqual([
+      expect.objectContaining({ title: "Added", completed: true, position: 0 }),
+      expect.objectContaining({ title: "Pending", completed: false, position: 1 }),
+    ]);
+
+    updated = await client.tloz.updateMission(mission.id, { descriptionDetail: "No tasks remain" });
+    expect(updated.progress).toBe(0);
+    expect((await client.tloz.getMissionDetail(mission.id))?.checklist).toEqual([]);
+  });
+
   it("rejects dependencies outside the mission project", async () => {
     const client = createMockDataClient();
     const mission = missions[0];

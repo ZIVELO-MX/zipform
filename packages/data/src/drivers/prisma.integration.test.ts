@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createPrismaDataClient } from "./prisma";
 import type { ZipformDataClient } from "../contracts";
 
@@ -500,6 +500,57 @@ describe("prisma integration", () => {
       const afterSecond = await client.tloz.getMissionDetail(mission.id);
       expect(afterSecond!.checklist).toHaveLength(2);
       expect(afterSecond!.checklist[0].title).toBe("Second pass item 1");
+    });
+
+    itIf(hasDb)("updateMission atomically replaces document checklist and progress", async () => {
+      const mission = await client.tloz.createMission({
+        title: "Generic document update",
+        description: "Before",
+        descriptionDetail: "- [x] Existing",
+        icon: "Atom",
+        type: "side_quest",
+        status: "next",
+        ownerId: "int-user-benji",
+        projectId: "int-project-core",
+        progress: 100,
+      });
+
+      await client.tloz.updateMission(mission.id, {
+        description: "After",
+        descriptionDetail: "- [x] Added\n- [ ] Changed\n- [ ] Removed next",
+        progress: 100,
+      });
+      const updated = await client.tloz.getMissionDetail(mission.id);
+      expect(updated).toMatchObject({ description: "After", progress: 33, checklistCount: 3, completed: 1 });
+      expect(updated!.checklist.map((item) => item.title)).toEqual(["Added", "Changed", "Removed next"]);
+
+      await client.tloz.updateMission(mission.id, { descriptionDetail: "No tasks remain" });
+      const cleared = await client.tloz.getMissionDetail(mission.id);
+      expect(cleared).toMatchObject({ progress: 0, checklistCount: 0, completed: 0 });
+    });
+
+    itIf(hasDb)("rolls back a mixed document update when validation fails", async () => {
+      const mission = await client.tloz.createMission({
+        title: "Rollback document update",
+        description: "Before",
+        descriptionDetail: "- [x] Stable",
+        icon: "Shield",
+        type: "side_quest",
+        status: "next",
+        ownerId: "int-user-benji",
+        projectId: "int-project-core",
+        progress: 100,
+      });
+
+      await expect(client.tloz.updateMission(mission.id, {
+        projectId: "missing-project",
+        description: "Must roll back",
+        descriptionDetail: "- [ ] Must roll back",
+      })).rejects.toThrow("project was not found");
+
+      const unchanged = await client.tloz.getMissionDetail(mission.id);
+      expect(unchanged).toMatchObject({ description: "Before", descriptionDetail: "- [x] Stable", progress: 100 });
+      expect(unchanged!.checklist).toEqual([expect.objectContaining({ title: "Stable", completed: true })]);
     });
   });
 

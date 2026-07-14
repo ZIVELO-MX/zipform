@@ -81,11 +81,15 @@ function createPrismaStub() {
     tlozChecklistItem: {
       findMany: findMany(checklistRows),
       create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
-        const row = data as never;
+        const row = { ...data, createdAt: new Date(), updatedAt: new Date() } as never;
         checklistRows.push(row);
         return row;
       }),
-      deleteMany,
+      deleteMany: vi.fn(async ({ where }: { where: { missionId: string } }) => {
+        const retained = checklistRows.filter((item) => item.missionId !== where.missionId);
+        checklistRows.splice(0, checklistRows.length, ...retained);
+        return {};
+      }),
     },
     tlozResource: {
       findMany: findMany(resourceRows),
@@ -165,6 +169,23 @@ describe("prisma data driver", () => {
     expect((await client.tloz.getMissionDetail(created.id))?.checklist).toEqual([
       expect.objectContaining({ title: "First outcome", completed: true, position: 0 }),
       expect.objectContaining({ title: "Second outcome", completed: false, position: 1 }),
+    ]);
+  });
+
+  it("synchronizes Markdown checkboxes during generic mission updates", async () => {
+    const client = createPrismaDataClient(createPrismaStub());
+    const mission = missions[0];
+
+    const updated = await client.tloz.updateMission(mission.id, {
+      description: "Updated with document",
+      descriptionDetail: "- [x] Added\n- [ ] Pending",
+      progress: 100,
+    });
+
+    expect(updated).toMatchObject({ description: "Updated with document", progress: 50 });
+    expect((await client.tloz.getMissionDetail(mission.id))?.checklist).toEqual([
+      expect.objectContaining({ title: "Added", completed: true, position: 0 }),
+      expect.objectContaining({ title: "Pending", completed: false, position: 1 }),
     ]);
   });
 
