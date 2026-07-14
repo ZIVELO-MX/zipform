@@ -12,6 +12,12 @@ Consult `GET https://zipform.zivelo.dev/api/openapi` before relying on this rout
 - Supporting data: `GET /api/v1/seasons`, `/episodes`, `/quest-items`, and `/resources`.
 - Query by example: `POST /api/v1/{missions|projects|quest-items|resources|users}/query`.
 
+## Discover assigned work
+
+When the user does not identify a mission, resolve `GET /api/v1/users/me` first and query missions with that returned `ownerId`. Within the requested project, if any, prefer `now`, then `next`, then `later`; skip `completed` and `blocked` unless requested. An explicit mission identifier always takes precedence over owner-first discovery.
+
+If no assigned mission is actionable, report that result before searching other owners. Reading another owner's mission is allowed, but implementing its primary deliverable requires explicit reassignment followed by a verification GET.
+
 ## Create a mission
 
 1. Resolve the project and inspect similar missions.
