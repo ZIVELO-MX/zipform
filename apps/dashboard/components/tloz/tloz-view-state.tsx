@@ -4,6 +4,7 @@ import type { TlozEpisode, TlozProject, TlozSeason, UserProfile } from "@zipform
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { resolveResponsiveTlozViews, resolveTlozView, type TlozView } from "../../lib/tloz-routes";
+import { loadTlozUiState, saveTlozUiState } from "./tloz-view-storage";
 
 export type TlozSort = "default" | "due-date" | "title" | "dependencies";
 export type TlozGrouping = "status" | "project" | "none";
@@ -61,39 +62,35 @@ export function TlozViewStateProvider({
   const effectiveViews = responsiveViews.views;
   const effectiveDefault = responsiveViews.defaultView;
 
-  const storageKey = `tloz:${storageScope}-controls`;
   const [preferredState, replaceState] = useState<TlozUiState>(() => sharedUiState ?? initialState(effectiveDefault));
   const [storageLoaded, setStorageLoaded] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(storageKey);
+    const storage = browserStorage();
+    const stored = storage ? loadTlozUiState(storage, storageScope) : null;
     if (!stored) {
       sharedUiState = preferredState;
       setStorageLoaded(true);
       return;
     }
-    try {
-      const parsed = normalizeStoredState(JSON.parse(stored) as Partial<TlozUiState>);
-      replaceState((current) => {
-        const next = {
+    replaceState((current) => {
+      const next = {
         ...current,
-        ...parsed,
-        view: parsed.view ?? current.view,
-        };
-        sharedUiState = next;
-        return next;
-      });
-    } catch {
-      window.localStorage.removeItem(storageKey);
-    }
+        ...stored,
+        view: stored.view ?? current.view,
+      };
+      sharedUiState = next;
+      return next;
+    });
     setStorageLoaded(true);
     // State is intentionally loaded only when this route scope mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effectiveDefault, storageKey, effectiveViews]);
+  }, [effectiveDefault, effectiveViews, storageScope]);
 
   useEffect(() => {
-    if (storageLoaded) window.localStorage.setItem(storageKey, JSON.stringify(preferredState));
-  }, [preferredState, storageKey, storageLoaded]);
+    const storage = browserStorage();
+    if (storageLoaded && storage) saveTlozUiState(storage, storageScope, preferredState);
+  }, [preferredState, storageLoaded, storageScope]);
 
   const state = useMemo<TlozUiState>(() => ({
     ...preferredState,
@@ -137,18 +134,10 @@ function initialState(view: TlozView): TlozUiState {
   };
 }
 
-function normalizeStoredState(state: Partial<TlozUiState>): Partial<TlozUiState> {
-  const views: TlozView[] = ["dashboard", "list", "board", "table", "calendar"];
-  const sorts: TlozSort[] = ["default", "due-date", "title", "dependencies"];
-  const groupings: TlozGrouping[] = ["status", "project", "none"];
-  return {
-    view: views.includes(state.view as TlozView) ? state.view : undefined,
-    projectId: typeof state.projectId === "string" ? state.projectId : "all",
-    seasonId: typeof state.seasonId === "string" ? state.seasonId : "all",
-    episodeId: typeof state.episodeId === "string" ? state.episodeId : "all",
-    ownerId: typeof state.ownerId === "string" ? state.ownerId : "all",
-    sort: sorts.includes(state.sort as TlozSort) ? state.sort : "dependencies",
-    grouping: groupings.includes(state.grouping as TlozGrouping) ? state.grouping : "status",
-    showCompleted: typeof state.showCompleted === "boolean" ? state.showCompleted : true,
-  };
+function browserStorage() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }

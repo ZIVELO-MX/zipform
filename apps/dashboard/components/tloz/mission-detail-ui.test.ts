@@ -40,4 +40,9 @@ describe("mission detail interaction contracts", () => {
     expect(detail).toContain("...(icon ? { icon } : {})");
     expect(detail).not.toContain("sm:grid-cols-[140px_1fr_1fr_auto_auto]");
   });
+
+  it("labels the checklist title action as Editar", () => {
+    expect(detail).toContain('<Pencil className="size-3.5" />Editar');
+    expect(detail).not.toContain('<Pencil className="size-3.5" />Renombrar');
+  });
 });

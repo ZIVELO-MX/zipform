@@ -5,6 +5,8 @@ import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@zipform/ui";
+import { MermaidDiagram } from "./mermaid-diagram";
+import { isMermaidCodeBlock } from "./mermaid-utils";
 
 type MarkdownEditorProps = {
   value: string;
@@ -120,7 +122,8 @@ function MarkdownContent({ children, onToggleTask }: { children: string; onToggl
         code: ({ className, ...props }) => {
           const isInline = !className;
           if (isInline) return <code className="rounded bg-carbon/5 px-1 py-0.5 font-mono text-[13px] text-[#B91C22]" {...props} />;
-          return <pre className="mb-3 overflow-x-auto rounded-xl bg-[#F5F5F4] p-4 text-[13px] last:mb-0"><code {...props} /></pre>;
+          if (isMermaidCodeBlock(className)) return <MermaidDiagram source={String(props.children).replace(/\n$/, "")} />;
+          return <pre className="mb-3 overflow-x-auto rounded-xl bg-[#F5F5F4] p-4 text-[13px] last:mb-0" tabIndex={0}><code className={className} {...props} /></pre>;
         },
         a: ({ ...props }) => <a className="text-zivelo underline underline-offset-2 hover:text-zivelo/80" target="_blank" rel="noreferrer" {...props} />,
         h1: ({ ...props }) => <h1 className="mb-3 text-2xl font-bold last:mb-0" {...props} />,
