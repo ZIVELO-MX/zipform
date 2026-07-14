@@ -13,6 +13,15 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
   if (authHeader?.startsWith("Bearer ")) {
     const apiKey = authHeader.slice(7).trim();
     if (apiKey) {
+      const localKey = process.env.ZIPFORM_LOCAL_API_KEY;
+      const localMode = process.env.ZIPFORM_DATA_DRIVER === "mock" && process.env.ZIPFORM_LOCAL_API_MODE === "1" && process.env.VERCEL !== "1";
+      if (localMode && localKey && apiKey === localKey) {
+        const users = await dataClient.tloz.getUsers();
+        const localUserId = process.env.ZIPFORM_LOCAL_API_USER_ID ?? "owner";
+        const localUser = users.find((candidate) => candidate.id === localUserId);
+        if (localUser) return { user: localUser };
+      }
+
       const user = await dataClient.agent.authenticateWithApiKey(apiKey);
       if (user) return { user };
     }
