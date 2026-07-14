@@ -5,11 +5,13 @@ description: Consult, create, review, correct, document, or update TLOZ missions
 
 # TLOZ Mission Operator
 
-Operate TLOZ data only through `https://zipform.zivelo.dev`. Treat current API responses and `GET /api/openapi` as the source of truth because the service changes frequently.
+Operate TLOZ data through the Zipform Data API. Use `https://zipform.zivelo.dev` for current production data and mission mutations; use the explicitly configured local API only for contract rehearsal, read-only development, and performance tests.
 
 ## Guardrails
 
 - Use the API instead of Prisma, PostgreSQL, seed files, or browser automation.
+- For local work, start `pnpm api:local`; it uses the mock driver on `127.0.0.1` and a development-only API key. Never point it at production `DATABASE_URL`.
+- For repeatable performance checks, run `pnpm perf:api` against local servers and compare the same workload; do not use production as a load-test target.
 - Read a resource before writing it and preserve unrelated content.
 - Inspect `GET /api/openapi` before using undocumented fields or operations.
 - Send the Bearer token only from `ZIPFORM_TOKEN`; never print, persist, commit, or place it in a payload.
@@ -22,14 +24,17 @@ Read [references/authentication.md](references/authentication.md) when configuri
 
 ## Resolve a mission
 
-1. Confirm `ZIPFORM_TOKEN` exists without printing it:
+1. Select the API origin:
+   - For mission consultation, mutation, and final verification, use `https://zipform.zivelo.dev` and continue with the production token below.
+   - For local contract rehearsal or benchmarks, use `http://127.0.0.1:3100` with the key printed by `pnpm api:local`; local data is not evidence about production.
+2. Confirm `ZIPFORM_TOKEN` exists without printing it when the production origin is selected:
    - If the variable is not set, do not abort. Inform the user that they need to export it: `export ZIPFORM_TOKEN="zaf_..."` in their terminal, then wait for confirmation before continuing.
    - Validate with `curl -s -H "Authorization: Bearer $ZIPFORM_TOKEN" "https://zipform.zivelo.dev/api/v1/projects"`; if 401, report that the token is invalid or expired and ask the user to provide a valid one.
-2. Call `GET /api/v1/projects` and resolve the project by slug, exact name, or unambiguous partial name.
-3. Call `GET /api/v1/missions?projectId={projectId}&limit=100`.
-4. Match the requested human-readable `displayId`; never use it as the internal ID.
-5. Call `GET /api/v1/missions/{id}` and read the complete current detail.
-6. Inspect `GET /api/openapi` if a required field, response, enum, or route remains uncertain.
+3. Call `GET /api/v1/projects` and resolve the project by slug, exact name, or unambiguous partial name.
+4. Call `GET /api/v1/missions?projectId={projectId}&limit=100`.
+5. Match the requested human-readable `displayId`; never use it as the internal ID.
+6. Call `GET /api/v1/missions/{id}` and read the complete current detail.
+7. Inspect `GET /api/openapi` if a required field, response, enum, or route remains uncertain.
 
 Do not guess when multiple projects or missions match.
 
@@ -95,6 +100,12 @@ When mission work produces a repository change:
 4. Monitor CI and preview checks. Update mission checkboxes only when supported by implementation and verification evidence.
 5. Follow the merge authority in `AGENTS.md`; leave the pull request ready for the user and report its URL and checks.
 6. Mark the mission completed only after all mission-specific closure conditions have been met and verified through the API.
+
+## Local API and approval minimization
+
+- Prefer `pnpm api:local` for non-production reads, payload rehearsal, and load testing so those requests stay on loopback and do not require external network access.
+- Use `pnpm tloz:api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` for production calls. The wrapper fixes the production origin, reads `ZIPFORM_TOKEN` only from the environment, and never prints it.
+- A persistent approval for the narrow wrapper command can prevent repeated permission prompts. If that approval is unavailable, do not substitute mock data for a production mutation or claim a current production read was verified; report the external-access blocker once.
 
 ## Report results
 
