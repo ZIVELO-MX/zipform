@@ -19,4 +19,15 @@ describe("Mermaid Markdown diagrams", () => {
     expect(markdownSource).toContain("if (isMermaidCodeBlock(className))");
     expect(markdownSource).toContain('<code className={className} {...props} />');
   });
+
+  it("opens an accessible modal viewer with zoom and drag controls", () => {
+    const source = readFileSync(new URL("./mermaid-diagram.tsx", import.meta.url), "utf8");
+    expect(source).toContain('aria-label="Ampliar diagrama Mermaid"');
+    expect(source).toContain('title="Visor de diagrama Mermaid"');
+    expect(source).toContain("event.ctrlKey");
+    expect(source).toContain("event.metaKey");
+    expect(source).toContain("setPointerCapture");
+    expect(source).toContain('aria-label="Cerrar visor de diagrama"');
+    expect(source).toContain("onPointerDownOutside={(event) => event.preventDefault()}");
+  });
 });
