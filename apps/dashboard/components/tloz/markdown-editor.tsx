@@ -5,7 +5,8 @@ import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@zipform/ui";
-import { isMermaidCodeBlock, MermaidDiagram } from "./mermaid-diagram";
+import { MermaidDiagram } from "./mermaid-diagram";
+import { isMermaidCodeBlock } from "./mermaid-utils";
 
 type MarkdownEditorProps = {
   value: string;

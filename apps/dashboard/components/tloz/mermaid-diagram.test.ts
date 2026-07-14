@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { isMermaidCodeBlock } from "./mermaid-diagram";
+import { isMermaidCodeBlock } from "./mermaid-utils";
 
 describe("Mermaid Markdown diagrams", () => {
   it("recognizes only Mermaid fenced code blocks", () => {

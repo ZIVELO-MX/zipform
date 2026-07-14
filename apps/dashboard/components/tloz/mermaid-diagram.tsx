@@ -66,7 +66,3 @@ export function MermaidDiagram({ source }: { source: string }) {
 
   return <div className="mb-3 min-h-20 animate-pulse rounded-xl bg-carbon/5 last:mb-0" role="status"><span className="sr-only">Generando diagrama Mermaid…</span></div>;
 }
-
-export function isMermaidCodeBlock(className?: string) {
-  return className?.split(/\s+/).includes("language-mermaid") ?? false;
-}
