@@ -1,28 +1,8 @@
-import {
-  CircleDot,
-  Compass,
-  Copy,
-  Database,
-  FileCheck,
-  FileText,
-  Flag,
-  Globe2,
-  History,
-  KeyRound,
-  LayoutDashboard,
-  LucideIcon,
-  PackageOpen,
-  Search,
-  Shield,
-  Sparkles,
-  Star,
-  Sword,
-  Target,
-  Utensils,
-  Wrench
-} from "lucide-react";
+import { CircleDot, Compass, Flag, Star, type LucideIcon } from "lucide-react";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozMissionStatus, TlozMissionType } from "@zipform/types";
+
+export { resolveTlozIcon as resolveMissionIcon } from "./tloz-icon-catalog";
 
 export const missionTypeLabel: Record<TlozMissionType, string> = {
   main_quest: "Main Quest",
@@ -44,7 +24,7 @@ export const missionStatusTone: Record<TlozMissionStatus, string> = {
   next: "#2D6CDF",
   later: "#7A4ED9",
   blocked: "#B91C22",
-  completed: "#6B6B6B"
+  completed: "#D72228"
 };
 
 export const missionTypeTone: Record<TlozMissionType, string> = {
@@ -60,32 +40,6 @@ export const missionTypeIcon: Record<TlozMissionType, LucideIcon> = {
   farming_quest: CircleDot,
   exploration_quest: Compass,
 };
-
-const iconRegistry: Record<string, LucideIcon> = {
-  Copy,
-  Compass,
-  Database,
-  FileCheck,
-  FileText,
-  Flag,
-  Globe2,
-  History,
-  KeyRound,
-  LayoutDashboard,
-  PackageOpen,
-  Search,
-  Shield,
-  Sparkles,
-  Target,
-  Star,
-  Sword,
-  Utensils,
-  Wrench
-};
-
-export function resolveMissionIcon(icon: string): LucideIcon {
-  return iconRegistry[icon] ?? CircleDot;
-}
 
 export function resolveIconLabel(icon: string): string {
   if (!icon) return "Unknown";

@@ -59,15 +59,14 @@ export function IconPicker({ icons, value, color = "currentColor", label = "Icon
   }
 
   const SelectedIcon = selected?.icon;
+  const trigger = <Button type="button" variant="outline" className={cn("w-full justify-start", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
+    {SelectedIcon ? <SelectedIcon aria-hidden="true" style={{ color }} /> : <FileText aria-hidden="true" style={{ color }} />}
+    {!iconOnly ? <span className="truncate">{triggerLabel ?? selected?.label ?? `Seleccionar ${label.toLowerCase()}`}</span> : null}
+  </Button>;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className={cn("w-full justify-start", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
-          {SelectedIcon ? <SelectedIcon className="size-3.5" aria-hidden="true" style={{ color }} /> : <FileText className="size-3.5" aria-hidden="true" style={{ color }} />}
-          {!iconOnly ? <span className="truncate">{triggerLabel ?? selected?.label ?? `Seleccionar ${label.toLowerCase()}`}</span> : null}
-        </Button>
-      </PopoverTrigger>
+      {iconOnly ? <Tooltip><TooltipTrigger asChild><PopoverTrigger asChild>{trigger}</PopoverTrigger></TooltipTrigger><TooltipContent>{selected?.label ?? label}</TooltipContent></Tooltip> : <PopoverTrigger asChild>{trigger}</PopoverTrigger>}
       <PopoverContent className="w-[min(340px,calc(100vw-32px))]" style={{ color }}>
         <PopoverHeader>
           <PopoverTitle>Seleccionar {label.toLowerCase()}</PopoverTitle>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, SegmentedControl, toast } from "@zipform/ui";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@zipform/ui";
 
 type MarkdownEditorProps = {
   value: string;
@@ -16,14 +16,11 @@ type MarkdownEditorProps = {
 export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…" }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
-  const [mode, setMode] = useState<"visual" | "text">("text");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const visualRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setDraft(value);
     setEditing(false);
-    setMode("text");
   }, [value]);
 
   function cancel() {
@@ -38,10 +35,6 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
 
   function handleCopy() {
     navigator.clipboard.writeText(value).then(() => toast.success("Copiado al portapapeles"));
-  }
-
-  function handleVisualInput(event: React.FormEvent<HTMLDivElement>) {
-    setDraft(event.currentTarget.innerText.replace(/\u00a0/g, " "));
   }
 
   return (
@@ -70,44 +63,15 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
       </div>
 
       {editing ? (
-        <div className="space-y-2">
-          <SegmentedControl
-            aria-label="Modo de edición"
-            value={mode}
-            onValueChange={(v) => setMode(v as "visual" | "text")}
-            options={[
-              { label: "Visual", value: "visual" },
-              { label: "Text", value: "text" },
-            ]}
-          />
-          {mode === "text" ? (
+        <div className="flex flex-col gap-2">
             <textarea
               ref={textareaRef}
               autoFocus
-              className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
+              className="min-h-[45dvh] w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10 md:min-h-80"
               value={draft}
               placeholder={placeholder}
               onChange={(event) => setDraft(event.target.value)}
             />
-          ) : (
-            <div
-              ref={visualRef}
-              contentEditable
-              suppressContentEditableWarning
-              role="textbox"
-              aria-label="Editor visual de Markdown"
-              className="min-h-[45dvh] w-full cursor-text rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543] outline-none focus:border-carbon/25 focus:ring-2 focus:ring-carbon/10"
-              onInput={handleVisualInput}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
-                const line = window.getSelection()?.anchorNode?.textContent?.split("\n").at(-1) ?? "";
-                const prefix = line.match(/^(\s*(?:[-*+]\s+|\d+[.)]\s+|>\s+))/)?.[1];
-                if (!prefix) return;
-                event.preventDefault();
-                document.execCommand("insertText", false, `\n${prefix}`);
-              }}
-            >{draft}</div>
-          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={cancel}>Cancelar</Button>
             <Button type="button" onClick={save}>Guardar</Button>

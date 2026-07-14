@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { Plus } from "lucide-react";
 import { Button, ColorPicker, DatePicker, EntityPicker, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, useOverlayToasterId, UserPicker, type IconPickerOption } from "@zipform/ui";
-import type { TlozInventoryCategory, TlozMissionStatus, TlozMissionType, TlozProject, TlozQuestItem, UserProfile } from "@zipform/types";
+import type { TlozProject, TlozQuestItem, UserProfile } from "@zipform/types";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { TlozValidationError, validateMissionCreate, validateProjectCreate, validateQuestItemCreate, type TlozResourceInput } from "@zipform/data";
 import { createMission, createProject, createQuestItem } from "../../app/tloz/actions";
 import { resolveMissionIcon } from "./tloz-utils";
+import { TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
+import { buildCreateInput, splitCreateIds } from "./tloz-create-input";
 import { initialDraft } from "./tloz-create-defaults";
 import { AddDependency, AddResource } from "./mission-detail";
 import { MissionPropertyFields, type MissionPropertyValues } from "./mission-inline-editor";
@@ -18,7 +20,7 @@ export type TlozCreateKind = "mission" | "project" | "inventory";
 type CreateContextValue = { kind: TlozCreateKind; label: string; openCreate: () => void };
 const CreateContext = createContext<CreateContextValue | null>(null);
 const kindLabel = { mission: "Mission", project: "Project", inventory: "Inventory item" } as const;
-const icons: IconPickerOption[] = ["Sword", "Sparkles", "Target", "Search", "Database", "FileText", "FileCheck", "KeyRound", "Shield", "Wrench", "FolderKanban", "PackageOpen"].map((id) => ({ id, label: id, icon: resolveMissionIcon(id) }));
+const icons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
 
 export function TlozCreateProvider({ children, kind, projects, users, missions = [], questItems = [], fixedProjectId }: { children: React.ReactNode; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; fixedProjectId?: string }) {
   const router = useRouter();
@@ -62,12 +64,12 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [resources, setResources] = useState<TlozResourceInput[]>([]);
   const formId = `create-${kind}-form`;
-  function field(name: string, value: string) { setDraft((current) => ({ ...current, [name]: value })); setErrors((current) => ({ ...current, [name]: "" })); }
-  function reset() { setDraft(initialDraft(kind, defaultOwnerId, defaultProjectId, today)); setErrors({}); }
+  function field(name: string, value: string) { setDraft((current) => ({ ...current, [name]: value })); setErrors((current) => ({ ...current, [name]: "", ...(name === "name" ? { title: "" } : {}) })); }
+  function reset() { setDraft(initialDraft(kind, defaultOwnerId, defaultProjectId, today)); setErrors({}); setResources([]); }
   function submit(event: React.FormEvent) {
     event.preventDefault();
     try {
-      const input = buildInput(kind, draft, resources);
+      const input = buildCreateInput(kind, draft, resources);
       if (kind === "mission") validateMissionCreate(input as never);
       else if (kind === "project") validateProjectCreate(input as never);
       else validateQuestItemCreate(input as never);
@@ -85,13 +87,13 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
   return (
     <form id={formId} onSubmit={submit} className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6" noValidate>
       <div><h3 className="mb-1 text-xl font-bold text-carbon">Nuevo {kindLabel[kind]}</h3><p className="m-0 text-sm text-carbon/55">Completa los datos requeridos antes de guardar.</p></div>
-      <FormField label={kind === "mission" ? "Título" : "Nombre"} error={errors[kind === "mission" ? "title" : "name"]} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField>
+      {kind === "mission" ? <div className="flex items-end gap-2"><IconPicker icons={icons} value={draft.icon} label="Icono de misión" recentStorageKey="zipform-tloz-recent-icons" onValueChange={(icon) => field("icon", icon)} iconOnly className="size-10 shrink-0 justify-center" /><div className="min-w-0 flex-1"><FormField label="Título" error={errors.title} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField></div></div> : <FormField label="Nombre" error={errors.name} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField>}
       <FormField label={kind === "mission" ? "Descripción" : "Descripción"} error={errors.description}><textarea className="min-h-24 w-full rounded-xl border border-carbon/15 bg-white px-3 py-2 text-sm outline-none transition focus:border-zivelo/50 focus:ring-2 focus:ring-zivelo/10" value={draft.description} rows={4} maxLength={kind === "mission" ? 280 : 5000} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => field("description", event.target.value)} /></FormField>
       {kind === "mission" ? <FormField label="Detalle" error={errors.descriptionDetail}><textarea className="min-h-40 w-full rounded-xl border border-carbon/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] outline-none transition focus:border-zivelo/50 focus:ring-2 focus:ring-zivelo/10" value={draft.descriptionDetail} rows={8} maxLength={20000} placeholder="Markdown, incluyendo - [ ] tasks…" onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => field("descriptionDetail", event.target.value)} /></FormField> : null}
-      <div className="grid gap-4 sm:grid-cols-2"><FormField label="Icono" error={errors.icon} required><IconPicker icons={icons} value={draft.icon} onValueChange={(icon) => field("icon", icon)} /></FormField>
+      {kind !== "mission" ? <div className="grid gap-4 sm:grid-cols-2"><FormField label="Icono" error={errors.icon} required><IconPicker icons={icons} value={draft.icon} onValueChange={(icon) => field("icon", icon)} /></FormField>
         {kind === "inventory" ? <FormField label="Categoría"><Select value={draft.category} onValueChange={(value) => field("category", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{[["tool","Herramienta"],["access","Acceso"],["asset","Activo"],["document","Documento"],["other","Otro"]].map(([id,label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select></FormField> : kind === "project" ? <FormField label="Color" error={errors.color}><ColorPicker value={draft.color} onValueChange={(color) => field("color", color)} /></FormField> : null}
-      </div>
-      {kind === "mission" ? <MissionPropertyFields values={{ status: draft.status as MissionPropertyValues["status"], type: draft.type as MissionPropertyValues["type"], ownerId: draft.ownerId, projectId: draft.projectId, startDate: draft.startDate, dueDate: draft.dueDate }} options={{ projects, users, episodes: [], missions }} onChange={(name, value) => field(name, value)} /> : <FormField label="Responsable" error={errors.ownerId} required={kind !== "inventory"}><UserPicker users={users} value={draft.ownerId || undefined} allowEmpty={kind === "inventory"} onValueChange={(ownerId) => field("ownerId", ownerId)} /></FormField>}
+      </div> : null}
+      {kind === "mission" ? <CreateSection title="Propiedades"><MissionPropertyFields layout="grid" values={{ status: draft.status as MissionPropertyValues["status"], type: draft.type as MissionPropertyValues["type"], ownerId: draft.ownerId, projectId: draft.projectId, startDate: draft.startDate, dueDate: draft.dueDate }} options={{ projects, users, episodes: [], missions }} onChange={(name, value) => field(name, value)} /></CreateSection> : <FormField label="Responsable" error={errors.ownerId} required={kind !== "inventory"}><UserPicker users={users} value={draft.ownerId || undefined} allowEmpty={kind === "inventory"} onValueChange={(ownerId) => field("ownerId", ownerId)} /></FormField>}
       {kind === "mission" ? <MissionRelations draft={draft} field={field} missions={missions} questItems={questItems} resources={resources} setResources={setResources} /> : null}
       {kind !== "inventory" && kind !== "mission" ? <div className="grid gap-4 sm:grid-cols-2"><FormField label="Inicio" error={errors.startDate} required><DatePicker value={draft.startDate || undefined} label="Fecha de inicio" onValueChange={(value) => field("startDate", value ?? "")} /></FormField><FormField label="Vence" error={errors.dueDate}><DatePicker value={draft.dueDate || undefined} label="Fecha límite" onValueChange={(value) => field("dueDate", value ?? "")} /></FormField></div> : null}
     </form>
@@ -105,20 +107,15 @@ function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, miss
 }
 
 function FormField({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) { return <label className="flex flex-col gap-1.5"><span className="text-xs font-bold text-carbon/60">{label}{required ? <span className="text-zivelo"> *</span> : null}</span>{children}{error ? <span className="text-xs font-medium text-[#B91C22]">{error}</span> : null}</label>; }
-function buildInput(kind: TlozCreateKind, draft: Record<string, string>, resources: TlozResourceInput[] = []) {
-  if (kind === "mission") return { title: draft.name, description: draft.description, descriptionDetail: draft.descriptionDetail, icon: draft.icon, type: draft.type as TlozMissionType, status: draft.status as TlozMissionStatus, ownerId: draft.ownerId, projectId: draft.projectId, startDate: draft.startDate || undefined, dueDate: draft.dueDate || undefined, progress: 0, dependencyIds: splitIds(draft.dependencyIds), requiredQuestItemIds: splitIds(draft.requiredQuestItemIds), resources };
-  if (kind === "project") return { name: draft.name, description: draft.description, icon: draft.icon, color: draft.color, status: "active" as const, type: "normal" as const, ownerId: draft.ownerId, startDate: draft.startDate, dueDate: draft.dueDate || undefined };
-  return { name: draft.name, description: draft.description, icon: draft.icon, status: "locked" as const, category: draft.category as TlozInventoryCategory, ownerId: draft.ownerId || undefined };
-}
-
-function splitIds(value?: string) { return value ? value.split(",").filter(Boolean) : []; }
-
 function MissionRelations({ draft, field, missions, questItems, resources, setResources }: { draft: Record<string, string>; field: (name: string, value: string) => void; missions: TlozMissionRecord[]; questItems: TlozQuestItem[]; resources: TlozResourceInput[]; setResources: React.Dispatch<React.SetStateAction<TlozResourceInput[]>> }) {
-  const dependencyIds = splitIds(draft.dependencyIds);
-  const questIds = splitIds(draft.requiredQuestItemIds);
-  const add = (name: string, id: string) => field(name, [...new Set([...splitIds(draft[name]), id])].join(","));
-  const remove = (name: string, id: string) => field(name, splitIds(draft[name]).filter((value) => value !== id).join(","));
+  const dependencyIds = splitCreateIds(draft.dependencyIds);
+  const questIds = splitCreateIds(draft.requiredQuestItemIds);
+  const add = (name: string, id: string) => field(name, [...new Set([...splitCreateIds(draft[name]), id])].join(","));
+  const remove = (name: string, id: string) => field(name, splitCreateIds(draft[name]).filter((value) => value !== id).join(","));
   const missionOptions = missions.filter((item) => item.id !== draft.id).map((item) => ({ id: item.id, name: `${item.displayId} · ${item.title}`, iconComponent: resolveMissionIcon(item.icon) }));
   const questOptions = questItems.map((item) => ({ id: item.id, name: item.name, iconComponent: resolveMissionIcon(item.icon) }));
-  return <section className="space-y-4 rounded-xl border border-carbon/10 bg-carbon/[0.025] p-4"><h4 className="m-0 text-sm font-bold">Relaciones y recursos</h4><div><p className="mb-2 text-xs font-bold text-carbon/60">Dependencias</p><div className="flex flex-col gap-2">{dependencyIds.map((id) => <div key={id} className="flex items-center justify-between rounded-xl border border-carbon/10 bg-white px-3 py-2 text-sm">{missions.find((item) => item.id === id)?.title ?? id}<Button type="button" variant="ghost" size="sm" onClick={() => remove("dependencyIds", id)}>Quitar</Button></div>)}<AddDependency missions={missionOptions.filter((item) => !dependencyIds.includes(item.id))} questItems={[]} onAddMission={(id) => add("dependencyIds", id)} onAddQuestItem={() => undefined} /></div></div><div><p className="mb-2 text-xs font-bold text-carbon/60">Quest Items requeridos</p><div className="flex flex-col gap-2">{questIds.map((id) => <div key={id} className="flex items-center justify-between rounded-xl border border-carbon/10 bg-white px-3 py-2 text-sm">{questItems.find((item) => item.id === id)?.name ?? id}<Button type="button" variant="ghost" size="sm" onClick={() => remove("requiredQuestItemIds", id)}>Quitar</Button></div>)}<AddDependency missions={[]} questItems={questOptions.filter((item) => !questIds.includes(item.id))} onAddMission={() => undefined} onAddQuestItem={(id) => add("requiredQuestItemIds", id)} /></div></div><div><p className="mb-2 text-xs font-bold text-carbon/60">Resources</p><div className="flex flex-col gap-2">{resources.map((resource, index) => <div key={index} className="rounded-xl border border-carbon/10 bg-white p-2"><span className="text-sm font-semibold">{resource.title || "Nuevo recurso"}</span><Button type="button" variant="ghost" size="sm" onClick={() => setResources((items) => items.filter((_, i) => i !== index))}>Quitar</Button></div>)}<AddResource onAdd={(resource) => setResources((items) => [...items, resource])} /></div></div></section>;
+  return <div className="flex flex-col gap-5"><CreateSection title="Dependencias"><div className="flex flex-col gap-2">{dependencyIds.map((id) => <SelectedRelation key={id} label={missions.find((item) => item.id === id)?.title ?? id} onRemove={() => remove("dependencyIds", id)} />)}<AddDependency missions={missionOptions.filter((item) => !dependencyIds.includes(item.id))} questItems={[]} onAddMission={(id) => add("dependencyIds", id)} onAddQuestItem={() => undefined} /></div></CreateSection><CreateSection title="Quest Items"><div className="flex flex-col gap-2">{questIds.map((id) => <SelectedRelation key={id} label={questItems.find((item) => item.id === id)?.name ?? id} onRemove={() => remove("requiredQuestItemIds", id)} />)}<AddDependency missions={[]} questItems={questOptions.filter((item) => !questIds.includes(item.id))} onAddMission={() => undefined} onAddQuestItem={(id) => add("requiredQuestItemIds", id)} /></div></CreateSection><CreateSection title="Attachments / Resources"><div className="flex min-w-0 flex-col gap-2">{resources.map((resource, index) => <SelectedRelation key={`${resource.title}-${index}`} label={resource.title || "Nuevo recurso"} onRemove={() => setResources((items) => items.filter((_, itemIndex) => itemIndex !== index))} />)}<AddResource onAdd={(resource) => setResources((items) => [...items, resource])} /></div></CreateSection></div>;
 }
+
+function CreateSection({ title, children }: { title: string; children: React.ReactNode }) { return <section className="rounded-xl border border-carbon/10 bg-carbon/[0.025] p-4"><h4 className="mb-3 mt-0 text-[13px] font-bold text-carbon">{title}</h4>{children}</section>; }
+function SelectedRelation({ label, onRemove }: { label: string; onRemove: () => void }) { return <div className="flex min-w-0 items-center justify-between gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-2 text-sm"><span className="truncate font-semibold">{label}</span><Button type="button" variant="ghost" size="sm" onClick={onRemove}>Quitar</Button></div>; }

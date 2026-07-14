@@ -12,7 +12,7 @@ type TlozPageShellProps = {
   children: React.ReactNode;
   projectLabel?: string;
   detailLabel?: string;
-  breadcrumb?: string[];
+  breadcrumb?: Array<string | { label: string; href: string }>;
   showSearch?: boolean;
   showHeader?: boolean;
   fullWidth?: boolean;
