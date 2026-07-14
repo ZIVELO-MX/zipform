@@ -30,11 +30,17 @@ Read [references/authentication.md](references/authentication.md) when configuri
 2. Confirm `ZIPFORM_TOKEN` exists without printing it when the production origin is selected:
    - If the variable is not set, do not abort. Inform the user that they need to export it: `export ZIPFORM_TOKEN="zaf_..."` in their terminal, then wait for confirmation before continuing.
    - Validate with `curl -s -H "Authorization: Bearer $ZIPFORM_TOKEN" "https://zipform.zivelo.dev/api/v1/projects"`; if 401, report that the token is invalid or expired and ask the user to provide a valid one.
-3. Call `GET /api/v1/projects` and resolve the project by slug, exact name, or unambiguous partial name.
-4. Call `GET /api/v1/missions?projectId={projectId}&limit=100`.
-5. Match the requested human-readable `displayId`; never use it as the internal ID.
-6. Call `GET /api/v1/missions/{id}` and read the complete current detail.
-7. Inspect `GET /api/openapi` if a required field, response, enum, or route remains uncertain.
+3. Call `GET /api/v1/users/me` and resolve the authenticated user before discovering work.
+4. If the user supplied a mission `displayId`, resolve that exact mission. Ownership priority must never replace an explicit identifier.
+5. If the user asked to choose or suggest work without a mission identifier:
+   - Query `GET /api/v1/missions?ownerId={authenticatedUserId}&limit=100` first; include `projectId` when the user constrained the project.
+   - Consider assigned missions in status order `now`, `next`, then `later`. Exclude `completed` and `blocked` unless the user explicitly requests them.
+   - Prefer a mission with clear pending outcomes and no unresolved dependencies. Read its complete detail before selecting it.
+   - Only search other owners as a fallback. Do not implement another owner's primary deliverable until reassignment is explicitly authorized and verified.
+6. When a project constraint must be resolved, call `GET /api/v1/projects` and match by slug, exact name, or unambiguous partial name.
+7. Match human-readable `displayId` values only after retrieving candidates; never use a `displayId` as the internal ID.
+8. Call `GET /api/v1/missions/{id}` and read the complete current detail.
+9. Inspect `GET /api/openapi` if a required field, response, enum, or route remains uncertain.
 
 Do not guess when multiple projects or missions match.
 

@@ -40,3 +40,16 @@ test("documents the local API and keeps production calls on the fixed origin", (
   assert.match(wrapper, /https:\/\/zipform\.zivelo\.dev/);
   assert.doesNotMatch(wrapper, /process\.env\.ZIPFORM_API_BASE_URL/);
 });
+
+test("prioritizes missions assigned to the authenticated TLOZ agent", () => {
+  const skill = readRepositoryFile(".codex/skills/tloz-mission-operator/SKILL.md");
+  const workflows = readRepositoryFile(".codex/skills/tloz-mission-operator/references/api-workflows.md");
+
+  const identityStep = skill.indexOf("GET /api/v1/users/me");
+  const assignedQueryStep = skill.indexOf("ownerId={authenticatedUserId}");
+  assert.ok(identityStep >= 0, "The skill must resolve the authenticated user");
+  assert.ok(assignedQueryStep > identityStep, "Assigned mission discovery must follow authenticated-user discovery");
+  assert.match(skill, /Ownership priority must never replace an explicit identifier/);
+  assert.match(skill, /status order `now`, `next`, then `later`/);
+  assert.match(workflows, /explicit mission identifier always takes precedence/);
+});
