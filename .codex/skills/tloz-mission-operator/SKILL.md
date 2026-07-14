@@ -1,9 +1,9 @@
 ---
 name: tloz-mission-operator
-description: Consult, create, review, correct, document, or update TLOZ missions exclusively through the Zipform Data API. Use when a user references a mission display ID such as TLO-0001, asks to change its title, document, status, relationships, or checkboxes, wants Scrum-style refinement, or needs help with ZIPFORM_TOKEN authentication.
+description: Consult, create, review, correct, document, or update TLOZ missions and projects exclusively through the Zipform Data API, including Markdown details with Mermaid diagrams. Use when a user references a mission display ID such as TLO-0001 or a project such as project-tloz, asks to change its title, document, status, relationships, checkboxes, or diagrams, wants Scrum-style refinement, or needs help with ZIPFORM_TOKEN authentication.
 ---
 
-# TLOZ Mission Operator
+# TLOZ Mission and Project Operator
 
 Operate TLOZ data through the Zipform Data API. Use `https://zipform.zivelo.dev` for current production data and mission mutations; use the explicitly configured local API only for contract rehearsal, read-only development, and performance tests.
 
@@ -56,7 +56,7 @@ The valid mission status values are:
 
 Use these exact lowercase values with `PATCH /api/v1/missions/{missionId}/status`.
 
-## Write mission documents
+## Write Markdown documents
 
 Mission content uses two separate fields: `description` is the short summary shown in previews (maximum 280 characters), while `descriptionDetail` is the full Markdown document (maximum 20,000 characters). The legacy `conclusion` field is no longer part of the contract.
 
@@ -70,6 +70,24 @@ Store checkboxes in the complete Markdown detail document:
 Before `PUT /api/v1/missions/{id}/document`, preserve the short `description`, relevant detail notes, references, and existing checkboxes. Send the complete desired `markdown`, not a fragment. Keep checkboxes brief, independently verifiable, ordered when sequence matters, and limited to the mission scope.
 
 Write concise, actionable titles. Describe the expected outcome, necessary context, scope boundaries, and how completion is verified. Apply Scrum or user-story language only when it improves clarity.
+
+Project content follows the same summary/detail split, but updates through `PATCH /api/v1/projects/{id}` with the smallest payload containing `description` and/or `descriptionDetail`. Read the project first and preserve unrelated fields.
+
+Use fenced Mermaid blocks inside `descriptionDetail` when a diagram makes a workflow, dependency graph, or lifecycle materially clearer:
+
+````md
+```mermaid
+flowchart LR
+  Mission --> PR --> Deploy --> Farming
+```
+````
+
+- Keep the source concise and valid Mermaid; prefer `flowchart` unless another diagram type communicates the relationship better.
+- Keep sensitive values and credentials out of labels.
+- Do not place Mermaid in the short `description` field.
+- Preserve ordinary fenced code blocks as ordinary code.
+- Verify the fenced source through the subsequent GET. Treat rendered output as a preview or post-deploy verification because the API only stores Markdown.
+- Expect invalid Mermaid to remain readable as source through the UI fallback; do not treat that fallback as successful diagram validation.
 
 ## Mutate and verify
 

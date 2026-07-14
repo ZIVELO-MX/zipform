@@ -12,6 +12,10 @@ Consult `GET https://zipform.zivelo.dev/api/openapi` before relying on this rout
 - Supporting data: `GET /api/v1/seasons`, `/episodes`, `/quest-items`, and `/resources`.
 - Query by example: `POST /api/v1/{missions|projects|quest-items|resources|users}/query`.
 
+## Project documents
+
+Read `GET /api/v1/projects/{projectId}` before updating project copy. Store the compact preview in `description` and the full Markdown document in `descriptionDetail`; update them with `PATCH /api/v1/projects/{projectId}`. Mermaid diagrams are fenced Markdown content and require no separate API field. Verify the persisted text with a subsequent GET.
+
 ## Discover assigned work
 
 When the user does not identify a mission, resolve `GET /api/v1/users/me` first and query missions with that returned `ownerId`. Within the requested project, if any, prefer `now`, then `next`, then `later`; skip `completed` and `blocked` unless requested. An explicit mission identifier always takes precedence over owner-first discovery.

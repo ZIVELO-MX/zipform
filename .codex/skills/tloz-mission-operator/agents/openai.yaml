@@ -1,4 +1,4 @@
 interface:
-  display_name: "TLOZ Mission Operator"
-  short_description: "Operate TLOZ missions through the Zipform Data API"
-  default_prompt: "Use $tloz-mission-operator to inspect or update a TLOZ mission through the Zipform Data API."
+  display_name: "TLOZ Mission and Project Operator"
+  short_description: "Operate TLOZ work and Mermaid documents"
+  default_prompt: "Use $tloz-mission-operator to inspect or update a TLOZ mission or project, including Mermaid details, through the Zipform Data API."
