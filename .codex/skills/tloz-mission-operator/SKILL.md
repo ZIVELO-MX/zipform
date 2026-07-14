@@ -85,6 +85,17 @@ Treat ownership and execution as separate concerns:
 - Self-assignment is appropriate only when the authenticated agent will implement the code or produce the primary deliverable. Explain why and obtain explicit confirmation before changing `ownerId` to the authenticated agent.
 - Never change ownership implicitly merely because the agent consulted or edited mission metadata.
 
+## Pull request handoff
+
+When mission work produces a repository change:
+
+1. Read the repository `AGENTS.md` and `.github/pull_request_template.md` before opening or updating the pull request.
+2. Fill the template with verified mission identifiers, behavior changes, public contracts, migration order, automated results, relevant manual checks, risks, and pending work. Remove unused placeholders.
+3. Attach the pull request to the mission as a Resource only after the pull request exists, using the title requested by the mission or plan.
+4. Monitor CI and preview checks. Update mission checkboxes only when supported by implementation and verification evidence.
+5. Follow the merge authority in `AGENTS.md`; leave the pull request ready for the user and report its URL and checks.
+6. Mark the mission completed only after all mission-specific closure conditions have been met and verified through the API.
+
 ## Report results
 
 State one result: `Consulted`, `Proposed`, `Created and verified`, `Updated and verified`, `Assigned and verified`, `Deleted and verified`, `Not changed`, `Blocked by authentication`, `Blocked by validation`, or `Could not be verified`.
