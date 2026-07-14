@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import type {
   ApiKey,
   Avatar,
@@ -56,6 +56,32 @@ function displayIdPrefix(projectName: string): string {
     .slice(0, 3)
     .toUpperCase()
     .padEnd(3, "X");
+}
+
+function missionDocumentState(markdown: string) {
+  const checklist = parseMarkdownChecklist(markdown);
+  const completed = checklist.filter((item) => item.completed).length;
+  return {
+    checklist,
+    progress: checklist.length ? Math.round((completed / checklist.length) * 100) : 0,
+  };
+}
+
+async function replaceMissionChecklist(
+  tx: Prisma.TransactionClient,
+  missionId: string,
+  checklist: ReturnType<typeof parseMarkdownChecklist>,
+) {
+  await tx.tlozChecklistItem.deleteMany({ where: { missionId } });
+  await Promise.all(checklist.map((item, position) => tx.tlozChecklistItem.create({
+    data: {
+      id: crypto.randomUUID(),
+      missionId,
+      title: item.title,
+      completed: item.completed,
+      position,
+    },
+  })));
 }
 
 const toIso = (value: Date) => value.toISOString();
@@ -713,6 +739,10 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           key,
           value === "" && ["projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? null : value
         ]));
+        const document = typeof input.descriptionDetail === "string"
+          ? missionDocumentState(input.descriptionDetail)
+          : null;
+        if (document) nullableData.progress = document.progress;
         const projectChanged = input.projectId !== undefined;
 
         await prisma.$transaction(async (tx) => {
@@ -747,6 +777,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
                     where: { id: missionId },
                     data: updateData
                   });
+                  if (document) await replaceMissionChecklist(tx, missionId, document.checklist);
                   await tx.tlozMissionDependency.deleteMany({
                     where: { OR: [{ missionId }, { dependsOnMissionId: missionId }] },
                   });
@@ -771,6 +802,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
             where: { id: missionId },
             data: updateData
           });
+          if (document) await replaceMissionChecklist(tx, missionId, document.checklist);
 
           if (projectChanged) {
             await tx.tlozMissionDependency.deleteMany({
@@ -781,15 +813,14 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         return getHydratedMission(missionId);
       },
       async saveMissionDocument(missionId, markdown) {
-        const items = parseMarkdownChecklist(markdown);
-        const progress = items.length ? Math.round((items.filter((item) => item.completed).length / items.length) * 100) : 0;
-        await prisma.$transaction([
-          prisma.tlozMission.update({ where: { id: missionId }, data: { descriptionDetail: markdown, progress } }),
-          prisma.tlozChecklistItem.deleteMany({ where: { missionId } }),
-          ...items.map((item, position) => prisma.tlozChecklistItem.create({
-            data: { id: crypto.randomUUID(), missionId, title: item.title, completed: item.completed, position }
-          }))
-        ]);
+        const document = missionDocumentState(markdown);
+        await prisma.$transaction(async (tx) => {
+          await tx.tlozMission.update({
+            where: { id: missionId },
+            data: { descriptionDetail: markdown, progress: document.progress },
+          });
+          await replaceMissionChecklist(tx, missionId, document.checklist);
+        });
         const detail = await this.getMissionDetail(missionId);
         if (!detail) throw new Error(`TLOZ mission ${missionId} was not found`);
         return detail;

@@ -303,12 +303,27 @@ export function createMockDataClient(): ZipformDataClient {
           key,
           value === "" && ["projectId", "seasonId", "episodeId", "dueDate", "startDate", "blockedReason"].includes(key) ? undefined : value
         ]));
+        const checklist = typeof input.descriptionDetail === "string"
+          ? parseMarkdownChecklist(input.descriptionDetail)
+          : null;
+        if (checklist) {
+          normalized.progress = checklist.length
+            ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100)
+            : 0;
+        }
         if (input.projectId && input.projectId !== tlozData.missions[index].projectId) {
           const project = tlozData.projects.find((item) => item.id === input.projectId);
           if (!project) throw new Error("TLOZ mission project was not found");
           normalized.displayId = nextMissionDisplayId(project.name, tlozData.missions.map((item) => item.displayId));
         }
         tlozData.missions[index] = { ...tlozData.missions[index], ...normalized, updatedAt: new Date().toISOString() };
+        if (checklist) {
+          const now = new Date().toISOString();
+          tlozData.checklistItems = tlozData.checklistItems.filter((item) => item.missionId !== missionId);
+          tlozData.checklistItems.push(...checklist.map((item, position) => ({
+            id: crypto.randomUUID(), missionId, title: item.title, completed: item.completed, position, createdAt: now, updatedAt: now
+          })));
+        }
         if (Object.prototype.hasOwnProperty.call(input, "projectId")) {
           tlozData.missionDependencies = tlozData.missionDependencies.filter(
             (item) => item.missionId !== missionId && item.dependsOnMissionId !== missionId,
@@ -317,14 +332,7 @@ export function createMockDataClient(): ZipformDataClient {
         return getHydratedMission(missionId);
       },
       async saveMissionDocument(missionId, markdown) {
-        const checklist = parseMarkdownChecklist(markdown);
-        const progress = checklist.length ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100) : 0;
-        await this.updateMission(missionId, { descriptionDetail: markdown, progress });
-        const now = new Date().toISOString();
-        tlozData.checklistItems = tlozData.checklistItems.filter((item) => item.missionId !== missionId);
-        tlozData.checklistItems.push(...checklist.map((item, position) => ({
-          id: crypto.randomUUID(), missionId, title: item.title, completed: item.completed, position, createdAt: now, updatedAt: now
-        })));
+        await this.updateMission(missionId, { descriptionDetail: markdown });
         return (await this.getMissionDetail(missionId))!;
       },
       async addMissionDependency(missionId, dependsOnMissionId) {
