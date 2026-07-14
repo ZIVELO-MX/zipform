@@ -41,3 +41,11 @@ describe("OpenAPI mission defaults and detail", () => {
     expect(block).toContain("completed:");
   });
 });
+
+describe("OpenAPI resource icons", () => {
+  it("documents icon input and persisted resource output", () => {
+    expect(schemaBlock("ResourceInput")).toContain("icon:");
+    expect(schemaBlock("Resource")).toContain("icon:");
+    expect(spec).toContain('$ref: "#/components/schemas/ResourceInput"');
+  });
+});

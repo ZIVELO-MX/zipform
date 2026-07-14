@@ -12,7 +12,7 @@ import {
   getTlozUsers,
 } from "../../../lib/tloz-data";
 import type { TlozDashboardSummary } from "../../../lib/tloz-data";
-import { findProjectBySlug } from "../../../lib/tloz-routes";
+import { findProjectBySlug, projectBreadcrumb } from "../../../lib/tloz-routes";
 import { getSystemProject } from "../../../lib/tloz-routes";
 import { InventoryProjectView, ProjectsSystemView } from "../../../components/tloz/system-project-views";
 import { CreateNewEntityButton } from "../../../components/tloz/tloz-create";
@@ -68,7 +68,7 @@ export default async function ProjectDetailPage({ params }: Props) {
   const detailOptions = { missions, projects: [project], seasons, episodes, questItems: projectInventory, users };
 
   return (
-    <TlozPageShell title="Lobby" breadcrumb={[project.name]} fullWidth controlProjectId={project.id}>
+    <TlozPageShell title="Lobby" breadcrumb={[projectBreadcrumb(project)]} fullWidth controlProjectId={project.id}>
       <TlozViewRenderer summary={projectSummary} missions={missions} allMissions={missions} projects={[project]} seasons={seasons} episodes={episodes} users={users} questItems={projectInventory} detailOptions={detailOptions} hideProjectSections />
     </TlozPageShell>
   );

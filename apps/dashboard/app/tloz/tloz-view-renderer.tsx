@@ -9,6 +9,7 @@ import { DashboardClient } from "./dashboard-client";
 import { TlozViewHeader } from "../../components/tloz/tloz-shell";
 import { useTlozViewState } from "../../components/tloz/tloz-view-state";
 import { CreateNewEntityButton } from "../../components/tloz/tloz-create";
+import { topologicalMissionOrder } from "../../components/tloz/tloz-utils";
 
 const BoardClient = dynamic(() => import("./board/board-client").then((module) => module.BoardClient), { loading: ViewLoading });
 const ListClient = dynamic(() => import("./list/list-client").then((module) => module.ListClient), { loading: ViewLoading });
@@ -58,6 +59,7 @@ export function TlozViewRenderer(props: ViewRendererProps) {
       && (state.showCompleted || mission.status !== "completed")
     ));
 
+    if (state.sort === "dependencies" || state.sort === "default") return topologicalMissionOrder(visible);
     return visible.sort((left, right) => state.sort === "title"
       ? left.title.localeCompare(right.title)
       : state.sort === "due-date"

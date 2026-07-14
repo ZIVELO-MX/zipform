@@ -1,24 +1,8 @@
-import {
-  CircleDot,
-  Copy,
-  Database,
-  FileCheck,
-  FileText,
-  Globe2,
-  History,
-  KeyRound,
-  LayoutDashboard,
-  LucideIcon,
-  Search,
-  Shield,
-  Sparkles,
-  Star,
-  Sword,
-  Utensils,
-  Wrench
-} from "lucide-react";
+import { CircleDot, Compass, Flag, Star, type LucideIcon } from "lucide-react";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozMissionStatus, TlozMissionType } from "@zipform/types";
+
+export { resolveTlozIcon as resolveMissionIcon } from "./tloz-icon-catalog";
 
 export const missionTypeLabel: Record<TlozMissionType, string> = {
   main_quest: "Main Quest",
@@ -40,7 +24,7 @@ export const missionStatusTone: Record<TlozMissionStatus, string> = {
   next: "#2D6CDF",
   later: "#7A4ED9",
   blocked: "#B91C22",
-  completed: "#6B6B6B"
+  completed: "#D72228"
 };
 
 export const missionTypeTone: Record<TlozMissionType, string> = {
@@ -50,27 +34,12 @@ export const missionTypeTone: Record<TlozMissionType, string> = {
   exploration_quest: "#7a4ed9"
 };
 
-const iconRegistry: Record<string, LucideIcon> = {
-  Copy,
-  Database,
-  FileCheck,
-  FileText,
-  Globe2,
-  History,
-  KeyRound,
-  LayoutDashboard,
-  Search,
-  Shield,
-  Sparkles,
-  Star,
-  Sword,
-  Utensils,
-  Wrench
+export const missionTypeIcon: Record<TlozMissionType, LucideIcon> = {
+  main_quest: Star,
+  side_quest: Flag,
+  farming_quest: CircleDot,
+  exploration_quest: Compass,
 };
-
-export function resolveMissionIcon(icon: string): LucideIcon {
-  return iconRegistry[icon] ?? CircleDot;
-}
 
 export function resolveIconLabel(icon: string): string {
   if (!icon) return "Unknown";
@@ -97,4 +66,31 @@ export function dependencyLabel(mission: TlozMissionRecord) {
   if (mission.dependencies.length === 0) return "Sin dependencias";
   if (mission.dependencies.length === 1) return "1 dependencia";
   return `${mission.dependencies.length} dependencias`;
+}
+
+export function pendingDependencyCount(mission: Pick<TlozMissionRecord, "dependencies" | "requiredQuestItems">) {
+  return mission.dependencies.filter((dependency) => dependency.status !== "completed").length
+    + mission.requiredQuestItems.filter((item) => item.status !== "unlocked").length;
+}
+
+/** Stable topological ordering where dependencies are rendered before dependents. */
+export function topologicalMissionOrder<T extends Pick<TlozMissionRecord, "id" | "dependencies">>(missions: T[]) {
+  const byId = new Map(missions.map((mission) => [mission.id, mission]));
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const result: T[] = [];
+  function visit(mission: T) {
+    if (visited.has(mission.id)) return;
+    if (visiting.has(mission.id)) return;
+    visiting.add(mission.id);
+    mission.dependencies.forEach((dependency) => {
+      const local = byId.get(dependency.id);
+      if (local) visit(local);
+    });
+    visiting.delete(mission.id);
+    visited.add(mission.id);
+    result.push(mission);
+  }
+  missions.forEach(visit);
+  return result;
 }

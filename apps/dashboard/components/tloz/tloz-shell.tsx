@@ -12,7 +12,7 @@ type TlozPageShellProps = {
   children: React.ReactNode;
   projectLabel?: string;
   detailLabel?: string;
-  breadcrumb?: string[];
+  breadcrumb?: Array<string | { label: string; href: string }>;
   showSearch?: boolean;
   showHeader?: boolean;
   fullWidth?: boolean;
@@ -60,7 +60,7 @@ export async function TlozPageShell({
   const controlEpisodes = controlProjectId ? episodes.filter((episode) => episodeIds.has(episode.id)) : episodes;
 
   return (
-    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} fixedProjectId={createKind === "mission" ? controlProjectId : undefined}>
+    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} fixedProjectId={createKind === "mission" ? controlProjectId : undefined}>
     <TlozViewStateProvider supportedViews={supportedViews} defaultView={defaultView} projects={controlProjects} seasons={controlSeasons} episodes={controlEpisodes} users={users} inventory={inventoryControls} showMissionControls={missionControls} storageScope={stateScope}>
       <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
         <TlozHeader

@@ -26,7 +26,7 @@ import {
   parseMarkdownChecklist,
   type TlozDataSet
 } from "../tloz-hydration";
-import { assertProjectScopedDependency } from "../dependency-rules";
+import { assertAcyclicDependency, assertProjectScopedDependency } from "../dependency-rules";
 import { slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 
 const globalForPrisma = globalThis as typeof globalThis & {
@@ -298,6 +298,7 @@ function mapResource(resource: {
   projectId: string | null;
   questItemId: string | null;
   type: string;
+  icon: string | null;
   title: string;
   url: string | null;
   fileId: string | null;
@@ -307,6 +308,7 @@ function mapResource(resource: {
   return {
     ...resource,
     type: resource.type as TlozResource["type"],
+    icon: resource.icon ?? undefined,
     missionId: resource.missionId ?? undefined,
     projectId: resource.projectId ?? undefined,
     questItemId: resource.questItemId ?? undefined,
@@ -660,7 +662,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
               suffix = existing.reduce((max, m) => Math.max(max, Number(m.displayId.slice(4)) || 0), 0) + 1;
             }
             const displayId = `${prefix}-${String(suffix).padStart(4, "0")}`;
-            const { id = crypto.randomUUID(), completedAt, ...data } = valid;
+            const { id = crypto.randomUUID(), completedAt, dependencyIds: _dependencyIds, requiredQuestItemIds: _requiredQuestItemIds, resources: _resources, ...data } = valid;
             const checklist = parseMarkdownChecklist(data.descriptionDetail);
             const progress = checklist.length
               ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100)
@@ -681,6 +683,18 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
                   updatedAt: now,
                 },
               })));
+              const dependencyIds = input.dependencyIds ?? [];
+              const requiredQuestItemIds = input.requiredQuestItemIds ?? [];
+              const resourceInputs = input.resources ?? [];
+              const dependencies = dependencyIds.length ? await tx.tlozMission.findMany({ where: { id: { in: dependencyIds } }, select: { id: true, projectId: true } }) : [];
+              if (dependencies.length !== dependencyIds.length) throw new Error("A mission dependency was not found");
+              dependencies.forEach((dependency) => assertProjectScopedDependency({ id, projectId: valid.projectId }, { id: dependency.id, projectId: dependency.projectId ?? undefined }));
+              const questItems = requiredQuestItemIds.length ? await tx.tlozQuestItem.findMany({ where: { id: { in: requiredQuestItemIds } }, select: { id: true } }) : [];
+              if (questItems.length !== requiredQuestItemIds.length) throw new Error("A required Quest Item was not found");
+              if (resourceInputs.some((resource) => !resource.title.trim() || !resource.type)) throw new Error("Mission resources require a type and title");
+              await Promise.all(dependencyIds.map((dependsOnMissionId) => tx.tlozMissionDependency.create({ data: { id: crypto.randomUUID(), missionId: id, dependsOnMissionId } })));
+              await Promise.all(requiredQuestItemIds.map((questItemId) => tx.tlozMissionQuestItem.create({ data: { id: crypto.randomUUID(), missionId: id, questItemId, required: true } })));
+              await Promise.all(resourceInputs.map((resource) => tx.tlozResource.create({ data: { id: crypto.randomUUID(), missionId: id, ...resource } })));
             });
             return getHydratedMission(id);
           } catch (error) {
@@ -789,6 +803,8 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           mission ? { id: mission.id, projectId: mission.projectId ?? undefined } : null,
           dependency ? { id: dependency.id, projectId: dependency.projectId ?? undefined } : null,
         );
+        const edges = await prisma.tlozMissionDependency.findMany({ select: { missionId: true, dependsOnMissionId: true } });
+        assertAcyclicDependency(missionId, dependsOnMissionId, edges.map((edge) => ({ id: edge.missionId, dependsOnMissionId: edge.dependsOnMissionId })));
         await prisma.tlozMissionDependency.upsert({
           where: { missionId_dependsOnMissionId: { missionId, dependsOnMissionId } },
           create: { id: crypto.randomUUID(), missionId, dependsOnMissionId },

@@ -41,7 +41,7 @@ export type TlozMissionDetail = TlozMissionRecord & {
 };
 
 export type TlozResourceInput = Pick<TlozResource, "type" | "title"> &
-  Partial<Pick<TlozResource, "url" | "fileId">>;
+  Partial<Pick<TlozResource, "url" | "fileId" | "icon">>;
 
 export type UserUpdateInput = {
   name?: string;
@@ -60,6 +60,9 @@ export type TlozMissionCreateInput = Pick<TlozMission, "title" | "type" | "owner
     projectId: string;
     id?: string;
     completedAt?: string;
+    dependencyIds?: string[];
+    requiredQuestItemIds?: string[];
+    resources?: TlozResourceInput[];
   };
 
 export type TlozProjectCreateInput = Omit<TlozProject, "id" | "slug" | "createdAt" | "updatedAt" | "descriptionDetail"> & { descriptionDetail?: string };

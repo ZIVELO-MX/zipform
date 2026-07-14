@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import {
@@ -12,6 +13,7 @@ import {
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -26,7 +28,7 @@ type TlozHeaderProps = {
   title: string;
   projectLabel?: string;
   detailLabel?: string;
-  breadcrumb?: string[];
+  breadcrumb?: Array<string | { label: string; href: string }>;
   showSearch?: boolean;
   showHeader?: boolean;
   commandEntities: {
@@ -98,14 +100,15 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           {segments.length ? (
             <Breadcrumb>
               <BreadcrumbList className="flex-nowrap text-carbon/60">
-                {segments.map((segment, index) => (
-                  <Fragment key={`${segment}-${index}`}>
+                {segments.map((segment, index) => {
+                  const label = typeof segment === "string" ? segment : segment.label;
+                  return <Fragment key={`${label}-${index}`}>
                     {index > 0 ? <BreadcrumbSeparator /> : null}
                     <BreadcrumbItem className={`min-w-0 ${index > 1 ? "hidden md:flex" : ""}`}>
-                      <BreadcrumbPage className="truncate">{segment}</BreadcrumbPage>
+                      {typeof segment === "string" ? <BreadcrumbPage className="truncate">{label}</BreadcrumbPage> : <BreadcrumbLink asChild><Link className="truncate" href={segment.href}>{label}</Link></BreadcrumbLink>}
                     </BreadcrumbItem>
-                  </Fragment>
-                ))}
+                  </Fragment>;
+                })}
               </BreadcrumbList>
             </Breadcrumb>
           ) : null}

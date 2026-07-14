@@ -56,10 +56,11 @@ export function SlideOver({ open, title, children, footer, onBack, onOpenChange,
     >
       <OverlayPortalProvider container={portalContainer}>
       <OverlayToasterProvider toasterId={toasterId}>
-      <ResizablePanelGroup orientation="horizontal" className="slide-over-panels">
-        <ResizablePanel defaultSize="35%" minSize="5%" maxSize="55%" className="hidden sm:block" onPointerDown={() => dialogRef.current?.close()} aria-label="Cerrar panel" />
-        <ResizableHandle className="hidden sm:flex" />
-        <ResizablePanel defaultSize="65%" minSize="45%" maxSize="95%" className="slide-over-content-panel min-w-0">
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Cerrar panel" data-slide-over-backdrop onClick={() => dialogRef.current?.close()} />
+      <ResizablePanelGroup orientation="horizontal" className="slide-over-panels pointer-events-none relative">
+        <ResizablePanel defaultSize="35%" minSize="5%" maxSize="55%" className="hidden sm:block" aria-label="Área fuera del panel" />
+        <ResizableHandle className="pointer-events-auto hidden sm:flex" />
+        <ResizablePanel defaultSize="65%" minSize="45%" maxSize="95%" className="slide-over-content-panel pointer-events-auto min-w-0">
           <div className="flex h-dvh flex-col border-l border-carbon/10 bg-[#FAFAF9] shadow-[-12px_0_48px_rgba(29,29,27,0.16)]">
             <header className="flex shrink-0 items-center gap-3 border-b border-carbon/10 px-4 py-3 sm:px-5">
               {onBack ? <Button type="button" variant="ghost" size="icon" aria-label="Volver a la misión anterior" onClick={onBack}><ArrowLeft aria-hidden="true" /></Button> : <form method="dialog" className="sm:hidden"><Button type="submit" variant="ghost" size="icon" aria-label="Volver al board"><ArrowLeft aria-hidden="true" /></Button></form>}

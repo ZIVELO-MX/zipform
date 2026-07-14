@@ -109,9 +109,10 @@ describe("mock data driver", () => {
     expect(detail.missionQuestItems).toEqual(expect.arrayContaining([expect.objectContaining({ questItemId: questItem.id, required: true })]));
     await client.tloz.removeMissionQuestItem(mission.id, questItem.id);
 
-    detail = await client.tloz.addMissionResource(mission.id, { type: "link", title: "Spec", url: "https://example.com" });
+    detail = await client.tloz.addMissionResource(mission.id, { type: "link", title: "Spec", url: "https://example.com", icon: "Globe2" });
     const resource = detail.resources.find((item) => item.title === "Spec")!;
     expect(resource.url).toBe("https://example.com");
+    expect(resource.icon).toBe("Globe2");
     expect((await client.tloz.removeMissionResource(mission.id, resource.id)).resources).not.toContainEqual(expect.objectContaining({ id: resource.id }));
   });
 

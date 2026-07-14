@@ -20,6 +20,7 @@ function createPrismaStub() {
     ...item, createdAt: date(item.createdAt), ...(item.updatedAt ? { updatedAt: date(item.updatedAt) } : {})
   });
   const checklistRows = checklistItems.map(withDates);
+  const resourceRows = resources.map((item) => ({ ...withDates(item), icon: nullable(item.icon), url: nullable(item.url), fileId: nullable(item.fileId) }));
   const findMany = <T>(rows: T[]) => vi.fn(async () => rows);
 
   const deleteMany = vi.fn(async () => ({}));
@@ -87,7 +88,12 @@ function createPrismaStub() {
       deleteMany,
     },
     tlozResource: {
-      findMany: findMany(resources.map((item) => ({ ...withDates(item), url: nullable(item.url), fileId: nullable(item.fileId) }))),
+      findMany: findMany(resourceRows),
+      create: vi.fn(async ({ data }: { data: Record<string, unknown> }) => {
+        const row = { ...data, icon: nullable(data.icon as string | undefined), url: nullable(data.url as string | undefined), fileId: nullable(data.fileId as string | undefined), createdAt: new Date(), updatedAt: new Date() } as never;
+        resourceRows.push(row);
+        return row;
+      }),
       deleteMany,
     },
     tlozUserMissionState: {
@@ -119,6 +125,7 @@ describe("prisma data driver", () => {
     expect(await client.tloz.getSeasons()).toHaveLength(seasons.length);
     expect(await client.tloz.getEpisodes()).toHaveLength(episodes.length);
     expect(await client.tloz.getQuestItems()).toHaveLength(questItems.length);
+    expect(await client.tloz.getResources()).toEqual(expect.arrayContaining([expect.objectContaining({ id: "resource-ui", icon: "FileCheck" })]));
     const source = missions[0];
     expect(await client.tloz.getMissions({
       projectId: source.projectId,
@@ -158,6 +165,23 @@ describe("prisma data driver", () => {
     expect((await client.tloz.getMissionDetail(created.id))?.checklist).toEqual([
       expect.objectContaining({ title: "First outcome", completed: true, position: 0 }),
       expect.objectContaining({ title: "Second outcome", completed: false, position: 1 }),
+    ]);
+  });
+
+  it("persists resource icons in the same Prisma mission transaction", async () => {
+    const client = createPrismaDataClient(createPrismaStub());
+    const template = missions[0];
+    const created = await client.tloz.createMission({
+      id: "prisma-resource-icon-test",
+      title: "Mission with icon resource",
+      type: "side_quest",
+      ownerId: template.ownerId,
+      projectId: template.projectId!,
+      resources: [{ type: "link", title: "Repository", url: "https://github.com/org/repo", icon: "Github" }],
+    });
+
+    expect((await client.tloz.getMissionDetail(created.id))?.resources).toEqual([
+      expect.objectContaining({ title: "Repository", icon: "Github" }),
     ]);
   });
 });

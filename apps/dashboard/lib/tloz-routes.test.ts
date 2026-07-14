@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSystemProject, inventoryItemHref, missionHref, projectDetailHref, projectHref, resolveResponsiveTlozViews, resolveTlozView } from "./tloz-routes";
+import { getSystemProject, inventoryItemHref, missionHref, projectBreadcrumb, projectDetailHref, projectHref, resolveResponsiveTlozViews, resolveTlozView } from "./tloz-routes";
 
 describe("TLOZ routes", () => {
   const project = { name: "Core Platform", slug: "core" };
@@ -12,6 +12,10 @@ describe("TLOZ routes", () => {
   it("encodes entity identifiers in system detail URLs", () => {
     expect(inventoryItemHref("access/key")).toBe("/tloz/inventory/access%2Fkey");
     expect(projectDetailHref("project core")).toBe("/tloz/projects/project%20core");
+  });
+
+  it("links a project lobby breadcrumb to canonical project detail", () => {
+    expect(projectBreadcrumb({ id: "project-tloz", name: "TLOZ" })).toEqual({ label: "TLOZ", href: "/tloz/projects/project-tloz" });
   });
 
   it("falls back to the context default when a view is unsupported", () => {

@@ -85,3 +85,7 @@ export function inventoryItemHref(itemId: string) {
 export function projectDetailHref(projectId: string) {
   return `/tloz/projects/${encodeURIComponent(projectId)}`;
 }
+
+export function projectBreadcrumb(project: Pick<TlozProject, "id" | "name">) {
+  return { label: project.name, href: projectDetailHref(project.id) };
+}

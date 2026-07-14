@@ -4,25 +4,24 @@ import { useEffect, useRef, useState } from "react";
 import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, SegmentedControl, toast } from "@zipform/ui";
+import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@zipform/ui";
 
 type MarkdownEditorProps = {
   value: string;
   onSave: (value: string) => void;
   onToggleTask?: (position: number, completed: boolean) => void;
   placeholder?: string;
+  showHeader?: boolean;
 };
 
-export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…" }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
-  const [mode, setMode] = useState<"visual" | "text">("text");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setDraft(value);
     setEditing(false);
-    setMode("text");
   }, [value]);
 
   function cancel() {
@@ -40,9 +39,9 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   }
 
   return (
-    <section className="mb-7">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Detalle</h2>
+    <section className={showHeader ? "mb-7" : ""} aria-label={showHeader ? undefined : "Editor de detalle"}>
+      <div className={cn("mb-2 flex items-center", showHeader ? "justify-between" : "justify-end")}>
+        {showHeader ? <h2 className="text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Detalle</h2> : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="ghost" size="icon-xs" className="size-7 rounded-md text-carbon/45 hover:text-carbon" aria-label="Opciones de descripción">
@@ -65,33 +64,15 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
       </div>
 
       {editing ? (
-        <div className="space-y-2">
-          <SegmentedControl
-            aria-label="Modo de edición"
-            value={mode}
-            onValueChange={(v) => setMode(v as "visual" | "text")}
-            options={[
-              { label: "Visual", value: "visual" },
-              { label: "Text", value: "text" },
-            ]}
-          />
-          {mode === "text" ? (
+        <div className="flex flex-col gap-2">
             <textarea
               ref={textareaRef}
               autoFocus
-              className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
+              className="min-h-[45dvh] w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10 md:min-h-80"
               value={draft}
               placeholder={placeholder}
               onChange={(event) => setDraft(event.target.value)}
             />
-          ) : (
-            <div
-              className="min-h-28 w-full cursor-text rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543]"
-              onClick={() => textareaRef.current?.focus()}
-            >
-              <MarkdownContent onToggleTask={onToggleTask}>{draft}</MarkdownContent>
-            </div>
-          )}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={cancel}>Cancelar</Button>
             <Button type="button" onClick={save}>Guardar</Button>
