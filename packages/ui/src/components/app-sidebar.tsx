@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import {
+  ChevronDown,
+  ChevronUp,
   LogOut,
   MoreHorizontal,
   PanelLeftClose,
@@ -43,7 +45,6 @@ import {
 } from "./dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { cn } from "../lib/utils";
-import { ChevronDown } from "lucide-react";
 
 export type NavItem = {
   label: string;
@@ -58,7 +59,13 @@ export type NavSection = {
   items: NavItem[];
   collapsible?: boolean;
   defaultCollapsed?: boolean;
+  visibleItemLimit?: number;
 };
+
+export function visibleNavItems(section: NavSection, expanded: boolean) {
+  if (!section.visibleItemLimit || expanded) return section.items;
+  return section.items.slice(0, section.visibleItemLimit);
+}
 
 export const SIDEBAR_MIN_WIDTH = 220;
 export const SIDEBAR_MAX_WIDTH = 500;
@@ -376,16 +383,7 @@ export function MobileMenuPanel({
           </button>
           {contextItem ? <MobileNavLink item={contextItem} active={false} onClose={onClose} subtle /> : null}
           {(sections ?? [{ items }]).map((section, sectionIndex) => (
-            <div className="mt-4 grid gap-1" key={section.label ?? sectionIndex}>
-              {section.label ? (
-                <p className="m-0 px-3 pb-1 text-[0.68rem] font-medium uppercase tracking-0 text-carbon/40">
-                  {section.label}
-                </p>
-              ) : null}
-              {(section.collapsible ? section.items : section.items).map((item) => (
-                <MobileNavLink key={item.href} item={item} active={isActive(pathname, item.href, item.exact)} onClose={onClose} />
-              ))}
-            </div>
+            <MobileSidebarSection key={section.label ?? sectionIndex} section={section} pathname={pathname} onClose={onClose} />
           ))}
         </nav>
 
@@ -508,11 +506,14 @@ function SidebarSection({
   pathname: string;
 }) {
   const [open, setOpen] = useState(!section.defaultCollapsed);
+  const [expanded, setExpanded] = useState(false);
+  const hasMore = Boolean(section.visibleItemLimit && section.items.length > section.visibleItemLimit);
+  const visibleItems = visibleNavItems(section, expanded);
 
   if (collapsed) {
     return (
       <div className="grid gap-1">
-        {section.items.map((item) => (
+        {visibleNavItems(section, false).map((item) => (
           <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href, item.exact)} collapsed />
         ))}
       </div>
@@ -539,13 +540,35 @@ function SidebarSection({
           {section.label}
         </button>
       ) : null}
-      {open || !section.collapsible
-        ? section.items.map((item) => (
-            <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href, item.exact)} collapsed={false} />
-          ))
-        : null}
+      {open || !section.collapsible ? (
+        <>
+          <div className={cn("grid gap-1", expanded && hasMore && "tloz-scrl max-h-52 overflow-y-auto overscroll-contain pr-1")}>
+            {visibleItems.map((item) => (
+              <SidebarLink key={item.href} item={item} active={isActive(pathname, item.href, item.exact)} collapsed={false} />
+            ))}
+          </div>
+          {hasMore ? <SectionExpansionButton expanded={expanded} onClick={() => setExpanded((value) => !value)} /> : null}
+        </>
+      ) : null}
     </div>
   );
+}
+
+function MobileSidebarSection({ section, pathname, onClose }: { section: NavSection; pathname: string; onClose: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasMore = Boolean(section.visibleItemLimit && section.items.length > section.visibleItemLimit);
+  return <div className="mt-4 grid gap-1">
+    {section.label ? <p className="m-0 px-3 pb-1 text-[0.68rem] font-medium uppercase tracking-0 text-carbon/40">{section.label}</p> : null}
+    <div className={cn("grid gap-1", expanded && hasMore && "tloz-scrl max-h-52 overflow-y-auto overscroll-contain pr-1")}>
+      {visibleNavItems(section, expanded).map((item) => <MobileNavLink key={item.href} item={item} active={isActive(pathname, item.href, item.exact)} onClose={onClose} />)}
+    </div>
+    {hasMore ? <SectionExpansionButton expanded={expanded} onClick={() => setExpanded((value) => !value)} /> : null}
+  </div>;
+}
+
+function SectionExpansionButton({ expanded, onClick }: { expanded: boolean; onClick: () => void }) {
+  const label = expanded ? "Mostrar menos proyectos" : "Mostrar más proyectos";
+  return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="mx-auto mt-1 rounded-md text-carbon/45 hover:text-carbon" aria-label={label} aria-expanded={expanded} onClick={onClick}>{expanded ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}</Button></TooltipTrigger><TooltipContent>{label}</TooltipContent></Tooltip>;
 }
 
 export function UserAvatar({ user, initials, large = false }: { user: SidebarUser; initials: string; large?: boolean }) {

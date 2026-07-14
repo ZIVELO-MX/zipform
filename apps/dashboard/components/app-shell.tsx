@@ -25,6 +25,7 @@ import { Suspense, type ReactNode, useCallback, useEffect, useMemo, useState } f
 import { resolveMissionIcon } from "./tloz/tloz-utils";
 import { projectHref } from "../lib/tloz-routes";
 import { SettingsDialog } from "./settings-dialog";
+import { sortProjectsByActivity } from "./project-navigation";
 
 type AppShellProps = {
   children: ReactNode;
@@ -49,8 +50,8 @@ const navItems = getEnabledApps();
 
 const tlozContextItem: NavItem = { label: "TLOZ", href: "/", icon: ArrowLeft };
 
-function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<string, number>, projectActivity: Map<string, string>): NavSection[] {
-  const projectItems: NavItem[] = [...projects].sort((a, b) => (projectActivity.get(b.id) ?? b.updatedAt).localeCompare(projectActivity.get(a.id) ?? a.updatedAt)).slice(0, 4).map((project) => {
+export function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<string, number>, projectActivity: Map<string, string>): NavSection[] {
+  const projectItems: NavItem[] = sortProjectsByActivity(projects, projectActivity).map((project) => {
     const Icon = resolveMissionIcon(project.icon);
     return {
       label: project.name,
@@ -81,7 +82,8 @@ function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<str
           label: "Proyectos",
           collapsible: true,
           defaultCollapsed: false,
-        items: [...projectItems, ...(projects.length > 4 ? [{ label: "Ver más", href: "/tloz/projects", icon: FolderKanban }] : [])],
+          visibleItemLimit: 4,
+          items: projectItems,
         } satisfies NavSection,
       ]
       : []),
