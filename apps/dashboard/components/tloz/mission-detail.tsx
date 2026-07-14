@@ -26,6 +26,7 @@ import { inferResourceIconId, isGithubUrl, RESOURCE_ICON_OPTIONS, resourceTypeLa
 import type { TlozResourceInput } from "@zipform/data";
 
 const missionIcons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
+const defaultMissionContentSections = ["description", "detail", "checklist"];
 
 export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
   missions: TlozMissionRecord[];
@@ -199,8 +200,10 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
             </div>
           </header>
 
-          <Accordion type="single" collapsible defaultValue="description" className="mb-7 mt-3" aria-label="Descripción">
-            <AccordionItem value="description" className="border-0"><AccordionTrigger className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">Descripción</AccordionTrigger><AccordionContent className="pt-1">
+          <Accordion type="multiple" defaultValue={defaultMissionContentSections} className="mb-7 mt-3" aria-label="Contenido de la misión">
+            <AccordionItem value="description" className="border-0">
+              <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">Descripción</AccordionTrigger>
+              <AccordionContent className="pt-1">
             {editingDescription ? (
               <textarea
                 autoFocus
@@ -216,15 +219,29 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
             ) : (
               <button type="button" className="block max-w-[62ch] rounded-md text-left text-[15px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button>
             )}
-            </AccordionContent></AccordionItem>
-          </Accordion>
+              </AccordionContent>
+            </AccordionItem>
 
-          <MarkdownEditor value={detailMarkdown} onSave={saveDocument} onToggleTask={toggleChecklistItem} />
+            <AccordionItem value="detail" className="border-0">
+              <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">Detalle</AccordionTrigger>
+              <AccordionContent className="pt-1">
+                <MarkdownEditor value={detailMarkdown} onSave={saveDocument} onToggleTask={toggleChecklistItem} showHeader={false} />
+              </AccordionContent>
+            </AccordionItem>
 
-          <section className="mb-7" aria-labelledby="mission-checklist-title">
-            <div className="mb-[13px] flex items-center justify-between"><h2 id="mission-checklist-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-[#454543]">Checklist</h2><div className="flex items-center gap-2"><SegmentedControl aria-label="Filtrar checklist" value={checklistFilter} onValueChange={(value) => setChecklistFilter(value as "all" | "pending")} options={[{ label: "Todos", value: "all" }, { label: "Pendientes", value: "pending" }]} /><span className="font-mono text-xs font-medium text-[#6B6B6B]">{current.checklist.filter((item) => item.completed).length} / {current.checklist.length}</span></div></div>
-            <MetricProgress className="mb-[15px]" value={checklistProgress} tone={tone} />
-            <div key={checklistFilter} className="mission-checklist-filter rounded-[14px] border border-[#1D1D1B]/10 bg-white p-1.5">
+            <AccordionItem value="checklist" className="border-0">
+              <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">
+                <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <span>Checklist</span>
+                  <span className="font-mono text-xs font-medium tracking-normal text-[#6B6B6B]">{current.checklist.filter((item) => item.completed).length} / {current.checklist.length}</span>
+                </span>
+              </AccordionTrigger>
+              <AccordionContent className="pt-1">
+                <div className="mb-[13px] flex justify-end">
+                  <SegmentedControl aria-label="Filtrar checklist" value={checklistFilter} onValueChange={(value) => setChecklistFilter(value as "all" | "pending")} options={[{ label: "Todos", value: "all" }, { label: "Pendientes", value: "pending" }]} />
+                </div>
+                <MetricProgress className="mb-[15px]" value={checklistProgress} tone={tone} />
+                <div key={checklistFilter} className="mission-checklist-filter rounded-[14px] border border-[#1D1D1B]/10 bg-white p-1.5">
               {current.checklist.map((item, position) => ({ item, position })).filter(({ item }) => checklistFilter === "all" || !item.completed).map(({ item, position }) => (
                 <div key={item.id} className="group flex items-center gap-[11px] rounded-[10px] px-3 py-2 transition-colors hover:bg-[#D72228]/[0.04]">
                   <label className="relative grid size-[19px] shrink-0 cursor-pointer place-items-center">
@@ -242,9 +259,11 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
                 </div>
               ))}
               <AddChecklistTask onAdd={(title) => saveDocument(appendTaskLine(detailMarkdown, title))} />
-            </div>
-            <AlertDialog open={deletingChecklist !== null} onOpenChange={(open) => !open && setDeletingChecklist(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Eliminar checkbox</AlertDialogTitle><AlertDialogDescription>Esta acción quitará “{deletingChecklist === null ? "" : current.checklist[deletingChecklist]?.title}” del documento de la misión.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletingChecklist !== null && deleteChecklistItem(deletingChecklist)}>Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-          </section>
+                </div>
+                <AlertDialog open={deletingChecklist !== null} onOpenChange={(open) => !open && setDeletingChecklist(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Eliminar checkbox</AlertDialogTitle><AlertDialogDescription>Esta acción quitará “{deletingChecklist === null ? "" : current.checklist[deletingChecklist]?.title}” del documento de la misión.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletingChecklist !== null && deleteChecklistItem(deletingChecklist)}>Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
 
           <div className="flex flex-col gap-7">
             <RelationsSection title="Dependencias">

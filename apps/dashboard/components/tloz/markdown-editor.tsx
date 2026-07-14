@@ -4,16 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@zipform/ui";
+import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@zipform/ui";
 
 type MarkdownEditorProps = {
   value: string;
   onSave: (value: string) => void;
   onToggleTask?: (position: number, completed: boolean) => void;
   placeholder?: string;
+  showHeader?: boolean;
 };
 
-export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…" }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -38,9 +39,9 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   }
 
   return (
-    <section className="mb-7">
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Detalle</h2>
+    <section className={showHeader ? "mb-7" : ""} aria-label={showHeader ? undefined : "Editor de detalle"}>
+      <div className={cn("mb-2 flex items-center", showHeader ? "justify-between" : "justify-end")}>
+        {showHeader ? <h2 className="text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Detalle</h2> : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button type="button" variant="ghost" size="icon-xs" className="size-7 rounded-md text-carbon/45 hover:text-carbon" aria-label="Opciones de descripción">

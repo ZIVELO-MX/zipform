@@ -7,9 +7,13 @@ const styles = readFileSync(new URL("../../app/globals.css", import.meta.url), "
 const utils = readFileSync(new URL("./tloz-utils.ts", import.meta.url), "utf8");
 
 describe("mission detail interaction contracts", () => {
-  it("opens Description by default through the shared accordion", () => {
-    expect(detail).toContain('defaultValue="description"');
-    expect(detail).toContain("<AccordionContent");
+  it("keeps Description, Detail, and Checklist open by default in left-icon accordions", () => {
+    expect(detail).toContain('const defaultMissionContentSections = ["description", "detail", "checklist"]');
+    expect(detail).toContain('value="description"');
+    expect(detail).toContain('value="detail"');
+    expect(detail).toContain('value="checklist"');
+    expect(detail.match(/iconPosition="start"/g)).toHaveLength(3);
+    expect(detail).toContain("showHeader={false}");
   });
 
   it("animates checklist filtering while respecting reduced motion", () => {
