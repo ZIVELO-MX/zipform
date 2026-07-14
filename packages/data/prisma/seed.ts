@@ -173,6 +173,7 @@ async function main() {
   await prisma.tlozResource.createMany({
     data: resources.map((resource) => ({
       ...resource,
+      icon: resource.icon ?? null,
       url: resource.url ?? null,
       fileId: resource.fileId ?? null,
       createdAt: date(resource.createdAt),

@@ -195,6 +195,7 @@ export type TlozResource = {
   projectId?: string;
   questItemId?: string;
   type: TlozResourceType;
+  icon?: string;
   title: string;
   url?: string;
   fileId?: string;

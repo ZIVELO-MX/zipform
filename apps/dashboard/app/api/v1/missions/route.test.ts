@@ -103,4 +103,24 @@ describe("POST /api/v1/missions", () => {
     }));
     expect(mockedCreateMission).toHaveBeenLastCalledWith(expect.objectContaining({ ownerId: "human-1", projectId: "project-1", status: "now" }));
   });
+
+  it("forwards the complete atomic relationship and resource-icon payload", async () => {
+    mockedCreateMission.mockResolvedValue({ id: "mission-1" } as never);
+    const payload = {
+      title: "Atomic mission",
+      type: "side_quest",
+      dependencyIds: ["mission-a"],
+      requiredQuestItemIds: ["quest-a"],
+      resources: [{ type: "link", title: "Repository", url: "https://github.com/org/repo", icon: "Github" }],
+    };
+
+    const response = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    expect(response.status).toBe(201);
+    expect(mockedCreateMission).toHaveBeenCalledWith(expect.objectContaining(payload));
+  });
 });

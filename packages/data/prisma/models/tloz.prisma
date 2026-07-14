@@ -165,6 +165,7 @@ model TlozResource {
   questItemId String?
   questItem TlozQuestItem? @relation(fields: [questItemId], references: [id], onDelete: Cascade)
   type      String
+  icon      String?
   title     String
   url       String?
   fileId    String?

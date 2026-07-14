@@ -557,6 +557,7 @@ export const resources: TlozResource[] = [
     id: "resource-ui",
     missionId: "mission-dashboard",
     type: "document",
+    icon: "FileCheck",
     title: "TLOZ UI reference",
     url: "/imports/tloz/TLOZ_UI_v2.md",
     createdAt: now,

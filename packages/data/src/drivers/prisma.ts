@@ -298,6 +298,7 @@ function mapResource(resource: {
   projectId: string | null;
   questItemId: string | null;
   type: string;
+  icon: string | null;
   title: string;
   url: string | null;
   fileId: string | null;
@@ -307,6 +308,7 @@ function mapResource(resource: {
   return {
     ...resource,
     type: resource.type as TlozResource["type"],
+    icon: resource.icon ?? undefined,
     missionId: resource.missionId ?? undefined,
     projectId: resource.projectId ?? undefined,
     questItemId: resource.questItemId ?? undefined,

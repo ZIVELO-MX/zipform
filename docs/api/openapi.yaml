@@ -468,6 +468,20 @@ paths:
                   minimum: 0
                   maximum: 100
                   default: 0
+                dependencyIds:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                requiredQuestItemIds:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    type: string
+                resources:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/ResourceInput"
       responses:
         "201":
           description: Mission created.
@@ -779,6 +793,8 @@ paths:
                   type: string
                   format: uri
                 fileId:
+                  type: string
+                icon:
                   type: string
       responses:
         "200":
@@ -1833,6 +1849,22 @@ components:
     ResourceType:
       type: string
       enum: [link, document, image, file, note]
+    ResourceInput:
+      type: object
+      additionalProperties: false
+      required: [type, title]
+      properties:
+        type:
+          $ref: "#/components/schemas/ResourceType"
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        fileId:
+          type: string
+        icon:
+          type: string
     Resource:
       type: object
       additionalProperties: false
@@ -1848,6 +1880,8 @@ components:
           type: string
         type:
           $ref: "#/components/schemas/ResourceType"
+        icon:
+          type: string
         title:
           type: string
         url:

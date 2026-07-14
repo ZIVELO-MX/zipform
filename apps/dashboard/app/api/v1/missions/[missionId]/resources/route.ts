@@ -17,7 +17,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ mis
     );
   }
 
-  let body: { type?: string; title?: string; url?: string; fileId?: string };
+  let body: { type?: string; title?: string; url?: string; fileId?: string; icon?: string };
   try {
     body = await request.json();
   } catch {
@@ -37,7 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ mis
   try {
     const detail = await dataClient.tloz.addMissionResource(
       missionId,
-      { type: body.type as TlozResourceType, title: body.title, url: body.url, fileId: body.fileId }
+      { type: body.type as TlozResourceType, title: body.title, url: body.url, fileId: body.fileId, icon: body.icon }
     );
     return NextResponse.json({ data: detail });
   } catch (e) {

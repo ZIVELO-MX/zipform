@@ -41,7 +41,7 @@ export type TlozMissionDetail = TlozMissionRecord & {
 };
 
 export type TlozResourceInput = Pick<TlozResource, "type" | "title"> &
-  Partial<Pick<TlozResource, "url" | "fileId">>;
+  Partial<Pick<TlozResource, "url" | "fileId" | "icon">>;
 
 export type UserUpdateInput = {
   name?: string;
