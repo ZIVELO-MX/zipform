@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from "react";
 import { Minus, Plus, X } from "lucide-react";
 import { Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogTrigger } from "@zipform/ui";
 import {
@@ -50,7 +50,6 @@ function readSvgViewBox(svgElement: SVGSVGElement) {
 }
 
 function MermaidViewer({ svg }: { svg: string }) {
-  const stageRef = useRef<HTMLDivElement>(null);
   const diagramRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef(INITIAL_MERMAID_ZOOM);
   const dragRef = useRef<{
@@ -103,55 +102,47 @@ function MermaidViewer({ svg }: { svg: string }) {
     setZoom(INITIAL_MERMAID_ZOOM);
   }, [applyViewBox, open, svg]);
 
-  useEffect(() => {
-    if (!open) return;
-    const stage = stageRef.current;
-    if (!stage) return;
+  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const delta = normalizeWheelDelta(event.deltaY, event.deltaMode, event.currentTarget.clientHeight);
+    if (wheelRef.current) {
+      wheelRef.current.delta += delta;
+      wheelRef.current.x = event.clientX;
+      wheelRef.current.y = event.clientY;
+    } else {
+      wheelRef.current = { delta, x: event.clientX, y: event.clientY };
+    }
 
-    const handleWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      const delta = normalizeWheelDelta(event.deltaY, event.deltaMode, stage.clientHeight);
-      if (wheelRef.current) {
-        wheelRef.current.delta += delta;
-        wheelRef.current.x = event.clientX;
-        wheelRef.current.y = event.clientY;
-      } else {
-        wheelRef.current = { delta, x: event.clientX, y: event.clientY };
-      }
-
-      if (wheelFrameRef.current !== null) return;
-      wheelFrameRef.current = window.requestAnimationFrame(() => {
-        wheelFrameRef.current = null;
-        const wheel = wheelRef.current;
-        const svgElement = diagramRef.current?.querySelector("svg");
-        wheelRef.current = null;
-        if (!wheel || !svgElement) return;
-        const currentViewBox = readSvgViewBox(svgElement);
-        if (!currentViewBox) return;
-
-        const nextZoom = mermaidZoomFromWheel(zoomRef.current, wheel.delta);
-        if (nextZoom === zoomRef.current) return;
-
-        const matrix = svgElement.getScreenCTM();
-        if (!matrix) return;
-        const pointer = svgElement.createSVGPoint();
-        pointer.x = wheel.x;
-        pointer.y = wheel.y;
-        const anchor = pointer.matrixTransform(matrix.inverse());
-        applyViewBox(zoomMermaidViewBox(currentViewBox, zoomRef.current, nextZoom, anchor));
-        zoomRef.current = nextZoom;
-        setZoom(nextZoom);
-      });
-    };
-
-    stage.addEventListener("wheel", handleWheel, { passive: false });
-    return () => {
-      stage.removeEventListener("wheel", handleWheel);
-      if (wheelFrameRef.current !== null) window.cancelAnimationFrame(wheelFrameRef.current);
+    if (wheelFrameRef.current !== null) return;
+    wheelFrameRef.current = window.requestAnimationFrame(() => {
       wheelFrameRef.current = null;
+      const wheel = wheelRef.current;
+      const svgElement = diagramRef.current?.querySelector("svg");
       wheelRef.current = null;
-    };
-  }, [applyViewBox, open]);
+      if (!wheel || !svgElement) return;
+      const currentViewBox = readSvgViewBox(svgElement);
+      if (!currentViewBox) return;
+
+      const nextZoom = mermaidZoomFromWheel(zoomRef.current, wheel.delta);
+      if (nextZoom === zoomRef.current) return;
+
+      const matrix = svgElement.getScreenCTM();
+      if (!matrix) return;
+      const pointer = svgElement.createSVGPoint();
+      pointer.x = wheel.x;
+      pointer.y = wheel.y;
+      const anchor = pointer.matrixTransform(matrix.inverse());
+      applyViewBox(zoomMermaidViewBox(currentViewBox, zoomRef.current, nextZoom, anchor));
+      zoomRef.current = nextZoom;
+      setZoom(nextZoom);
+    });
+  };
+
+  useEffect(() => () => {
+    if (wheelFrameRef.current !== null) window.cancelAnimationFrame(wheelFrameRef.current);
+    wheelFrameRef.current = null;
+    wheelRef.current = null;
+  }, [open]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -230,8 +221,8 @@ function MermaidViewer({ svg }: { svg: string }) {
       >
         <DialogDescription>Arrastra el diagrama para moverlo y usa la rueda para cambiar el zoom.</DialogDescription>
         <div
-          ref={stageRef}
           className="size-full cursor-grab touch-none select-none overflow-hidden bg-paper data-[dragging=true]:cursor-grabbing"
+          onWheel={handleWheel}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={stopDragging}
