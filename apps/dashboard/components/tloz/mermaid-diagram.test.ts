@@ -29,6 +29,8 @@ describe("Mermaid Markdown diagrams", () => {
     expect(source).not.toContain("event.metaKey");
     expect(source).toContain("setPointerCapture");
     expect(source).toContain("onWheel={handleWheel}");
+    expect(source).toContain("svgPointFromClient");
+    expect(source).not.toContain("getScreenCTM");
     expect(source).toContain('aria-label="Cerrar visor de diagrama"');
     expect(source).toContain("onPointerDownOutside={(event) => event.preventDefault()}");
     expect(source).toContain('overlayVariant="mission"');

@@ -49,6 +49,27 @@ function readSvgViewBox(svgElement: SVGSVGElement) {
   }, null);
 }
 
+function svgPointFromClient(svgElement: SVGSVGElement, viewBox: MermaidViewBox, clientX: number, clientY: number) {
+  const rect = svgElement.getBoundingClientRect();
+  const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
+  if (!Number.isFinite(scale) || scale <= 0) return null;
+  const renderedWidth = viewBox.width * scale;
+  const renderedHeight = viewBox.height * scale;
+  const left = rect.left + (rect.width - renderedWidth) / 2;
+  const top = rect.top + (rect.height - renderedHeight) / 2;
+
+  return {
+    x: viewBox.x + (clientX - left) / scale,
+    y: viewBox.y + (clientY - top) / scale,
+  };
+}
+
+function svgScreenScale(svgElement: SVGSVGElement, viewBox: MermaidViewBox) {
+  const rect = svgElement.getBoundingClientRect();
+  const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
+  return { x: scale, y: scale };
+}
+
 function MermaidViewer({ svg }: { svg: string }) {
   const diagramRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef(INITIAL_MERMAID_ZOOM);
@@ -126,12 +147,8 @@ function MermaidViewer({ svg }: { svg: string }) {
       const nextZoom = mermaidZoomFromWheel(zoomRef.current, wheel.delta);
       if (nextZoom === zoomRef.current) return;
 
-      const matrix = svgElement.getScreenCTM();
-      if (!matrix) return;
-      const pointer = svgElement.createSVGPoint();
-      pointer.x = wheel.x;
-      pointer.y = wheel.y;
-      const anchor = pointer.matrixTransform(matrix.inverse());
+      const anchor = svgPointFromClient(svgElement, currentViewBox, wheel.x, wheel.y);
+      if (!anchor) return;
       applyViewBox(zoomMermaidViewBox(currentViewBox, zoomRef.current, nextZoom, anchor));
       zoomRef.current = nextZoom;
       setZoom(nextZoom);
@@ -149,17 +166,13 @@ function MermaidViewer({ svg }: { svg: string }) {
     const stage = event.currentTarget;
     const svgElement = diagramRef.current?.querySelector("svg");
     const currentViewBox = svgElement ? readSvgViewBox(svgElement) : null;
-    const matrix = svgElement?.getScreenCTM();
-    if (!currentViewBox || !matrix) return;
+    if (!currentViewBox || !svgElement) return;
     stage.setPointerCapture(event.pointerId);
     stage.dataset.dragging = "true";
     dragRef.current = {
       pointerId: event.pointerId,
       startViewBox: currentViewBox,
-      screenScale: {
-        x: Math.hypot(matrix.a, matrix.b),
-        y: Math.hypot(matrix.c, matrix.d),
-      },
+      screenScale: svgScreenScale(svgElement, currentViewBox),
       x: event.clientX,
       y: event.clientY,
     };
