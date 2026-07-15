@@ -11,6 +11,9 @@ import {
   clampMermaidZoom,
   type MermaidViewBox,
   type MermaidViewportPoint,
+  mermaidDistance,
+  mermaidMidpoint,
+  mermaidZoomFromPinch,
   mermaidZoomFromWheel,
   normalizeWheelDelta,
   panMermaidViewBox,
@@ -70,16 +73,27 @@ function svgScreenScale(svgElement: SVGSVGElement, viewBox: MermaidViewBox) {
   return { x: scale, y: scale };
 }
 
+type MermaidGesture = {
+  type: "pan";
+  pointerId: number;
+  startViewBox: MermaidViewBox;
+  screenScale: MermaidViewportPoint;
+  startPoint: MermaidViewportPoint;
+} | {
+  type: "pinch";
+  pointerIds: [number, number];
+  startViewBox: MermaidViewBox;
+  startZoom: number;
+  startDistance: number;
+  startMidpoint: MermaidViewportPoint;
+  anchor: MermaidViewportPoint;
+};
+
 function MermaidViewer({ svg }: { svg: string }) {
   const diagramRef = useRef<HTMLDivElement>(null);
   const zoomRef = useRef(INITIAL_MERMAID_ZOOM);
-  const dragRef = useRef<{
-    pointerId: number;
-    startViewBox: MermaidViewBox;
-    screenScale: MermaidViewportPoint;
-    x: number;
-    y: number;
-  } | null>(null);
+  const activePointersRef = useRef(new Map<number, MermaidViewportPoint>());
+  const gestureRef = useRef<MermaidGesture | null>(null);
   const wheelRef = useRef<{ delta: number; x: number; y: number } | null>(null);
   const wheelFrameRef = useRef<number | null>(null);
   const [open, setOpen] = useState(false);
@@ -96,6 +110,9 @@ function MermaidViewer({ svg }: { svg: string }) {
     const diagram = diagramRef.current;
     if (!diagram) return;
 
+    // React must not own this innerHTML: zoom state renders would otherwise
+    // recreate the SVG and restore Mermaid's original viewBox.
+    diagram.innerHTML = svg;
     const svgElement = diagram.querySelector("svg");
     if (!svgElement) return;
     const declared = svgElement.viewBox.baseVal;
@@ -161,39 +178,113 @@ function MermaidViewer({ svg }: { svg: string }) {
     wheelRef.current = null;
   }, [open]);
 
-  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
-    const stage = event.currentTarget;
+  const beginGesture = (stage: HTMLDivElement) => {
     const svgElement = diagramRef.current?.querySelector("svg");
     const currentViewBox = svgElement ? readSvgViewBox(svgElement) : null;
-    if (!currentViewBox || !svgElement) return;
+    if (!currentViewBox || !svgElement) {
+      gestureRef.current = null;
+      return;
+    }
+
+    const pointers = [...activePointersRef.current.entries()];
+    if (pointers.length >= 2) {
+      const [[firstId, first], [secondId, second]] = pointers;
+      const startMidpoint = mermaidMidpoint(first, second);
+      const anchor = svgPointFromClient(svgElement, currentViewBox, startMidpoint.x, startMidpoint.y);
+      const startDistance = mermaidDistance(first, second);
+      if (!anchor || startDistance <= 0) {
+        gestureRef.current = null;
+        return;
+      }
+      gestureRef.current = {
+        type: "pinch",
+        pointerIds: [firstId, secondId],
+        startViewBox: currentViewBox,
+        startZoom: zoomRef.current,
+        startDistance,
+        startMidpoint,
+        anchor,
+      };
+    } else if (pointers.length === 1) {
+      const [[pointerId, startPoint]] = pointers;
+      gestureRef.current = {
+        type: "pan",
+        pointerId,
+        startViewBox: currentViewBox,
+        screenScale: svgScreenScale(svgElement, currentViewBox),
+        startPoint,
+      };
+    } else {
+      gestureRef.current = null;
+    }
+    stage.dataset.dragging = pointers.length > 0 ? "true" : "false";
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const stage = event.currentTarget;
     stage.setPointerCapture(event.pointerId);
-    stage.dataset.dragging = "true";
-    dragRef.current = {
-      pointerId: event.pointerId,
-      startViewBox: currentViewBox,
-      screenScale: svgScreenScale(svgElement, currentViewBox),
-      x: event.clientX,
-      y: event.clientY,
-    };
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    beginGesture(stage);
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = dragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (!activePointersRef.current.has(event.pointerId)) return;
+    activePointersRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const gesture = gestureRef.current;
+    if (!gesture) return;
+
+    if (gesture.type === "pan") {
+      if (gesture.pointerId !== event.pointerId) return;
+      applyViewBox(panMermaidViewBox(
+        gesture.startViewBox,
+        { x: event.clientX - gesture.startPoint.x, y: event.clientY - gesture.startPoint.y },
+        gesture.screenScale,
+      ));
+      return;
+    }
+
+    const [firstId, secondId] = gesture.pointerIds;
+    const first = activePointersRef.current.get(firstId);
+    const second = activePointersRef.current.get(secondId);
+    const svgElement = diagramRef.current?.querySelector("svg");
+    if (!first || !second || !svgElement) return;
+
+    const currentMidpoint = mermaidMidpoint(first, second);
+    const nextZoom = mermaidZoomFromPinch(
+      gesture.startZoom,
+      gesture.startDistance,
+      mermaidDistance(first, second),
+    );
+    const zoomedViewBox = zoomMermaidViewBox(
+      gesture.startViewBox,
+      gesture.startZoom,
+      nextZoom,
+      gesture.anchor,
+    );
     applyViewBox(panMermaidViewBox(
-      drag.startViewBox,
-      { x: event.clientX - drag.x, y: event.clientY - drag.y },
-      drag.screenScale,
+      zoomedViewBox,
+      {
+        x: currentMidpoint.x - gesture.startMidpoint.x,
+        y: currentMidpoint.y - gesture.startMidpoint.y,
+      },
+      svgScreenScale(svgElement, zoomedViewBox),
     ));
+    zoomRef.current = nextZoom;
+    setZoom(nextZoom);
   };
 
-  const stopDragging = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (dragRef.current?.pointerId !== event.pointerId) return;
-    dragRef.current = null;
-    delete event.currentTarget.dataset.dragging;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+  const stopGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const stage = event.currentTarget;
+    activePointersRef.current.delete(event.pointerId);
+    if (stage.hasPointerCapture(event.pointerId)) {
+      stage.releasePointerCapture(event.pointerId);
+    }
+    if (activePointersRef.current.size > 0) {
+      beginGesture(stage);
+    } else {
+      gestureRef.current = null;
+      delete stage.dataset.dragging;
     }
   };
 
@@ -214,7 +305,10 @@ function MermaidViewer({ svg }: { svg: string }) {
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => {
-      if (!nextOpen) dragRef.current = null;
+      if (!nextOpen) {
+        gestureRef.current = null;
+        activePointersRef.current.clear();
+      }
       setOpen(nextOpen);
     }}>
       <figure className="group relative mb-3 overflow-x-auto rounded-xl border border-carbon/10 bg-paper p-3 last:mb-0" aria-label="Diagrama Mermaid">
@@ -228,27 +322,26 @@ function MermaidViewer({ svg }: { svg: string }) {
       <DialogContent
         title="Visor de diagrama Mermaid"
         overlayVariant="mission"
-        className="h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-none gap-0 overflow-hidden rounded-2xl border-carbon/10 bg-paper p-0 shadow-[-12px_0_48px_rgba(29,29,27,0.16)] motion-reduce:animate-none"
+        className="h-dvh w-full max-w-none gap-0 overflow-hidden rounded-none border-0 bg-paper p-0 shadow-[-12px_0_48px_rgba(29,29,27,0.16)] motion-reduce:animate-none sm:h-[calc(100dvh-2rem)] sm:w-[calc(100%-2rem)] sm:rounded-2xl sm:border sm:border-carbon/10"
         onPointerDownOutside={(event) => event.preventDefault()}
         onInteractOutside={(event) => event.preventDefault()}
       >
-        <DialogDescription>Arrastra el diagrama para moverlo y usa la rueda para cambiar el zoom.</DialogDescription>
+        <DialogDescription>Arrastra para mover y usa la rueda o dos dedos para cambiar el zoom.</DialogDescription>
         <div
           className="size-full cursor-grab touch-none select-none overflow-hidden bg-paper data-[dragging=true]:cursor-grabbing"
           onWheel={handleWheel}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
-          onPointerUp={stopDragging}
-          onPointerCancel={stopDragging}
+          onPointerUp={stopGesture}
+          onPointerCancel={stopGesture}
         >
           <div
             ref={diagramRef}
             className="pointer-events-none size-full [&_svg]:block [&_svg]:size-full [&_svg]:!max-w-none"
-            dangerouslySetInnerHTML={{ __html: svg }}
           />
         </div>
 
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-carbon/10 bg-paper p-1 shadow-soft">
+        <div className="absolute bottom-[max(1rem,env(safe-area-inset-bottom))] left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-carbon/10 bg-paper p-1 shadow-soft">
           <Button type="button" variant="ghost" size="icon" className="rounded-lg" aria-label="Reducir diagrama" disabled={zoom <= MIN_MERMAID_ZOOM} onClick={() => changeZoom(-MERMAID_ZOOM_STEP)}>
             <Minus aria-hidden="true" />
           </Button>
@@ -261,7 +354,7 @@ function MermaidViewer({ svg }: { svg: string }) {
         </div>
 
         <DialogClose asChild>
-          <Button type="button" variant="outline" size="icon" className="absolute right-4 top-4 rounded-full" aria-label="Cerrar visor de diagrama">
+          <Button type="button" variant="outline" size="icon" className="absolute right-[max(1rem,env(safe-area-inset-right))] top-[max(1rem,env(safe-area-inset-top))] rounded-full" aria-label="Cerrar visor de diagrama">
             <X aria-hidden="true" />
           </Button>
         </DialogClose>

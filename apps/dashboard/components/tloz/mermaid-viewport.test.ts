@@ -5,6 +5,9 @@ import {
   MERMAID_ZOOM_STEP,
   MIN_MERMAID_ZOOM,
   clampMermaidZoom,
+  mermaidDistance,
+  mermaidMidpoint,
+  mermaidZoomFromPinch,
   mermaidZoomFromWheel,
   normalizeWheelDelta,
   panMermaidViewBox,
@@ -24,6 +27,19 @@ describe("Mermaid diagram viewport", () => {
   it("zooms in for wheel up and out for wheel down", () => {
     expect(mermaidZoomFromWheel(1.5, -100)).toBeGreaterThan(1.5);
     expect(mermaidZoomFromWheel(1.5, 100)).toBeLessThan(1.5);
+  });
+
+  it("zooms in and out from a two-finger pinch and respects the limits", () => {
+    expect(mermaidZoomFromPinch(1.5, 100, 150)).toBe(2.25);
+    expect(mermaidZoomFromPinch(1.5, 100, 50)).toBe(0.75);
+    expect(mermaidZoomFromPinch(3, 100, 200)).toBe(MAX_MERMAID_ZOOM);
+    expect(mermaidZoomFromPinch(1, 100, 10)).toBe(MIN_MERMAID_ZOOM);
+    expect(mermaidZoomFromPinch(1.5, 0, 100)).toBe(1.5);
+  });
+
+  it("calculates the midpoint and distance between touch pointers", () => {
+    expect(mermaidMidpoint({ x: 20, y: 40 }, { x: 80, y: 120 })).toEqual({ x: 50, y: 80 });
+    expect(mermaidDistance({ x: 0, y: 0 }, { x: 30, y: 40 })).toBe(50);
   });
 
   it("normalizes wheel line and page deltas", () => {
@@ -61,6 +77,12 @@ describe("Mermaid diagram viewport", () => {
     );
 
     expect(result).toEqual({ x: 80, y: 60, width: 500, height: 250 });
+  });
+
+  it("ignores pan when the SVG has no usable screen scale", () => {
+    const viewBox = { x: 100, y: 50, width: 500, height: 250 };
+
+    expect(panMermaidViewBox(viewBox, { x: 40, y: 20 }, { x: 0, y: 0 })).toBe(viewBox);
   });
 
   it("centers the original viewBox at the initial 150% zoom", () => {

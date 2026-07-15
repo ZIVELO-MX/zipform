@@ -20,7 +20,7 @@ describe("Mermaid Markdown diagrams", () => {
     expect(markdownSource).toContain('<code className={className} {...props} />');
   });
 
-  it("opens an accessible modal viewer with wheel zoom and drag", () => {
+  it("opens an accessible modal viewer with wheel, drag, and touch zoom", () => {
     const source = readFileSync(new URL("./mermaid-diagram.tsx", import.meta.url), "utf8");
     const dialogSource = readFileSync(new URL("../../../../packages/ui/src/components/dialog.tsx", import.meta.url), "utf8");
     expect(source).toContain('aria-label="Abrir diagrama Mermaid"');
@@ -29,6 +29,8 @@ describe("Mermaid Markdown diagrams", () => {
     expect(source).not.toContain("event.metaKey");
     expect(source).toContain("setPointerCapture");
     expect(source).toContain("onWheel={handleWheel}");
+    expect(source).toContain("mermaidZoomFromPinch");
+    expect(source).toContain("activePointersRef");
     expect(source).toContain("svgPointFromClient");
     expect(source).not.toContain("getScreenCTM");
     expect(source).toContain('aria-label="Cerrar visor de diagrama"');
@@ -43,6 +45,11 @@ describe("Mermaid Markdown diagrams", () => {
     expect(source).not.toContain("Maximize2");
     expect(source).not.toContain("will-change-transform");
     expect(source).not.toContain("diagram.style.width");
+    expect(source).toContain("diagram.innerHTML = svg");
+    expect(source.match(/dangerouslySetInnerHTML/g)).toHaveLength(1);
+    expect(source).toContain("h-dvh w-full");
+    expect(source).toContain("safe-area-inset-bottom");
+    expect(source).toContain("safe-area-inset-top");
     expect(dialogSource).toContain('type DialogOverlayVariant = "dimmed" | "mission"');
     expect(dialogSource).toContain('variant === "mission" ? "bg-carbon/60" : "bg-carbon/40 backdrop-blur-sm"');
   });

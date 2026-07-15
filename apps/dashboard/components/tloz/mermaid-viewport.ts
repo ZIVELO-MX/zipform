@@ -38,6 +38,23 @@ export function mermaidZoomFromWheel(scale: number, pixelDeltaY: number) {
   return clampMermaidZoom(scale * Math.exp(-pixelDeltaY * WHEEL_ZOOM_SENSITIVITY));
 }
 
+export function mermaidZoomFromPinch(scale: number, startDistance: number, currentDistance: number) {
+  if (!Number.isFinite(startDistance) || startDistance <= 0
+    || !Number.isFinite(currentDistance) || currentDistance <= 0) return clampMermaidZoom(scale);
+  return clampMermaidZoom(scale * currentDistance / startDistance);
+}
+
+export function mermaidMidpoint(first: MermaidViewportPoint, second: MermaidViewportPoint) {
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+  };
+}
+
+export function mermaidDistance(first: MermaidViewportPoint, second: MermaidViewportPoint) {
+  return Math.hypot(second.x - first.x, second.y - first.y);
+}
+
 export function normalizeWheelDelta(deltaY: number, deltaMode: number, viewportHeight: number) {
   if (deltaMode === 1) return deltaY * 16;
   if (deltaMode === 2) return deltaY * viewportHeight;
@@ -67,6 +84,8 @@ export function panMermaidViewBox(
   pointerDelta: MermaidViewportPoint,
   screenScale: MermaidViewportPoint,
 ) {
+  if (!Number.isFinite(screenScale.x) || screenScale.x <= 0
+    || !Number.isFinite(screenScale.y) || screenScale.y <= 0) return viewBox;
   return {
     ...viewBox,
     x: viewBox.x - pointerDelta.x / screenScale.x,
