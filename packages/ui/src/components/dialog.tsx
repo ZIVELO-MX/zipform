@@ -8,6 +8,8 @@ import { OverlayPortalProvider, useOverlayPortalContainer } from "./overlay-port
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 
+type DialogOverlayVariant = "dimmed" | "mission";
+
 function DialogPortal(props: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   const container = useOverlayPortalContainer();
   return <DialogPrimitive.Portal container={container ?? undefined} {...props} />;
@@ -15,11 +17,12 @@ function DialogPortal(props: React.ComponentProps<typeof DialogPrimitive.Portal>
 
 const DialogOverlay = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Overlay>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
->(({ className, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay> & { variant?: DialogOverlayVariant }
+>(({ className, variant = "dimmed", ...props }, ref) => (
   <DialogPrimitive.Overlay
     className={cn(
-      "fixed inset-0 z-50 bg-carbon/40 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:animate-none",
+      variant === "mission" ? "bg-carbon/60" : "bg-carbon/40 backdrop-blur-sm",
       className
     )}
     {...props}
@@ -30,8 +33,8 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { title?: string }
->(({ className, children, title = "Diálogo", ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { overlayVariant?: DialogOverlayVariant; title?: string }
+>(({ className, children, overlayVariant = "dimmed", title = "Diálogo", ...props }, ref) => {
   const [container, setContainer] = React.useState<HTMLElement | null>(null);
   const localRef = React.useRef<React.ElementRef<typeof DialogPrimitive.Content>>(null);
 
@@ -49,7 +52,7 @@ const DialogContent = React.forwardRef<
 
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay variant={overlayVariant} />
       <DialogPrimitive.Content
         ref={setRefs}
         className={cn(

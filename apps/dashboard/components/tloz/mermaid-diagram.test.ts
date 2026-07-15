@@ -19,4 +19,32 @@ describe("Mermaid Markdown diagrams", () => {
     expect(markdownSource).toContain("if (isMermaidCodeBlock(className))");
     expect(markdownSource).toContain('<code className={className} {...props} />');
   });
+
+  it("opens a contained full-screen viewer with SVG download", () => {
+    const source = readFileSync(new URL("./mermaid-diagram.tsx", import.meta.url), "utf8");
+    const dialogSource = readFileSync(new URL("../../../../packages/ui/src/components/dialog.tsx", import.meta.url), "utf8");
+    expect(source).toContain('aria-label="Abrir diagrama Mermaid"');
+    expect(source).toContain("hidden size-full");
+    expect(source).toContain("sm:flex");
+    expect(source).toContain("usa el zoom nativo del navegador");
+    expect(source).toContain('title="Visor de diagrama Mermaid"');
+    expect(source).toContain('aria-label="Descargar diagrama SVG"');
+    expect(source).toContain("downloadMermaidSvg");
+    expect(source).toContain('anchor.download = "diagrama-mermaid.svg"');
+    expect(source).toContain("URL.revokeObjectURL(url)");
+    expect(source).toContain('aria-label="Cerrar visor de diagrama"');
+    expect(source).toContain("onPointerDownOutside={(event) => event.preventDefault()}");
+    expect(source).toContain('overlayVariant="mission"');
+    expect(source).toContain("cursor-pointer");
+    expect(source).toContain("[&_svg]:size-full");
+    expect(source).toContain("[&_svg]:!max-w-none");
+    expect(source).not.toContain("onWheel={handleWheel}");
+    expect(source).not.toContain("setPointerCapture");
+    expect(source).not.toContain("mermaid-viewport");
+    expect(source).not.toContain('aria-label="Reducir diagrama"');
+    expect(source).not.toContain('aria-label="Ampliar diagrama"');
+    expect(source).toContain("h-dvh w-full");
+    expect(dialogSource).toContain('type DialogOverlayVariant = "dimmed" | "mission"');
+    expect(dialogSource).toContain('variant === "mission" ? "bg-carbon/60" : "bg-carbon/40 backdrop-blur-sm"');
+  });
 });
