@@ -1,16 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { Maximize2, Minus, Plus, X } from "lucide-react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { X } from "lucide-react";
 import { Button, Dialog, DialogClose, DialogContent, DialogDescription, DialogTrigger } from "@zipform/ui";
 import {
-  DEFAULT_MERMAID_TRANSFORM,
-  MAX_MERMAID_ZOOM,
-  MERMAID_ZOOM_STEP,
-  MIN_MERMAID_ZOOM,
-  panMermaid,
-  zoomMermaidAt,
-  type MermaidViewportTransform,
+  INITIAL_MERMAID_ZOOM,
+  mermaidAnchorInRect,
+  mermaidScrollCorrection,
+  mermaidZoomFromWheel,
+  normalizeWheelDelta,
 } from "./mermaid-viewport";
 
 type MermaidState =
@@ -36,44 +34,38 @@ function loadMermaid() {
 
 function MermaidViewer({ svg }: { svg: string }) {
   const stageRef = useRef<HTMLDivElement>(null);
-  const transformNodeRef = useRef<HTMLDivElement>(null);
-  const transformRef = useRef<MermaidViewportTransform>({ ...DEFAULT_MERMAID_TRANSFORM });
-  const dragRef = useRef<{ pointerId: number; x: number; y: number } | null>(null);
-  const frameRef = useRef<number | null>(null);
+  const diagramRef = useRef<HTMLDivElement>(null);
+  const baseWidthRef = useRef(0);
+  const zoomRef = useRef(INITIAL_MERMAID_ZOOM);
+  const dragRef = useRef<{ pointerId: number; scrollLeft: number; scrollTop: number; x: number; y: number } | null>(null);
+  const wheelRef = useRef<{ delta: number; x: number; y: number } | null>(null);
+  const initFrameRef = useRef<number | null>(null);
+  const wheelFrameRef = useRef<number | null>(null);
   const [open, setOpen] = useState(false);
-  const [scale, setScale] = useState(DEFAULT_MERMAID_TRANSFORM.scale);
+  const [zoom, setZoom] = useState(INITIAL_MERMAID_ZOOM);
 
-  const renderTransform = useCallback(() => {
-    if (frameRef.current !== null) return;
-    frameRef.current = window.requestAnimationFrame(() => {
-      frameRef.current = null;
-      const node = transformNodeRef.current;
-      if (!node) return;
-      const transform = transformRef.current;
-      node.style.transform = `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`;
-    });
-  }, []);
-
-  const resetTransform = useCallback(() => {
-    transformRef.current = { ...DEFAULT_MERMAID_TRANSFORM };
-    setScale(DEFAULT_MERMAID_TRANSFORM.scale);
-    renderTransform();
-  }, [renderTransform]);
-
-  const updateZoom = useCallback((requestedScale: number, clientX?: number, clientY?: number) => {
+  useLayoutEffect(() => {
+    if (!open) return;
     const stage = stageRef.current;
-    let point = { x: 0, y: 0 };
-    if (stage && clientX !== undefined && clientY !== undefined) {
-      const rect = stage.getBoundingClientRect();
-      point = {
-        x: clientX - rect.left - rect.width / 2,
-        y: clientY - rect.top - rect.height / 2,
-      };
-    }
-    transformRef.current = zoomMermaidAt(transformRef.current, requestedScale, point);
-    setScale(transformRef.current.scale);
-    renderTransform();
-  }, [renderTransform]);
+    const diagram = diagramRef.current;
+    if (!stage || !diagram) return;
+
+    baseWidthRef.current = Math.max(stage.clientWidth - 64, 320);
+    zoomRef.current = INITIAL_MERMAID_ZOOM;
+    diagram.style.width = `${baseWidthRef.current * INITIAL_MERMAID_ZOOM}px`;
+    setZoom(INITIAL_MERMAID_ZOOM);
+
+    initFrameRef.current = window.requestAnimationFrame(() => {
+      initFrameRef.current = null;
+      stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      stage.scrollTop = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+    });
+
+    return () => {
+      if (initFrameRef.current !== null) window.cancelAnimationFrame(initFrameRef.current);
+      initFrameRef.current = null;
+    };
+  }, [open, svg]);
 
   useEffect(() => {
     if (!open) return;
@@ -81,36 +73,78 @@ function MermaidViewer({ svg }: { svg: string }) {
     if (!stage) return;
 
     const handleWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey && !event.metaKey) return;
       event.preventDefault();
-      const direction = event.deltaY > 0 ? -1 : 1;
-      updateZoom(transformRef.current.scale + direction * MERMAID_ZOOM_STEP, event.clientX, event.clientY);
+      const delta = normalizeWheelDelta(event.deltaY, event.deltaMode, stage.clientHeight);
+      if (wheelRef.current) {
+        wheelRef.current.delta += delta;
+        wheelRef.current.x = event.clientX;
+        wheelRef.current.y = event.clientY;
+      } else {
+        wheelRef.current = { delta, x: event.clientX, y: event.clientY };
+      }
+
+      if (wheelFrameRef.current !== null) return;
+      wheelFrameRef.current = window.requestAnimationFrame(() => {
+        wheelFrameRef.current = null;
+        const wheel = wheelRef.current;
+        const diagram = diagramRef.current;
+        wheelRef.current = null;
+        if (!wheel || !diagram) return;
+
+        const previousRect = diagram.getBoundingClientRect();
+        const pointer = { x: wheel.x, y: wheel.y };
+        const anchor = mermaidAnchorInRect({
+          x: previousRect.left,
+          y: previousRect.top,
+          width: previousRect.width,
+          height: previousRect.height,
+        }, pointer);
+        const nextZoom = mermaidZoomFromWheel(zoomRef.current, wheel.delta);
+        if (nextZoom === zoomRef.current) return;
+
+        zoomRef.current = nextZoom;
+        diagram.style.width = `${baseWidthRef.current * nextZoom}px`;
+        const nextRect = diagram.getBoundingClientRect();
+        const correction = mermaidScrollCorrection({
+          x: nextRect.left,
+          y: nextRect.top,
+          width: nextRect.width,
+          height: nextRect.height,
+        }, anchor, pointer);
+        stage.scrollLeft += correction.x;
+        stage.scrollTop += correction.y;
+        setZoom(nextZoom);
+      });
     };
 
     stage.addEventListener("wheel", handleWheel, { passive: false });
-    return () => stage.removeEventListener("wheel", handleWheel);
-  }, [open, updateZoom]);
-
-  useEffect(() => () => {
-    if (frameRef.current !== null) window.cancelAnimationFrame(frameRef.current);
-  }, []);
+    return () => {
+      stage.removeEventListener("wheel", handleWheel);
+      if (wheelFrameRef.current !== null) window.cancelAnimationFrame(wheelFrameRef.current);
+      wheelFrameRef.current = null;
+      wheelRef.current = null;
+    };
+  }, [open]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    const stage = event.currentTarget;
     event.currentTarget.setPointerCapture(event.pointerId);
     event.currentTarget.dataset.dragging = "true";
-    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+    dragRef.current = {
+      pointerId: event.pointerId,
+      scrollLeft: stage.scrollLeft,
+      scrollTop: stage.scrollTop,
+      x: event.clientX,
+      y: event.clientY,
+    };
   };
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
-    transformRef.current = panMermaid(transformRef.current, {
-      x: event.clientX - drag.x,
-      y: event.clientY - drag.y,
-    });
-    dragRef.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
-    renderTransform();
+    event.currentTarget.scrollLeft = drag.scrollLeft - (event.clientX - drag.x);
+    event.currentTarget.scrollTop = drag.scrollTop - (event.clientY - drag.y);
   };
 
   const stopDragging = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -124,55 +158,45 @@ function MermaidViewer({ svg }: { svg: string }) {
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => {
-      if (nextOpen) resetTransform();
-      else dragRef.current = null;
+      if (!nextOpen) dragRef.current = null;
       setOpen(nextOpen);
     }}>
       <figure className="group relative mb-3 overflow-x-auto rounded-xl border border-carbon/10 bg-paper p-3 last:mb-0" aria-label="Diagrama Mermaid">
-        <div className="min-w-fit pointer-events-none [&_svg]:h-auto [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: svg }} />
+        <div className="pointer-events-none min-w-fit [&_svg]:h-auto [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: svg }} />
         <DialogTrigger asChild>
-          <Button type="button" variant="ghost" className="absolute inset-0 size-full cursor-zoom-in rounded-xl bg-transparent p-0 hover:bg-carbon/[0.025] focus-visible:outline-zivelo" aria-label="Ampliar diagrama Mermaid">
-            <span className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-lg border border-carbon/10 bg-paper/95 text-carbon/60 opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
-              <Maximize2 aria-hidden="true" />
-            </span>
-          </Button>
+          <Button type="button" variant="ghost" className="absolute inset-0 size-full cursor-pointer rounded-xl bg-transparent p-0 hover:bg-carbon/[0.025] focus-visible:outline-zivelo" aria-label="Abrir diagrama Mermaid" />
         </DialogTrigger>
         <figcaption className="sr-only">Diagrama generado desde la descripción Markdown. Presiona para ampliarlo.</figcaption>
       </figure>
 
       <DialogContent
         title="Visor de diagrama Mermaid"
-        className="h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-none gap-0 overflow-hidden rounded-2xl border-white/10 bg-carbon p-0 shadow-none motion-reduce:animate-none"
+        overlayVariant="clear"
+        className="h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-none gap-0 overflow-hidden rounded-2xl border-carbon/10 bg-ivory p-0 shadow-soft motion-reduce:animate-none"
         onPointerDownOutside={(event) => event.preventDefault()}
         onInteractOutside={(event) => event.preventDefault()}
       >
-        <DialogDescription>Arrastra el diagrama para moverlo. Usa los controles o Control más rueda para cambiar el zoom.</DialogDescription>
+        <DialogDescription>Arrastra el diagrama para moverlo y usa la rueda para cambiar el zoom.</DialogDescription>
         <div
           ref={stageRef}
-          className="flex size-full cursor-grab touch-none select-none items-center justify-center overflow-hidden p-6 data-[dragging=true]:cursor-grabbing sm:p-10"
+          className="size-full cursor-grab touch-none select-none overflow-hidden bg-ivory data-[dragging=true]:cursor-grabbing"
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={stopDragging}
           onPointerCancel={stopDragging}
         >
-          <div
-            ref={transformNodeRef}
-            className="pointer-events-none inline-flex max-h-full max-w-full will-change-transform rounded-xl bg-paper p-4 shadow-[0_0_0_1px_rgba(255,255,255,0.08)] [&_svg]:h-auto [&_svg]:max-h-[calc(100dvh-8rem)] [&_svg]:max-w-[calc(100vw-4rem)]"
-            dangerouslySetInnerHTML={{ __html: svg }}
-          />
+          <div className="flex min-h-full min-w-full p-8">
+            <div
+              ref={diagramRef}
+              className="pointer-events-none m-auto shrink-0 rounded-xl bg-paper p-4 shadow-[0_0_0_1px_rgba(29,29,27,0.08)] [&_svg]:block [&_svg]:h-auto [&_svg]:!max-w-none [&_svg]:!w-full"
+              dangerouslySetInnerHTML={{ __html: svg }}
+            />
+          </div>
         </div>
 
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-xl border border-carbon/10 bg-paper p-1 shadow-soft">
-          <Button type="button" variant="ghost" size="icon" aria-label="Reducir diagrama" disabled={scale <= MIN_MERMAID_ZOOM} onClick={() => updateZoom(scale - MERMAID_ZOOM_STEP)}>
-            <Minus aria-hidden="true" />
-          </Button>
-          <Button type="button" variant="ghost" size="sm" className="min-w-16 tabular-nums" aria-label="Restablecer zoom y posición" onClick={resetTransform}>
-            {Math.round(scale * 100)}%
-          </Button>
-          <Button type="button" variant="ghost" size="icon" aria-label="Ampliar diagrama" disabled={scale >= MAX_MERMAID_ZOOM} onClick={() => updateZoom(scale + MERMAID_ZOOM_STEP)}>
-            <Plus aria-hidden="true" />
-          </Button>
-        </div>
+        <span className="pointer-events-none absolute bottom-4 left-1/2 min-w-16 -translate-x-1/2 select-none rounded-lg border border-carbon/10 bg-paper px-3 py-2 text-center text-xs font-semibold tabular-nums text-carbon/65 shadow-soft">
+          {Math.round(zoom * 100)}%
+        </span>
 
         <DialogClose asChild>
           <Button type="button" variant="outline" size="icon" className="absolute right-4 top-4 rounded-full" aria-label="Cerrar visor de diagrama">

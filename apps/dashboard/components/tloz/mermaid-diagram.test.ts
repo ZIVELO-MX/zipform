@@ -20,14 +20,21 @@ describe("Mermaid Markdown diagrams", () => {
     expect(markdownSource).toContain('<code className={className} {...props} />');
   });
 
-  it("opens an accessible modal viewer with zoom and drag controls", () => {
+  it("opens an accessible modal viewer with wheel zoom and drag", () => {
     const source = readFileSync(new URL("./mermaid-diagram.tsx", import.meta.url), "utf8");
-    expect(source).toContain('aria-label="Ampliar diagrama Mermaid"');
+    expect(source).toContain('aria-label="Abrir diagrama Mermaid"');
     expect(source).toContain('title="Visor de diagrama Mermaid"');
-    expect(source).toContain("event.ctrlKey");
-    expect(source).toContain("event.metaKey");
+    expect(source).not.toContain("event.ctrlKey");
+    expect(source).not.toContain("event.metaKey");
     expect(source).toContain("setPointerCapture");
     expect(source).toContain('aria-label="Cerrar visor de diagrama"');
     expect(source).toContain("onPointerDownOutside={(event) => event.preventDefault()}");
+    expect(source).toContain('overlayVariant="clear"');
+    expect(source).toContain("cursor-pointer");
+    expect(source).toContain("select-none");
+    expect(source).not.toContain("Maximize2");
+    expect(source).not.toContain('aria-label="Reducir diagrama"');
+    expect(source).not.toContain('aria-label="Ampliar diagrama"');
+    expect(source).not.toContain("will-change-transform");
   });
 });
