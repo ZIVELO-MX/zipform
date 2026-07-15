@@ -20,36 +20,27 @@ describe("Mermaid Markdown diagrams", () => {
     expect(markdownSource).toContain('<code className={className} {...props} />');
   });
 
-  it("opens an accessible modal viewer with wheel, drag, and touch zoom", () => {
+  it("opens a contained full-screen viewer with SVG download", () => {
     const source = readFileSync(new URL("./mermaid-diagram.tsx", import.meta.url), "utf8");
     const dialogSource = readFileSync(new URL("../../../../packages/ui/src/components/dialog.tsx", import.meta.url), "utf8");
     expect(source).toContain('aria-label="Abrir diagrama Mermaid"');
     expect(source).toContain('title="Visor de diagrama Mermaid"');
-    expect(source).not.toContain("event.ctrlKey");
-    expect(source).not.toContain("event.metaKey");
-    expect(source).toContain("setPointerCapture");
-    expect(source).toContain("onWheel={handleWheel}");
-    expect(source).toContain("mermaidZoomFromPinch");
-    expect(source).toContain("activePointersRef");
-    expect(source).toContain("svgPointFromClient");
-    expect(source).not.toContain("getScreenCTM");
+    expect(source).toContain('aria-label="Descargar diagrama SVG"');
+    expect(source).toContain("downloadMermaidSvg");
+    expect(source).toContain('anchor.download = "diagrama-mermaid.svg"');
+    expect(source).toContain("URL.revokeObjectURL(url)");
     expect(source).toContain('aria-label="Cerrar visor de diagrama"');
     expect(source).toContain("onPointerDownOutside={(event) => event.preventDefault()}");
     expect(source).toContain('overlayVariant="mission"');
-    expect(source).toContain('aria-label="Reducir diagrama"');
-    expect(source).toContain('aria-label="Ampliar diagrama"');
-    expect(source).toContain("disabled={zoom <= MIN_MERMAID_ZOOM}");
-    expect(source).toContain("disabled={zoom >= MAX_MERMAID_ZOOM}");
     expect(source).toContain("cursor-pointer");
-    expect(source).toContain("select-none");
-    expect(source).not.toContain("Maximize2");
-    expect(source).not.toContain("will-change-transform");
-    expect(source).not.toContain("diagram.style.width");
-    expect(source).toContain("diagram.innerHTML = svg");
-    expect(source.match(/dangerouslySetInnerHTML/g)).toHaveLength(1);
+    expect(source).toContain("[&_svg]:size-full");
+    expect(source).toContain("[&_svg]:!max-w-none");
+    expect(source).not.toContain("onWheel={handleWheel}");
+    expect(source).not.toContain("setPointerCapture");
+    expect(source).not.toContain("mermaid-viewport");
+    expect(source).not.toContain('aria-label="Reducir diagrama"');
+    expect(source).not.toContain('aria-label="Ampliar diagrama"');
     expect(source).toContain("h-dvh w-full");
-    expect(source).toContain("safe-area-inset-bottom");
-    expect(source).toContain("safe-area-inset-top");
     expect(dialogSource).toContain('type DialogOverlayVariant = "dimmed" | "mission"');
     expect(dialogSource).toContain('variant === "mission" ? "bg-carbon/60" : "bg-carbon/40 backdrop-blur-sm"');
   });
