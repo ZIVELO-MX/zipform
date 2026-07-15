@@ -8,7 +8,7 @@ import { OverlayPortalProvider, useOverlayPortalContainer } from "./overlay-port
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
 
-type DialogOverlayVariant = "dimmed" | "clear";
+type DialogOverlayVariant = "dimmed" | "mission";
 
 function DialogPortal(props: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   const container = useOverlayPortalContainer();
@@ -22,7 +22,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     className={cn(
       "fixed inset-0 z-50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 motion-reduce:animate-none",
-      variant === "dimmed" ? "bg-carbon/40 backdrop-blur-sm" : "bg-transparent",
+      variant === "mission" ? "bg-carbon/60" : "bg-carbon/40 backdrop-blur-sm",
       className
     )}
     {...props}
