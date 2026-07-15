@@ -24,6 +24,9 @@ describe("Mermaid Markdown diagrams", () => {
     const source = readFileSync(new URL("./mermaid-diagram.tsx", import.meta.url), "utf8");
     const dialogSource = readFileSync(new URL("../../../../packages/ui/src/components/dialog.tsx", import.meta.url), "utf8");
     expect(source).toContain('aria-label="Abrir diagrama Mermaid"');
+    expect(source).toContain("hidden size-full");
+    expect(source).toContain("sm:flex");
+    expect(source).toContain("usa el zoom nativo del navegador");
     expect(source).toContain('title="Visor de diagrama Mermaid"');
     expect(source).toContain('aria-label="Descargar diagrama SVG"');
     expect(source).toContain("downloadMermaidSvg");

@@ -45,9 +45,9 @@ function MermaidViewer({ svg }: { svg: string }) {
       <figure className="group relative mb-3 overflow-x-auto rounded-xl border border-carbon/10 bg-paper p-3 last:mb-0" aria-label="Diagrama Mermaid">
         {!open ? <div className="pointer-events-none min-w-fit [&_svg]:h-auto [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: svg }} /> : null}
         <DialogTrigger asChild>
-          <Button type="button" variant="ghost" className="absolute inset-0 size-full cursor-pointer rounded-xl bg-transparent p-0 hover:bg-carbon/[0.025] focus-visible:outline-zivelo" aria-label="Abrir diagrama Mermaid" />
+          <Button type="button" variant="ghost" className="absolute inset-0 hidden size-full cursor-pointer rounded-xl bg-transparent p-0 hover:bg-carbon/[0.025] focus-visible:outline-zivelo sm:flex" aria-label="Abrir diagrama Mermaid" />
         </DialogTrigger>
-        <figcaption className="sr-only">Diagrama generado desde la descripción Markdown. Presiona para ampliarlo.</figcaption>
+        <figcaption className="px-3 pt-2 text-xs font-semibold text-carbon/55 sm:sr-only">En móvil, usa el zoom nativo del navegador para ampliar el diagrama.</figcaption>
       </figure>
 
       <DialogContent
