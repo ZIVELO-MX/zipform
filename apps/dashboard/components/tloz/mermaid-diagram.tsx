@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { ResourcePreview } from "@zipform/ui";
-import { createMermaidSvgBlob } from "./mermaid-download";
+import { createMermaidSvgBlob, getMermaidSvgDimensions } from "./mermaid-download";
 
 type MermaidState =
   | { status: "loading" }
@@ -39,10 +39,13 @@ function MermaidViewer({ svg }: { svg: string }) {
     };
   }, [svg]);
 
+  const dimensions = getMermaidSvgDimensions(svg);
   const slide = previewSrc ? {
     id: "mermaid-diagram",
     src: previewSrc,
     alt: "Diagrama Mermaid",
+    ...dimensions,
+    ...(dimensions ? { srcSet: [{ src: previewSrc, ...dimensions }] } : {}),
   } : null;
 
   return (

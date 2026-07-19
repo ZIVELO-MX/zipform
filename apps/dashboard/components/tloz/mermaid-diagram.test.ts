@@ -27,6 +27,8 @@ describe("Mermaid Markdown diagrams", () => {
     expect(source).toContain('aria-label="Abrir diagrama Mermaid"');
     expect(source).toContain("ResourcePreview");
     expect(source).toContain("createMermaidSvgBlob(svg)");
+    expect(source).toContain("getMermaidSvgDimensions(svg)");
+    expect(source).toContain("srcSet: [{ src: previewSrc, ...dimensions }]");
     expect(source).toContain("URL.revokeObjectURL(url)");
     expect(source).toContain("triggerRef");
     expect(source).toContain("cursor-zoom-in");
