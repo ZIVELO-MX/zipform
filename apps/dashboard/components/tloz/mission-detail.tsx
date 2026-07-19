@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption } from "@zipform/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
 import {
@@ -281,7 +281,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
           <RelationsSection className="mt-7" title="Recursos">
             <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
-              {current.resources.map((resource) => <ResourceReference key={resource.id} resource={resource} onRemove={() => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id))} />)}
+              <MissionResourceReferences resources={current.resources} onRemove={(resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id))} />
               {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
             </div>
             <AddResource onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} />
@@ -359,11 +359,22 @@ function MissionReferences({ missions, project, onRemove, onNavigate }: { missio
   })}</div>;
 }
 
-function ResourceReference({ resource, onRemove }: { resource: TlozResource; onRemove: () => void }) {
+function MissionResourceReferences({ resources, onRemove }: { resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
+  const previewSlides: ResourcePreviewSlide[] = resources
+    .filter((resource) => resource.type === "image" && Boolean(resource.url))
+    .map((resource) => ({ id: resource.id, src: resource.url!, alt: resource.title, title: resource.title }));
+  return <>{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</>;
+}
+
+function ResourceReference({ resource, previewSlides, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; onRemove: () => void }) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const isGithub = isGithubUrl(resource.url);
+  const isPreviewable = resource.type === "image" && Boolean(resource.url);
   const ResourceIcon = resolveResourceIcon(resource);
   const content = <><span className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-3"><ResourceIcon aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-sm font-semibold">{resource.title}</p><p className="m-0 truncate text-xs text-carbon/45">{resourceTypeLabel[resource.type]}{resource.fileId ? ` · ${resource.fileId}` : ""}</p></div></>;
-  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}<IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} /></div>;
+  const primary = isPreviewable ? <button ref={triggerRef} type="button" className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" onClick={() => setOpen(true)} aria-label={`Previsualizar ${resource.title}`}>{content}</button> : resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>;
+  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{primary}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}<IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} />{isPreviewable ? <ResourcePreview slides={previewSlides} open={open} onClose={() => setOpen(false)} index={Math.max(previewSlides.findIndex((slide) => slide.id === resource.id), 0)} triggerRef={triggerRef} ariaLabel={`Vista previa de ${resource.title}`} /> : null}</div>;
 }
 
 function OpenReferenceButton({ label, href, onOpen, className }: { label: string; href: string; onOpen?: () => void; className?: string }) {
