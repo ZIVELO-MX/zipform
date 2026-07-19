@@ -9,11 +9,10 @@ export const getTlozDashboardSummary = cache(() => dataClient.tloz.getDashboardS
 export const getTlozMissions = cache(() => dataClient.tloz.getMissions());
 export const getTlozMissionDetail = cache((missionId: string) => dataClient.tloz.getMissionDetail(missionId));
 export const getTlozMissionDetailWithAttachments = cache(async (missionId: string) => {
-  const [mission, groups] = await Promise.all([
-    dataClient.tloz.getMissionDetail(missionId),
-    dataClient.tloz.getAttachmentGroups(missionId),
-  ]);
-  if (!mission || groups.length === 0) return mission;
+  const mission = await dataClient.tloz.getMissionDetail(missionId);
+  if (!mission) return mission;
+  const groups = await dataClient.tloz.getAttachmentGroups(mission.id);
+  if (groups.length === 0) return mission;
   return hydrateTlozMissionResources(mission, groups, (path) => getTlozAttachmentStorage().createSignedRead(path, 3600));
 });
 

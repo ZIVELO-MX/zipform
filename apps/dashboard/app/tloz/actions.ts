@@ -4,6 +4,7 @@ import { auth } from "../../auth";
 import { dataClient, type TlozMissionCreateInput, type TlozMissionUpdateInput, type TlozProjectCreateInput, type TlozProjectUpdateInput, type TlozQuestItemCreateInput, type TlozQuestItemUpdateInput, type TlozResourceInput } from "@zipform/data";
 import type { TlozMissionStatus } from "@zipform/types";
 import { revalidatePath } from "next/cache";
+import { getTlozMissionDetailWithAttachments } from "../../lib/tloz-data";
 
 const revalidateTloz = () => revalidatePath("/tloz", "layout");
 
@@ -29,7 +30,7 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
 
 export async function getMissionDetail(missionId: string) {
   await assertAuthenticated();
-  return dataClient.tloz.getMissionDetail(missionId);
+  return getTlozMissionDetailWithAttachments(missionId);
 }
 
 export async function getMissionDetailOptions() {

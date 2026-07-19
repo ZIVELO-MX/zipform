@@ -10,10 +10,27 @@ vi.mock("react", () => ({ cache: <T extends (...args: never[]) => unknown>(callb
 vi.mock("@zipform/data", () => ({ dataClient: { tloz: mocks } }));
 vi.mock("./tloz-attachment-storage", () => ({ getTlozAttachmentStorage: () => ({ createSignedRead: mocks.createSignedRead }) }));
 
-import { hydrateTlozMissionResources } from "./tloz-data";
+import { getTlozMissionDetailWithAttachments, hydrateTlozMissionResources } from "./tloz-data";
 
 describe("hydrateTlozMissionResources", () => {
   beforeEach(() => vi.clearAllMocks());
+
+  it("resolves display IDs before loading and signing attachment groups", async () => {
+    mocks.getMissionDetail.mockResolvedValue({
+      id: "mission-uuid",
+      resources: [{ id: "resource-1", type: "image", title: "Capture" }],
+    });
+    mocks.getAttachmentGroups.mockResolvedValue([
+      { attachments: [{ id: "resource-1", storagePath: "missions/mission-uuid/capture/file.png" }] },
+    ]);
+    mocks.createSignedRead.mockResolvedValue("https://signed.test/file.png");
+
+    await expect(getTlozMissionDetailWithAttachments("TLO-0029")).resolves.toMatchObject({
+      resources: [{ id: "resource-1", url: "https://signed.test/file.png" }],
+    });
+    expect(mocks.getMissionDetail).toHaveBeenCalledWith("TLO-0029");
+    expect(mocks.getAttachmentGroups).toHaveBeenCalledWith("mission-uuid");
+  });
 
   it("adds signed URLs to attachment resources for the TLO-0064 preview", async () => {
     const mission = { resources: [{ id: "resource-1", type: "image", title: "Capture", url: undefined }] } as never;
