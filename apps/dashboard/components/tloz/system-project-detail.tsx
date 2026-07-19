@@ -15,7 +15,7 @@ import { useTlozViewState } from "./tloz-view-state";
 import { DetailPropertyRow } from "./detail-property-row";
 import { MarkdownEditor } from "./markdown-editor";
 import { AddResource } from "./mission-detail";
-import { resourceTypeLabel, resolveResourceIcon, TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
+import { resourceTypeLabel, resolveResourceIcon, resolveResourceImageUrl, TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
 
 const icons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
 const projectStatusLabel: Record<TlozProjectStatus, string> = { planned: "Planeado", active: "Activo", archived: "Archivado" };
@@ -107,7 +107,7 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
 
         <section className="mt-7"><button type="button" className="mb-[13px] flex w-full items-center justify-between text-left" aria-expanded={missionsOpen} onClick={() => setMissionsOpen((open) => !open)}><h2 className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">{project ? "Missions" : "Usado por"}</h2><span className="text-xs text-carbon/45">{missionsOpen ? "Ocultar" : "Mostrar"}</span></button>{missionsOpen ? <div className="flex flex-col gap-2">{relatedMissions.map((mission) => props.onNavigateMission ? <button key={mission.id} type="button" onClick={() => props.onNavigateMission?.(mission)} className="flex items-center gap-3 rounded-xl border border-carbon/10 bg-white px-3.5 py-3 text-left text-carbon hover:border-zivelo/25"><span className="grid size-7 place-items-center rounded-lg bg-carbon/5"><FileText size={13} /></span><span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{mission.title}</span><span className="text-[11px] text-carbon/45">{mission.status}</span></button> : <Link key={mission.id} href={mission.project ? missionHref(mission.project, mission.displayId) : "/tloz"} className="flex items-center gap-3 rounded-xl border border-carbon/10 bg-white px-3.5 py-3 text-carbon no-underline hover:border-zivelo/25"><span className="grid size-7 place-items-center rounded-lg bg-carbon/5"><FileText size={13} /></span><span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{mission.title}</span><span className="text-[11px] text-carbon/45">{mission.status}</span></Link>)}{!relatedMissions.length ? <p className="text-sm text-carbon/45">Sin missions relacionadas.</p> : null}</div> : null}</section>
 
-        <DetailSection title="Recursos" className="mt-7"><div className="mission-resource-grid grid grid-cols-2 gap-2.5">{resources.map((resource) => <ResourceCard key={resource.id} resource={resource} previewSlides={resources.filter((candidate) => candidate.type === "image" && Boolean(candidate.url)).map((candidate) => ({ id: candidate.id, src: candidate.url!, alt: candidate.title, title: candidate.title }))} onRemove={() => void removeResource(resource.id)} />)}<AddResource onAdd={(input) => void addResource(input)} /></div></DetailSection>
+        <DetailSection title="Recursos" className="mt-7"><div className="mission-resource-grid grid grid-cols-2 gap-2.5">{resources.map((resource) => <ResourceCard key={resource.id} resource={resource} previewSlides={resources.flatMap((candidate) => { const src = resolveResourceImageUrl(candidate); return src ? [{ id: candidate.id, src, alt: candidate.title, title: candidate.title }] : []; })} onRemove={() => void removeResource(resource.id)} />)}<AddResource onAdd={(input) => void addResource(input)} /></div></DetailSection>
       </main>
 
       <aside className="mission-detail-properties flex self-start flex-col gap-3.5" aria-label="Propiedades">
@@ -154,9 +154,10 @@ function Activity({ label, date, tone = "#9a9a98" }: { label: string; date: stri
 function ResourceCard({ resource, previewSlides, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; onRemove: () => void }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const isPreviewable = resource.type === "image" && Boolean(resource.url);
+  const previewUrl = resolveResourceImageUrl(resource);
+  const isPreviewable = Boolean(previewUrl);
   const Icon = resolveResourceIcon(resource);
-  const content = <><span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5]">{isPreviewable ? <img src={resource.url} alt="" className="size-full object-cover" /> : <Icon size={13} />}</span><span className="min-w-0 flex-1"><strong className="block truncate text-sm">{resource.title}</strong><span className="block truncate text-xs text-carbon/45">{resourceTypeLabel[resource.type]}</span></span></>;
+  const content = <><span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5]"><Icon size={13} aria-hidden="true" /></span><span className="min-w-0 flex-1"><strong className="block truncate text-sm">{resource.title}</strong><span className="block truncate text-xs text-carbon/45">{resourceTypeLabel[resource.type]}</span></span></>;
   const primary = isPreviewable ? <button ref={triggerRef} type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-zivelo" onClick={() => setOpen(true)} aria-label={`Previsualizar ${resource.title}`}>{content}</button> : resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 text-carbon no-underline" href={resource.url} target="_blank" rel="noreferrer">{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>;
   return <div className="group flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3">{primary}<Button type="button" variant="ghost" size="icon-xs" aria-label={`Eliminar ${resource.title}`} onClick={onRemove}><X /></Button>{isPreviewable ? <ResourcePreview slides={previewSlides} open={open} onClose={() => setOpen(false)} index={Math.max(previewSlides.findIndex((slide) => slide.id === resource.id), 0)} triggerRef={triggerRef} /> : null}</div>;
 }

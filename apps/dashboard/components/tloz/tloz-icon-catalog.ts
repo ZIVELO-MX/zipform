@@ -41,6 +41,27 @@ export function isGithubUrl(url?: string) {
   }
 }
 
+function isHttpUrl(value?: string) {
+  if (!value) return false;
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+export function resolveResourceImageUrl(resource: Pick<TlozResource, "type" | "url" | "fileId">) {
+  if (resource.type !== "image") return undefined;
+  if (isHttpUrl(resource.url)) return resource.url?.trim();
+  if (isHttpUrl(resource.fileId)) return resource.fileId?.trim();
+  return undefined;
+}
+
+export function resourceUsesFileId(type: TlozResourceType) {
+  return type === "file" || type === "document";
+}
+
 export function inferResourceIconId(resource: Pick<TlozResource, "type" | "url" | "icon">) {
   if (resource.icon?.trim()) return resource.icon;
   if (isGithubUrl(resource.url)) return "Github";

@@ -18,15 +18,24 @@ describe("hydrateTlozMissionResources", () => {
   it("resolves display IDs before loading and signing attachment groups", async () => {
     mocks.getMissionDetail.mockResolvedValue({
       id: "mission-uuid",
-      resources: [{ id: "resource-1", type: "image", title: "Capture" }],
+      resources: [
+        { id: "resource-1", type: "image", title: "Desktop capture" },
+        { id: "resource-2", type: "image", title: "Mobile capture" },
+      ],
     });
     mocks.getAttachmentGroups.mockResolvedValue([
-      { attachments: [{ id: "resource-1", storagePath: "missions/mission-uuid/capture/file.png" }] },
+      { attachments: [
+        { id: "resource-1", storagePath: "missions/mission-uuid/capture/desktop.png" },
+        { id: "resource-2", storagePath: "missions/mission-uuid/capture/mobile.png" },
+      ] },
     ]);
-    mocks.createSignedRead.mockResolvedValue("https://signed.test/file.png");
+    mocks.createSignedRead.mockImplementation(async (path: string) => `https://signed.test/${path}`);
 
     await expect(getTlozMissionDetailWithAttachments("TLO-0029")).resolves.toMatchObject({
-      resources: [{ id: "resource-1", url: "https://signed.test/file.png" }],
+      resources: [
+        { id: "resource-1", url: "https://signed.test/missions/mission-uuid/capture/desktop.png" },
+        { id: "resource-2", url: "https://signed.test/missions/mission-uuid/capture/mobile.png" },
+      ],
     });
     expect(mocks.getMissionDetail).toHaveBeenCalledWith("TLO-0029");
     expect(mocks.getAttachmentGroups).toHaveBeenCalledWith("mission-uuid");

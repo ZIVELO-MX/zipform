@@ -22,7 +22,7 @@ import { missionStatusLabel, missionStatusTone, missionTypeIcon, missionTypeLabe
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import { appendTaskLine, updateTaskLine } from "./mission-document";
 import { MarkdownEditor } from "./markdown-editor";
-import { inferResourceIconId, isGithubUrl, RESOURCE_ICON_OPTIONS, resourceTypeLabel, resolveResourceIcon, TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
+import { inferResourceIconId, isGithubUrl, RESOURCE_ICON_OPTIONS, resourceTypeLabel, resolveResourceIcon, resolveResourceImageUrl, resourceUsesFileId, TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
 import type { TlozResourceInput } from "@zipform/data";
 
 const missionIcons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
@@ -360,9 +360,10 @@ function MissionReferences({ missions, project, onRemove, onNavigate }: { missio
 }
 
 function MissionResourceReferences({ resources, onRemove }: { resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
-  const previewSlides: ResourcePreviewSlide[] = resources
-    .filter((resource) => resource.type === "image" && Boolean(resource.url))
-    .map((resource) => ({ id: resource.id, src: resource.url!, alt: resource.title, title: resource.title }));
+  const previewSlides: ResourcePreviewSlide[] = resources.flatMap((resource) => {
+    const src = resolveResourceImageUrl(resource);
+    return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
+  });
   return <>{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</>;
 }
 
@@ -370,9 +371,10 @@ function ResourceReference({ resource, previewSlides, onRemove }: { resource: Tl
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const isGithub = isGithubUrl(resource.url);
-  const isPreviewable = resource.type === "image" && Boolean(resource.url);
+  const previewUrl = resolveResourceImageUrl(resource);
+  const isPreviewable = Boolean(previewUrl);
   const ResourceIcon = resolveResourceIcon(resource);
-  const content = <><span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-3">{isPreviewable ? <img src={resource.url} alt="" className="size-full object-cover" /> : <ResourceIcon aria-hidden="true" />}</span><div className="min-w-0 flex-1"><p className="m-0 truncate text-sm font-semibold">{resource.title}</p><p className="m-0 truncate text-xs text-carbon/45">{resourceTypeLabel[resource.type]}{resource.fileId ? ` · ${resource.fileId}` : ""}</p></div></>;
+  const content = <><span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-3"><ResourceIcon aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-sm font-semibold">{resource.title}</p><p className="m-0 truncate text-xs text-carbon/45">{resourceTypeLabel[resource.type]}{resource.fileId && !previewUrl ? ` · ${resource.fileId}` : ""}</p></div></>;
   const primary = isPreviewable ? <button ref={triggerRef} type="button" className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" onClick={() => setOpen(true)} aria-label={`Previsualizar ${resource.title}`}>{content}</button> : resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>;
   return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{primary}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}<IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} />{isPreviewable ? <ResourcePreview slides={previewSlides} open={open} onClose={() => setOpen(false)} index={Math.max(previewSlides.findIndex((slide) => slide.id === resource.id), 0)} triggerRef={triggerRef} /> : null}</div>;
 }
@@ -384,7 +386,7 @@ function OpenReferenceButton({ label, href, onOpen, className }: { label: string
 
 export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => void }) {
   const [adding, setAdding] = useState(false); const [title, setTitle] = useState(""); const [location, setLocation] = useState(""); const [type, setType] = useState<TlozResourceType>("link"); const [icon, setIcon] = useState("");
-  const usesFileId = type === "file" || type === "document" || type === "image";
+  const usesFileId = resourceUsesFileId(type);
   if (!adding) return <button type="button" className="col-span-full flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setAdding(true)}><Plus className="size-3.5" aria-hidden="true" />Agregar nuevo</button>;
   const inferredIcon = inferResourceIconId({ type, url: usesFileId ? undefined : location, icon: icon || undefined });
   return <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-carbon/10 bg-white p-2.5"><div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2 sm:grid-cols-[40px_130px_minmax(0,1fr)]"><IconPicker icons={RESOURCE_ICON_OPTIONS} value={inferredIcon} label="Icono del recurso" onValueChange={setIcon} allowClear iconOnly className="size-10 justify-center" /><Select value={type} onValueChange={(value) => setType(value as TlozResourceType)}><SelectTrigger aria-label="Tipo de recurso"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{Object.entries(resourceTypeLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select><Input className="col-span-2 min-w-0 sm:col-span-1" aria-label="Título del recurso" placeholder="Título" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div className="flex min-w-0 flex-col gap-2 sm:flex-row"><Input className="min-w-0 flex-1" aria-label={usesFileId ? "Identificador del archivo" : "URL del recurso"} placeholder={usesFileId ? "ID del archivo" : "https://…"} value={location} onChange={(event) => setLocation(event.target.value)} /><div className="flex shrink-0 justify-end gap-1"><Button type="button" size="icon" variant="outline" disabled={!title.trim()} aria-label="Adjuntar recurso" onClick={() => { onAdd({ type, title: title.trim(), ...(icon ? { icon } : {}), ...(location.trim() ? usesFileId ? { fileId: location.trim() } : { url: location.trim() } : {}) }); setTitle(""); setLocation(""); setIcon(""); setAdding(false); }}><Plus aria-hidden="true" /></Button><Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Button></div></div></div>;
