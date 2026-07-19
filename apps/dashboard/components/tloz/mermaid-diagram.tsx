@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Download, Maximize2 } from "lucide-react";
-import { Button, ResourcePreview } from "@zipform/ui";
+import { ResourcePreview } from "@zipform/ui";
 import { createMermaidSvgBlob } from "./mermaid-download";
 
 type MermaidState =
@@ -24,17 +23,6 @@ function loadMermaid() {
     return mermaid;
   });
   return mermaidLoader;
-}
-
-function downloadMermaidSvg(svg: string) {
-  const url = URL.createObjectURL(createMermaidSvgBlob(svg));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = "diagrama-mermaid.svg";
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  URL.revokeObjectURL(url);
 }
 
 function MermaidViewer({ svg }: { svg: string }) {
@@ -60,19 +48,12 @@ function MermaidViewer({ svg }: { svg: string }) {
   return (
     <>
       <figure className="group relative mb-3 overflow-x-auto rounded-xl border border-carbon/10 bg-paper p-3 last:mb-0" aria-label="Diagrama Mermaid">
-        <div className="min-w-fit [&_svg]:h-auto [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: svg }} />
-        <div className="flex items-center justify-end gap-2 border-t border-carbon/10 pt-2">
-          <Button type="button" variant="outline" size="sm" onClick={() => downloadMermaidSvg(svg)} aria-label="Descargar diagrama SVG">
-            <Download data-icon="inline-start" aria-hidden="true" />
-            Descargar SVG
-          </Button>
-          <Button ref={triggerRef} type="button" variant="outline" size="sm" onClick={() => setOpen(true)} aria-label="Abrir diagrama Mermaid">
-            <Maximize2 data-icon="inline-start" aria-hidden="true" />
-            Abrir preview
-          </Button>
-        </div>
+        <button ref={triggerRef} type="button" className="block min-w-fit w-full cursor-zoom-in rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-zivelo" onClick={() => setOpen(true)} aria-label="Abrir diagrama Mermaid">
+          <span className="block min-w-fit [&_svg]:h-auto [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: svg }} />
+        </button>
+        <figcaption className="sr-only">Haz clic en el diagrama para abrir la vista previa con zoom.</figcaption>
       </figure>
-      {slide ? <ResourcePreview slides={[slide]} open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} ariaLabel="Vista previa del diagrama Mermaid" /> : null}
+      {slide ? <ResourcePreview slides={[slide]} open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} /> : null}
     </>
   );
 }

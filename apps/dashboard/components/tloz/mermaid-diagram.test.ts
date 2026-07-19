@@ -20,22 +20,25 @@ describe("Mermaid Markdown diagrams", () => {
     expect(markdownSource).toContain('<code className={className} {...props} />');
   });
 
-  it("opens a contained full-screen viewer with SVG download", () => {
+  it("opens the rendered diagram as a lightbox image", () => {
     const source = readFileSync(new URL("./mermaid-diagram.tsx", import.meta.url), "utf8");
     const previewSource = readFileSync(new URL("../../../../packages/ui/src/components/resource-preview.tsx", import.meta.url), "utf8");
     const lightboxSource = readFileSync(new URL("../../../../packages/ui/src/components/resource-preview-lightbox.tsx", import.meta.url), "utf8");
     expect(source).toContain('aria-label="Abrir diagrama Mermaid"');
     expect(source).toContain("ResourcePreview");
     expect(source).toContain("createMermaidSvgBlob(svg)");
-    expect(source).toContain('aria-label="Descargar diagrama SVG"');
-    expect(source).toContain("downloadMermaidSvg");
-    expect(source).toContain('anchor.download = "diagrama-mermaid.svg"');
     expect(source).toContain("URL.revokeObjectURL(url)");
     expect(source).toContain("triggerRef");
+    expect(source).toContain("cursor-zoom-in");
     expect(previewSource).toContain("React.lazy");
     expect(lightboxSource).toContain("Zoom");
     expect(lightboxSource).toContain("Thumbnails");
     expect(lightboxSource).toContain("Fullscreen");
+    expect(lightboxSource).toContain("DownloadPlugin");
+    expect(lightboxSource).toContain("scrollToZoom: true");
+    expect(lightboxSource).not.toContain("render={{");
+    expect(source).not.toContain("Descargar SVG");
+    expect(source).not.toContain("Abrir preview");
     expect(source).not.toContain("onWheel={handleWheel}");
     expect(source).not.toContain("setPointerCapture");
     expect(source).not.toContain("mermaid-viewport");

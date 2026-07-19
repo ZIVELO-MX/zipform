@@ -19,7 +19,6 @@ export type ResourcePreviewProps = {
   index?: number;
   onIndexChange?: (index: number) => void;
   triggerRef?: React.RefObject<HTMLElement | null>;
-  ariaLabel?: string;
 };
 
 export function clampResourcePreviewIndex(index: number, slidesLength: number) {
@@ -45,7 +44,6 @@ export function ResourcePreview({
   index = 0,
   onIndexChange,
   triggerRef,
-  ariaLabel = "Vista previa de recursos",
 }: ResourcePreviewProps) {
   const normalizedSlides = normalizeResourcePreviewSlides(slides);
   if (!open || normalizedSlides.length === 0) return null;
@@ -58,7 +56,6 @@ export function ResourcePreview({
         slides={normalizedSlides}
         open={open}
         index={safeIndex}
-        ariaLabel={ariaLabel}
         onClose={onClose}
         onIndexChange={onIndexChange}
         onExited={() => {
