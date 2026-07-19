@@ -7,6 +7,7 @@ import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import { useController, useNavigationState } from "yet-another-react-lightbox";
 import type { ResourcePreviewSlide } from "./resource-preview";
+import { useOverlayPortalContainer } from "./overlay-portal";
 
 type ResourcePreviewLightboxProps = {
   slides: readonly ResourcePreviewSlide[];
@@ -45,6 +46,8 @@ export function ResourcePreviewLightbox({
   onIndexChange,
   onExited,
 }: ResourcePreviewLightboxProps) {
+  const overlayContainer = useOverlayPortalContainer();
+
   return (
     <Lightbox
       open={open}
@@ -59,6 +62,7 @@ export function ResourcePreviewLightbox({
         imageFit: "contain",
       }}
       controller={{ aria: true }}
+      portal={{ root: overlayContainer ?? undefined }}
       render={{
         buttonPrev: () => <NavigationButton direction="prev" />,
         buttonNext: () => <NavigationButton direction="next" />,
