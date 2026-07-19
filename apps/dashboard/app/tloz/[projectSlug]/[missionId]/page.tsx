@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { TlozPageShell } from "../../../../components/tloz/tloz-shell";
-import { getTlozEpisodes, getTlozMissionDetail, getTlozMissions, getTlozProjects, getTlozQuestItems, getTlozResources, getTlozSeasons, getTlozUsers } from "../../../../lib/tloz-data";
+import { getTlozEpisodes, getTlozMissionDetailWithAttachments, getTlozMissions, getTlozProjects, getTlozQuestItems, getTlozResources, getTlozSeasons, getTlozUsers } from "../../../../lib/tloz-data";
 import { findProjectBySlug, projectHref } from "../../../../lib/tloz-routes";
 import { getSystemProject } from "../../../../lib/tloz-routes";
 import { SystemEntityDetailPage } from "../../../../components/tloz/system-entity-detail-page";
@@ -11,7 +11,7 @@ import Link from "next/link";
 export default async function ProjectMissionPage({ params }: { params: Promise<{ projectSlug: string; missionId: string }> }) {
   const { projectSlug, missionId } = await params;
   const [mission, missions, projects, seasons, episodes, questItems, resources, allUsers] = await Promise.all([
-    getTlozMissionDetail(missionId), getTlozMissions(), getTlozProjects(), getTlozSeasons(), getTlozEpisodes(), getTlozQuestItems(), getTlozResources(), getTlozUsers(),
+    getTlozMissionDetailWithAttachments(missionId), getTlozMissions(), getTlozProjects(), getTlozSeasons(), getTlozEpisodes(), getTlozQuestItems(), getTlozResources(), getTlozUsers(),
   ]);
   const systemProject = getSystemProject(projectSlug);
   if (systemProject?.detailVariant === "inventory") {
