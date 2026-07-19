@@ -1,10 +1,12 @@
 "use client";
 
 import Lightbox from "yet-another-react-lightbox";
+import { ChevronLeft, ChevronRight, Download, Expand, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import DownloadPlugin from "yet-another-react-lightbox/plugins/download";
 import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import { useController, useNavigationState } from "yet-another-react-lightbox";
 import type { ResourcePreviewSlide } from "./resource-preview";
 
 type ResourcePreviewLightboxProps = {
@@ -15,6 +17,26 @@ type ResourcePreviewLightboxProps = {
   onIndexChange?: (index: number) => void;
   onExited: () => void;
 };
+
+function NavigationButton({ direction }: { direction: "prev" | "next" }) {
+  const { prev, next } = useController();
+  const { prevDisabled, nextDisabled } = useNavigationState();
+  const isPrevious = direction === "prev";
+  const disabled = isPrevious ? prevDisabled : nextDisabled;
+  const Icon = isPrevious ? ChevronLeft : ChevronRight;
+
+  return (
+    <button
+      type="button"
+      aria-label={isPrevious ? "Imagen anterior" : "Siguiente imagen"}
+      disabled={disabled}
+      className={`yarl__button yarl__navigation_${direction}`}
+      onClick={() => (isPrevious ? prev() : next())}
+    >
+      <Icon className="yarl__icon" aria-hidden="true" />
+    </button>
+  );
+}
 
 export function ResourcePreviewLightbox({
   slides,
@@ -38,10 +60,41 @@ export function ResourcePreviewLightbox({
         imageFit: "contain",
       }}
       controller={{ aria: true }}
+      render={{
+        buttonPrev: () => <NavigationButton direction="prev" />,
+        buttonNext: () => <NavigationButton direction="next" />,
+        iconClose: () => <X aria-hidden="true" />,
+        iconDownload: () => <Download aria-hidden="true" />,
+        iconEnterFullscreen: () => <Maximize2 aria-hidden="true" />,
+        iconExitFullscreen: () => <Minimize2 aria-hidden="true" />,
+        iconZoomIn: () => <ZoomIn aria-hidden="true" />,
+        iconZoomOut: () => <ZoomOut aria-hidden="true" />,
+        iconThumbnailsVisible: () => <Expand aria-hidden="true" />,
+        iconThumbnailsHidden: () => <Expand aria-hidden="true" />,
+      }}
+      styles={{
+        root: {
+          colorScheme: "light",
+          "--yarl__color_backdrop": "rgba(250, 250, 249, 0.97)",
+          "--yarl__container_background_color": "#FAFAF9",
+          "--yarl__color_button": "#1D1D1B",
+          "--yarl__color_button_active": "#D72228",
+          "--yarl__color_button_disabled": "rgba(29, 29, 27, 0.28)",
+          "--yarl__button_filter": "none",
+          "--yarl__toolbar_padding": "12px",
+          "--yarl__icon_size": "20px",
+        },
+      }}
       labels={{
         Next: "Siguiente imagen",
         Previous: "Imagen anterior",
         Close: "Cerrar vista previa",
+        Download: "Descargar imagen",
+        "Enter Fullscreen": "Abrir pantalla completa",
+        "Exit Fullscreen": "Salir de pantalla completa",
+        Thumbnails: "Miniaturas",
+        "Show thumbnails": "Mostrar miniaturas",
+        "Hide thumbnails": "Ocultar miniaturas",
         "Zoom in": "Acercar",
         "Zoom out": "Alejar",
       }}

@@ -38,7 +38,15 @@ describe("Mermaid Markdown diagrams", () => {
     expect(lightboxSource).toContain("Fullscreen");
     expect(lightboxSource).toContain("DownloadPlugin");
     expect(lightboxSource).toContain("scrollToZoom: true");
-    expect(lightboxSource).not.toContain("render={{");
+    expect(lightboxSource).toContain("ChevronLeft");
+    expect(lightboxSource).toContain("ChevronRight");
+    expect(lightboxSource).toContain('colorScheme: "light"');
+    expect(lightboxSource).toContain('"--yarl__container_background_color": "#FAFAF9"');
+    expect(lightboxSource).toContain('"--yarl__color_button_active": "#D72228"');
+    expect(lightboxSource).toContain('aria-label={isPrevious ? "Imagen anterior" : "Siguiente imagen"}');
+    expect(lightboxSource).toContain('"Show thumbnails": "Mostrar miniaturas"');
+    expect(lightboxSource).not.toContain("title={isPrevious");
+    expect(lightboxSource).toContain("render={{");
     expect(source).not.toContain("Descargar SVG");
     expect(source).not.toContain("Abrir preview");
     expect(source).not.toContain("onWheel={handleWheel}");
