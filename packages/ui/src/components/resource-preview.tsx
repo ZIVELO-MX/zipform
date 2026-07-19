@@ -31,6 +31,10 @@ export function normalizeResourcePreviewSlides(slides: readonly ResourcePreviewS
     .filter((slide) => slide.src.trim().length > 0)
     .map((slide) => ({ ...slide, alt: slide.alt.trim() || "Imagen" }));
 }
+
+export function resolveResourcePreviewPortalRoot(container: HTMLElement | null) {
+  return container ?? undefined;
+}
 const LazyResourcePreviewLightbox = React.lazy(() =>
   import("./resource-preview-lightbox").then(({ ResourcePreviewLightbox }) => ({
     default: ResourcePreviewLightbox,
