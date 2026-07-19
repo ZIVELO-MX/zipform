@@ -93,6 +93,9 @@ async function storageRequest(path: string, init: RequestInit = {}) {
 
 function signedUrl(baseUrl: string, value: string, token?: string) {
   const url = new URL(value, `${baseUrl}/storage/v1/`);
+  if (url.origin === baseUrl && !url.pathname.startsWith("/storage/v1/")) {
+    url.pathname = `/storage/v1${url.pathname.startsWith("/") ? url.pathname : `/${url.pathname}`}`;
+  }
   if (token) url.searchParams.set("token", token);
   return url.toString();
 }

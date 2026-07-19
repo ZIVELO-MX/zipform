@@ -25,3 +25,16 @@ test("creates and constrains the private TLOZ attachments bucket idempotently", 
   assert.equal(requests[2].init.method, "PUT");
   assert.deepEqual(JSON.parse(requests[1].init.body).allowed_mime_types, ["image/png", "image/jpeg", "image/webp"]);
 });
+
+test("recognizes Supabase's logical not-found response returned as HTTP 400", async () => {
+  const responses = [
+    new Response(JSON.stringify({ statusCode: "404", error: "Bucket not found" }), { status: 400 }),
+    new Response("created", { status: 200 }),
+    new Response("updated", { status: 200 }),
+  ];
+  const result = await ensureTlozAttachmentsBucket({
+    env: { SUPABASE_URL: "https://supabase.test", SUPABASE_SERVICE_ROLE_KEY: "secret" },
+    fetchImpl: async () => responses.shift(),
+  });
+  assert.equal(result.created, true);
+});

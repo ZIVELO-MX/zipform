@@ -21,12 +21,23 @@ async function request(fetchImpl, baseUrl, serviceRoleKey, path, init = {}) {
   return response;
 }
 
+async function isBucketNotFound(response) {
+  if (response.status === 404) return true;
+  if (response.status !== 400) return false;
+  try {
+    const body = await response.clone().json();
+    return body?.statusCode === "404" && body?.error === "Bucket not found";
+  } catch {
+    return false;
+  }
+}
+
 export async function ensureTlozAttachmentsBucket({ env = process.env, fetchImpl = fetch } = {}) {
   const { baseUrl, serviceRoleKey } = configFrom(env);
   const bucketPath = `/bucket/${TLOZ_ATTACHMENTS_BUCKET}`;
   const currentResponse = await request(fetchImpl, baseUrl, serviceRoleKey, bucketPath);
   let created = false;
-  if (currentResponse.status === 404) {
+  if (await isBucketNotFound(currentResponse)) {
     const createResponse = await request(fetchImpl, baseUrl, serviceRoleKey, "/bucket", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
