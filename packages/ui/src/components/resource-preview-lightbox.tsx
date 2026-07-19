@@ -43,8 +43,6 @@ export function ResourcePreviewLightbox({
         Next: "Siguiente imagen",
         Previous: "Imagen anterior",
         Close: "Cerrar vista previa",
-        Fullscreen: "Pantalla completa",
-        "Exit Fullscreen": "Salir de pantalla completa",
         ZoomIn: "Acercar",
         ZoomOut: "Alejar",
       }}

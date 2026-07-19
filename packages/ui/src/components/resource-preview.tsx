@@ -26,6 +26,12 @@ export function clampResourcePreviewIndex(index: number, slidesLength: number) {
   if (slidesLength <= 0) return 0;
   return Math.min(Math.max(index, 0), slidesLength - 1);
 }
+
+export function normalizeResourcePreviewSlides(slides: readonly ResourcePreviewSlide[]) {
+  return slides
+    .filter((slide) => slide.src.trim().length > 0)
+    .map((slide) => ({ ...slide, alt: slide.alt.trim() || "Imagen" }));
+}
 const LazyResourcePreviewLightbox = React.lazy(() =>
   import("./resource-preview-lightbox").then(({ ResourcePreviewLightbox }) => ({
     default: ResourcePreviewLightbox,
@@ -41,14 +47,15 @@ export function ResourcePreview({
   triggerRef,
   ariaLabel = "Vista previa de recursos",
 }: ResourcePreviewProps) {
-  if (!open || slides.length === 0) return null;
+  const normalizedSlides = normalizeResourcePreviewSlides(slides);
+  if (!open || normalizedSlides.length === 0) return null;
 
-  const safeIndex = clampResourcePreviewIndex(index, slides.length);
+  const safeIndex = clampResourcePreviewIndex(index, normalizedSlides.length);
 
   return (
     <React.Suspense fallback={<div className="sr-only" role="status">Cargando vista previa…</div>}>
       <LazyResourcePreviewLightbox
-        slides={slides}
+        slides={normalizedSlides}
         open={open}
         index={safeIndex}
         ariaLabel={ariaLabel}
