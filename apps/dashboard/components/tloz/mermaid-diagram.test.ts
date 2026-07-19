@@ -41,7 +41,7 @@ describe("Mermaid Markdown diagrams", () => {
     expect(lightboxSource).toContain("ChevronLeft");
     expect(lightboxSource).toContain("ChevronRight");
     expect(lightboxSource).toContain('colorScheme: "light"');
-    expect(lightboxSource).toContain('"--yarl__container_background_color": "#FAFAF9"');
+    expect(lightboxSource).toContain('"--yarl__container_background_color": "rgba(29, 29, 27, 0.60)"');
     expect(lightboxSource).toContain('"--yarl__color_button_active": "#D72228"');
     expect(lightboxSource).toContain('aria-label={isPrevious ? "Imagen anterior" : "Siguiente imagen"}');
     expect(lightboxSource).not.toContain("title={isPrevious");

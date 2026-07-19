@@ -72,8 +72,8 @@ export function ResourcePreviewLightbox({
       styles={{
         root: {
           colorScheme: "light",
-          "--yarl__color_backdrop": "rgba(250, 250, 249, 0.97)",
-          "--yarl__container_background_color": "#FAFAF9",
+          "--yarl__color_backdrop": "rgba(29, 29, 27, 0.60)",
+          "--yarl__container_background_color": "rgba(29, 29, 27, 0.60)",
           "--yarl__color_button": "#1D1D1B",
           "--yarl__color_button_active": "#D72228",
           "--yarl__color_button_disabled": "rgba(29, 29, 27, 0.28)",
