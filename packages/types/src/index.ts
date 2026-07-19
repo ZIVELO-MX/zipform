@@ -199,8 +199,33 @@ export type TlozResource = {
   title: string;
   url?: string;
   fileId?: string;
+  groupKey?: string;
+  externalKey?: string;
+  storagePath?: string;
+  contentType?: string;
+  sizeBytes?: number;
+  width?: number;
+  height?: number;
+  sourceRevision?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type TlozAttachmentFile = {
+  key: string;
+  title: string;
+  fileName: string;
+  contentType: "image/png" | "image/jpeg" | "image/webp";
+  sizeBytes: number;
+  width: number;
+  height: number;
+};
+
+export type TlozAttachmentGroup = {
+  groupKey: string;
+  sourceRevision: string;
+  generation: number;
+  attachments: Array<Omit<TlozResource, "url"> & { url: string }>;
 };
 
 export type TlozUserMissionState = {

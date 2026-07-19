@@ -849,6 +849,108 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+  /missions/{missionId}/attachments:
+    get:
+      operationId: listMissionAttachmentGroups
+      summary: List the current private screenshot groups for a mission
+      description: Returns the current snapshot for each group with short-lived signed read URLs. Object paths and service credentials are never returned.
+      tags: [Resources]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      responses:
+        "200":
+          description: Current attachment groups.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AttachmentGroup"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: prepareMissionAttachmentBatch
+      summary: Prepare a direct-upload screenshot snapshot
+      description: Validates the complete snapshot manifest and returns one signed upload URL per image. The API does not receive image bytes.
+      tags: [Resources]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttachmentManifest"
+      responses:
+        "200":
+          description: Batch prepared. Repeating the same mission, groupKey and sourceRevision is idempotent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AttachmentBatchPrepared"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    put:
+      operationId: finalizeMissionAttachmentBatch
+      summary: Finalize a screenshot snapshot atomically
+      description: Verifies every uploaded object, replaces the complete group, removes absent keys, and returns 409 when a newer generation has superseded this batch. Repeating a finalized batch is idempotent.
+      tags: [Resources]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [uploadBatchId]
+              properties:
+                uploadBatchId:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+      responses:
+        "200":
+          description: Snapshot finalized.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AttachmentGroupResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The batch belongs to an older generation.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
   /missions/{missionId}/quest-items:
     post:
       operationId: linkMissionQuestItem
@@ -1555,6 +1657,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/ApiError"
+    ServiceUnavailable:
+      description: Private storage is unavailable or not configured.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
   schemas:
     # ── Shared ───────────────────────────────────────────────────────
     ApiError:
@@ -1569,7 +1677,7 @@ components:
           properties:
             code:
               type: string
-              enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR]
+              enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR, INVALID_ATTACHMENT_MANIFEST, ATTACHMENT_STORAGE_NOT_CONFIGURED, ATTACHMENT_STORAGE_ERROR, attachment_object_missing, attachment_object_invalid, batch_superseded]
             message:
               type: string
             fields:
@@ -1847,6 +1955,134 @@ components:
           type: [string, "null"]
 
     # ── Resources ────────────────────────────────────────────────────
+    AttachmentFile:
+      type: object
+      additionalProperties: false
+      required: [key, title, fileName, contentType, sizeBytes, width, height]
+      properties:
+        key:
+          type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        fileName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        contentType:
+          type: string
+          enum: [image/png, image/jpeg, image/webp]
+        sizeBytes:
+          type: integer
+          minimum: 1
+          maximum: 6291456
+        width:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        height:
+          type: integer
+          minimum: 1
+          maximum: 10000
+    AttachmentManifest:
+      type: object
+      additionalProperties: false
+      required: [groupKey, sourceRevision, files]
+      properties:
+        groupKey:
+          type: string
+          pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        sourceRevision:
+          type: string
+          pattern: "^[0-9a-fA-F]{40}$"
+        files:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/AttachmentFile"
+    AttachmentUpload:
+      allOf:
+        - $ref: "#/components/schemas/AttachmentFile"
+        - type: object
+          required: [storagePath, uploadUrl]
+          properties:
+            storagePath:
+              type: string
+            uploadUrl:
+              type: string
+              format: uri
+    AttachmentBatchPrepared:
+      type: object
+      required: [uploadBatchId, generation, groupKey, sourceRevision, status, uploads]
+      properties:
+        uploadBatchId:
+          type: string
+        generation:
+          type: integer
+          minimum: 1
+        groupKey:
+          type: string
+        sourceRevision:
+          type: string
+        status:
+          type: string
+          enum: [prepared, finalized]
+        uploads:
+          type: array
+          items:
+            $ref: "#/components/schemas/AttachmentUpload"
+    Attachment:
+      allOf:
+        - $ref: "#/components/schemas/Resource"
+        - type: object
+          required: [groupKey, externalKey, contentType, sizeBytes, width, height, sourceRevision, url]
+          properties:
+            groupKey:
+              type: string
+            externalKey:
+              type: string
+            contentType:
+              type: string
+            sizeBytes:
+              type: integer
+            width:
+              type: integer
+            height:
+              type: integer
+            sourceRevision:
+              type: string
+            url:
+              type: string
+              format: uri
+    AttachmentGroup:
+      type: object
+      required: [groupKey, sourceRevision, generation, attachments]
+      properties:
+        groupKey:
+          type: string
+        sourceRevision:
+          type: string
+        generation:
+          type: integer
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attachment"
+    AttachmentGroupResult:
+      allOf:
+        - $ref: "#/components/schemas/AttachmentGroup"
+        - type: object
+          required: [uploadBatchId, warnings]
+          properties:
+            uploadBatchId:
+              type: string
+            warnings:
+              type: array
+              items:
+                type: string
     ResourceType:
       type: string
       enum: [link, document, image, file, note]
@@ -1889,6 +2125,20 @@ components:
           type: string
           format: uri
         fileId:
+          type: string
+        groupKey:
+          type: string
+        externalKey:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+        width:
+          type: integer
+        height:
+          type: integer
+        sourceRevision:
           type: string
     ResourceListResponse:
       type: object

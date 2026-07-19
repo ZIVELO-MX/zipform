@@ -85,6 +85,7 @@ model TlozMission {
   missionQuestItems  TlozMissionQuestItem[]
   checklistItems     TlozChecklistItem[]
   resources          TlozResource[]
+  attachmentBatches  TlozAttachmentBatch[]
   userMissionStates  TlozUserMissionState[]
 
   @@index([ownerId])
@@ -169,13 +170,41 @@ model TlozResource {
   title     String
   url       String?
   fileId    String?
+  groupKey String?
+  externalKey String?
+  storagePath String?
+  contentType String?
+  sizeBytes Int?
+  width Int?
+  height Int?
+  sourceRevision String?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
   @@index([missionId])
   @@index([projectId])
   @@index([questItemId])
+  @@unique([missionId, groupKey, externalKey])
   @@map("tloz_resources")
+}
+
+model TlozAttachmentBatch {
+  id             String      @id
+  missionId      String
+  mission        TlozMission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  groupKey       String
+  sourceRevision String
+  generation     Int
+  status         String
+  manifest       Json
+  finalizedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([missionId, groupKey, sourceRevision])
+  @@unique([missionId, groupKey, generation])
+  @@index([missionId, groupKey, generation])
+  @@map("tloz_attachment_batches")
 }
 
 model TlozUserMissionState {

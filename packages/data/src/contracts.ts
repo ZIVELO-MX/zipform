@@ -11,6 +11,8 @@ import type {
   TlozProject,
   TlozQuestItem,
   TlozResource,
+  TlozAttachmentFile,
+  TlozAttachmentGroup,
   TlozSeason,
   UserProfile
 } from "@zipform/types";
@@ -42,6 +44,24 @@ export type TlozMissionDetail = TlozMissionRecord & {
 
 export type TlozResourceInput = Pick<TlozResource, "type" | "title"> &
   Partial<Pick<TlozResource, "url" | "fileId" | "icon">>;
+
+export type TlozAttachmentFileInput = TlozAttachmentFile & { storagePath: string };
+
+export type TlozAttachmentBatch = {
+  uploadBatchId: string;
+  missionId: string;
+  groupKey: string;
+  sourceRevision: string;
+  generation: number;
+  status: "prepared" | "finalized";
+  files: TlozAttachmentFileInput[];
+};
+
+export type TlozAttachmentFinalizeResult = {
+  batch: TlozAttachmentBatch;
+  group: TlozAttachmentGroup;
+  previousStoragePaths: string[];
+};
 
 export type UserUpdateInput = {
   name?: string;
@@ -166,6 +186,10 @@ export type TlozRepository = {
   removeProjectResource(projectId: string, resourceId: string): Promise<TlozResource[]>;
   addQuestItemResource(questItemId: string, input: TlozResourceInput): Promise<TlozResource[]>;
   removeQuestItemResource(questItemId: string, resourceId: string): Promise<TlozResource[]>;
+  prepareAttachmentBatch(missionId: string, groupKey: string, sourceRevision: string, files: TlozAttachmentFileInput[]): Promise<TlozAttachmentBatch>;
+  getAttachmentBatch(uploadBatchId: string): Promise<TlozAttachmentBatch>;
+  finalizeAttachmentBatch(uploadBatchId: string): Promise<TlozAttachmentFinalizeResult>;
+  getAttachmentGroups(missionId: string): Promise<TlozAttachmentGroup[]>;
   patchMissionStatus(missionId: string, status: TlozMission["status"]): Promise<TlozMissionRecord>;
   deleteMission(missionId: string): Promise<void>;
 };
