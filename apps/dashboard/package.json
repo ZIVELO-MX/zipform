@@ -26,7 +26,8 @@
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "tailwindcss-animate": "^1.0.7",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "yet-another-react-lightbox": "3.32.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

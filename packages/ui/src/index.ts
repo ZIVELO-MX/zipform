@@ -24,6 +24,7 @@ export * from "./components/overlay-portal";
 export * from "./components/popover";
 export * from "./components/progress";
 export * from "./components/resizable";
+export * from "./components/resource-preview";
 export * from "./components/select";
 export * from "./components/segmented-control";
 export * from "./components/skeleton";

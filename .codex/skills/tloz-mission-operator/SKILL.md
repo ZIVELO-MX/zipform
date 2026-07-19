@@ -5,7 +5,7 @@ description: Consult, create, review, correct, document, or update TLOZ missions
 
 # TLOZ Mission and Project Operator
 
-Operate TLOZ data through the Zipform Data API. Use `https://zipform.zivelo.dev` for current production data and mission mutations; use the explicitly configured local API only for contract rehearsal, read-only development, and performance tests.
+Operate TLOZ data through the Zipform Data API. Use `https://zipform.zivelo.dev` for current production data and mission mutations; use the explicitly configured local API only for contract rehearsal, read-only development, and performance tests. Prefer the computer-level `tloz-api` CLI so the same API wrapper works from any repository.
 
 ## Guardrails
 
@@ -21,6 +21,18 @@ Operate TLOZ data through the Zipform Data API. Use `https://zipform.zivelo.dev`
 - Change `ownerId` only when the user explicitly authorizes the assignment and the target user is resolved unambiguously through the API.
 
 Read [references/authentication.md](references/authentication.md) when configuring or troubleshooting authentication. Read [references/api-workflows.md](references/api-workflows.md) before creating or mutating missions or relationships.
+
+## Install and use the API CLI
+
+Use `tloz-api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` for production calls. The CLI fixes the production origin, reads `ZIPFORM_TOKEN` only from the environment, and never prints it.
+
+If `tloz-api` is not available, install it from this skill without sudo or shell-profile changes:
+
+```bash
+node "${CODEX_HOME:-$HOME/.codex}/skills/tloz-mission-operator/scripts/install-tloz-api.mjs"
+```
+
+The installer places it in `${HOME}/.local/bin/tloz-api`. If that directory is not in `PATH`, invoke that absolute path or add the directory to the launching agent's environment. When working in this repository, `pnpm tloz:api` remains a compatibility alias for the same implementation.
 
 ## Resolve a mission
 
@@ -128,7 +140,7 @@ When mission work produces a repository change:
 ## Local API and approval minimization
 
 - Prefer `pnpm api:local` for non-production reads, payload rehearsal, and load testing so those requests stay on loopback and do not require external network access.
-- Use `pnpm tloz:api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` for production calls. The wrapper fixes the production origin, reads `ZIPFORM_TOKEN` only from the environment, and never prints it.
+- Use `tloz-api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` for production calls. The repository's `pnpm tloz:api` alias is equivalent when operating inside Zipform.
 - A persistent approval for the narrow wrapper command can prevent repeated permission prompts. If that approval is unavailable, do not substitute mock data for a production mutation or claim a current production read was verified; report the external-access blocker once.
 
 ## Report results
