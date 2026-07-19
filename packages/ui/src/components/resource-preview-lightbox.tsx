@@ -43,8 +43,8 @@ export function ResourcePreviewLightbox({
         Next: "Siguiente imagen",
         Previous: "Imagen anterior",
         Close: "Cerrar vista previa",
-        ZoomIn: "Acercar",
-        ZoomOut: "Alejar",
+        "Zoom in": "Acercar",
+        "Zoom out": "Alejar",
       }}
       on={{
         view: ({ index: currentIndex }) => onIndexChange?.(currentIndex),
