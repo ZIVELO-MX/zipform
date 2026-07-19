@@ -71,12 +71,12 @@ export function ResourcePreviewLightbox({
       }}
       styles={{
         root: {
-          colorScheme: "light",
-          "--yarl__color_backdrop": "rgba(29, 29, 27, 0.60)",
-          "--yarl__container_background_color": "rgba(29, 29, 27, 0.60)",
-          "--yarl__color_button": "#1D1D1B",
+          colorScheme: "dark",
+          "--yarl__color_backdrop": "#000",
+          "--yarl__container_background_color": "#000",
+          "--yarl__color_button": "#FFF",
           "--yarl__color_button_active": "#D72228",
-          "--yarl__color_button_disabled": "rgba(29, 29, 27, 0.28)",
+          "--yarl__color_button_disabled": "rgba(255, 255, 255, 0.40)",
           "--yarl__button_filter": "none",
           "--yarl__toolbar_padding": "12px",
           "--yarl__icon_size": "20px",
