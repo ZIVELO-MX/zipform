@@ -5,6 +5,7 @@ import { AppShell } from "../components/app-shell";
 import { Toaster } from "@zipform/ui";
 import type { TlozProject } from "@zipform/types";
 import "./globals.css";
+import "yet-another-react-lightbox/styles.css";
 
 export const metadata: Metadata = {
   title: "Zipform",
