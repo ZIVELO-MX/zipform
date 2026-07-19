@@ -34,7 +34,7 @@ describe("Mermaid Markdown diagrams", () => {
     expect(source).toContain("cursor-zoom-in");
     expect(previewSource).toContain("React.lazy");
     expect(lightboxSource).toContain("Zoom");
-    expect(lightboxSource).toContain("Thumbnails");
+    expect(lightboxSource).not.toContain("Thumbnails");
     expect(lightboxSource).toContain("Fullscreen");
     expect(lightboxSource).toContain("DownloadPlugin");
     expect(lightboxSource).toContain("scrollToZoom: true");
@@ -44,7 +44,6 @@ describe("Mermaid Markdown diagrams", () => {
     expect(lightboxSource).toContain('"--yarl__container_background_color": "#FAFAF9"');
     expect(lightboxSource).toContain('"--yarl__color_button_active": "#D72228"');
     expect(lightboxSource).toContain('aria-label={isPrevious ? "Imagen anterior" : "Siguiente imagen"}');
-    expect(lightboxSource).toContain('"Show thumbnails": "Mostrar miniaturas"');
     expect(lightboxSource).not.toContain("title={isPrevious");
     expect(lightboxSource).toContain("render={{");
     expect(source).not.toContain("Descargar SVG");

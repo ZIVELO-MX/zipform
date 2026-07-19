@@ -1,10 +1,9 @@
 "use client";
 
 import Lightbox from "yet-another-react-lightbox";
-import { ChevronLeft, ChevronRight, Download, Expand, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Maximize2, Minimize2, X, ZoomIn, ZoomOut } from "lucide-react";
 import DownloadPlugin from "yet-another-react-lightbox/plugins/download";
 import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
-import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import { useController, useNavigationState } from "yet-another-react-lightbox";
 import type { ResourcePreviewSlide } from "./resource-preview";
@@ -52,7 +51,7 @@ export function ResourcePreviewLightbox({
       close={onClose}
       index={index}
       slides={slides.map(({ id: _id, title: _title, ...slide }) => slide)}
-      plugins={[Zoom, Thumbnails, Fullscreen, DownloadPlugin]}
+      plugins={[Zoom, Fullscreen, DownloadPlugin]}
       zoom={{ maxZoomPixelRatio: 3, scrollToZoom: true }}
       carousel={{
         finite: slides.length <= 1,
@@ -69,8 +68,6 @@ export function ResourcePreviewLightbox({
         iconExitFullscreen: () => <Minimize2 aria-hidden="true" />,
         iconZoomIn: () => <ZoomIn aria-hidden="true" />,
         iconZoomOut: () => <ZoomOut aria-hidden="true" />,
-        iconThumbnailsVisible: () => <Expand aria-hidden="true" />,
-        iconThumbnailsHidden: () => <Expand aria-hidden="true" />,
       }}
       styles={{
         root: {
@@ -92,9 +89,6 @@ export function ResourcePreviewLightbox({
         Download: "Descargar imagen",
         "Enter Fullscreen": "Abrir pantalla completa",
         "Exit Fullscreen": "Salir de pantalla completa",
-        Thumbnails: "Miniaturas",
-        "Show thumbnails": "Mostrar miniaturas",
-        "Hide thumbnails": "Ocultar miniaturas",
         "Zoom in": "Acercar",
         "Zoom out": "Alejar",
       }}

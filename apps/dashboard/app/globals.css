@@ -4,6 +4,24 @@
 @tailwind components;
 @tailwind utilities;
 
+.tloz-resource-preview .yarl__container {
+  background: #fafaf9;
+}
+
+.tloz-resource-preview .yarl__slide_image {
+  box-shadow: 10px 10px 0 rgba(29, 29, 27, 0.14);
+}
+
+@media (prefers-contrast: more) {
+  .tloz-resource-preview .yarl__container {
+    background: #000;
+  }
+
+  .tloz-resource-preview .yarl__slide_image {
+    box-shadow: 10px 10px 0 rgba(255, 255, 255, 0.22);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
