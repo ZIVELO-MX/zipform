@@ -33,12 +33,14 @@ test("routes TLOZ pull request handoff through the agent template", () => {
 
 test("documents the local API and keeps production calls on the fixed origin", () => {
   const skill = readRepositoryFile(".codex/skills/tloz-mission-operator/SKILL.md");
-  const wrapper = readRepositoryFile("scripts/tloz-api.mjs");
+  const wrapper = readRepositoryFile(".codex/skills/tloz-mission-operator/scripts/tloz-api.mjs");
 
   assert.match(skill, /pnpm api:local/);
   assert.match(skill, /pnpm perf:api/);
   assert.match(wrapper, /https:\/\/zipform\.zivelo\.dev/);
   assert.doesNotMatch(wrapper, /process\.env\.ZIPFORM_API_BASE_URL/);
+  assert.match(skill, /install-tloz-api\.mjs/);
+  assert.match(skill, /tloz-api \/api\/v1/);
 });
 
 test("prioritizes missions assigned to the authenticated TLOZ agent", () => {
