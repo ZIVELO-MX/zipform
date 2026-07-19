@@ -1,4 +1,4 @@
-import { PrismaClient, type Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import type {
   ApiKey,
   Avatar,
@@ -8,6 +8,7 @@ import type {
   TlozMission,
   TlozMissionDependency,
   TlozMissionQuestItem,
+  TlozAttachmentGroup,
   TlozProject,
   TlozQuestItem,
   TlozResource,
@@ -15,7 +16,8 @@ import type {
   TlozUserMissionState,
   UserProfile
 } from "@zipform/types";
-import type { TlozMissionRecord, ApiKeyCreateResult, AgentCreateInput } from "../contracts";
+import type { TlozAttachmentBatch, TlozAttachmentFileInput, TlozAttachmentFinalizeResult, TlozMissionRecord, ApiKeyCreateResult, AgentCreateInput } from "../contracts";
+import { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "../tloz-attachment-errors";
 import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
 import { hashApiKey, verifyApiKey, generateApiKey } from "../lib/crypto";
 import { apps, roadmap } from "../seed-data";
@@ -328,20 +330,77 @@ function mapResource(resource: {
   title: string;
   url: string | null;
   fileId: string | null;
+  groupKey: string | null;
+  externalKey: string | null;
+  storagePath: string | null;
+  contentType: string | null;
+  sizeBytes: number | null;
+  width: number | null;
+  height: number | null;
+  sourceRevision: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): TlozResource {
+  const { storagePath: _storagePath, ...publicResource } = resource;
   return {
-    ...resource,
-    type: resource.type as TlozResource["type"],
-    icon: resource.icon ?? undefined,
-    missionId: resource.missionId ?? undefined,
-    projectId: resource.projectId ?? undefined,
-    questItemId: resource.questItemId ?? undefined,
-    url: resource.url ?? undefined,
-    fileId: resource.fileId ?? undefined,
-    createdAt: toIso(resource.createdAt),
-    updatedAt: toIso(resource.updatedAt)
+    ...publicResource,
+    type: publicResource.type as TlozResource["type"],
+    icon: publicResource.icon ?? undefined,
+    missionId: publicResource.missionId ?? undefined,
+    projectId: publicResource.projectId ?? undefined,
+    questItemId: publicResource.questItemId ?? undefined,
+    url: publicResource.url ?? undefined,
+    fileId: publicResource.fileId ?? undefined,
+    groupKey: publicResource.groupKey ?? undefined,
+    externalKey: publicResource.externalKey ?? undefined,
+    contentType: publicResource.contentType ?? undefined,
+    sizeBytes: publicResource.sizeBytes ?? undefined,
+    width: publicResource.width ?? undefined,
+    height: publicResource.height ?? undefined,
+    sourceRevision: publicResource.sourceRevision ?? undefined,
+    createdAt: toIso(publicResource.createdAt),
+    updatedAt: toIso(publicResource.updatedAt)
+  };
+}
+
+function attachmentFilesFromManifest(manifest: Prisma.JsonValue): TlozAttachmentFileInput[] {
+  if (!Array.isArray(manifest)) throw new TlozAttachmentError("ATTACHMENT_CONFLICT", "El manifiesto de capturas persistido es inválido.");
+  return manifest as unknown as TlozAttachmentFileInput[];
+}
+
+function mapAttachmentBatch(row: {
+  id: string;
+  missionId: string;
+  groupKey: string;
+  sourceRevision: string;
+  generation: number;
+  status: string;
+  manifest: Prisma.JsonValue;
+}): TlozAttachmentBatch {
+  return {
+    uploadBatchId: row.id,
+    missionId: row.missionId,
+    groupKey: row.groupKey,
+    sourceRevision: row.sourceRevision,
+    generation: row.generation,
+    status: row.status as TlozAttachmentBatch["status"],
+    files: attachmentFilesFromManifest(row.manifest),
+  };
+}
+
+function mapAttachmentGroup(
+  groupKey: string,
+  sourceRevision: string,
+  generation: number,
+  resources: Array<Parameters<typeof mapResource>[0]>,
+): TlozAttachmentGroup {
+  return {
+    groupKey,
+    sourceRevision,
+    generation,
+    attachments: resources.map((resource) => {
+      return { ...mapResource(resource), storagePath: resource.storagePath ?? undefined, url: "" };
+    }),
   };
 }
 
@@ -882,6 +941,131 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       async removeQuestItemResource(questItemId, resourceId) {
         await prisma.tlozResource.deleteMany({ where: { id: resourceId, questItemId } });
         return (await prisma.tlozResource.findMany({ where: { questItemId }, orderBy: { createdAt: "asc" } })).map(mapResource);
+      },
+      async prepareAttachmentBatch(missionId, groupKey, sourceRevision, files) {
+        const existing = await prisma.tlozAttachmentBatch.findUnique({
+          where: { missionId_groupKey_sourceRevision: { missionId, groupKey, sourceRevision } },
+        });
+        if (existing) return mapAttachmentBatch(existing);
+
+        const mission = await prisma.tlozMission.findUnique({ where: { id: missionId }, select: { id: true } });
+        if (!mission) throw new TlozAttachmentError("ATTACHMENT_MISSION_NOT_FOUND", `TLOZ mission ${missionId} was not found`);
+        const latest = await prisma.tlozAttachmentBatch.findFirst({
+          where: { missionId, groupKey },
+          orderBy: { generation: "desc" },
+          select: { generation: true },
+        });
+        const row = await prisma.tlozAttachmentBatch.create({
+          data: {
+            id: crypto.randomUUID(),
+            missionId,
+            groupKey,
+            sourceRevision,
+            generation: (latest?.generation ?? 0) + 1,
+            status: "prepared",
+            manifest: files as unknown as Prisma.InputJsonValue,
+          },
+        });
+        return mapAttachmentBatch(row);
+      },
+      async getAttachmentBatch(uploadBatchId) {
+        const row = await prisma.tlozAttachmentBatch.findUnique({ where: { id: uploadBatchId } });
+        if (!row) throw new TlozAttachmentError("ATTACHMENT_BATCH_NOT_FOUND", "El lote de capturas no existe.");
+        return mapAttachmentBatch(row);
+      },
+      async finalizeAttachmentBatch(uploadBatchId) {
+        const batch = await prisma.tlozAttachmentBatch.findUnique({ where: { id: uploadBatchId } });
+        if (!batch) throw new TlozAttachmentError("ATTACHMENT_BATCH_NOT_FOUND", "El lote de capturas no existe.");
+        const mappedBatch = mapAttachmentBatch(batch);
+
+        if (batch.status !== "finalized") {
+          const finalized = await prisma.$transaction(async (tx) => {
+            const latest = await tx.tlozAttachmentBatch.findFirst({
+              where: { missionId: batch.missionId, groupKey: batch.groupKey },
+              orderBy: { generation: "desc" },
+              select: { id: true },
+            });
+            if (latest?.id !== batch.id) throw new TlozAttachmentBatchSupersededError();
+
+            const current = await tx.tlozResource.findMany({
+              where: { missionId: batch.missionId, groupKey: batch.groupKey },
+              orderBy: { createdAt: "asc" },
+            });
+            const files = mappedBatch.files;
+            const keys = files.map((file) => file.key);
+            const previousStoragePaths = current
+              .filter((resource) => !keys.includes(resource.externalKey ?? "") || files.some((file) => file.key === resource.externalKey && file.storagePath !== resource.storagePath))
+              .map((resource) => resource.storagePath)
+              .filter((path): path is string => Boolean(path));
+            const currentByKey = new Map(current.map((resource) => [resource.externalKey, resource]));
+
+            for (const file of files) {
+              const existing = currentByKey.get(file.key);
+              const data = {
+                type: "image",
+                title: file.title,
+                url: null,
+                fileId: null,
+                groupKey: batch.groupKey,
+                externalKey: file.key,
+                storagePath: file.storagePath,
+                contentType: file.contentType,
+                sizeBytes: file.sizeBytes,
+                width: file.width,
+                height: file.height,
+                sourceRevision: batch.sourceRevision,
+              };
+              if (existing) await tx.tlozResource.update({ where: { id: existing.id }, data });
+              else await tx.tlozResource.create({ data: { id: crypto.randomUUID(), missionId: batch.missionId, ...data } });
+            }
+            await tx.tlozResource.deleteMany({
+              where: { missionId: batch.missionId, groupKey: batch.groupKey, externalKey: { notIn: keys } },
+            });
+            const updated = await tx.tlozResource.findMany({
+              where: { missionId: batch.missionId, groupKey: batch.groupKey },
+              orderBy: { createdAt: "asc" },
+            });
+            const updatedBatch = await tx.tlozAttachmentBatch.update({
+              where: { id: batch.id },
+              data: { status: "finalized", finalizedAt: new Date() },
+            });
+            return { updatedBatch, updated, previousStoragePaths };
+          }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+          return {
+            batch: mapAttachmentBatch(finalized.updatedBatch),
+            group: mapAttachmentGroup(batch.groupKey, batch.sourceRevision, batch.generation, finalized.updated),
+            previousStoragePaths: [...new Set(finalized.previousStoragePaths)],
+          } satisfies TlozAttachmentFinalizeResult;
+        }
+
+        const resources = await prisma.tlozResource.findMany({
+          where: { missionId: batch.missionId, groupKey: batch.groupKey },
+          orderBy: { createdAt: "asc" },
+        });
+        return {
+          batch: mappedBatch,
+          group: mapAttachmentGroup(batch.groupKey, batch.sourceRevision, batch.generation, resources),
+          previousStoragePaths: [],
+        } satisfies TlozAttachmentFinalizeResult;
+      },
+      async getAttachmentGroups(missionId) {
+        const [resources, batches] = await Promise.all([
+          prisma.tlozResource.findMany({ where: { missionId, groupKey: { not: null }, sourceRevision: { not: null } }, orderBy: { createdAt: "asc" } }),
+          prisma.tlozAttachmentBatch.findMany({ where: { missionId, status: "finalized" }, orderBy: { generation: "desc" } }),
+        ]);
+        const latestByGroup = new Map<string, (typeof batches)[number]>();
+        for (const batch of batches) if (!latestByGroup.has(batch.groupKey)) latestByGroup.set(batch.groupKey, batch);
+        const resourcesByGroup = new Map<string, typeof resources>();
+        for (const resource of resources) {
+          if (!resource.groupKey) continue;
+          const group = resourcesByGroup.get(resource.groupKey) ?? [];
+          group.push(resource);
+          resourcesByGroup.set(resource.groupKey, group);
+        }
+        return [...resourcesByGroup.entries()].flatMap(([groupKey, groupResources]) => {
+          const batch = latestByGroup.get(groupKey);
+          return batch ? [mapAttachmentGroup(groupKey, batch.sourceRevision, batch.generation, groupResources)] : [];
+        });
       },
       async patchMissionStatus(missionId, status) {
         await prisma.tlozMission.update({

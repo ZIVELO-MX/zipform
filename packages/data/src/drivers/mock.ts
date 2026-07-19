@@ -1,5 +1,6 @@
-import type { ApiKey, TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
-import type { TlozMissionRecord } from "../contracts";
+import type { ApiKey, TlozAttachmentGroup, TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
+import type { TlozAttachmentBatch, TlozAttachmentFileInput, TlozMissionRecord } from "../contracts";
+import { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "../tloz-attachment-errors";
 import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
 import type { AgentCreateInput, ApiKeyCreateResult } from "../contracts";
 import {
@@ -38,6 +39,7 @@ export function createMockDataClient(): ZipformDataClient {
     resources: [...resources],
     userMissionStates: [...userMissionStates]
   };
+  const attachmentBatches: TlozAttachmentBatch[] = [];
 
   const getHydratedMission = (missionId: string) => {
     const mission = hydrateMissions(tlozData).find((item) => item.id === missionId);
@@ -387,6 +389,39 @@ export function createMockDataClient(): ZipformDataClient {
         tlozData.resources = tlozData.resources.filter((item) => item.id !== resourceId || item.questItemId !== questItemId);
         return tlozData.resources.filter((item) => item.questItemId === questItemId);
       },
+      async prepareAttachmentBatch(missionId, groupKey, sourceRevision, files: TlozAttachmentFileInput[]) {
+        const existing = attachmentBatches.find((batch) => batch.missionId === missionId && batch.groupKey === groupKey && batch.sourceRevision === sourceRevision);
+        if (existing) return { ...existing, files: existing.files.map((file) => ({ ...file })) };
+        if (!tlozData.missions.some((mission) => mission.id === missionId)) throw new TlozAttachmentError("ATTACHMENT_MISSION_NOT_FOUND", "Mission not found");
+        const generation = Math.max(0, ...attachmentBatches.filter((batch) => batch.missionId === missionId && batch.groupKey === groupKey).map((batch) => batch.generation)) + 1;
+        const batch: TlozAttachmentBatch = { uploadBatchId: crypto.randomUUID(), missionId, groupKey, sourceRevision, generation, status: "prepared", files: files.map((file) => ({ ...file })) };
+        attachmentBatches.push(batch);
+        return { ...batch, files: batch.files.map((file) => ({ ...file })) };
+      },
+      async getAttachmentBatch(uploadBatchId) {
+        const batch = attachmentBatches.find((item) => item.uploadBatchId === uploadBatchId);
+        if (!batch) throw new TlozAttachmentError("ATTACHMENT_BATCH_NOT_FOUND", "Batch not found");
+        return { ...batch, files: batch.files.map((file) => ({ ...file })) };
+      },
+      async finalizeAttachmentBatch(uploadBatchId) {
+        const batch = attachmentBatches.find((item) => item.uploadBatchId === uploadBatchId);
+        if (!batch) throw new TlozAttachmentError("ATTACHMENT_BATCH_NOT_FOUND", "Batch not found");
+        const current = tlozData.resources.filter((resource) => resource.missionId === batch.missionId && resource.groupKey === batch.groupKey);
+        if (batch.status === "finalized") return { batch, group: mockAttachmentGroup(batch, current), previousStoragePaths: [] };
+        const latest = attachmentBatches.filter((item) => item.missionId === batch.missionId && item.groupKey === batch.groupKey).sort((a, b) => b.generation - a.generation)[0];
+        if (latest?.uploadBatchId !== batch.uploadBatchId) throw new TlozAttachmentBatchSupersededError();
+        const previousStoragePaths = current.map((resource) => resource.storagePath).filter((path): path is string => Boolean(path));
+        const next = batch.files.map((file) => {
+          const existing = current.find((resource) => resource.externalKey === file.key);
+          return { id: existing?.id ?? crypto.randomUUID(), missionId: batch.missionId, type: "image" as const, title: file.title, groupKey: batch.groupKey, externalKey: file.key, storagePath: file.storagePath, contentType: file.contentType, sizeBytes: file.sizeBytes, width: file.width, height: file.height, sourceRevision: batch.sourceRevision, createdAt: existing?.createdAt ?? new Date().toISOString(), updatedAt: new Date().toISOString() };
+        });
+        tlozData.resources = [...tlozData.resources.filter((resource) => !(resource.missionId === batch.missionId && resource.groupKey === batch.groupKey)), ...next];
+        batch.status = "finalized";
+        return { batch, group: mockAttachmentGroup(batch, next), previousStoragePaths };
+      },
+      async getAttachmentGroups(missionId) {
+        return attachmentBatches.filter((batch) => batch.missionId === missionId && batch.status === "finalized").map((batch) => mockAttachmentGroup(batch, tlozData.resources.filter((resource) => resource.missionId === missionId && resource.groupKey === batch.groupKey)));
+      },
       async patchMissionStatus(missionId, status) {
         return this.updateMission(missionId, {
           status,
@@ -406,5 +441,14 @@ export function createMockDataClient(): ZipformDataClient {
         tlozData.userMissionStates = tlozData.userMissionStates.filter((item) => item.missionId !== missionId);
       }
     }
+  };
+}
+
+function mockAttachmentGroup(batch: TlozAttachmentBatch, resources: TlozResource[]): TlozAttachmentGroup {
+  return {
+    groupKey: batch.groupKey,
+    sourceRevision: batch.sourceRevision,
+    generation: batch.generation,
+    attachments: resources.map((resource) => ({ ...resource, url: "" })),
   };
 }

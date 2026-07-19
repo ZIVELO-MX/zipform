@@ -49,3 +49,16 @@ describe("OpenAPI resource icons", () => {
     expect(spec).toContain('$ref: "#/components/schemas/ResourceInput"');
   });
 });
+
+describe("OpenAPI mission attachments", () => {
+  it("documents the two-phase direct upload contract and limits", () => {
+    expect(spec).toContain("/missions/{missionId}/attachments:");
+    expect(spec).toContain("operationId: prepareMissionAttachmentBatch");
+    expect(spec).toContain("operationId: finalizeMissionAttachmentBatch");
+    expect(spec).toContain("operationId: listMissionAttachmentGroups");
+    expect(spec).toContain("maximum: 6291456");
+    expect(spec).toContain("maxItems: 20");
+    expect(spec).toContain("batch_superseded");
+    expect(spec).toContain("sourceRevision");
+  });
+});
