@@ -114,6 +114,13 @@ describe("settings actions (agent)", () => {
       expect(mocks.revokeApiKey).toHaveBeenCalledWith("key-1");
     });
 
+    it("rejects reader agents from key administration", async () => {
+      mocks.auth.mockResolvedValue({ user: { id: "reader", type: "agent", role: "agent:reader" } });
+
+      await expect(revokeAgentApiKey("key-1")).rejects.toThrow("No autorizado");
+      expect(mocks.revokeApiKey).not.toHaveBeenCalled();
+    });
+
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 

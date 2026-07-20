@@ -18,6 +18,7 @@ vi.mock("../auth", () => ({ auth: mocks.auth }));
 import { authenticateRequest } from "./api-auth";
 
 const localUser = { id: "owner", name: "Owner", username: "owner", email: "owner@zipform.dev", role: "Owner", type: "human", avatarUrl: "", theme: "system" };
+const readerUser = { id: "zileo", name: "Zileo", username: "zileo", email: "zileo@zivelo.dev", role: "agent:reader", type: "agent", avatarUrl: "", theme: "system" };
 const mutableEnv = process.env as Record<string, string | undefined>;
 const originalNodeEnv = mutableEnv.NODE_ENV;
 
@@ -62,5 +63,23 @@ describe("local API authentication", () => {
     if (result instanceof Response) expect(result.status).toBe(401);
     if (originalNodeEnv === undefined) delete mutableEnv.NODE_ENV;
     else mutableEnv.NODE_ENV = originalNodeEnv;
+  });
+
+  it("rejects reader mutations while allowing semantic query reads", async () => {
+    process.env.ZIPFORM_DATA_DRIVER = "prisma";
+    mocks.authenticateWithApiKey.mockResolvedValue(readerUser);
+
+    const mutation = await authenticateRequest(new NextRequest("http://localhost/api/v1/missions", {
+      method: "POST",
+      headers: { authorization: "Bearer zaf_reader" },
+    }));
+    expect(mutation).toBeInstanceOf(Response);
+    if (mutation instanceof Response) expect(mutation.status).toBe(403);
+
+    const query = await authenticateRequest(new NextRequest("http://localhost/api/v1/missions/query", {
+      method: "POST",
+      headers: { authorization: "Bearer zaf_reader" },
+    }));
+    expect(query).toEqual({ user: readerUser });
   });
 });

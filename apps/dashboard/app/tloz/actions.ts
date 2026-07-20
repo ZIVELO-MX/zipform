@@ -5,12 +5,14 @@ import { dataClient, type TlozMissionCreateInput, type TlozMissionUpdateInput, t
 import type { TlozMissionStatus } from "@zipform/types";
 import { revalidatePath } from "next/cache";
 import { getTlozMissionDetailWithAttachments } from "../../lib/tloz-data";
+import { isReadOnlyAgent } from "../../lib/authorization";
 
 const revalidateTloz = () => revalidatePath("/tloz", "layout");
 
-async function assertAuthenticated() {
+async function assertAuthenticated(options: { allowReadOnly?: boolean } = {}) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("No autorizado");
+  if (!options.allowReadOnly && isReadOnlyAgent(session.user)) throw new Error("No autorizado");
   return session.user.id;
 }
 
@@ -29,23 +31,23 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
 }
 
 export async function getMissionDetail(missionId: string) {
-  await assertAuthenticated();
+  await assertAuthenticated({ allowReadOnly: true });
   return getTlozMissionDetailWithAttachments(missionId);
 }
 
 export async function getMissionDetailOptions() {
-  await assertAuthenticated();
+  await assertAuthenticated({ allowReadOnly: true });
   const [missions, projects, seasons, episodes, questItems, users] = await Promise.all([
     dataClient.tloz.getMissions(), dataClient.tloz.getProjects(), dataClient.tloz.getSeasons(), dataClient.tloz.getEpisodes(), dataClient.tloz.getQuestItems(), dataClient.tloz.getUsers()
   ]);
   return { missions, projects, seasons, episodes, questItems, users };
 }
 export async function getEntityResources(kind: "project" | "inventory", entityId: string) {
-  await assertAuthenticated();
+  await assertAuthenticated({ allowReadOnly: true });
   const resources = await dataClient.tloz.getResources();
   return resources.filter((resource) => kind === "project" ? resource.projectId === entityId : resource.questItemId === entityId);
 }
-export async function getTlozDetailUsers() { await assertAuthenticated(); return dataClient.tloz.getUsers(); }
+export async function getTlozDetailUsers() { await assertAuthenticated({ allowReadOnly: true }); return dataClient.tloz.getUsers(); }
 
 export async function createProject(input: TlozProjectCreateInput | string) {
   const userId = await assertAuthenticated();
