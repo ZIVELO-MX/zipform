@@ -46,7 +46,10 @@ POST /api/v1/agents/{agentId}/api-keys    # create new key
 DELETE /api/v1/agents/{agentId}/api-keys/{keyId}  # revoke key
 ```
 
-No RBAC is enforced yet; all authenticated agents have the same access as a human user with a valid session.
+The current authorization baseline restricts `agent:reader` to sanitized TLOZ
+reads. The approved target policy and its implementation status are documented in
+the [TLOZ operational permission matrix](./tloz-permission-matrix.md); enforcement
+of the complete matrix is tracked by TLO-0026.
 
 ## Endpoints
 
