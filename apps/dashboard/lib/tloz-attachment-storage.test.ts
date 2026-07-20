@@ -22,4 +22,27 @@ describe("TLOZ attachment signed URLs", () => {
       "https://supabase.test/storage/v1/object/sign/tloz-attachments/file.png",
     );
   });
+
+  it.each([400, 404])("treats Supabase HTTP %i as a missing object", async (status) => {
+    vi.stubEnv("SUPABASE_URL", "https://supabase.test");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role-test");
+    vi.stubEnv("TLOZ_ATTACHMENTS_BUCKET", "tloz-attachments");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status })));
+    const storage = createTlozAttachmentStorage();
+
+    await expect(storage.inspectObject("missions/mission-1/pr-57/missing.png")).resolves.toBeNull();
+  });
+
+  it("preserves unexpected Supabase inspection failures", async () => {
+    vi.stubEnv("SUPABASE_URL", "https://supabase.test");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role-test");
+    vi.stubEnv("TLOZ_ATTACHMENTS_BUCKET", "tloz-attachments");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 503 })));
+    const storage = createTlozAttachmentStorage();
+
+    await expect(storage.inspectObject("missions/mission-1/pr-57/file.png")).rejects.toMatchObject({
+      code: "ATTACHMENT_STORAGE_ERROR",
+      message: "Storage respondió HTTP 503.",
+    });
+  });
 });

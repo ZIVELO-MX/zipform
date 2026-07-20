@@ -119,7 +119,7 @@ export function createTlozAttachmentStorage(): AttachmentStorage {
       const encodedPath = path.split("/").map(encodeURIComponent).join("/");
       const { serviceRoleKey } = requireStorageConfig();
       const response = await fetch(`${baseUrl}/storage/v1/object/${encodeURIComponent(TLOZ_ATTACHMENTS_BUCKET)}/${encodedPath}`, { method: "HEAD", headers: { Authorization: `Bearer ${serviceRoleKey}`, apikey: serviceRoleKey } });
-      if (response.status === 404) return null;
+      if (response.status === 400 || response.status === 404) return null;
       if (!response.ok) throw new TlozAttachmentRequestError("ATTACHMENT_STORAGE_ERROR", `Storage respondió HTTP ${response.status}.`);
       return { contentType: response.headers.get("content-type")?.split(";", 1)[0] ?? "", sizeBytes: Number(response.headers.get("content-length") ?? "0") };
     },
