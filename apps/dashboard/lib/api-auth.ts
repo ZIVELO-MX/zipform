@@ -2,10 +2,15 @@ import { type NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import type { UserProfile } from "@zipform/types";
 import { auth } from "../auth";
+import { authorizeApiRequest } from "./authorization";
 
 type AuthResult =
   | { user: UserProfile }
   | Response;
+
+function authenticated(user: UserProfile, request: NextRequest): AuthResult {
+  return authorizeApiRequest(request, user) ?? { user };
+}
 
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
   const authHeader = request.headers.get("authorization");
@@ -19,11 +24,11 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
         const users = await dataClient.tloz.getUsers();
         const localUserId = process.env.ZIPFORM_LOCAL_API_USER_ID ?? "owner";
         const localUser = users.find((candidate) => candidate.id === localUserId);
-        if (localUser) return { user: localUser };
+        if (localUser) return authenticated(localUser, request);
       }
 
       const user = await dataClient.agent.authenticateWithApiKey(apiKey);
-      if (user) return { user };
+      if (user) return authenticated(user, request);
     }
   }
 
@@ -33,7 +38,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     const user = users.find(
       (candidate) => candidate.email.trim().toLowerCase() === session.user.email!.toLowerCase()
     );
-    if (user) return { user };
+    if (user) return authenticated(user, request);
   }
 
   return NextResponse.json(

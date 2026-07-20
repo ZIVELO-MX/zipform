@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
+import { toPublicUserProfile } from "../../../../../lib/authorization";
 
 export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -30,7 +31,9 @@ export async function POST(request: NextRequest) {
       body.email ? { email: body.email } : body.username ? { username: body.username } : undefined,
       { limit, cursor: body.cursor }
     );
-    return NextResponse.json(result);
+    return NextResponse.json(auth.user.role === "agent:reader" && auth.user.type === "agent"
+      ? { ...result, data: result.data.map(toPublicUserProfile) }
+      : result);
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
