@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, FileStack, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
+import type { TlozAttachmentGroup, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
 import {
   addMissionDependency,
   addMissionResource,
@@ -18,6 +18,7 @@ import {
   updateMission,
 } from "../../app/tloz/actions";
 import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
+import { MissionAttachmentUploader } from "./mission-attachment-uploader";
 import { missionStatusLabel, missionStatusTone, missionTypeIcon, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import { appendTaskLine, updateTaskLine } from "./mission-document";
@@ -27,6 +28,7 @@ import type { TlozResourceInput } from "@zipform/data";
 
 const missionIcons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
 const defaultMissionContentSections = ["description", "detail", "checklist"];
+const MISSION_ATTACHMENT_UPLOAD_UI_ENABLED = false;
 
 export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
   missions: TlozMissionRecord[];
@@ -35,9 +37,10 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
 
 type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "descriptionDetail" | "icon">;
 
-export function MissionDetail({ mission, options, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
+export function MissionDetail({ mission, options, canUpdate = true, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
+  canUpdate?: boolean;
   onMissionChange?: (mission: TlozMissionDetail) => void;
   onNavigateMission?: (missionId: string) => void;
   onNavigateQuestItem?: (questItemId: string) => void;
@@ -155,6 +158,14 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
   function toggleChecklistItem(position: number, checked: boolean) {
     saveDocument(updateTaskLine(detailMarkdown, position, { completed: checked }));
+  }
+
+  function acceptAttachmentGroup(group: TlozAttachmentGroup) {
+    const nextResources = [
+      ...current.resources.filter((resource) => resource.groupKey !== group.groupKey),
+      ...group.attachments,
+    ];
+    accept({ ...current, resources: nextResources });
   }
 
   function renameChecklistItem(position: number) {
@@ -281,6 +292,7 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
           <RelationsSection className="mt-7" title="Recursos">
             <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
+              {MISSION_ATTACHMENT_UPLOAD_UI_ENABLED ? <MissionAttachmentUploader missionId={current.id} resources={current.resources.filter((resource) => Boolean(resource.groupKey && resource.externalKey))} canUpdate={canUpdate} onGroupCompleted={acceptAttachmentGroup} /> : null}
               <MissionResourceReferences resources={current.resources} onRemove={(resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id))} />
               {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
             </div>
@@ -360,11 +372,37 @@ function MissionReferences({ missions, project, onRemove, onNavigate }: { missio
 }
 
 function MissionResourceReferences({ resources, onRemove }: { resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
+  const grouped = new Map<string, TlozResource[]>();
+  const standalone: TlozResource[] = [];
+  for (const resource of resources) {
+    if (!resource.groupKey) {
+      standalone.push(resource);
+      continue;
+    }
+    grouped.set(resource.groupKey, [...(grouped.get(resource.groupKey) ?? []), resource]);
+  }
+  const previewSlides: ResourcePreviewSlide[] = standalone.flatMap((resource) => {
+    const src = resolveResourceImageUrl(resource);
+    return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
+  });
+  return <>{[...grouped.entries()].map(([groupKey, group]) => <MissionAttachmentGroupReference key={groupKey} groupKey={groupKey} resources={group} onRemove={onRemove} />)}{standalone.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</>;
+}
+
+function MissionAttachmentGroupReference({ groupKey, resources, onRemove }: { groupKey: string; resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
+  const [expanded, setExpanded] = useState(true);
   const previewSlides: ResourcePreviewSlide[] = resources.flatMap((resource) => {
     const src = resolveResourceImageUrl(resource);
     return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
   });
-  return <>{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</>;
+  const groupName = groupKey.replace(/[._-]+/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
+  return <section className="col-span-full min-w-0 rounded-xl border border-[#1D1D1B]/10 bg-white p-3" aria-labelledby={`resource-group-${groupKey}`}>
+    <div className="mb-2.5 flex min-w-0 items-center gap-3">
+      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-4"><FileStack aria-hidden="true" /></span>
+      <div className="min-w-0 flex-1"><h3 id={`resource-group-${groupKey}`} className="m-0 truncate text-[13.5px] font-semibold text-[#1D1D1B]">{groupName}</h3><p className="m-0 text-[11.5px] text-[#9A9A98]">Grupo de capturas</p></div>
+      <button type="button" className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border border-[#1D1D1B]/10 px-2.5 text-[11px] font-bold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" aria-expanded={expanded} aria-controls={`resource-group-items-${groupKey}`} onClick={() => setExpanded((value) => !value)}><span>{resources.length}/{resources.length} elementos</span><ChevronDown className={`size-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} aria-hidden="true" /></button>
+    </div>
+    {expanded ? <div id={`resource-group-items-${groupKey}`} className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</div> : null}
+  </section>;
 }
 
 function ResourceReference({ resource, previewSlides, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; onRemove: () => void }) {
