@@ -62,6 +62,8 @@ describe("mission detail interaction contracts", () => {
     expect(detail).toContain("MISSION_ATTACHMENT_UPLOAD_UI_ENABLED = false");
     expect(detail).toContain("MissionAttachmentGroupReference");
     expect(detail).toContain("Grupo de capturas");
+    expect(detail).toContain("elementos");
+    expect(detail).toContain("aria-expanded={expanded}");
     expect(detail).not.toContain('resources={current.resources.filter((resource) => !resource.groupKey)}');
   });
 

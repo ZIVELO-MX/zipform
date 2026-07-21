@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, FileStack, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, FileStack, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozAttachmentGroup, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
@@ -389,6 +389,7 @@ function MissionResourceReferences({ resources, onRemove }: { resources: TlozRes
 }
 
 function MissionAttachmentGroupReference({ groupKey, resources, onRemove }: { groupKey: string; resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
+  const [expanded, setExpanded] = useState(true);
   const previewSlides: ResourcePreviewSlide[] = resources.flatMap((resource) => {
     const src = resolveResourceImageUrl(resource);
     return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
@@ -397,9 +398,10 @@ function MissionAttachmentGroupReference({ groupKey, resources, onRemove }: { gr
   return <section className="col-span-full min-w-0 rounded-xl border border-[#1D1D1B]/10 bg-white p-3" aria-labelledby={`resource-group-${groupKey}`}>
     <div className="mb-2.5 flex min-w-0 items-center gap-3">
       <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-4"><FileStack aria-hidden="true" /></span>
-      <div className="min-w-0 flex-1"><h3 id={`resource-group-${groupKey}`} className="m-0 truncate text-[13.5px] font-semibold text-[#1D1D1B]">{groupName}</h3><p className="m-0 text-[11.5px] text-[#9A9A98]">Grupo de capturas · {resources.length} {resources.length === 1 ? "imagen" : "imágenes"}</p></div>
+      <div className="min-w-0 flex-1"><h3 id={`resource-group-${groupKey}`} className="m-0 truncate text-[13.5px] font-semibold text-[#1D1D1B]">{groupName}</h3><p className="m-0 text-[11.5px] text-[#9A9A98]">Grupo de capturas</p></div>
+      <button type="button" className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border border-[#1D1D1B]/10 px-2.5 text-[11px] font-bold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" aria-expanded={expanded} aria-controls={`resource-group-items-${groupKey}`} onClick={() => setExpanded((value) => !value)}><span>{resources.length}/{resources.length} elementos</span><ChevronDown className={`size-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} aria-hidden="true" /></button>
     </div>
-    <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</div>
+    {expanded ? <div id={`resource-group-items-${groupKey}`} className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</div> : null}
   </section>;
 }
 
