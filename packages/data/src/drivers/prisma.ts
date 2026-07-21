@@ -18,7 +18,7 @@ import type {
 } from "@zipform/types";
 import type { TlozAttachmentBatch, TlozAttachmentFileInput, TlozAttachmentFinalizeResult, TlozMissionRecord, ApiKeyCreateResult, AgentCreateInput } from "../contracts";
 import { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "../tloz-attachment-errors";
-import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
+import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, UserRole, ZipformDataClient } from "../contracts";
 import { hashApiKey, verifyApiKey, generateApiKey } from "../lib/crypto";
 import { apps, roadmap } from "../seed-data";
 import {
@@ -685,6 +685,10 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       async getUsers() {
         const rows = await prisma.user.findMany({ orderBy: { name: "asc" } });
         return rows.map(mapUser);
+      },
+      async updateUserRole(userId: string, role: UserRole) {
+        const row = await prisma.user.update({ where: { id: userId }, data: { role, updatedAt: new Date() } });
+        return mapUser(row);
       },
       async createProject(input) {
         const valid = validateProjectCreate(input);

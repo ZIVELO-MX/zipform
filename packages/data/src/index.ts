@@ -29,6 +29,7 @@ export type {
   TlozResourceInput,
   TlozRepository,
   UserFilters,
+  UserRole,
   UserUpdateInput,
   ZipformDataClient
 } from "./contracts";

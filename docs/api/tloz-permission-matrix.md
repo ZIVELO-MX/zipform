@@ -1,6 +1,7 @@
 # TLOZ operational permission matrix
 
-Status: proposed policy for TLO-0013. Enforcement remains in TLO-0026.
+Status: normative policy extended by TLO-0067. Enforcement is deployed with the
+role-management implementation.
 
 ## Purpose
 
@@ -19,7 +20,7 @@ The role strings below match the current production identities.
 | --- | --- | --- |
 | `human` | `Platform Owner` | Full TLOZ administration and destructive operations |
 | `human` | `Full Stack Developer` | Global visibility and owner-scoped contribution |
-| `agent` | `agent:operative` | Global, non-destructive TLOZ operation |
+| `agent` | `agent:operative` | Global TLOZ operation, Mission deletion, and guarded role administration |
 | `agent` | `agent:reader` | Global, sanitized, read-only access |
 
 Unknown role strings have no TLOZ access. Adding a role requires an explicit
@@ -51,7 +52,7 @@ rights over Missions or Quest Items owned by someone else.
 | Link or unlink Quest Items | Global | Own | Global | Deny |
 | Move to another Project, Season, or Episode | Global | Deny | Global | Deny |
 | Assign or reassign owner | Global | Deny | Global | Deny |
-| Delete Mission | Global | Deny | Deny | Deny |
+| Delete Mission | Global | Deny | Global | Deny |
 
 For developer creation, a supplied `ownerId` that differs from the actor is
 denied rather than silently accepted. Platform Owners and operative agents may
@@ -59,8 +60,8 @@ assign during creation or update. Process-level requirements such as obtaining
 human confirmation before self-assignment remain caller responsibilities and do
 not weaken the server-side role check.
 
-Mission deletion is the only destructive Mission operation and is reserved for
-the Platform Owner. Removing a relationship or Resource is not Mission deletion
+Mission deletion is destructive but is allowed globally for Platform Owners and
+operative agents. Removing a relationship or Resource is not Mission deletion
 and follows the owning Mission's mutation rule.
 
 ## Supporting entity permissions
@@ -126,9 +127,11 @@ profile needed for assignment. Reader agents receive a public profile without
 email.
 
 Only the Platform Owner may create users or agents, create/revoke/list API keys,
-change roles, or use other administrative surfaces. No API response may expose a
-password hash, raw API key, key hash, session, database URL, service-role key, or
-authentication secret.
+or use other administrative surfaces. Platform Owners and `agent:operative` may
+change compatible roles through `PATCH /users/{userId}/role`; an operative cannot
+change itself or an existing Platform Owner. The last Platform Owner cannot be
+removed (`409`). No API response may expose a password hash, raw API key, key
+hash, session, database URL, service-role key, or authentication secret.
 
 ## Authentication and error contract
 
@@ -140,6 +143,7 @@ Authorization is deny-by-default and runs before the repository mutation.
 | Valid credential without permission for the operation | `403` | `FORBIDDEN` | Generic message and `requestId`; no entity representation or policy detail |
 | Entity does not exist, or nested child does not belong to route parent | `404` | `NOT_FOUND` | Same not-found shape; do not disclose an alternate parent |
 | Authorized request with invalid input | `400` | `INVALID_REQUEST` | Field errors may describe submitted fields but not protected data |
+| Attempt to remove the last Platform Owner | `409` | `LAST_OWNER` | Role remains unchanged |
 
 Every denied mutation is side-effect free. Data API handlers and Server Actions
 must call the same policy before changing data. Server Actions may translate the
@@ -160,7 +164,10 @@ These cases form the minimum acceptance suite for TLO-0026.
 | Full Stack Developer | Remove Mission Resource | Actor owns parent Mission | Allow |
 | `agent:operative` | Assign Mission to a resolved user | Any Mission | Allow |
 | `agent:operative` | Edit Project or Quest Item | Any owner | Allow |
-| `agent:operative` | Delete Mission | Any Mission | `403`, unchanged |
+| `agent:operative` | Delete Mission | Any Mission | Allow |
+| `agent:operative` | `PATCH /users/{id}/role` | Compatible non-owner target | Allow |
+| `agent:operative` | `PATCH /users/{id}/role` | Self or existing owner | `403`, unchanged |
+| Platform Owner | Demote the only owner | One Platform Owner remains | `409`, unchanged |
 | `agent:reader` | `GET /missions/{id}` | Any Mission | `200` |
 | `agent:reader` | `POST /missions/query` | Valid filters | `200` |
 | `agent:reader` | `GET /users` | Any users | `200`, no email |
@@ -175,16 +182,16 @@ Items, Seasons/Episodes when writable, and administrative endpoints.
 
 ## Current implementation gaps
 
-This matrix is a policy artifact, not an enforcement claim. At the time of
-TLO-0013:
+This matrix is also the contract covered by the deployed backend. Remaining
+implementation work is tracked separately:
 
 - `agent:reader` already has global TLOZ reads, sanitized profiles, and broad
   mutation denial;
-- operative agents and authenticated humans otherwise retain broad mutation
-  access, including operations restricted by this matrix;
-- Server Actions distinguish reader agents but do not yet enforce owner-scoped
-  developer permissions or a shared typed error contract;
+- the UI still needs to consume server-derived capabilities and present typed
+  authorization errors;
 - Activity is derived or fixture-backed rather than a persistent audit log;
-- complete parity and denial tests remain work for TLO-0026.
+- manual role verification remains assigned to TLO-0040.
 
-TLO-0026 must close these gaps without changing the decisions in this document.
+TLO-0067 owns the role endpoint and the operative deletion extension. TLO-0068
+owns client-side visibility and authorization error presentation; it must not
+duplicate this policy in the browser.

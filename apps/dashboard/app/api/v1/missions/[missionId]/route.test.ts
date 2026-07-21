@@ -80,15 +80,16 @@ describe("PATCH /api/v1/missions/:missionId", () => {
     expect(JSON.stringify(body)).not.toContain("postgres://");
   });
 
-  it("reserves Mission deletion for Platform Owners", async () => {
+  it("allows operative and owner Mission deletion", async () => {
     vi.mocked(authenticateRequest).mockResolvedValue({
       user: { id: "operative-1", type: "agent", role: "agent:operative" },
     } as never);
-    const denied = await DELETE(new Request("https://zipform.test/api/v1/missions/mission-1", { method: "DELETE" }), {
+    vi.mocked(dataClient.tloz.getMissionDetail).mockReset().mockResolvedValue({ id: "mission-1", ownerId: "developer-1" } as never);
+    const operativeDelete = await DELETE(new Request("https://zipform.test/api/v1/missions/mission-1", { method: "DELETE" }), {
       params: Promise.resolve({ missionId: "mission-1" }),
     });
-    expect(denied.status).toBe(403);
-    expect(dataClient.tloz.deleteMission).not.toHaveBeenCalled();
+    expect(operativeDelete.status).toBe(200);
+    expect(dataClient.tloz.deleteMission).toHaveBeenCalledWith("mission-1");
 
     vi.mocked(authenticateRequest).mockResolvedValue({
       user: { id: "owner-1", type: "human", role: "Platform Owner" },

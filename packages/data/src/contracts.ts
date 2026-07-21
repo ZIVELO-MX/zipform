@@ -70,6 +70,8 @@ export type UserUpdateInput = {
   avatarUrl?: string;
 };
 
+export type UserRole = "Platform Owner" | "Full Stack Developer" | "agent:operative" | "agent:reader";
+
 type TlozMissionCreateOptional = Omit<
   TlozMission,
   "id" | "displayId" | "createdAt" | "updatedAt" | "completedAt" | "title" | "type" | "ownerId" | "projectId"
@@ -167,6 +169,7 @@ export type TlozRepository = {
   getQuestItems(): Promise<TlozQuestItem[]>;
   getResources(): Promise<TlozResource[]>;
   getUsers(): Promise<UserProfile[]>;
+  updateUserRole(userId: string, role: UserRole): Promise<UserProfile>;
   createProject(input: TlozProjectCreateInput): Promise<TlozProject>;
   createQuestItem(input: TlozQuestItemCreateInput): Promise<TlozQuestItem>;
   updateProject(projectId: string, input: TlozProjectUpdateInput): Promise<TlozProject>;
