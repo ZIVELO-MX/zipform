@@ -18,13 +18,13 @@ const actors = {
   unknown: { id: "unknown-1", type: "human", role: "Guest" },
 } as const;
 
-function allowed(actor: (typeof actors)[keyof typeof actors], operation: TlozOperation, context = {}) {
+function allowed(actor: (typeof actors)[keyof typeof actors], operation: TlozOperation, context: Record<string, string | boolean> = {}) {
   return authorizeTlozOperation(actor as never, operation, context).allowed;
 }
 
 describe("TLOZ authorization policy", () => {
   it("implements the role matrix with deny-by-default behavior", () => {
-    const cases: Array<[keyof typeof actors, TlozOperation, Record<string, string>, boolean]> = [
+    const cases: Array<[keyof typeof actors, TlozOperation, Record<string, string | boolean>, boolean]> = [
       ["owner", "read", {}, true],
       ["developer", "read", {}, true],
       ["operative", "read", {}, true],
