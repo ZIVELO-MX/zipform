@@ -4,11 +4,19 @@ import type { ApiKey, Avatar, UserProfile } from "@zipform/types";
 import { auth } from "../auth";
 import { dataClient, type UserUpdateInput } from "@zipform/data";
 import { revalidatePath } from "next/cache";
-import { isReadOnlyAgent } from "./authorization";
+import { assertTlozOperation, isReadOnlyAgent, TlozAuthorizationError } from "./authorization";
 
 async function assertSettingsAccess() {
   const session = await auth();
-  if (!session?.user?.id || isReadOnlyAgent(session.user)) throw new Error("No autorizado");
+  if (!session?.user?.id) throw new TlozAuthorizationError("UNAUTHORIZED", 401);
+  if (isReadOnlyAgent(session.user)) throw new TlozAuthorizationError("FORBIDDEN", 403);
+  return session.user;
+}
+
+async function assertAdminAccess() {
+  const session = await auth();
+  if (!session?.user?.id) throw new TlozAuthorizationError("UNAUTHORIZED", 401);
+  assertTlozOperation(session.user, "admin");
   return session.user;
 }
 
@@ -27,13 +35,13 @@ export async function listAvatars(): Promise<Avatar[]> {
 }
 
 export async function listAgents(): Promise<UserProfile[]> {
-  await assertSettingsAccess();
+  await assertAdminAccess();
 
   return dataClient.agent.list();
 }
 
 export async function listAgentApiKeys(agentId: string): Promise<ApiKey[]> {
-  await assertSettingsAccess();
+  await assertAdminAccess();
 
   return dataClient.agent.listApiKeys(agentId);
 }
@@ -44,7 +52,7 @@ export type CreateApiKeyResult = {
 };
 
 export async function createAgentApiKey(agentId: string, name: string): Promise<CreateApiKeyResult> {
-  const session = await assertSettingsAccess();
+  const session = await assertAdminAccess();
 
   const result = await dataClient.agent.createApiKey(agentId, name, session.id);
   revalidatePath("/", "layout");
@@ -52,7 +60,7 @@ export async function createAgentApiKey(agentId: string, name: string): Promise<
 }
 
 export async function revokeAgentApiKey(keyId: string): Promise<void> {
-  await assertSettingsAccess();
+  await assertAdminAccess();
 
   await dataClient.agent.revokeApiKey(keyId);
   revalidatePath("/", "layout");

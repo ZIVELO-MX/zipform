@@ -3,12 +3,13 @@ import { dataClient } from "@zipform/data";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { POST } from "./route";
 
-vi.mock("@zipform/data", () => ({ dataClient: { tloz: { addMissionResource: vi.fn() } } }));
+vi.mock("@zipform/data", () => ({ dataClient: { tloz: { addMissionResource: vi.fn(), getMissionDetail: vi.fn() } } }));
 vi.mock("../../../../../../lib/api-auth", () => ({ authenticateRequest: vi.fn() }));
 
 describe("POST /api/v1/missions/:missionId/resources", () => {
   beforeEach(() => {
-    vi.mocked(authenticateRequest).mockResolvedValue({ user: { id: "agent-1" } } as never);
+    vi.mocked(authenticateRequest).mockResolvedValue({ user: { id: "agent-1", type: "agent", role: "agent:operative" } } as never);
+    vi.mocked(dataClient.tloz.getMissionDetail).mockResolvedValue({ id: "mission-1", ownerId: "owner-1" } as never);
     vi.mocked(dataClient.tloz.addMissionResource).mockResolvedValue({ id: "mission-1", resources: [{ id: "resource-1", icon: "Github" }] } as never);
   });
 

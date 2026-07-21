@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import type { TlozResourceType } from "@zipform/types";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
+import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
 
 const VALID_TYPES: TlozResourceType[] = ["link", "document", "image", "file", "note"];
 
@@ -35,14 +36,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ mis
   }
 
   try {
+    const permission = await authorizeMissionOperation(auth.user, missionId);
+    if (!permission.allowed) return permission.response;
     const detail = await dataClient.tloz.addMissionResource(
       missionId,
       { type: body.type as TlozResourceType, title: body.title, url: body.url, fileId: body.fileId, icon: body.icon }
     );
     return NextResponse.json({ data: detail });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }

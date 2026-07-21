@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import { authenticateRequest } from "../../../../../../../lib/api-auth";
+import { authorizeMissionOperation } from "../../../../../../../lib/tloz-api-authorization";
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ missionId: string; resourceId: string }> }) {
   const auth = await authenticateRequest(request as Parameters<typeof authenticateRequest>[0]);
@@ -15,11 +16,19 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ m
   }
 
   try {
+    const permission = await authorizeMissionOperation(auth.user, missionId);
+    if (!permission.allowed) return permission.response;
+    if (!permission.entity.resources.some((resource) => resource.id === resourceId)) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Recurso no encontrado.", requestId: crypto.randomUUID() } },
+        { status: 404 },
+      );
+    }
     const detail = await dataClient.tloz.removeMissionResource(missionId, resourceId);
     return NextResponse.json({ data: detail });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }

@@ -31,7 +31,7 @@ describe("OpenAPI mission defaults and detail", () => {
     const operation = spec.match(/^  \/missions:\n([\s\S]*?)(?=^  \/missions\/query:)/m)?.[1] ?? "";
     expect(operation).toContain("required: [title, type]");
     expect(operation).toContain("default: later");
-    expect(operation).toContain("Defaults to the Zibot user ID");
+    expect(operation).toContain("Defaults to the authenticated developer");
     expect(operation).toContain("slug is zivelo");
   });
 
@@ -60,5 +60,22 @@ describe("OpenAPI mission attachments", () => {
     expect(spec).toContain("maxItems: 20");
     expect(spec).toContain("batch_superseded");
     expect(spec).toContain("sourceRevision");
+  });
+});
+
+describe("OpenAPI authorization errors", () => {
+  it("documents a 403 response beside every authenticated operation", () => {
+    const unauthorized = spec.match(/components\/responses\/Unauthorized/g) ?? [];
+    const forbidden = spec.match(/components\/responses\/Forbidden/g) ?? [];
+    expect(forbidden).toHaveLength(unauthorized.length);
+    expect(spec).toContain("Forbidden:");
+    expect(spec).toContain("not permitted to perform this operation");
+  });
+
+  it("documents sanitized reader user profiles", () => {
+    const user = schemaBlock("User");
+    expect(user).toContain("Email is omitted for agent:reader");
+    expect(user).toContain("required: [id, name, username, role, type, avatarUrl]");
+    expect(user).not.toContain("required: [id, name, username, email");
   });
 });
