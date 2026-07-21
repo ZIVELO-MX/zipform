@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import type { TlozMissionStatus } from "@zipform/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
+import { authorizeApiOperation, isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
 
 const VALID_MISSION_FIELDS = new Set([
   "title", "description", "descriptionDetail", "icon", "type", "status",
@@ -32,7 +33,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ mis
         { status: 404 }
       );
     }
-    return NextResponse.json({ data: detail });
+    return NextResponse.json({ data: isReadOnlyAgent(auth.user) ? toPublicMissionOwner(detail) : detail });
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
@@ -97,11 +98,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mi
       );
     }
 
+    const changesPlacement = ["ownerId", "projectId", "seasonId", "episodeId"]
+      .some((field) => Object.prototype.hasOwnProperty.call(allowedFields, field));
+    const forbidden = authorizeApiOperation(auth.user, changesPlacement ? "move" : "update", {
+      ownerId: existing.ownerId,
+    });
+    if (forbidden) return forbidden;
+
     await dataClient.tloz.updateMission(missionId, allowedFields);
     return NextResponse.json({ data: await dataClient.tloz.getMissionDetail(missionId) });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }
@@ -119,12 +127,22 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ m
     );
   }
 
+  const forbidden = authorizeApiOperation(auth.user, "delete-mission");
+  if (forbidden) return forbidden;
+
   try {
+    const existing = await dataClient.tloz.getMissionDetail(missionId);
+    if (!existing) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Misión no encontrada.", requestId: crypto.randomUUID() } },
+        { status: 404 },
+      );
+    }
     await dataClient.tloz.deleteMission(missionId);
     return NextResponse.json({ success: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import { authenticateRequest } from "../../../../../../../lib/api-auth";
+import { authorizeMissionOperation } from "../../../../../../../lib/tloz-api-authorization";
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ missionId: string; questItemId: string }> }) {
   const auth = await authenticateRequest(request as Parameters<typeof authenticateRequest>[0]);
@@ -15,11 +16,13 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ m
   }
 
   try {
+    const permission = await authorizeMissionOperation(auth.user, missionId);
+    if (!permission.allowed) return permission.response;
     const detail = await dataClient.tloz.removeMissionQuestItem(missionId, questItemId);
     return NextResponse.json({ data: detail });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }

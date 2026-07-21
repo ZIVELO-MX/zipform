@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import type { TlozMissionStatus } from "@zipform/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
+import { isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
 
 const VALID_STATUSES: TlozMissionStatus[] = ["now", "next", "later", "completed", "blocked"];
 
@@ -44,7 +45,9 @@ export async function POST(request: NextRequest) {
       },
       { limit, cursor: body.cursor }
     );
-    return NextResponse.json(result);
+    return NextResponse.json(isReadOnlyAgent(auth.user)
+      ? { ...result, data: result.data.map(toPublicMissionOwner) }
+      : result);
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },

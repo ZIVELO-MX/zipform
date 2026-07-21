@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import type { TlozMissionStatus } from "@zipform/types";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
+import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
 
 const VALID_STATUSES: TlozMissionStatus[] = ["now", "next", "later", "completed", "blocked"];
 
@@ -35,11 +36,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mi
   }
 
   try {
+    const permission = await authorizeMissionOperation(auth.user, missionId);
+    if (!permission.allowed) return permission.response;
     await dataClient.tloz.patchMissionStatus(missionId, body.status as TlozMissionStatus);
     return NextResponse.json({ data: await dataClient.tloz.getMissionDetail(missionId) });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }

@@ -5,7 +5,7 @@ import { getTlozAttachmentStorage } from "../../../../../../lib/tloz-attachment-
 import { POST, PUT } from "./route";
 
 vi.mock("@zipform/data", () => ({
-  dataClient: { tloz: { prepareAttachmentBatch: vi.fn(), getAttachmentBatch: vi.fn(), finalizeAttachmentBatch: vi.fn(), getAttachmentGroups: vi.fn() } },
+  dataClient: { tloz: { prepareAttachmentBatch: vi.fn(), getAttachmentBatch: vi.fn(), finalizeAttachmentBatch: vi.fn(), getAttachmentGroups: vi.fn(), getMissionDetail: vi.fn() } },
   TlozAttachmentError: class TlozAttachmentError extends Error { code: string; constructor(code: string, message: string) { super(message); this.code = code; } },
 }));
 vi.mock("../../../../../../lib/api-auth", () => ({ authenticateRequest: vi.fn() }));
@@ -30,7 +30,8 @@ describe("/api/v1/missions/:missionId/attachments", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(authenticateRequest).mockResolvedValue({ user: { id: "agent-1" } } as never);
+    vi.mocked(authenticateRequest).mockResolvedValue({ user: { id: "agent-1", type: "agent", role: "agent:operative" } } as never);
+    vi.mocked(dataClient.tloz.getMissionDetail).mockResolvedValue({ id: "mission-1", ownerId: "owner-1" } as never);
     vi.mocked(getTlozAttachmentStorage).mockReturnValue(storage);
     storage.createSignedUpload.mockResolvedValue({ uploadUrl: "https://storage.test/upload" });
     storage.inspectObject.mockResolvedValue({ contentType: "image/png", sizeBytes: 1024 });
@@ -44,6 +45,19 @@ describe("/api/v1/missions/:missionId/attachments", () => {
     expect(response.status).toBe(400);
     expect(storage.createSignedUpload).not.toHaveBeenCalled();
     expect(dataClient.tloz.prepareAttachmentBatch).not.toHaveBeenCalled();
+  });
+
+  it("rejects reader preparation before repository or storage side effects", async () => {
+    vi.mocked(authenticateRequest).mockResolvedValue({
+      user: { id: "reader-1", type: "agent", role: "agent:reader" },
+    } as never);
+    const response = await POST(new Request("https://zipform.test/api/v1/missions/mission-1/attachments", {
+      method: "POST",
+      body: JSON.stringify(manifest),
+    }), { params: Promise.resolve({ missionId: "mission-1" }) });
+    expect(response.status).toBe(403);
+    expect(dataClient.tloz.prepareAttachmentBatch).not.toHaveBeenCalled();
+    expect(storage.createSignedUpload).not.toHaveBeenCalled();
   });
 
   it("prepares a direct-upload batch without receiving image bytes", async () => {

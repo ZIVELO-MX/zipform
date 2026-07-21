@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
-import { toPublicUserProfile } from "../../../../../lib/authorization";
+import { isReadOnlyAgent, toPublicUserProfile } from "../../../../../lib/authorization";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ userId: string }> }) {
   const auth = await authenticateRequest(_request as Parameters<typeof authenticateRequest>[0]);
@@ -25,7 +25,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
         { status: 404 }
       );
     }
-    return NextResponse.json({ data: auth.user.role === "agent:reader" && auth.user.type === "agent" ? toPublicUserProfile(user) : user });
+    return NextResponse.json({ data: isReadOnlyAgent(auth.user) ? toPublicUserProfile(user) : user });
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },

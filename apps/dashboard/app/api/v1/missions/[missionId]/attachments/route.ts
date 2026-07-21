@@ -2,6 +2,7 @@ import { dataClient, TlozAttachmentError } from "@zipform/data";
 import type { TlozAttachmentGroup } from "@zipform/types";
 import { NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
+import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
 import { attachmentStoragePath, getTlozAttachmentStorage, TlozAttachmentRequestError, validateAttachmentManifest } from "../../../../../../lib/tloz-attachment-storage";
 
 type RouteContext = { params: Promise<{ missionId: string }> };
@@ -42,6 +43,8 @@ export async function POST(request: Request, { params }: RouteContext) {
   if (!validateMissionId(missionId)) return errorResponse(400, "INVALID_REQUEST", "missionId inválido.");
 
   try {
+    const permission = await authorizeMissionOperation(auth.user, missionId);
+    if (!permission.allowed) return permission.response;
     const manifest = validateAttachmentManifest(await request.json());
     const storage = getTlozAttachmentStorage();
     const filesWithPaths = manifest.files.map((file) => {
@@ -63,6 +66,8 @@ export async function PUT(request: Request, { params }: RouteContext) {
   if (!validateMissionId(missionId)) return errorResponse(400, "INVALID_REQUEST", "missionId inválido.");
 
   try {
+    const permission = await authorizeMissionOperation(auth.user, missionId);
+    if (!permission.allowed) return permission.response;
     const body = await request.json() as { uploadBatchId?: unknown };
     if (typeof body.uploadBatchId !== "string" || body.uploadBatchId.length < 1 || body.uploadBatchId.length > 128) return errorResponse(400, "INVALID_REQUEST", "uploadBatchId es requerido.");
     const batch = await dataClient.tloz.getAttachmentBatch(body.uploadBatchId);

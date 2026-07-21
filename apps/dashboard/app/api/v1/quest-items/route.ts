@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import type { TlozInventoryCategory, TlozInventoryStatus } from "@zipform/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
+import { authorizeApiOperation, isFullStackDeveloper } from "../../../../lib/authorization";
 
 const validStatuses: TlozInventoryStatus[] = ["locked", "unlocked"];
 const validCategories: TlozInventoryCategory[] = ["tool", "access", "asset", "document", "other"];
@@ -75,6 +76,8 @@ export async function POST(request: NextRequest) {
     Object.entries(body).filter(([key]) => VALID_CREATE_FIELDS.has(key))
   );
 
+  if (isFullStackDeveloper(auth.user) && !allowedFields.ownerId) allowedFields.ownerId = auth.user.id;
+
   if (!allowedFields.name) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "name es requerido.", requestId: crypto.randomUUID() } },
@@ -83,11 +86,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const forbidden = authorizeApiOperation(auth.user, "create", {
+      requestedOwnerId: typeof allowedFields.ownerId === "string" ? allowedFields.ownerId : null,
+    });
+    if (forbidden) return forbidden;
     const created = await dataClient.tloz.createQuestItem(allowedFields as Parameters<typeof dataClient.tloz.createQuestItem>[0]);
     return NextResponse.json({ data: created }, { status: 201 });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }

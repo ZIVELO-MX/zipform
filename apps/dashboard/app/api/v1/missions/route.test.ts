@@ -123,4 +123,26 @@ describe("POST /api/v1/missions", () => {
     expect(response.status).toBe(201);
     expect(mockedCreateMission).toHaveBeenCalledWith(expect.objectContaining(payload));
   });
+
+  it("forces developer ownership by default and rejects creation for another owner", async () => {
+    mockedAuthenticateRequest.mockResolvedValue({
+      user: { id: "developer-1", type: "human", role: "Full Stack Developer" },
+    } as never);
+    mockedCreateMission.mockResolvedValue({ id: "mission-1" } as never);
+
+    const ownResponse = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+      method: "POST",
+      body: JSON.stringify({ title: "Own", type: "side_quest" }),
+    }));
+    expect(ownResponse.status).toBe(201);
+    expect(mockedCreateMission).toHaveBeenLastCalledWith(expect.objectContaining({ ownerId: "developer-1" }));
+
+    mockedCreateMission.mockClear();
+    const deniedResponse = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+      method: "POST",
+      body: JSON.stringify({ title: "Foreign", type: "side_quest", ownerId: "owner-1" }),
+    }));
+    expect(deniedResponse.status).toBe(403);
+    expect(mockedCreateMission).not.toHaveBeenCalled();
+  });
 });

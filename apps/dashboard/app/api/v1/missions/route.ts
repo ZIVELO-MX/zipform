@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient, TlozValidationError } from "@zipform/data";
 import type { TlozMissionStatus } from "@zipform/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
+import { authorizeApiOperation, isFullStackDeveloper, isReadOnlyAgent, toPublicMissionOwner } from "../../../../lib/authorization";
 
 const VALID_CREATE_FIELDS = new Set([
   "id", "title", "description", "descriptionDetail", "icon", "type", "status",
@@ -44,7 +45,9 @@ export async function GET(request: NextRequest) {
       { projectId: projectId ?? undefined, ownerId: ownerId ?? undefined, status: status ?? undefined, seasonId: seasonId ?? undefined, episodeId: episodeId ?? undefined, title: title ?? undefined },
       { limit, cursor: cursor ?? undefined }
     );
-    return NextResponse.json(result);
+    return NextResponse.json(isReadOnlyAgent(auth.user)
+      ? { ...result, data: result.data.map(toPublicMissionOwner) }
+      : result);
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
@@ -76,7 +79,16 @@ export async function POST(request: NextRequest) {
     const zibot = users.find((user) => user.username === "zibot");
     const zivelo = projects.find((project) => project.slug === "zivelo");
     if (!zibot || !zivelo) throw new Error("Mission defaults are not configured");
-    const input = { ownerId: zibot.id, projectId: zivelo.id, status: "later", ...allowedFields };
+    const input = {
+      ownerId: isFullStackDeveloper(auth.user) ? auth.user.id : zibot.id,
+      projectId: zivelo.id,
+      status: "later",
+      ...allowedFields,
+    };
+    const forbidden = authorizeApiOperation(auth.user, "create", {
+      requestedOwnerId: typeof input.ownerId === "string" ? input.ownerId : null,
+    });
+    if (forbidden) return forbidden;
     const created = await dataClient.tloz.createMission(input as Parameters<typeof dataClient.tloz.createMission>[0]);
     const detail = await dataClient.tloz.getMissionDetail(created.id);
     return NextResponse.json({ data: detail }, { status: 201 });

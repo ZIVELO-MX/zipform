@@ -40,6 +40,8 @@ const agentUser: UserProfile = {
   theme: "system"
 };
 
+const ownerSession = { user: { id: "owner", type: "human", role: "Platform Owner" } };
+
 const apiKey: ApiKey = {
   id: "key-1",
   userId: "d5ca1936-3240-4247-8c2b-a7152a681311",
@@ -57,7 +59,7 @@ describe("settings actions (agent)", () => {
 
   describe("listAgents", () => {
     it("returns agents when authenticated", async () => {
-      mocks.auth.mockResolvedValue({ user: { id: "owner" } });
+      mocks.auth.mockResolvedValue(ownerSession);
       mocks.list.mockResolvedValue([agentUser]);
 
       await expect(listAgents()).resolves.toEqual([agentUser]);
@@ -66,14 +68,24 @@ describe("settings actions (agent)", () => {
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 
-      await expect(listAgents()).rejects.toThrow("No autorizado");
+      await expect(listAgents()).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
+      expect(mocks.list).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { id: "developer", type: "human", role: "Full Stack Developer" },
+      { id: "operative", type: "agent", role: "agent:operative" },
+      { id: "reader", type: "agent", role: "agent:reader" },
+    ])("rejects non-owner role $role", async (user) => {
+      mocks.auth.mockResolvedValue({ user });
+      await expect(listAgents()).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
       expect(mocks.list).not.toHaveBeenCalled();
     });
   });
 
   describe("listAgentApiKeys", () => {
     it("returns API keys when authenticated", async () => {
-      mocks.auth.mockResolvedValue({ user: { id: "owner" } });
+      mocks.auth.mockResolvedValue(ownerSession);
       mocks.listApiKeys.mockResolvedValue([apiKey]);
 
       await expect(listAgentApiKeys("d5ca1936-3240-4247-8c2b-a7152a681311")).resolves.toEqual([apiKey]);
@@ -83,13 +95,13 @@ describe("settings actions (agent)", () => {
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 
-      await expect(listAgentApiKeys("d5ca1936-3240-4247-8c2b-a7152a681311")).rejects.toThrow("No autorizado");
+      await expect(listAgentApiKeys("d5ca1936-3240-4247-8c2b-a7152a681311")).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
     });
   });
 
   describe("createAgentApiKey", () => {
     it("creates an API key with the session user as creator", async () => {
-      mocks.auth.mockResolvedValue({ user: { id: "owner" } });
+      mocks.auth.mockResolvedValue(ownerSession);
       mocks.createApiKey.mockResolvedValue({ key: "zaf_abc123", apiKey });
 
       const result = await createAgentApiKey("d5ca1936-3240-4247-8c2b-a7152a681311", "test key");
@@ -100,14 +112,14 @@ describe("settings actions (agent)", () => {
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 
-      await expect(createAgentApiKey("d5ca1936-3240-4247-8c2b-a7152a681311", "test key")).rejects.toThrow("No autorizado");
+      await expect(createAgentApiKey("d5ca1936-3240-4247-8c2b-a7152a681311", "test key")).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
       expect(mocks.createApiKey).not.toHaveBeenCalled();
     });
   });
 
   describe("revokeAgentApiKey", () => {
     it("revokes an API key when authenticated", async () => {
-      mocks.auth.mockResolvedValue({ user: { id: "owner" } });
+      mocks.auth.mockResolvedValue(ownerSession);
       mocks.revokeApiKey.mockResolvedValue(undefined);
 
       await revokeAgentApiKey("key-1");
@@ -117,20 +129,20 @@ describe("settings actions (agent)", () => {
     it("rejects reader agents from key administration", async () => {
       mocks.auth.mockResolvedValue({ user: { id: "reader", type: "agent", role: "agent:reader" } });
 
-      await expect(revokeAgentApiKey("key-1")).rejects.toThrow("No autorizado");
+      await expect(revokeAgentApiKey("key-1")).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
       expect(mocks.revokeApiKey).not.toHaveBeenCalled();
     });
 
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 
-      await expect(revokeAgentApiKey("key-1")).rejects.toThrow("No autorizado");
+      await expect(revokeAgentApiKey("key-1")).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
     });
   });
 
   describe("listAvatars", () => {
     it("returns avatars when authenticated", async () => {
-      mocks.auth.mockResolvedValue({ user: { id: "owner" } });
+      mocks.auth.mockResolvedValue(ownerSession);
       mocks.listAvatars.mockResolvedValue([
         { id: "s1", name: "Semielfo", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Semielfo.jpeg" },
         { id: "s2", name: "Dragon", imageUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Dragon.jpeg" },
@@ -145,7 +157,7 @@ describe("settings actions (agent)", () => {
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 
-      await expect(listAvatars()).rejects.toThrow("No autorizado");
+      await expect(listAvatars()).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
       expect(mocks.listAvatars).not.toHaveBeenCalled();
     });
   });

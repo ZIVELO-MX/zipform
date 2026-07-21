@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
+import { authorizeProjectOperation } from "../../../../../lib/tloz-api-authorization";
 
 const VALID_PROJECT_FIELDS = new Set([
   "name", "description", "descriptionDetail", "icon", "color",
@@ -72,11 +73,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
   }
 
   try {
+    const permission = await authorizeProjectOperation(
+      auth.user,
+      projectId,
+      Object.prototype.hasOwnProperty.call(allowedFields, "ownerId") ? "move" : "update",
+    );
+    if (!permission.allowed) return permission.response;
     const updated = await dataClient.tloz.updateProject(projectId, allowedFields as Parameters<typeof dataClient.tloz.updateProject>[1]);
     return NextResponse.json({ data: updated });
-  } catch (e) {
+  } catch {
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message: (e as Error).message || "Error interno del servidor.", requestId: crypto.randomUUID() } },
+      { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
     );
   }

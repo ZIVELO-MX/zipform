@@ -1,39 +1,91 @@
 import { describe, expect, it } from "vitest";
-import { authorizeApiRequest, isReadOnlyAgent, toPublicUserProfile } from "./authorization";
+import {
+  assertTlozOperation,
+  authorizeApiRequest,
+  authorizeTlozOperation,
+  isReadOnlyAgent,
+  TlozAuthorizationError,
+  toPublicMissionOwner,
+  toPublicUserProfile,
+  type TlozOperation,
+} from "./authorization";
 
-const reader = { type: "agent", role: "agent:reader" };
-const operative = { type: "agent", role: "agent:operative" };
+const actors = {
+  owner: { id: "owner-1", type: "human", role: "Platform Owner" },
+  developer: { id: "developer-1", type: "human", role: "Full Stack Developer" },
+  operative: { id: "operative-1", type: "agent", role: "agent:operative" },
+  reader: { id: "reader-1", type: "agent", role: "agent:reader" },
+  unknown: { id: "unknown-1", type: "human", role: "Guest" },
+} as const;
 
-describe("authorization policy", () => {
-  it("identifies only the reader agent role", () => {
-    expect(isReadOnlyAgent(reader)).toBe(true);
-    expect(isReadOnlyAgent(operative)).toBe(false);
-    expect(isReadOnlyAgent({ type: "human", role: "agent:reader" })).toBe(false);
+function allowed(actor: (typeof actors)[keyof typeof actors], operation: TlozOperation, context = {}) {
+  return authorizeTlozOperation(actor as never, operation, context).allowed;
+}
+
+describe("TLOZ authorization policy", () => {
+  it("implements the role matrix with deny-by-default behavior", () => {
+    const cases: Array<[keyof typeof actors, TlozOperation, Record<string, string>, boolean]> = [
+      ["owner", "read", {}, true],
+      ["developer", "read", {}, true],
+      ["operative", "read", {}, true],
+      ["reader", "read", {}, true],
+      ["unknown", "read", {}, false],
+      ["owner", "delete-mission", {}, true],
+      ["developer", "delete-mission", {}, false],
+      ["operative", "delete-mission", {}, false],
+      ["reader", "delete-mission", {}, false],
+      ["developer", "create", { requestedOwnerId: "developer-1" }, true],
+      ["developer", "create", { requestedOwnerId: "owner-1" }, false],
+      ["developer", "update", { ownerId: "developer-1" }, true],
+      ["developer", "update", { ownerId: "owner-1" }, false],
+      ["developer", "move", { ownerId: "developer-1" }, false],
+      ["developer", "structure", {}, false],
+      ["operative", "move", {}, true],
+      ["operative", "structure", {}, true],
+      ["reader", "mutate", {}, false],
+      ["owner", "admin", {}, true],
+      ["developer", "admin", {}, false],
+      ["operative", "admin", {}, false],
+      ["reader", "admin", {}, false],
+      ["reader", "read-sensitive-user", {}, false],
+      ["operative", "read-sensitive-user", {}, true],
+    ];
+
+    for (const [role, operation, context, expected] of cases) {
+      expect(allowed(actors[role], operation, context), `${role} ${operation}`).toBe(expected);
+    }
   });
 
-  it("allows TLOZ reads, including POST query endpoints", () => {
-    expect(authorizeApiRequest(new Request("https://zipform.test/api/v1/missions"), reader as never)).toBeNull();
-    expect(authorizeApiRequest(new Request("https://zipform.test/api/v1/missions/query", { method: "POST" }), reader as never)).toBeNull();
+  it("returns typed errors for expected Server Action denials", () => {
+    expect(() => assertTlozOperation(actors.reader as never, "mutate"))
+      .toThrowError(TlozAuthorizationError);
+    try {
+      assertTlozOperation(actors.operative as never, "delete-mission");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "FORBIDDEN", status: 403 });
+    }
   });
 
-  it("rejects mutations and administrative surfaces for readers", async () => {
-    const mutation = authorizeApiRequest(new Request("https://zipform.test/api/v1/missions", { method: "POST" }), reader as never);
-    const agents = authorizeApiRequest(new Request("https://zipform.test/api/v1/agents"), reader as never);
-    const outsideTloz = authorizeApiRequest(new Request("https://zipform.test/api/v1/apps"), reader as never);
+  it("allows semantic query reads but rejects reader mutations and admin routes", async () => {
+    expect(authorizeApiRequest(new Request("https://zipform.test/api/v1/missions"), actors.reader as never)).toBeNull();
+    expect(authorizeApiRequest(new Request("https://zipform.test/api/v1/missions/query", { method: "POST" }), actors.reader as never)).toBeNull();
 
+    const mutation = authorizeApiRequest(new Request("https://zipform.test/api/v1/missions", { method: "POST" }), actors.reader as never);
+    const agents = authorizeApiRequest(new Request("https://zipform.test/api/v1/agents"), actors.operative as never);
     expect(mutation).toBeInstanceOf(Response);
     expect(agents).toBeInstanceOf(Response);
-    expect(outsideTloz).toBeInstanceOf(Response);
     await expect(mutation?.json()).resolves.toMatchObject({ error: { code: "FORBIDDEN" } });
   });
 
-  it("preserves full access for operative agents", () => {
-    expect(authorizeApiRequest(new Request("https://zipform.test/api/v1/missions", { method: "POST" }), operative as never)).toBeNull();
+  it("identifies only the exact reader agent role", () => {
+    expect(isReadOnlyAgent(actors.reader as never)).toBe(true);
+    expect(isReadOnlyAgent(actors.operative as never)).toBe(false);
+    expect(isReadOnlyAgent({ id: "human", type: "human", role: "agent:reader" } as never)).toBe(false);
   });
 
-  it("removes email from public user profiles", () => {
-    expect(toPublicUserProfile({
-      id: "user-1",
+  it("removes email from public user profiles and nested Mission owners", () => {
+    const user = {
+      id: "reader-1",
       name: "Reader",
       username: "reader",
       email: "reader@zivelo.dev",
@@ -41,6 +93,11 @@ describe("authorization policy", () => {
       type: "agent",
       avatarUrl: "",
       theme: "system",
-    })).toEqual({ id: "user-1", name: "Reader", username: "reader", role: "agent:reader", type: "agent", avatarUrl: "", theme: "system" });
+    } as const;
+    expect(toPublicUserProfile(user as never)).not.toHaveProperty("email");
+    expect(toPublicMissionOwner({ id: "mission-1", owner: user as never })).toEqual({
+      id: "mission-1",
+      owner: expect.not.objectContaining({ email: expect.anything() }),
+    });
   });
 });

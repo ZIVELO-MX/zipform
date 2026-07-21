@@ -12,10 +12,18 @@ function authenticated(user: UserProfile, request: NextRequest): AuthResult {
   return authorizeApiRequest(request, user) ?? { user };
 }
 
+function unauthorizedResponse() {
+  return NextResponse.json(
+    { error: { code: "UNAUTHORIZED", message: "Se requiere una sesión activa o un API key válido.", requestId: crypto.randomUUID() } },
+    { status: 401 },
+  );
+}
+
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
   const authHeader = request.headers.get("authorization");
 
-  if (authHeader?.startsWith("Bearer ")) {
+  if (authHeader !== null) {
+    if (!authHeader.startsWith("Bearer ")) return unauthorizedResponse();
     const apiKey = authHeader.slice(7).trim();
     if (apiKey) {
       const localKey = process.env.ZIPFORM_LOCAL_API_KEY;
@@ -30,6 +38,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
       const user = await dataClient.agent.authenticateWithApiKey(apiKey);
       if (user) return authenticated(user, request);
     }
+    return unauthorizedResponse();
   }
 
   const session = await auth();
@@ -41,8 +50,5 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     if (user) return authenticated(user, request);
   }
 
-  return NextResponse.json(
-    { error: { code: "UNAUTHORIZED", message: "Se requiere una sesión activa o un API key válido.", requestId: crypto.randomUUID() } },
-    { status: 401 }
-  );
+  return unauthorizedResponse();
 }

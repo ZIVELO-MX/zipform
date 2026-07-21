@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@zipform/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
-import { toPublicUserProfile } from "../../../../../lib/authorization";
+import { authorizeApiOperation, isReadOnlyAgent, toPublicUserProfile } from "../../../../../lib/authorization";
 
 export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -23,6 +23,10 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
+  if (body.email) {
+    const forbidden = authorizeApiOperation(auth.user, "read-sensitive-user");
+    if (forbidden) return forbidden;
+  }
 
   const limit = body.limit ? Math.max(1, Math.min(100, Number(body.limit))) : 25;
 
@@ -31,7 +35,7 @@ export async function POST(request: NextRequest) {
       body.email ? { email: body.email } : body.username ? { username: body.username } : undefined,
       { limit, cursor: body.cursor }
     );
-    return NextResponse.json(auth.user.role === "agent:reader" && auth.user.type === "agent"
+    return NextResponse.json(isReadOnlyAgent(auth.user)
       ? { ...result, data: result.data.map(toPublicUserProfile) }
       : result);
   } catch {
