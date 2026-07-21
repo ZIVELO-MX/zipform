@@ -115,13 +115,12 @@ describe("TLOZ Server Action authorization", () => {
     expect(mocks.tloz.createMission).not.toHaveBeenCalled();
   });
 
-  it("allows operative global updates but reserves Mission deletion for Platform Owner", async () => {
+  it("allows operative global updates and Mission deletion", async () => {
     mocks.auth.mockResolvedValue({ user: operative });
     mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, ownerId: "owner-1" });
     await expect(updateMission("mission-1", { ownerId: "developer-1" })).resolves.toEqual(mission);
-    await expect(deleteMission("mission-1"))
-      .rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
-    expect(mocks.tloz.deleteMission).not.toHaveBeenCalled();
+    await expect(deleteMission("mission-1")).resolves.toBeUndefined();
+    expect(mocks.tloz.deleteMission).toHaveBeenCalledWith("mission-1");
 
     mocks.auth.mockResolvedValue({ user: owner });
     await deleteMission("mission-1");

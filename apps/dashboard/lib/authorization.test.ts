@@ -18,13 +18,13 @@ const actors = {
   unknown: { id: "unknown-1", type: "human", role: "Guest" },
 } as const;
 
-function allowed(actor: (typeof actors)[keyof typeof actors], operation: TlozOperation, context = {}) {
+function allowed(actor: (typeof actors)[keyof typeof actors], operation: TlozOperation, context: Record<string, string | boolean> = {}) {
   return authorizeTlozOperation(actor as never, operation, context).allowed;
 }
 
 describe("TLOZ authorization policy", () => {
   it("implements the role matrix with deny-by-default behavior", () => {
-    const cases: Array<[keyof typeof actors, TlozOperation, Record<string, string>, boolean]> = [
+    const cases: Array<[keyof typeof actors, TlozOperation, Record<string, string | boolean>, boolean]> = [
       ["owner", "read", {}, true],
       ["developer", "read", {}, true],
       ["operative", "read", {}, true],
@@ -32,7 +32,7 @@ describe("TLOZ authorization policy", () => {
       ["unknown", "read", {}, false],
       ["owner", "delete-mission", {}, true],
       ["developer", "delete-mission", {}, false],
-      ["operative", "delete-mission", {}, false],
+      ["operative", "delete-mission", {}, true],
       ["reader", "delete-mission", {}, false],
       ["developer", "create", { requestedOwnerId: "developer-1" }, true],
       ["developer", "create", { requestedOwnerId: "owner-1" }, false],
@@ -49,6 +49,10 @@ describe("TLOZ authorization policy", () => {
       ["reader", "admin", {}, false],
       ["reader", "read-sensitive-user", {}, false],
       ["operative", "read-sensitive-user", {}, true],
+      ["operative", "manage-roles", { targetUserId: "developer-1" }, true],
+      ["operative", "manage-roles", { targetUserId: "operative-1" }, false],
+      ["operative", "manage-roles", { targetUserId: "owner-1", targetIsPlatformOwner: true }, false],
+      ["owner", "manage-roles", { targetUserId: "owner-1", targetIsPlatformOwner: true }, true],
     ];
 
     for (const [role, operation, context, expected] of cases) {
@@ -60,7 +64,7 @@ describe("TLOZ authorization policy", () => {
     expect(() => assertTlozOperation(actors.reader as never, "mutate"))
       .toThrowError(TlozAuthorizationError);
     try {
-      assertTlozOperation(actors.operative as never, "delete-mission");
+      assertTlozOperation(actors.reader as never, "delete-mission");
     } catch (error) {
       expect(error).toMatchObject({ code: "FORBIDDEN", status: 403 });
     }

@@ -1,7 +1,7 @@
 import type { ApiKey, TlozAttachmentGroup, TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
 import type { TlozAttachmentBatch, TlozAttachmentFileInput, TlozMissionRecord } from "../contracts";
 import { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "../tloz-attachment-errors";
-import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, ZipformDataClient } from "../contracts";
+import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, UserRole, ZipformDataClient } from "../contracts";
 import type { AgentCreateInput, ApiKeyCreateResult } from "../contracts";
 import {
   apps,
@@ -215,6 +215,12 @@ export function createMockDataClient(): ZipformDataClient {
       },
       async getUsers() {
         return tlozData.users;
+      },
+      async updateUserRole(userId: string, role: UserRole) {
+        const user = tlozData.users.find((candidate) => candidate.id === userId);
+        if (!user) throw new Error("User not found");
+        user.role = role;
+        return user;
       },
       async createProject(input) {
         const valid = validateProjectCreate(input);

@@ -163,6 +163,47 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+  /users/{userId}/role:
+    patch:
+      operationId: updateUserRole
+      summary: Update a user's operational role
+      description: Platform Owners and guarded agent:operative callers may update compatible roles. Operatives cannot modify themselves or an existing Platform Owner.
+      tags: [Users]
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  $ref: "#/components/schemas/UserRole"
+      responses:
+        "200":
+          description: User role updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The last Platform Owner cannot be removed.
+        "500":
+          $ref: "#/components/responses/InternalError"
 
   # ── Projects ───────────────────────────────────────────────────────
   /projects:
@@ -1792,7 +1833,7 @@ components:
           format: email
           description: Omitted from responses to agent:reader.
         role:
-          type: string
+          $ref: "#/components/schemas/UserRole"
         type:
           type: string
           enum: [human, agent]
@@ -1813,6 +1854,9 @@ components:
             $ref: "#/components/schemas/User"
         nextCursor:
           type: [string, "null"]
+    UserRole:
+      type: string
+      enum: [Platform Owner, Full Stack Developer, agent:operative, agent:reader]
 
     # ── Projects ─────────────────────────────────────────────────────
     ProjectStatus:

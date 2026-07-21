@@ -16,11 +16,14 @@ export type TlozOperation =
   | "move"
   | "structure"
   | "delete-mission"
+  | "manage-roles"
   | "admin";
 
 export type TlozAuthorizationContext = {
   ownerId?: string | null;
   requestedOwnerId?: string | null;
+  targetUserId?: string | null;
+  targetIsPlatformOwner?: boolean;
 };
 
 export type TlozAuthorizationDecision =
@@ -71,8 +74,18 @@ export function authorizeTlozOperation(
   if (operation === "read-sensitive-user") {
     return role === "reader" ? { allowed: false, code: "FORBIDDEN", status: 403 } : { allowed: true };
   }
-  if (operation === "admin" || operation === "delete-mission") {
+  if (operation === "admin") {
     return role === "owner" ? { allowed: true } : { allowed: false, code: "FORBIDDEN", status: 403 };
+  }
+  if (operation === "delete-mission") {
+    return role === "owner" || role === "operative"
+      ? { allowed: true }
+      : { allowed: false, code: "FORBIDDEN", status: 403 };
+  }
+  if (operation === "manage-roles") {
+    return role === "owner" || (role === "operative" && context.targetUserId !== actor.id && !context.targetIsPlatformOwner)
+      ? { allowed: true }
+      : { allowed: false, code: "FORBIDDEN", status: 403 };
   }
   if (role === "reader") return { allowed: false, code: "FORBIDDEN", status: 403 };
   if (operation === "mutate") return { allowed: true };
