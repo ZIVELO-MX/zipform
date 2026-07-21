@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, FileStack, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozAttachmentGroup, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
@@ -28,6 +28,7 @@ import type { TlozResourceInput } from "@zipform/data";
 
 const missionIcons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
 const defaultMissionContentSections = ["description", "detail", "checklist"];
+const MISSION_ATTACHMENT_UPLOAD_UI_ENABLED = false;
 
 export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
   missions: TlozMissionRecord[];
@@ -291,8 +292,8 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
 
           <RelationsSection className="mt-7" title="Recursos">
             <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
-              <MissionAttachmentUploader missionId={current.id} resources={current.resources.filter((resource) => Boolean(resource.groupKey && resource.externalKey))} canUpdate={canUpdate} onGroupCompleted={acceptAttachmentGroup} />
-              <MissionResourceReferences resources={current.resources.filter((resource) => !resource.groupKey)} onRemove={(resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id))} />
+              {MISSION_ATTACHMENT_UPLOAD_UI_ENABLED ? <MissionAttachmentUploader missionId={current.id} resources={current.resources.filter((resource) => Boolean(resource.groupKey && resource.externalKey))} canUpdate={canUpdate} onGroupCompleted={acceptAttachmentGroup} /> : null}
+              <MissionResourceReferences resources={current.resources} onRemove={(resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id))} />
               {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
             </div>
             <AddResource onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} />
@@ -371,11 +372,35 @@ function MissionReferences({ missions, project, onRemove, onNavigate }: { missio
 }
 
 function MissionResourceReferences({ resources, onRemove }: { resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
+  const grouped = new Map<string, TlozResource[]>();
+  const standalone: TlozResource[] = [];
+  for (const resource of resources) {
+    if (!resource.groupKey) {
+      standalone.push(resource);
+      continue;
+    }
+    grouped.set(resource.groupKey, [...(grouped.get(resource.groupKey) ?? []), resource]);
+  }
+  const previewSlides: ResourcePreviewSlide[] = standalone.flatMap((resource) => {
+    const src = resolveResourceImageUrl(resource);
+    return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
+  });
+  return <>{[...grouped.entries()].map(([groupKey, group]) => <MissionAttachmentGroupReference key={groupKey} groupKey={groupKey} resources={group} onRemove={onRemove} />)}{standalone.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</>;
+}
+
+function MissionAttachmentGroupReference({ groupKey, resources, onRemove }: { groupKey: string; resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
   const previewSlides: ResourcePreviewSlide[] = resources.flatMap((resource) => {
     const src = resolveResourceImageUrl(resource);
     return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
   });
-  return <>{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</>;
+  const groupName = groupKey.replace(/[._-]+/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
+  return <section className="col-span-full min-w-0 rounded-xl border border-[#1D1D1B]/10 bg-white p-3" aria-labelledby={`resource-group-${groupKey}`}>
+    <div className="mb-2.5 flex min-w-0 items-center gap-3">
+      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-4"><FileStack aria-hidden="true" /></span>
+      <div className="min-w-0 flex-1"><h3 id={`resource-group-${groupKey}`} className="m-0 truncate text-[13.5px] font-semibold text-[#1D1D1B]">{groupName}</h3><p className="m-0 text-[11.5px] text-[#9A9A98]">Grupo de capturas · {resources.length} {resources.length === 1 ? "imagen" : "imágenes"}</p></div>
+    </div>
+    <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</div>
+  </section>;
 }
 
 function ResourceReference({ resource, previewSlides, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; onRemove: () => void }) {

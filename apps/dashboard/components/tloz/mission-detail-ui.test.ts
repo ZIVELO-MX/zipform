@@ -58,6 +58,13 @@ describe("mission detail interaction contracts", () => {
     expect(attachmentUploader).toContain("Reemplazar");
   });
 
+  it("keeps the attachment uploader hidden while API-created groups render in Resources", () => {
+    expect(detail).toContain("MISSION_ATTACHMENT_UPLOAD_UI_ENABLED = false");
+    expect(detail).toContain("MissionAttachmentGroupReference");
+    expect(detail).toContain("Grupo de capturas");
+    expect(detail).not.toContain('resources={current.resources.filter((resource) => !resource.groupKey)}');
+  });
+
   it("keeps attachment limits and signed URL handling in the client contract", () => {
     expect(attachmentClient).toContain("MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024");
     expect(attachmentClient).toContain("MAX_ATTACHMENT_COUNT = 20");
