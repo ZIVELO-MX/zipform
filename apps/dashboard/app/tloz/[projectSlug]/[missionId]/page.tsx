@@ -7,6 +7,7 @@ import { SystemEntityDetailPage } from "../../../../components/tloz/system-entit
 import { MissionDetailPage } from "../../../../components/tloz/mission-detail-page";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { getMissionCapabilities } from "../../actions";
 
 export default async function ProjectMissionPage({ params }: { params: Promise<{ projectSlug: string; missionId: string }> }) {
   const { projectSlug, missionId } = await params;
@@ -27,6 +28,7 @@ export default async function ProjectMissionPage({ params }: { params: Promise<{
   const project = findProjectBySlug(projects, projectSlug);
   if (!project || !mission || mission.projectId !== project.id) notFound();
   const projectMissions = missions.filter((item) => item.projectId === project.id);
+  const capabilities = await getMissionCapabilities(missionId);
 
   return (
     <TlozPageShell title="Lobby" showHeader={false}>
@@ -37,7 +39,7 @@ export default async function ProjectMissionPage({ params }: { params: Promise<{
           </Link>
           <div className="min-w-0 flex-1"><p className="m-0 truncate text-[11px] font-medium text-carbon/45">{project.name} /</p><p className="m-0 truncate text-sm font-bold text-carbon/75">{mission.title}</p></div>
         </header>
-        <MissionDetailPage mission={mission} options={{ projects: [project], seasons, episodes, users: allUsers, missions: projectMissions, questItems }} />
+        <MissionDetailPage mission={mission} options={{ projects: [project], seasons, episodes, users: allUsers, missions: projectMissions, questItems }} canUpdate={capabilities.canUpdate} />
       </div>
     </TlozPageShell>
   );

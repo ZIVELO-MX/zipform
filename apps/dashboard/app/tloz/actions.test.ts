@@ -48,6 +48,7 @@ import {
   createMission,
   createSeason,
   deleteMission,
+  getMissionCapabilities,
   getMissionDetailOptions,
   saveMissionDocument,
   updateMission,
@@ -147,6 +148,19 @@ describe("TLOZ Server Action authorization", () => {
     await expect(createMission({ ...createInput, ownerId: reader.id } as never))
       .rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
     expect(mocks.tloz.createMission).not.toHaveBeenCalled();
+  });
+
+  it("resolves Mission attachment capabilities from role and ownership", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, ownerId: developer.id });
+    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: true });
+
+    mocks.auth.mockResolvedValue({ user: reader });
+    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: false });
+
+    mocks.auth.mockResolvedValue({ user: developer });
+    mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, ownerId: "owner-1" });
+    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: false });
   });
 
   it("uses an explicit 401 error when no session exists", async () => {

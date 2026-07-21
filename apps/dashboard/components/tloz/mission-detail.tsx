@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@zipform/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
+import type { TlozAttachmentGroup, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
 import {
   addMissionDependency,
   addMissionResource,
@@ -18,6 +18,7 @@ import {
   updateMission,
 } from "../../app/tloz/actions";
 import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
+import { MissionAttachmentUploader } from "./mission-attachment-uploader";
 import { missionStatusLabel, missionStatusTone, missionTypeIcon, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import { appendTaskLine, updateTaskLine } from "./mission-document";
@@ -35,9 +36,10 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
 
 type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "descriptionDetail" | "icon">;
 
-export function MissionDetail({ mission, options, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
+export function MissionDetail({ mission, options, canUpdate = true, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
+  canUpdate?: boolean;
   onMissionChange?: (mission: TlozMissionDetail) => void;
   onNavigateMission?: (missionId: string) => void;
   onNavigateQuestItem?: (questItemId: string) => void;
@@ -155,6 +157,14 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
   function toggleChecklistItem(position: number, checked: boolean) {
     saveDocument(updateTaskLine(detailMarkdown, position, { completed: checked }));
+  }
+
+  function acceptAttachmentGroup(group: TlozAttachmentGroup) {
+    const nextResources = [
+      ...current.resources.filter((resource) => resource.groupKey !== group.groupKey),
+      ...group.attachments,
+    ];
+    accept({ ...current, resources: nextResources });
   }
 
   function renameChecklistItem(position: number) {
@@ -281,7 +291,8 @@ export function MissionDetail({ mission, options, onMissionChange, onNavigateMis
 
           <RelationsSection className="mt-7" title="Recursos">
             <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
-              <MissionResourceReferences resources={current.resources} onRemove={(resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id))} />
+              <MissionAttachmentUploader missionId={current.id} resources={current.resources.filter((resource) => Boolean(resource.groupKey && resource.externalKey))} canUpdate={canUpdate} onGroupCompleted={acceptAttachmentGroup} />
+              <MissionResourceReferences resources={current.resources.filter((resource) => !resource.groupKey)} onRemove={(resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id))} />
               {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
             </div>
             <AddResource onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} />

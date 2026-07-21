@@ -15,6 +15,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "../../auth";
 import {
   assertTlozOperation,
+  authorizeTlozOperation,
   isFullStackDeveloper,
   isReadOnlyAgent,
   TlozAuthorizationError,
@@ -78,6 +79,13 @@ export async function getMissionDetail(missionId: string) {
   const actor = await authenticatedActor();
   const mission = await getTlozMissionDetailWithAttachments(missionId);
   return mission && isReadOnlyAgent(actor) ? toPublicMissionOwner(mission) : mission;
+}
+
+export async function getMissionCapabilities(missionId: string) {
+  const actor = await authenticatedActor();
+  const mission = await dataClient.tloz.getMissionDetail(missionId);
+  if (!mission) throw new Error("Misión no encontrada.");
+  return { canUpdate: authorizeTlozOperation(actor, "update", { ownerId: mission.ownerId }).allowed };
 }
 
 export async function getMissionDetailOptions() {
