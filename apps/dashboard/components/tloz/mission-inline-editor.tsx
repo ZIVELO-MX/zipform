@@ -86,7 +86,7 @@ export function MissionPropertyFields({ values, options, onChange, ariaBusy = fa
 
 function ProjectValue({ project }: { project?: { name: string; color?: string; icon?: string } }) { const color = project?.color ?? "#6B6B6B"; const Icon = resolveMissionIcon(project?.icon); return <span className="inline-flex min-w-0 items-center gap-1.5"><span className="grid size-6 shrink-0 place-items-center rounded-md [&_svg]:size-3.5" style={{ backgroundColor: `${color}18`, color }}><Icon aria-hidden="true" /></span><span className="truncate">{project?.name ?? "Sin proyecto"}</span></span>; }
 
-type ContractOption = Pick<TlozFieldOption, "value" | "label" | "color">;
+type ContractOption = Pick<TlozFieldOption, "value" | "label" | "color" | "role">;
 
 export function detailFieldOptions(
   options: MissionEditorOptions | undefined,
