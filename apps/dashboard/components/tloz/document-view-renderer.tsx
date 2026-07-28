@@ -5,6 +5,7 @@ import type {
   TlozDocumentDefinition,
   TlozDocumentPresentationField,
   TlozDocumentScalar,
+  TlozProject,
   UserProfile,
 } from "@tloz/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Button, Input, SlideOver, toast } from "@tloz/ui";
@@ -31,6 +32,12 @@ import type { TlozMissionDetail } from "../../lib/tloz-data";
 import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { MissionList, MissionTable, type MissionViewRecord } from "./mission-views";
+import { TlozViewHeader } from "./tloz-shell";
+
+const collectionViewConfig = {
+  list: { title: "Lista", description: "Todas las missions · agrupadas por estado" },
+  table: { title: "Tabla", description: "Todas las missions · todas las propiedades" },
+} as const;
 
 type DocumentViewRendererProps = {
   documents: TlozDocument[];
@@ -73,15 +80,22 @@ export function DocumentViewRenderer({
   }
 
   if (state.view !== "list" && state.view !== "table" && fallback) return fallback;
+  const collectionView = state.view === "table" ? "table" : "list";
 
   return (
     <>
-      <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
-        {state.view === "list" ? (
-          <MissionList missions={displayRecords} grouping={state.grouping} statusOptions={statusOptions} onSelect={openRecord} />
-        ) : (
-          <MissionTable missions={displayRecords} statusOptions={statusOptions} onSelect={openRecord} />
-        )}
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <TlozViewHeader
+          title={collectionViewConfig[collectionView].title}
+          description={collectionViewConfig[collectionView].description}
+        />
+        <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
+          {state.view === "list" ? (
+            <MissionList missions={displayRecords} grouping={state.grouping} statusOptions={statusOptions} onSelect={openRecord} />
+          ) : (
+            <MissionTable missions={displayRecords} statusOptions={statusOptions} onSelect={openRecord} />
+          )}
+        </div>
       </div>
       <SlideOver
         open={Boolean(selected)}
@@ -199,7 +213,91 @@ function MissionDocumentDetail({ document, panel = false }: { document: TlozDocu
   return <MissionDetail mission={result.mission} options={result.options} canUpdate={result.canUpdate} variant={panel ? "panel" : "full"} />;
 }
 
-function DocumentRecordDetail({
+function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: TlozDocument }>) {
+  const mission = documentToDetailMission(props.document, props.users);
+  return (
+    <MissionDetail
+      mission={mission}
+      options={{
+        projects: mission.project ? [mission.project] : [],
+        users: props.users,
+        missions: [],
+        questItems: [],
+        document: props.document,
+        contract: props.document.contract?.fields ?? [],
+        hideEmptyFields: true,
+      }}
+      canUpdate={false}
+      variant={props.panel ? "panel" : "full"}
+      onNavigateMission={undefined}
+      onNavigateQuestItem={undefined}
+    />
+  );
+}
+
+function documentToDetailMission(document: TlozDocument, users: DocumentUser[]): TlozMissionDetail {
+  const stringValue = (key: string) => {
+    const value = documentValue(document, key);
+    return typeof value === "string" && value ? value : undefined;
+  };
+  const numberValue = (key: string) => {
+    const value = documentValue(document, key);
+    return typeof value === "number" ? value : 0;
+  };
+  const ownerId = typeof document.properties.owner === "string"
+    ? document.properties.owner
+    : typeof document.properties.assignee === "string"
+      ? document.properties.assignee
+      : users[0]?.id ?? "document-owner";
+  const project = document.kind === "project"
+    ? {
+        id: document.source?.id ?? document.id,
+        slug: document.projectSlug ?? document.publicId,
+        name: document.title,
+        description: document.summary,
+        descriptionDetail: document.body,
+        color: typeof document.properties.color === "string" ? document.properties.color : "#3A47B5",
+        icon: typeof document.properties.icon === "string" ? document.properties.icon : "FolderKanban",
+        status: "active",
+        type: "normal",
+        ownerId,
+        startDate: stringValue("start") ?? document.createdAt.slice(0, 10),
+        dueDate: stringValue("due"),
+        createdAt: document.createdAt,
+        updatedAt: document.updatedAt,
+      } satisfies TlozProject
+    : undefined;
+  return {
+    id: document.source?.id ?? document.id,
+    displayId: document.publicId,
+    title: document.title,
+    description: document.summary,
+    descriptionDetail: document.body,
+    icon: typeof document.properties.icon === "string" ? document.properties.icon : document.kind === "inventory" ? "PackageOpen" : "FolderKanban",
+    type: typeof document.properties.category === "string" ? document.properties.category : document.kind === "inventory" ? "inventory" : "project",
+    status: typeof document.properties.status === "string" ? document.properties.status : "later",
+    ownerId,
+    projectId: project?.id,
+    startDate: stringValue("start"),
+    dueDate: stringValue("due"),
+    progress: numberValue("progress"),
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt,
+    owner: (users.find((user) => user.id === ownerId) ?? { id: ownerId, name: "Sin responsable" }) as UserProfile,
+    project,
+    dependencies: [],
+    questItems: [],
+    requiredQuestItems: [],
+    checklist: [],
+    checklistCount: 0,
+    completed: 0,
+    resources: [],
+    requiredBy: [],
+    missionQuestItems: [],
+  };
+}
+
+function DocumentRecordEditorDetail({
   document: initialDocument,
   definition,
   users,

@@ -17,6 +17,8 @@ describe("document entity routes", () => {
     expect(documentPage).toContain("<DocumentEntityView");
     expect(missionPage).toContain("<DocumentDetail");
     expect(renderer).toContain("export function DocumentDetail");
+    expect(renderer).toContain("function documentToDetailMission");
+    expect(renderer).toContain("<MissionDetail");
     expect(renderer).toContain('view.id === "detail"');
     expect(projectRoute).not.toContain("<SystemEntityDetailPage");
     expect(inventoryRoute).not.toContain("<SystemEntityDetailPage");
@@ -37,6 +39,9 @@ describe("document entity routes", () => {
   it("uses Mission list and table UI without a duplicate document toolbar", () => {
     expect(renderer).toContain("<MissionList");
     expect(renderer).toContain("<MissionTable");
+    expect(renderer).toContain('<TlozViewHeader');
+    expect(renderer).toContain('Todas las missions · agrupadas por estado');
+    expect(renderer).toContain('Todas las missions · todas las propiedades');
     expect(renderer).not.toContain("DocumentCollectionToolbar");
     expect(collectionPage).toContain('(["list", "table"] satisfies TlozView[])');
   });
