@@ -53,9 +53,11 @@ const statusRoleLabel: Record<TlozStatusRole, string> = {
 export function ProjectContractEditor({
   document,
   onChange,
+  embedded = false,
 }: {
   document: TlozDocument;
   onChange?: (document: TlozDocument) => void;
+  embedded?: boolean;
 }) {
   const [current, setCurrent] = useState(document);
   const [fields, setFields] = useState(() => normalizeFieldPositions(document.contract?.fields ?? []));
@@ -127,7 +129,7 @@ export function ProjectContractEditor({
   }
 
   return (
-    <section className="mx-auto mb-10 w-full max-w-[1052px] px-[26px]" aria-labelledby="project-contract-title">
+    <section className={embedded ? "mb-7 w-full" : "mx-auto mb-10 w-full max-w-[1052px] px-[26px]"} aria-labelledby="project-contract-title">
       <div className="overflow-hidden rounded-2xl border border-carbon/10 bg-white">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-carbon/[0.07] px-4 py-3">
           <div>

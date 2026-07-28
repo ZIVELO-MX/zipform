@@ -6,9 +6,9 @@ import { SlideOver } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozQuestItem } from "@tloz/types";
 import { getMissionCapabilities, getMissionDetail, getMissionDetailOptions, getMissionDocumentOptions } from "../../app/tloz/actions";
-import { inventoryItemHref } from "../../lib/tloz-routes";
-import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
-import { SystemEntityDetail } from "./system-project-detail";
+import type { MissionDetailOptions } from "./mission-detail";
+import { DocumentDetail } from "./document-view-renderer";
+import { SystemDocumentDetail } from "./system-project-detail";
 
 type MissionSlideOverProps = {
   mission: TlozMissionRecord | null;
@@ -76,7 +76,7 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
 
   return (
     <SlideOver open={Boolean(mission)} title={selectedQuestItem?.name ?? detail?.title ?? mission?.title ?? "Detalle de Mission"} onBack={selectedQuestItem || history.length ? navigateBack : undefined} onOpenChange={(open) => !open && onClose()}>
-      {selectedQuestItem ? <SystemEntityDetail variant="inventory" entity={selectedQuestItem} missions={options.missions} users={options.users} resources={[]} panel onChange={(entity) => setSelectedQuestItem(entity as TlozQuestItem)} onNavigateMission={(item) => void navigateToMission(item.id)} onOpenFullPage={() => { onClose(); router.push(inventoryItemHref(selectedQuestItem.id)); }} /> : detail ? <div className="min-h-full bg-[#FAFAF9]"><MissionDetail variant="panel" mission={detail} options={options} canUpdate={canUpdate} onNavigateMission={(id) => void navigateToMission(id)} onNavigateQuestItem={(id) => { const item = options.questItems.find((quest) => quest.id === id); if (item) setSelectedQuestItem(item); }} onMissionChange={onMissionChange} /></div> : <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando misión…</div>}
+      {selectedQuestItem ? <SystemDocumentDetail entityId={selectedQuestItem.id} users={options.users} panel /> : detail ? <div className="min-h-full bg-[#FAFAF9]"><DocumentDetail panel mission={detail} options={options} canUpdate={canUpdate} onNavigateMission={(id) => void navigateToMission(id)} onNavigateQuestItem={(id) => { const item = options.questItems.find((quest) => quest.id === id); if (item) setSelectedQuestItem(item); }} onMissionChange={onMissionChange} /></div> : <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando misión…</div>}
     </SlideOver>
   );
 }

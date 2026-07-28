@@ -38,8 +38,8 @@ export const getTlozProjects = cache(() => dataClient.tloz.getProjects());
 export const getTlozQuestItems = cache(() => dataClient.tloz.getQuestItems());
 export const getTlozResources = cache(() => dataClient.tloz.getResources());
 export const getTlozUsers = cache(() => dataClient.tloz.getUsers());
-export const getTlozDocuments = cache((kind?: TlozDocumentKind) => (
-  dataClient.documents.find(kind ? { kind } : {}, { limit: 100 })
+export const getTlozDocuments = cache((kind?: TlozDocumentKind, parentId?: string) => (
+  dataClient.documents.find({ ...(kind ? { kind } : {}), ...(parentId ? { parentId } : {}) }, { limit: 100 })
 ));
 export const getTlozProjectDocuments = () => getTlozDocuments("project");
 export const getTlozInventoryDocuments = () => getTlozDocuments("inventory");

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getTlozMissionDetailWithAttachments: vi.fn(),
   documents: {
     get: vi.fn(),
+    getDefinition: vi.fn(),
     update: vi.fn(),
     replaceProjectContract: vi.fn(),
   },
@@ -53,10 +54,12 @@ vi.mock("../../lib/tloz-data", () => ({
 import {
   createMission,
   deleteMission,
+  getDocumentDetailOptions,
   getMissionCapabilities,
   getMissionDetailOptions,
   patchMissionStatus,
   saveMissionDocument,
+  updateDocumentContent,
   updateMission,
 } from "./actions";
 
@@ -270,6 +273,40 @@ describe("TLOZ Server Action authorization", () => {
     mocks.auth.mockResolvedValue({ user: developer });
     mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, ownerId: "owner-1" });
     await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: false });
+  });
+
+  it("loads the matching definition for a document detail", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    const document = {
+      id: "inventory-document",
+      publicId: "inventory-item",
+      kind: "inventory",
+      source: { type: "inventory", id: "inventory-1" },
+    };
+    const definition = { id: "inventory-definition", key: "inventory", kind: "inventory" };
+    mocks.documents.get.mockResolvedValue(document);
+    mocks.documents.getDefinition.mockResolvedValue(definition);
+    mocks.tloz.getQuestItems.mockResolvedValue([{ id: "inventory-1", ownerId: developer.id }]);
+
+    await expect(getDocumentDetailOptions("inventory-document")).resolves.toEqual({ document, definition });
+    expect(mocks.documents.getDefinition).toHaveBeenCalledWith("inventory");
+  });
+
+  it("updates common document content with the expected revision", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    const document = {
+      id: "project-document",
+      kind: "project",
+      revision: 4,
+      source: { type: "project", id: "project-1" },
+    };
+    const updated = { ...document, title: "Updated", revision: 5 };
+    mocks.documents.get.mockResolvedValue(document);
+    mocks.documents.update.mockResolvedValue(updated);
+    mocks.tloz.getProjects.mockResolvedValue([{ id: "project-1", ownerId: developer.id }]);
+
+    await expect(updateDocumentContent(document.id, { title: "Updated" }, 4)).resolves.toEqual(updated);
+    expect(mocks.documents.update).toHaveBeenCalledWith(document.id, { title: "Updated" }, 4);
   });
 
   it("uses an explicit 401 error when no session exists", async () => {

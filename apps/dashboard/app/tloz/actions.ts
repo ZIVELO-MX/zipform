@@ -11,7 +11,7 @@ import {
   type TlozQuestItemUpdateInput,
   type TlozResourceInput,
 } from "@tloz/data";
-import type { TlozDocumentScalar, TlozFieldDefinition, TlozMissionStatus } from "@tloz/types";
+import type { TlozDocumentScalar, TlozDocumentUpdate, TlozFieldDefinition, TlozMissionStatus } from "@tloz/types";
 import { revalidatePath } from "next/cache";
 import { auth } from "../../auth";
 import {
@@ -177,6 +177,27 @@ export async function getMissionDocumentOptions(missionId: string) {
   };
 }
 
+export async function getDocumentDetailOptions(documentId: string) {
+  const document = await dataClient.documents.get(documentId, {
+    includeChildren: true,
+    childrenPagination: { limit: 1 },
+  });
+  if (!document) throw new Error("Documento no encontrado.");
+  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id, "read");
+  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id, "read");
+  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id, "read");
+  else await authenticatedActor();
+
+  const definitionKey = document.kind === "project"
+    ? "projects"
+    : document.kind === "inventory"
+      ? "inventory"
+      : `project:${document.parentId}:children`;
+  const definition = await dataClient.documents.getDefinition(definitionKey);
+  if (!definition) throw new Error("Definición documental no encontrada.");
+  return { document, definition };
+}
+
 export async function updateDocumentProperties(
   documentId: string,
   properties: Record<string, string | number | boolean | string[] | null>,
@@ -193,6 +214,23 @@ export async function updateDocumentProperties(
     { properties },
     document.revision,
   );
+  revalidateTloz();
+  return updated;
+}
+
+export async function updateDocumentContent(
+  documentId: string,
+  input: Pick<TlozDocumentUpdate, "title" | "summary">,
+  revision: number,
+) {
+  const document = await dataClient.documents.get(documentId);
+  if (!document) throw new Error("Documento no encontrado.");
+  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id);
+  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id);
+  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id);
+  else await authenticatedActor();
+
+  const updated = await dataClient.documents.update(document.id, input, revision);
   revalidateTloz();
   return updated;
 }

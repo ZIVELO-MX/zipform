@@ -3,12 +3,16 @@ import type { TlozDashboardSummary } from "../../lib/tloz-data";
 import {
   getTlozDashboardSummary,
   getTlozDocument,
+  getTlozDocumentDefinition,
+  getTlozDocuments,
   getTlozMissions,
   getTlozProjects,
   getTlozQuestItems,
 } from "../../lib/tloz-data";
 import { findProjectBySlug } from "../../lib/tloz-routes";
+import type { TlozView } from "../../lib/tloz-routes";
 import { TlozViewRenderer } from "../../app/tloz/tloz-view-renderer";
+import { DocumentViewRenderer } from "./document-view-renderer";
 import { TlozPageShell } from "./tloz-shell";
 
 export async function ProjectWorkspacePage({ projectSlug }: { projectSlug: string }) {
@@ -38,27 +42,45 @@ export async function ProjectWorkspacePage({ projectSlug }: { projectSlug: strin
   };
   const users = Array.from(new Map(missions.map((mission) => [mission.owner.id, mission.owner])).values());
   const projectDocument = await getTlozDocument(project.id);
+  if (!projectDocument) notFound();
+  const [missionDocuments, documentDefinition] = await Promise.all([
+    getTlozDocuments("mission", projectDocument.id),
+    getTlozDocumentDefinition(`project:${projectDocument.id}:children`),
+  ]);
+  if (!documentDefinition) notFound();
   const statusOptions = projectDocument?.contract?.fields.find((field) => field.key === "status")?.options ?? [];
   const detailOptions = { missions, projects: [project], questItems: projectInventory, users };
+  const supportedViews = documentDefinition.views
+    .map((view) => view.id)
+    .filter((view): view is TlozView => view !== "detail");
 
   return (
     <TlozPageShell
       title={project.name}
       breadcrumb={["Lobby", project.name]}
       fullWidth
+      supportedViews={supportedViews}
+      defaultView={documentDefinition.defaultView as TlozView}
       controlProjectId={project.id}
       stateScope={`project:${project.slug}`}
     >
-      <TlozViewRenderer
-        summary={projectSummary}
-        missions={missions}
-        allMissions={missions}
-        projects={[project]}
+      <DocumentViewRenderer
+        documents={missionDocuments.data}
+        definition={documentDefinition}
         users={users}
-        questItems={projectInventory}
-        detailOptions={detailOptions}
-        statusOptions={statusOptions}
-        hideProjectSections
+        fallback={(
+          <TlozViewRenderer
+            summary={projectSummary}
+            missions={missions}
+            allMissions={missions}
+            projects={[project]}
+            users={users}
+            questItems={projectInventory}
+            detailOptions={detailOptions}
+            statusOptions={statusOptions}
+            hideProjectSections
+          />
+        )}
       />
     </TlozPageShell>
   );

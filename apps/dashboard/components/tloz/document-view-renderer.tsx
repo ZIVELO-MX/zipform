@@ -7,12 +7,19 @@ import type {
   TlozDocumentScalar,
   UserProfile,
 } from "@tloz/types";
-import { Button, SlideOver, toast } from "@tloz/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Button, Input, SlideOver, toast } from "@tloz/ui";
 import { ArrowUpRight, List, Table } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
-import { updateDocumentBody } from "../../app/tloz/actions";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import {
+  getMissionCapabilities,
+  getMissionDetail,
+  getMissionDetailOptions,
+  getMissionDocumentOptions,
+  updateDocumentBody,
+  updateDocumentContent,
+} from "../../app/tloz/actions";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { inventoryItemHref } from "../../lib/tloz-routes";
 import { EntityList, EntityTable, type EntityColumn } from "./entity-views";
@@ -21,17 +28,23 @@ import { MarkdownEditor } from "./markdown-editor";
 import { ProjectContractEditor } from "./project-contract-editor";
 import { resolveMissionIcon } from "./tloz-utils";
 import { useTlozViewState } from "./tloz-view-state";
+import type { TlozMissionDetail } from "../../lib/tloz-data";
+import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 
 type DocumentViewRendererProps = {
   documents: TlozDocument[];
   definition: TlozDocumentDefinition;
   users: UserProfile[];
+  fallback?: React.ReactNode;
 };
+
+type DocumentUser = Pick<UserProfile, "id" | "name">;
 
 export function DocumentViewRenderer({
   documents,
   definition,
   users,
+  fallback,
 }: DocumentViewRendererProps) {
   const { state, setState } = useTlozViewState();
   const router = useRouter();
@@ -68,6 +81,8 @@ export function DocumentViewRenderer({
     else setSelected(document);
   }
 
+  if (state.view !== "list" && state.view !== "table" && fallback) return fallback;
+
   const secondaryField = visibleFields.find((field) => field.key !== "title");
   return (
     <>
@@ -80,8 +95,8 @@ export function DocumentViewRenderer({
         />
         {state.view === "list" ? (
           <EntityList
-            title={definition.key === "projects" ? "Projects" : "Inventory"}
-            tone={definition.kind === "project" ? "#3A47B5" : "#7A5A12"}
+            title={definition.kind === "project" ? "Projects" : definition.kind === "mission" ? "Missions" : "Inventory"}
+            tone={definition.kind === "project" ? "#3A47B5" : definition.kind === "mission" ? "#D72228" : "#7A5A12"}
             items={documents}
             onSelect={openDocument}
             render={(document) => (
@@ -115,7 +130,7 @@ export function DocumentViewRenderer({
         }}
       >
         {selected ? (
-          <DocumentDetailView
+          <DocumentDetail
             key={selected.id}
             document={selected}
             definition={definition}
@@ -140,7 +155,7 @@ function DocumentCollectionToolbar({
   activeView: "list" | "table";
   onViewChange: (view: "list" | "table") => void;
 }) {
-  const label = kind === "project" ? "Todos los proyectos" : "Todo el inventario";
+  const label = kind === "project" ? "Todos los proyectos" : kind === "mission" ? "Todas las misiones" : "Todo el inventario";
   return (
     <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-1 md:px-0">
       <span className="text-xs font-semibold text-carbon/60">
@@ -174,39 +189,106 @@ export function DocumentEntityView({
 }: {
   document: TlozDocument;
   definition: TlozDocumentDefinition;
-  users: UserProfile[];
+  users: DocumentUser[];
 }) {
   const [document, setDocument] = useState(initialDocument);
-  return (
-    <>
-      <DocumentDetailView
-        document={document}
-        definition={definition}
-        users={users}
-        onChange={setDocument}
-      />
-      {document.kind === "project" ? (
-        <ProjectContractEditor document={document} onChange={setDocument} />
-      ) : null}
-    </>
-  );
+  return <DocumentDetail document={document} definition={definition} users={users} onChange={setDocument} />;
 }
 
-export function DocumentDetailView({
+type DocumentDetailProps = {
+  document: TlozDocument;
+  definition: TlozDocumentDefinition;
+  users: DocumentUser[];
+  panel?: boolean;
+  onChange?: (document: TlozDocument) => void;
+} | {
+  mission: TlozMissionDetail;
+  options: MissionDetailOptions;
+  canUpdate?: boolean;
+  panel?: boolean;
+  onMissionChange?: (mission: TlozMissionDetail) => void;
+  onNavigateMission?: (missionId: string) => void;
+  onNavigateQuestItem?: (questItemId: string) => void;
+};
+
+export function DocumentDetail(props: DocumentDetailProps) {
+  if ("mission" in props) {
+    return (
+      <MissionDetail
+        mission={props.mission}
+        options={props.options}
+        canUpdate={props.canUpdate}
+        variant={props.panel ? "panel" : "full"}
+        onMissionChange={props.onMissionChange}
+        onNavigateMission={props.onNavigateMission}
+        onNavigateQuestItem={props.onNavigateQuestItem}
+      />
+    );
+  }
+  if (props.document.kind === "mission") {
+    return <MissionDocumentDetail document={props.document} panel={props.panel} />;
+  }
+  return <DocumentRecordDetail {...props} />;
+}
+
+function MissionDocumentDetail({ document, panel = false }: { document: TlozDocument; panel?: boolean }) {
+  const [result, setResult] = useState<{
+    mission: TlozMissionDetail;
+    options: MissionDetailOptions;
+    canUpdate: boolean;
+  } | null>(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    const missionId = document.source?.id ?? document.publicId;
+    setResult(null);
+    setError(false);
+    void Promise.all([
+      getMissionDetail(missionId),
+      getMissionDetailOptions(),
+      getMissionDocumentOptions(missionId),
+      getMissionCapabilities(missionId),
+    ]).then(([mission, options, documentOptions, capabilities]) => {
+      if (!active || !mission) {
+        if (active) setError(true);
+        return;
+      }
+      setResult({
+        mission,
+        options: {
+          ...options,
+          document: documentOptions.document ?? undefined,
+          contract: documentOptions.contract,
+        },
+        canUpdate: capabilities.canUpdate,
+      });
+    }).catch(() => {
+      if (active) setError(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [document.publicId, document.source?.id]);
+
+  if (error) return <div className="p-6 text-sm font-semibold text-[#B91C22]" role="alert">No se pudo cargar la Mission.</div>;
+  if (!result) return <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando Mission…</div>;
+  return <MissionDetail mission={result.mission} options={result.options} canUpdate={result.canUpdate} variant={panel ? "panel" : "full"} />;
+}
+
+function DocumentRecordDetail({
   document: initialDocument,
   definition,
   users,
   panel = false,
   onChange,
-}: {
-  document: TlozDocument;
-  definition: TlozDocumentDefinition;
-  users: UserProfile[];
-  panel?: boolean;
-  onChange?: (document: TlozDocument) => void;
-}) {
+}: Extract<DocumentDetailProps, { document: TlozDocument }>) {
   const [document, setDocument] = useState(initialDocument);
   const [pending, startTransition] = useTransition();
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(initialDocument.title);
+  const [editingSummary, setEditingSummary] = useState(false);
+  const [summaryDraft, setSummaryDraft] = useState(initialDocument.summary);
   const detail = definition.views.find((view) => view.id === "detail");
   const fieldsByKey = useMemo(
     () => new Map(definition.fields.map((field) => [field.key, field])),
@@ -220,6 +302,23 @@ export function DocumentDetailView({
     .map((key) => fieldsByKey.get(key) ?? fallbackField(key))
     .filter((field) => field.visible)
     .filter((field) => documentValue(document, field.key) !== null);
+  const Icon = resolveMissionIcon(
+    typeof document.properties.icon === "string"
+      ? document.properties.icon
+      : document.kind === "project"
+        ? "FolderKanban"
+        : document.kind === "mission"
+          ? "Sword"
+          : "PackageOpen",
+  );
+  const tone = typeof document.properties.color === "string"
+    ? document.properties.color
+    : document.kind === "project"
+      ? "#3A47B5"
+      : document.kind === "mission"
+        ? "#D72228"
+        : "#7A5A12";
+  const statusField = fields.find((field) => field.key === "status");
 
   function saveBody(body: string) {
     const toastId = toast.loading("Guardando documento…");
@@ -235,69 +334,102 @@ export function DocumentDetailView({
     });
   }
 
-  return (
-    <article className={panel ? "min-h-full bg-[#FAFAF9] px-5 py-6" : "mx-auto w-full max-w-[1052px] px-[26px] py-8"}>
-      <header className="mb-7 border-b border-carbon/[0.08] pb-6">
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="font-mono text-[11px] font-semibold text-carbon/45">
-            {document.publicId}
-          </span>
-          <span className="rounded-full bg-carbon/[0.06] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.05em] text-carbon/55">
-            {document.kind}
-          </span>
-        </div>
-        <h1 className="m-0 text-[30px] font-bold tracking-[-0.03em] text-carbon">
-          {document.title}
-        </h1>
-        {document.summary ? (
-          <p className="mt-2 max-w-3xl text-[14px] font-medium leading-6 text-carbon/55">
-            {document.summary}
-          </p>
-        ) : null}
-        {panel || (document.kind === "project" && document.projectSlug) ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {panel ? (
-              <Button asChild variant="outline" size="sm">
-                <Link href={documentHref(document)}>
-                  Abrir detalle
-                  <ArrowUpRight aria-hidden="true" />
-                </Link>
-              </Button>
-            ) : null}
-            {document.kind === "project" && document.projectSlug ? (
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/${document.projectSlug}`}>
-                  Abrir workspace
-                  <ArrowUpRight aria-hidden="true" />
-                </Link>
-              </Button>
-            ) : null}
-          </div>
-        ) : null}
-      </header>
+  function saveContent(input: { title?: string; summary?: string }) {
+    const toastId = toast.loading("Guardando documento…");
+    startTransition(async () => {
+      try {
+        const updated = await updateDocumentContent(document.id, input, document.revision);
+        setDocument(updated);
+        setTitleDraft(updated.title);
+        setSummaryDraft(updated.summary);
+        onChange?.(updated);
+        toast.success("Documento actualizado", { id: toastId });
+      } catch {
+        setTitleDraft(document.title);
+        setSummaryDraft(document.summary);
+        toast.error("No se pudo guardar el documento", { id: toastId });
+      }
+    });
+  }
 
-      <div className={panel ? "grid gap-7" : "grid gap-8 lg:grid-cols-[minmax(0,1fr)_308px]"}>
-        <div className="min-w-0">
-          <MarkdownEditor
-            value={document.body}
-            onSave={saveBody}
-            placeholder="Sin detalle."
-          />
-          {pending ? (
-            <p className="text-[11px] font-semibold text-carbon/40" role="status">
-              Guardando…
-            </p>
+  function finishTitle() {
+    const title = titleDraft.trim();
+    setEditingTitle(false);
+    if (!title || title === document.title) {
+      setTitleDraft(document.title);
+      return;
+    }
+    saveContent({ title });
+  }
+
+  function finishSummary() {
+    const summary = summaryDraft.trim();
+    setEditingSummary(false);
+    if (summary === document.summary) return;
+    saveContent({ summary });
+  }
+
+  return (
+    <article className={`mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-[26px] md:py-7 ${panel ? "min-h-full bg-[#FAFAF9]" : ""}`} aria-busy={pending}>
+      <div className="mission-detail-layout grid min-w-0 gap-[30px]">
+        <main className="min-w-0">
+          <header>
+            <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold" style={{ backgroundColor: `${tone}18`, color: tone }}>
+                <Icon className="size-[13px]" aria-hidden="true" />
+                {document.kind === "project" ? "Project" : document.kind === "mission" ? "Mission" : "Inventory"}
+              </span>
+              {statusField ? <DocumentValue document={document} field={statusField} usersById={usersById} /> : null}
+              <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{document.publicId}</span>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-[15px]" style={{ backgroundColor: `${tone}18`, color: tone }}><Icon aria-hidden="true" /></span>
+              {editingTitle ? (
+                <Input autoFocus className="h-auto border border-[#1D1D1B]/15 bg-white px-2 py-0 text-[30px] font-bold leading-[1.12] tracking-[-0.025em] shadow-none" value={titleDraft} aria-label="Título del documento" onChange={(event) => setTitleDraft(event.target.value)} onBlur={finishTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { setTitleDraft(document.title); setEditingTitle(false); } }} />
+              ) : (
+                <button type="button" className="max-w-full rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setEditingTitle(true)}><h1 className="m-0 text-balance text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-[#1D1D1B]">{document.title}</h1></button>
+              )}
+            </div>
+          </header>
+
+          <Accordion type="multiple" defaultValue={["description", "detail"]} className="mb-7 mt-3" aria-label="Contenido del documento">
+            <AccordionItem value="description" className="border-0">
+              <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">Descripción</AccordionTrigger>
+              <AccordionContent className="pt-1">
+                {editingSummary ? (
+                  <textarea autoFocus className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10" value={summaryDraft} aria-label="Descripción del documento" maxLength={280} onChange={(event) => setSummaryDraft(event.target.value)} onBlur={finishSummary} onKeyDown={(event) => { if (event.key === "Escape") { setSummaryDraft(document.summary); setEditingSummary(false); } }} />
+                ) : (
+                  <button type="button" className="block max-w-[62ch] rounded-md text-left text-[15px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setEditingSummary(true)}>{document.summary || "Añadir descripción"}</button>
+                )}
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="detail" className="border-0">
+              <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">Detalle</AccordionTrigger>
+              <AccordionContent className="pt-1">
+                <MarkdownEditor value={document.body} onSave={saveBody} placeholder="Sin detalle." showHeader={false} />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          {document.kind === "project" ? <ProjectContractEditor document={document} embedded onChange={(updated) => { setDocument(updated); onChange?.(updated); }} /> : null}
+          {pending ? <p className="text-[11px] font-semibold text-carbon/40" role="status">Guardando…</p> : null}
+        </main>
+
+        <aside className="mission-detail-properties flex self-start flex-col gap-3.5" aria-label="Información del documento">
+          {panel ? (
+            <Link href={documentHref(document)} className="flex items-center justify-center gap-2 rounded-xl border border-carbon/10 bg-white px-4 py-3 text-[13px] font-semibold text-carbon/60 no-underline transition-colors hover:border-carbon/20 hover:text-carbon">
+              Abrir en página completa <ArrowUpRight className="size-3.5" aria-hidden="true" />
+            </Link>
           ) : null}
-        </div>
-        <aside>
-          <h2 className="mb-2 text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/70">
-            Propiedades
-          </h2>
-          <dl className="overflow-hidden rounded-xl border border-carbon/[0.09] bg-white">
+          {document.kind === "project" && document.projectSlug ? (
+            <Button asChild variant="outline" className="min-h-11 rounded-xl"><Link href={`/${document.projectSlug}`}>Abrir workspace<ArrowUpRight aria-hidden="true" /></Link></Button>
+          ) : null}
+          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby={`document-properties-${document.id}`}>
+            <h2 id={`document-properties-${document.id}`} className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2>
+            <dl className="px-2 py-1.5">
             {fields.map((field) => (
               <div
                 key={field.key}
-                className="grid grid-cols-[108px_minmax(0,1fr)] gap-3 border-b border-carbon/[0.06] px-3 py-2.5 last:border-b-0"
+                className="grid grid-cols-[108px_minmax(0,1fr)] gap-3 border-b border-carbon/[0.06] px-2 py-2.5 last:border-b-0"
               >
                 <dt className="text-[11px] font-semibold text-carbon/45">{field.label}</dt>
                 <dd className="min-w-0 text-right text-[12px] font-semibold text-carbon">
@@ -305,7 +437,15 @@ export function DocumentDetailView({
                 </dd>
               </div>
             ))}
-          </dl>
+            </dl>
+          </section>
+          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby={`document-activity-${document.id}`}>
+            <h2 id={`document-activity-${document.id}`} className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2>
+            <div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]">
+              <span>Documento actualizado · {new Date(document.updatedAt).toLocaleDateString("es-MX")}</span>
+              <span>Documento creado · {new Date(document.createdAt).toLocaleDateString("es-MX")}</span>
+            </div>
+          </section>
         </aside>
       </div>
     </article>
@@ -318,13 +458,17 @@ function DocumentName({ document }: { document: TlozDocument }) {
       ? document.properties.icon
       : document.kind === "inventory"
         ? "PackageOpen"
-        : "FolderKanban",
+        : document.kind === "mission"
+          ? "Sword"
+          : "FolderKanban",
   );
   const tone = typeof document.properties.color === "string"
     ? document.properties.color
     : document.kind === "inventory"
       ? "#7A5A12"
-      : "#3A47B5";
+      : document.kind === "mission"
+        ? "#D72228"
+        : "#3A47B5";
   return (
     <span className="flex min-w-0 flex-1 items-center gap-2.5 font-semibold text-carbon">
       <span
@@ -345,7 +489,7 @@ function DocumentValue({
 }: {
   document: TlozDocument;
   field: TlozDocumentPresentationField;
-  usersById: Map<string, UserProfile>;
+  usersById: Map<string, DocumentUser>;
 }) {
   const value = documentValue(document, field.key);
   if (value === null) return null;
