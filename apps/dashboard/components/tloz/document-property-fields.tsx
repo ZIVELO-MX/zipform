@@ -175,9 +175,9 @@ function PropertyEditor({
           <Button
             key={option.value}
             type="button"
-            variant={selected.has(option.value) ? "secondary" : "ghost"}
+            variant="ghost"
             size="sm"
-            className="justify-start"
+            className={`justify-start ${selected.has(option.value) ? "bg-carbon/[0.07] text-carbon" : ""}`}
             onClick={() => {
               const next = new Set(selected);
               if (next.has(option.value)) next.delete(option.value);
@@ -238,8 +238,9 @@ function CreatePropertyEditor({
           <Button
             key={option.value}
             type="button"
-            variant={selected.has(option.value) ? "secondary" : "ghost"}
+            variant="ghost"
             size="sm"
+            className={selected.has(option.value) ? "bg-carbon/[0.07] text-carbon" : undefined}
             onClick={() => {
               const next = new Set(selected);
               if (next.has(option.value)) next.delete(option.value);

@@ -275,7 +275,7 @@ function FieldRow({ field, index, count, onChange, onMove, onRemove }: {
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon-xs"
           className="text-carbon/40 hover:text-[#B91C22]"
           aria-label={`Retirar ${field.label}`}
           disabled={field.key === "status" || field.key === "category"}
@@ -355,7 +355,8 @@ function OptionEditor({ field, onChange }: {
         <Button
           type="button"
           variant="ghost"
-          size="xs"
+          size="sm"
+          className="min-h-7 px-2 text-xs"
           onClick={() => onChange([...field.options, {
             value: nextOptionKey(field.options),
             label: "Opción",
