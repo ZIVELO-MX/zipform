@@ -60,4 +60,4 @@ Keep claims evidence-based; do not mark work complete before verification.
 - [ ] Las migraciones nuevas se conservaron y se verificó su orden de despliegue.
 - [ ] La descripción refleja el estado real del PR y los pasos manuales relevantes.
 - [ ] CI y preview finalizaron correctamente antes de cerrar la misión relacionada.
-- [ ] Si aplica TLOZ: los cambios se hicieron por Zipform Data API, se verificaron con GET y el PR quedó adjunto como Resource.
+- [ ] Si aplica TLOZ: los cambios se hicieron por TLOZ Data API, se verificaron con GET y el PR quedó adjunto como Resource.

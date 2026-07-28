@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dataClient, TlozValidationError } from "@zipform/data";
+import { dataClient, TlozValidationError } from "@tloz/data";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { POST } from "./route";
 
-vi.mock("@zipform/data", () => {
+vi.mock("@tloz/data", () => {
   class ValidationError extends Error {
     constructor(public readonly fields: Record<string, string>) {
       super("Invalid TLOZ data");
@@ -39,7 +39,7 @@ describe("POST /api/v1/missions", () => {
         id: "agent-1",
         name: "Zibot",
         username: "zibot",
-        email: "zibot@zipform.dev",
+        email: "zibot@tloz.dev",
         role: "agent:operative",
         type: "agent",
         avatarUrl: "",
@@ -53,7 +53,7 @@ describe("POST /api/v1/missions", () => {
       projectId: "El proyecto es obligatorio.",
     }));
 
-    const response = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+    const response = await POST(new NextRequest("https://tloz.test/api/v1/missions", {
       method: "POST",
       body: JSON.stringify({ title: "Mission", ownerId: "agent-1", type: "side_quest" }),
       headers: { "Content-Type": "application/json" },
@@ -72,7 +72,7 @@ describe("POST /api/v1/missions", () => {
   it("does not expose unexpected internal error details", async () => {
     mockedCreateMission.mockRejectedValue(new Error("database connection string leaked"));
 
-    const response = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+    const response = await POST(new NextRequest("https://tloz.test/api/v1/missions", {
       method: "POST",
       body: JSON.stringify({ title: "Mission", ownerId: "agent-1", type: "side_quest", projectId: "project-1" }),
       headers: { "Content-Type": "application/json" },
@@ -87,7 +87,7 @@ describe("POST /api/v1/missions", () => {
   it("applies stable defaults while preserving explicit values", async () => {
     mockedCreateMission.mockResolvedValue({ id: "mission-1" } as never);
 
-    const response = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+    const response = await POST(new NextRequest("https://tloz.test/api/v1/missions", {
       method: "POST",
       body: JSON.stringify({ title: "Mission", type: "side_quest" }),
       headers: { "Content-Type": "application/json" },
@@ -96,7 +96,7 @@ describe("POST /api/v1/missions", () => {
     expect(response.status).toBe(201);
     expect(mockedCreateMission).toHaveBeenCalledWith(expect.objectContaining({ ownerId: "agent-1", projectId: "project-zivelo", status: "later" }));
 
-    await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+    await POST(new NextRequest("https://tloz.test/api/v1/missions", {
       method: "POST",
       body: JSON.stringify({ title: "Explicit", type: "side_quest", ownerId: "human-1", projectId: "project-1", status: "now" }),
       headers: { "Content-Type": "application/json" },
@@ -114,7 +114,7 @@ describe("POST /api/v1/missions", () => {
       resources: [{ type: "link", title: "Repository", url: "https://github.com/org/repo", icon: "Github" }],
     };
 
-    const response = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+    const response = await POST(new NextRequest("https://tloz.test/api/v1/missions", {
       method: "POST",
       body: JSON.stringify(payload),
       headers: { "Content-Type": "application/json" },
@@ -130,7 +130,7 @@ describe("POST /api/v1/missions", () => {
     } as never);
     mockedCreateMission.mockResolvedValue({ id: "mission-1" } as never);
 
-    const ownResponse = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+    const ownResponse = await POST(new NextRequest("https://tloz.test/api/v1/missions", {
       method: "POST",
       body: JSON.stringify({ title: "Own", type: "side_quest" }),
     }));
@@ -138,7 +138,7 @@ describe("POST /api/v1/missions", () => {
     expect(mockedCreateMission).toHaveBeenLastCalledWith(expect.objectContaining({ ownerId: "developer-1" }));
 
     mockedCreateMission.mockClear();
-    const deniedResponse = await POST(new NextRequest("https://zipform.test/api/v1/missions", {
+    const deniedResponse = await POST(new NextRequest("https://tloz.test/api/v1/missions", {
       method: "POST",
       body: JSON.stringify({ title: "Foreign", type: "side_quest", ownerId: "owner-1" }),
     }));

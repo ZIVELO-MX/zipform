@@ -3,19 +3,19 @@ import { spawn } from "node:child_process";
 const args = process.argv.slice(2);
 const production = args.includes("--production");
 const port = process.env.PORT ?? args.find((arg) => /^\d+$/.test(arg)) ?? "3100";
-const localKey = process.env.ZIPFORM_LOCAL_API_KEY ?? "zaf_local_development_only";
+const localKey = process.env.TLOZ_LOCAL_API_KEY ?? process.env.ZIPFORM_LOCAL_API_KEY ?? "tloz_local_development_only";
 
 const child = spawn(
   "pnpm",
-  ["--filter", "@zipform/dashboard", production ? "start" : "dev", "--hostname", "127.0.0.1", "--port", String(port)],
+  ["--filter", "@tloz/dashboard", production ? "start" : "dev", "--hostname", "127.0.0.1", "--port", String(port)],
   {
     env: {
       ...process.env,
       NODE_ENV: production ? "production" : "development",
-      ZIPFORM_DATA_DRIVER: "mock",
-      ZIPFORM_LOCAL_API_MODE: "1",
-      ZIPFORM_LOCAL_API_KEY: localKey,
-      ZIPFORM_LOCAL_API_USER_ID: process.env.ZIPFORM_LOCAL_API_USER_ID ?? "owner",
+      TLOZ_DATA_DRIVER: "mock",
+      TLOZ_LOCAL_API_MODE: "1",
+      TLOZ_LOCAL_API_KEY: localKey,
+      TLOZ_LOCAL_API_USER_ID: process.env.TLOZ_LOCAL_API_USER_ID ?? process.env.ZIPFORM_LOCAL_API_USER_ID ?? "owner",
     },
     stdio: "inherit",
   },

@@ -2,7 +2,6 @@ import { Prisma, PrismaClient } from "@prisma/client";
 import type {
   ApiKey,
   Avatar,
-  PlatformMetric,
   TlozChecklistItem,
   TlozEpisode,
   TlozMission,
@@ -15,12 +14,11 @@ import type {
   TlozSeason,
   TlozUserMissionState,
   UserProfile
-} from "@zipform/types";
+} from "@tloz/types";
 import type { TlozAttachmentBatch, TlozAttachmentFileInput, TlozAttachmentFinalizeResult, TlozMissionRecord, ApiKeyCreateResult, AgentCreateInput } from "../contracts";
 import { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "../tloz-attachment-errors";
-import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, UserRole, ZipformDataClient } from "../contracts";
+import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, UserRole, TlozDataClient } from "../contracts";
 import { hashApiKey, verifyApiKey, generateApiKey } from "../lib/crypto";
-import { apps, roadmap } from "../seed-data";
 import {
   buildTlozDashboardSummary,
   buildTlozMissionDetail,
@@ -29,15 +27,16 @@ import {
   type TlozDataSet
 } from "../tloz-hydration";
 import { assertAcyclicDependency, assertProjectScopedDependency } from "../dependency-rules";
-import { slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
+import { RESERVED_TLOZ_SLUGS, slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
+import { createPrismaDocumentRepository } from "./prisma-documents";
 
 const globalForPrisma = globalThis as typeof globalThis & {
-  zipformPrisma?: PrismaClient;
+  tlozPrisma?: PrismaClient;
 };
 
 export function getPrismaClient() {
-  globalForPrisma.zipformPrisma ??= new PrismaClient();
-  return globalForPrisma.zipformPrisma;
+  globalForPrisma.tlozPrisma ??= new PrismaClient();
+  return globalForPrisma.tlozPrisma;
 }
 
 const UNIQUE_CONSTRAINT_CODE = "P2002";
@@ -132,14 +131,6 @@ function mapApiKey(key: {
     expiresAt: key.expiresAt?.toISOString() ?? undefined,
     createdAt: toIso(key.createdAt),
     updatedAt: toIso(key.updatedAt)
-  };
-}
-
-function mapMetric(metric: { label: string; value: string; tone: string }): PlatformMetric {
-  return {
-    label: metric.label,
-    value: metric.value,
-    tone: metric.tone as PlatformMetric["tone"]
   };
 }
 
@@ -433,7 +424,7 @@ async function getCurrentUser(prisma = getPrismaClient()): Promise<UserProfile> 
   const fallbackUser = await prisma.user.findFirst({ orderBy: { id: "asc" } });
 
   if (!fallbackUser) {
-    throw new Error("No users found in the configured Zipform database. Run the data seed first.");
+    throw new Error("No users found in the configured TLOZ database. Run the data seed first.");
   }
 
   return mapUser(fallbackUser);
@@ -481,7 +472,7 @@ async function loadTlozDataSet(prisma = getPrismaClient()): Promise<TlozDataSet>
   };
 }
 
-export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient()): ZipformDataClient {
+export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient()): TlozDataClient {
   const getHydratedMission = async (missionId: string) => {
     const mission = hydrateMissions(await loadTlozDataSet(prisma)).find((item) => item.id === missionId);
     if (!mission) throw new Error(`TLOZ mission ${missionId} was not found`);
@@ -489,19 +480,6 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
   };
 
   return {
-    apps: {
-      async list() {
-        return apps;
-      },
-      async getById(id) {
-        return apps.find((app) => app.id === id) ?? null;
-      }
-    },
-    roadmap: {
-      async getSnapshot() {
-        return roadmap;
-      }
-    },
     user: {
       async getCurrent() {
         return getCurrentUser(prisma);
@@ -515,15 +493,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       }
     },
     platform: {
-      async getMetrics() {
-        const rows = await prisma.platformMetric.findMany({ orderBy: { position: "asc" } });
-        return rows.map(mapMetric);
-      },
       async listAvatars() {
         const rows = await prisma.avatar.findMany({ orderBy: { name: "asc" } });
         return rows.map(mapAvatar);
       }
     },
+    documents: createPrismaDocumentRepository(prisma),
     agent: {
       async list() {
         const rows = await prisma.user.findMany({ where: { type: "agent" }, orderBy: { name: "asc" } });
@@ -610,7 +585,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const where: Record<string, unknown> = {};
         if (filters?.email) where.email = filters.email.toLowerCase();
         if (filters?.username) where.username = filters.username;
-        const rows = await prisma.user.findMany({ where, orderBy: { name: "asc" }, take: limit + 1 });
+        const rows = await prisma.user.findMany({
+          where,
+          orderBy: [{ name: "asc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
         const data = rows.slice(0, limit).map(mapUser);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };
@@ -620,7 +600,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const where: Record<string, unknown> = {};
         if (filters?.ownerId) where.ownerId = filters.ownerId;
         if (filters?.status) where.status = filters.status;
-        const rows = await prisma.tlozProject.findMany({ where, orderBy: { createdAt: "asc" }, take: limit + 1 });
+        const rows = await prisma.tlozProject.findMany({
+          where,
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
         const data = rows.slice(0, limit).map(mapProject);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };
@@ -636,8 +621,15 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           (!filters?.status || mission.status === filters.status) &&
           (!filters?.title || mission.title.toLowerCase().includes(filters.title.toLowerCase()))
         );
-        const data = filtered.slice(0, limit);
-        return { data, nextCursor: filtered.length > limit ? data[data.length - 1]?.id ?? null : null };
+        const cursorIndex = pagination?.cursor
+          ? filtered.findIndex((mission) => mission.id === pagination.cursor)
+          : -1;
+        const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+        const data = filtered.slice(start, start + limit);
+        return {
+          data,
+          nextCursor: start + data.length < filtered.length ? data.at(-1)?.id ?? null : null,
+        };
       },
       async findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>> {
         const limit = Math.min(pagination?.limit ?? 25, 100);
@@ -645,7 +637,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         if (filters?.ownerId) where.ownerId = filters.ownerId;
         if (filters?.status) where.status = filters.status;
         if (filters?.category) where.category = filters.category;
-        const rows = await prisma.tlozQuestItem.findMany({ where, orderBy: { createdAt: "asc" }, take: limit + 1 });
+        const rows = await prisma.tlozQuestItem.findMany({
+          where,
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
         const data = rows.slice(0, limit).map(mapQuestItem);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };
@@ -657,7 +654,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         if (filters?.projectId) where.projectId = filters.projectId;
         if (filters?.questItemId) where.questItemId = filters.questItemId;
         if (filters?.type) where.type = filters.type;
-        const rows = await prisma.tlozResource.findMany({ where, orderBy: { createdAt: "asc" }, take: limit + 1 });
+        const rows = await prisma.tlozResource.findMany({
+          where,
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
         const data = rows.slice(0, limit).map(mapResource);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };
@@ -693,8 +695,9 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       async createProject(input) {
         const valid = validateProjectCreate(input);
         const base = slugify(valid.name);
-        let candidate = base;
-        let suffix = 2;
+        const reserved = RESERVED_TLOZ_SLUGS.includes(base as (typeof RESERVED_TLOZ_SLUGS)[number]);
+        let candidate = reserved ? `${base}-2` : base;
+        let suffix = reserved ? 3 : 2;
         for (let i = 0; i < 20; i++) {
           try {
             const row = await prisma.tlozProject.create({

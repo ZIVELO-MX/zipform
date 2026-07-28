@@ -1,5 +1,11 @@
-import type { TlozInventoryCategory, TlozMissionStatus, TlozMissionType } from "@zipform/types";
-import type { TlozResourceInput } from "@zipform/data";
+import type {
+  TlozDocumentScalar,
+  TlozFieldDefinition,
+  TlozInventoryCategory,
+  TlozMissionStatus,
+  TlozMissionType,
+} from "@tloz/types";
+import type { TlozResourceInput } from "@tloz/data";
 
 export function buildCreateInput(kind: "mission" | "project" | "inventory", draft: Record<string, string>, resources: TlozResourceInput[] = []) {
   if (kind === "mission") return {
@@ -24,4 +30,13 @@ export function buildCreateInput(kind: "mission" | "project" | "inventory", draf
 
 export function splitCreateIds(value?: string) {
   return value ? value.split(",").filter(Boolean) : [];
+}
+
+export function documentPropertyDefaults(fields: TlozFieldDefinition[]) {
+  return Object.fromEntries(
+    fields
+      .filter((field) => field.key !== "status" && field.key !== "category")
+      .filter((field) => field.defaultValue !== undefined)
+      .map((field) => [field.key, field.defaultValue as TlozDocumentScalar]),
+  );
 }

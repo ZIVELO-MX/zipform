@@ -6,9 +6,10 @@ import { MissionTable } from "../../../components/tloz/mission-views";
 import { MissionSlideOver } from "../../../components/tloz/mission-slide-over";
 import { useIsMobile } from "../../../hooks/use-is-mobile";
 import type { TlozMissionRecord } from "../../../lib/tloz-data";
+import type { TlozFieldOption } from "@tloz/types";
 import { missionHref } from "../../../lib/tloz-routes";
 
-export function TableClient({ missions }: { missions: TlozMissionRecord[] }) {
+export function TableClient({ missions, statusOptions = [] }: { missions: TlozMissionRecord[]; statusOptions?: TlozFieldOption[] }) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
@@ -24,7 +25,7 @@ export function TableClient({ missions }: { missions: TlozMissionRecord[] }) {
 
   return (
     <>
-      <MissionTable missions={missions} onSelect={handleSelect} />
+      <MissionTable missions={missions} statusOptions={statusOptions} onSelect={handleSelect} />
       <MissionSlideOver mission={selectedMission} onClose={() => setSelectedMission(null)} />
     </>
   );

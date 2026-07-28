@@ -20,7 +20,7 @@ describe("GET /api/v1/users/me", () => {
         id: "agent-1",
         name: "Zibot",
         username: "zibot",
-        email: "zibot@zipform.dev",
+        email: "zibot@tloz.dev",
         role: "agent:operative",
         type: "agent",
         avatarUrl: "",
@@ -28,7 +28,7 @@ describe("GET /api/v1/users/me", () => {
       },
     });
 
-    const response = await GET(new NextRequest("https://zipform.test/api/v1/users/me"));
+    const response = await GET(new NextRequest("https://tloz.test/api/v1/users/me"));
 
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
@@ -42,7 +42,7 @@ describe("GET /api/v1/users/me", () => {
       { status: 401 },
     ));
 
-    const response = await GET(new NextRequest("https://zipform.test/api/v1/users/me"));
+    const response = await GET(new NextRequest("https://tloz.test/api/v1/users/me"));
 
     expect(response.status).toBe(401);
     expect(await response.json()).toMatchObject({ error: { code: "UNAUTHORIZED" } });
@@ -62,7 +62,7 @@ describe("GET /api/v1/users/me", () => {
       },
     });
 
-    const response = await GET(new NextRequest("https://zipform.test/api/v1/users/me"));
+    const response = await GET(new NextRequest("https://tloz.test/api/v1/users/me"));
 
     expect(response.status).toBe(200);
     const body = await response.json();

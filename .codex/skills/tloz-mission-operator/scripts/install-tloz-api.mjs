@@ -21,7 +21,9 @@ export async function install(args = process.argv.slice(2)) {
   try {
     const existing = await readFile(target, "utf8");
     const bundled = await readFile(source, "utf8");
-    if (!existing.startsWith("#!/usr/bin/env node\n") || !existing.includes('PRODUCTION_ORIGIN = "https://zipform.zivelo.dev"')) {
+    const recognizedOrigin = existing.includes('PRODUCTION_ORIGIN = "https://tloz.zivelo.dev"')
+      || existing.includes('PRODUCTION_ORIGIN = "https://zipform.zivelo.dev"');
+    if (!existing.startsWith("#!/usr/bin/env node\n") || !recognizedOrigin) {
       throw new Error(`El destino ya existe y no parece ser tloz-api: ${target}`);
     }
     if (existing === bundled) return target;

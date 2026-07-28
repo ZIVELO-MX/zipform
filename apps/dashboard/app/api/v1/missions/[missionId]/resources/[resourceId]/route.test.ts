@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dataClient } from "@zipform/data";
+import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../../../lib/api-auth";
 import { DELETE } from "./route";
 
-vi.mock("@zipform/data", () => ({
+vi.mock("@tloz/data", () => ({
   dataClient: { tloz: { getMissionDetail: vi.fn(), removeMissionResource: vi.fn() } },
 }));
 vi.mock("../../../../../../../lib/api-auth", () => ({ authenticateRequest: vi.fn() }));
@@ -22,7 +22,7 @@ describe("DELETE /api/v1/missions/:missionId/resources/:resourceId", () => {
   });
 
   it("returns 404 without removing a Resource from the wrong parent", async () => {
-    const response = await DELETE(new Request("https://zipform.test/api/v1/missions/mission-1/resources/resource-2", {
+    const response = await DELETE(new Request("https://tloz.test/api/v1/missions/mission-1/resources/resource-2", {
       method: "DELETE",
     }), { params: Promise.resolve({ missionId: "mission-1", resourceId: "resource-2" }) });
 
@@ -32,7 +32,7 @@ describe("DELETE /api/v1/missions/:missionId/resources/:resourceId", () => {
 
   it("removes a Resource only after matching its parent", async () => {
     vi.mocked(dataClient.tloz.removeMissionResource).mockResolvedValue({ id: "mission-1" } as never);
-    const response = await DELETE(new Request("https://zipform.test/api/v1/missions/mission-1/resources/resource-1", {
+    const response = await DELETE(new Request("https://tloz.test/api/v1/missions/mission-1/resources/resource-1", {
       method: "DELETE",
     }), { params: Promise.resolve({ missionId: "mission-1", resourceId: "resource-1" }) });
 

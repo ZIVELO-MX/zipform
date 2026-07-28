@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
-import type { TlozEpisode, TlozProject, TlozQuestItem, TlozSeason, UserProfile } from "@zipform/types";
+import type { TlozFieldOption, TlozProject, TlozQuestItem, UserProfile } from "@tloz/types";
 import type { TlozDashboardSummary, TlozMissionRecord } from "../../lib/tloz-data";
 import type { MissionDetailOptions } from "../../components/tloz/mission-detail";
 import { DashboardClient } from "./dashboard-client";
@@ -33,30 +33,25 @@ type ViewRendererProps = {
   missions: TlozMissionRecord[];
   allMissions: TlozMissionRecord[];
   projects: TlozProject[];
-  seasons: TlozSeason[];
-  episodes: TlozEpisode[];
   users: UserProfile[];
   questItems: TlozQuestItem[];
   detailOptions: MissionDetailOptions;
+  statusOptions?: TlozFieldOption[];
   hideProjectSections?: boolean;
 };
 
 export function TlozViewRenderer(props: ViewRendererProps) {
-  const { summary, missions, allMissions, projects, seasons, episodes, users, questItems, detailOptions, hideProjectSections } = props;
+  const { summary, missions, allMissions, projects, users, questItems, detailOptions, statusOptions = [], hideProjectSections } = props;
   const { state } = useTlozViewState();
   const view = state.view;
   const config = viewConfig[view] ?? viewConfig.dashboard;
   const projectFilterActive = projects.length > 1 && projects.some((project) => project.id === state.projectId);
-  const seasonFilterActive = seasons.some((season) => season.id === state.seasonId);
-  const episodeFilterActive = episodes.some((episode) => episode.id === state.episodeId);
   const ownerFilterActive = users.some((user) => user.id === state.ownerId);
   const visibleMissions = useMemo(() => {
     const visible = missions.filter((mission) => (
       (!projectFilterActive || mission.projectId === state.projectId)
-      && (!seasonFilterActive || mission.seasonId === state.seasonId)
-      && (!episodeFilterActive || mission.episodeId === state.episodeId)
       && (!ownerFilterActive || mission.ownerId === state.ownerId)
-      && (state.showCompleted || mission.status !== "completed")
+      && (state.showCompleted || statusRole(mission.status, statusOptions) !== "done")
     ));
 
     if (state.sort === "dependencies" || state.sort === "default") return topologicalMissionOrder(visible);
@@ -65,7 +60,7 @@ export function TlozViewRenderer(props: ViewRendererProps) {
       : state.sort === "due-date"
         ? (left.dueDate ?? "9999-12-31").localeCompare(right.dueDate ?? "9999-12-31")
         : left.createdAt.localeCompare(right.createdAt));
-  }, [episodeFilterActive, missions, ownerFilterActive, projectFilterActive, seasonFilterActive, state]);
+  }, [missions, ownerFilterActive, projectFilterActive, state, statusOptions]);
 
   if (view === "dashboard") {
     if (!summary) return null;
@@ -74,13 +69,13 @@ export function TlozViewRenderer(props: ViewRendererProps) {
       ...summary,
       activeQuest: summary.activeQuest && visibleIds.has(summary.activeQuest.id) ? summary.activeQuest : null,
       activeSupportQuest: summary.activeSupportQuest && visibleIds.has(summary.activeSupportQuest.id) ? summary.activeSupportQuest : null,
-      nowMissions: visibleMissions.filter((mission) => mission.status === "now" || mission.status === "blocked"),
-      mainQuests: visibleMissions.filter((mission) => mission.type === "main_quest" && mission.status !== "completed"),
-      upcomingMissions: visibleMissions.filter((mission) => mission.status === "next"),
-      futureMissions: visibleMissions.filter((mission) => mission.status === "later"),
+      nowMissions: visibleMissions.filter((mission) => ["active", "blocked"].includes(statusRole(mission.status, statusOptions))),
+      mainQuests: visibleMissions.filter((mission) => mission.type === "main_quest" && statusRole(mission.status, statusOptions) !== "done"),
+      upcomingMissions: visibleMissions.filter((mission) => statusRole(mission.status, statusOptions) === "ready"),
+      futureMissions: visibleMissions.filter((mission) => statusRole(mission.status, statusOptions) === "backlog"),
       projects: summary.projects.filter((project) => visibleMissions.some((mission) => mission.projectId === project.id)),
     };
-    return <DashboardClient summary={filteredSummary} detailOptions={detailOptions} hideProjectSections={hideProjectSections} />;
+    return <DashboardClient summary={filteredSummary} detailOptions={detailOptions} statusOptions={statusOptions} hideProjectSections={hideProjectSections} />;
   }
 
   return (
@@ -92,22 +87,32 @@ export function TlozViewRenderer(props: ViewRendererProps) {
             missions={visibleMissions}
             allMissions={allMissions}
             projects={projects}
-            seasons={seasons}
-            episodes={episodes}
             users={users}
             questItems={questItems}
+            statusOptions={statusOptions}
           />
         ) : view === "list" ? (
-          <ListClient missions={visibleMissions} grouping={state.grouping} />
+          <ListClient missions={visibleMissions} grouping={state.grouping} statusOptions={statusOptions} />
         ) : view === "table" ? (
-          <TableClient missions={visibleMissions} />
+          <TableClient missions={visibleMissions} statusOptions={statusOptions} />
         ) : view === "calendar" ? (
           <CalendarClient missions={visibleMissions} />
         ) : (
-          <ListClient missions={visibleMissions} grouping={state.grouping} />
+          <ListClient missions={visibleMissions} grouping={state.grouping} statusOptions={statusOptions} />
         )}
         {view === "list" || view === "table" ? <CreateNewEntityButton /> : null}
       </div>
     </div>
   );
+}
+
+function statusRole(status: string, options: TlozFieldOption[]) {
+  const defaults: Record<string, "active" | "blocked" | "ready" | "backlog" | "done"> = {
+    now: "active",
+    blocked: "blocked",
+    next: "ready",
+    later: "backlog",
+    completed: "done",
+  };
+  return options.find((option) => option.value === status)?.role ?? defaults[status] ?? "backlog";
 }

@@ -27,7 +27,7 @@ export type IconPickerProps = {
   className?: string;
 };
 
-export function IconPicker({ icons, value, color = "currentColor", label = "Icono", triggerLabel, recentStorageKey = "zipform-recent-icons", onValueChange, allowClear = false, iconOnly = false, className }: IconPickerProps) {
+export function IconPicker({ icons, value, color = "currentColor", label = "Icono", triggerLabel, recentStorageKey = "tloz-recent-icons", onValueChange, allowClear = false, iconOnly = false, className }: IconPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [recentIds, setRecentIds] = React.useState<string[]>([]);

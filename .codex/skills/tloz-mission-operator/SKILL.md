@@ -1,11 +1,11 @@
 ---
 name: tloz-mission-operator
-description: Consult, create, review, correct, document, or update TLOZ missions and projects exclusively through the Zipform Data API, including Markdown details with Mermaid diagrams. Use when a user references a mission display ID such as TLO-0001 or a project such as project-tloz, asks to change its title, document, status, relationships, checkboxes, or diagrams, wants Scrum-style refinement, or needs help with ZIPFORM_TOKEN authentication.
+description: Consult, create, review, correct, document, or update TLOZ missions and projects exclusively through the TLOZ Data API, including Markdown details with Mermaid diagrams. Use when a user references a mission display ID such as TLO-0001 or a project such as project-tloz, asks to change its title, document, status, relationships, checkboxes, or diagrams, wants Scrum-style refinement, or needs help with TLOZ_TOKEN authentication.
 ---
 
 # TLOZ Mission and Project Operator
 
-Operate TLOZ data through the Zipform Data API. Use `https://zipform.zivelo.dev` for current production data and mission mutations; use the explicitly configured local API only for contract rehearsal, read-only development, and performance tests. Prefer the computer-level `tloz-api` CLI so the same API wrapper works from any repository.
+Operate TLOZ data through the TLOZ Data API. Use `https://tloz.zivelo.dev` for current production data and mission mutations; use the explicitly configured local API only for contract rehearsal, read-only development, and performance tests. Prefer the computer-level `tloz-api` CLI so the same API wrapper works from any repository.
 
 ## Guardrails
 
@@ -14,7 +14,7 @@ Operate TLOZ data through the Zipform Data API. Use `https://zipform.zivelo.dev`
 - For repeatable performance checks, run `pnpm perf:api` against local servers and compare the same workload; do not use production as a load-test target.
 - Read a resource before writing it and preserve unrelated content.
 - Inspect `GET /api/openapi` before using undocumented fields or operations.
-- Send the Bearer token only from `ZIPFORM_TOKEN`; never print, persist, commit, or place it in a payload.
+- Send the Bearer token from `TLOZ_TOKEN`; `ZIPFORM_TOKEN` is a one-release compatibility fallback. Never print, persist, commit, or place either value in a payload.
 - Use the smallest valid mutation and verify every mutation with a subsequent GET.
 - Report failed, ambiguous, or unverified changes honestly.
 - Do not delete a mission without an explicit request identifying that mission.
@@ -24,7 +24,7 @@ Read [references/authentication.md](references/authentication.md) when configuri
 
 ## Install and use the API CLI
 
-Use `tloz-api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` for production calls. The CLI fixes the production origin, reads `ZIPFORM_TOKEN` only from the environment, and never prints it.
+Use `tloz-api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` for production calls. The CLI fixes the production origin, reads `TLOZ_TOKEN` (or the temporary `ZIPFORM_TOKEN` fallback) from the environment, and never prints it.
 
 If `tloz-api` is not available, install it from this skill without sudo or shell-profile changes:
 
@@ -37,11 +37,11 @@ The installer places it in `${HOME}/.local/bin/tloz-api`. If that directory is n
 ## Resolve a mission
 
 1. Select the API origin:
-   - For mission consultation, mutation, and final verification, use `https://zipform.zivelo.dev` and continue with the production token below.
+   - For mission consultation, mutation, and final verification, use `https://tloz.zivelo.dev` and continue with the production token below.
    - For local contract rehearsal or benchmarks, use `http://127.0.0.1:3100` with the key printed by `pnpm api:local`; local data is not evidence about production.
-2. Confirm `ZIPFORM_TOKEN` exists without printing it when the production origin is selected:
-   - If the variable is not set, do not abort. Inform the user that they need to export it: `export ZIPFORM_TOKEN="zaf_..."` in their terminal, then wait for confirmation before continuing.
-   - Validate with `curl -s -H "Authorization: Bearer $ZIPFORM_TOKEN" "https://zipform.zivelo.dev/api/v1/projects"`; if 401, report that the token is invalid or expired and ask the user to provide a valid one.
+2. Confirm `TLOZ_TOKEN` exists without printing it when the production origin is selected:
+   - If neither token variable is set, do not abort. Inform the user that they need to export it: `export TLOZ_TOKEN="tloz_..."` in their terminal, then wait for confirmation before continuing.
+   - Validate with `curl -s -H "Authorization: Bearer $TLOZ_TOKEN" "https://tloz.zivelo.dev/api/v1/projects"`; if 401, report that the token is invalid or expired and ask the user to provide a valid one.
 3. Call `GET /api/v1/users/me` and resolve the authenticated user before discovering work.
 4. If the user supplied a mission `displayId`, resolve that exact mission. Ownership priority must never replace an explicit identifier.
 5. If the user asked to choose or suggest work without a mission identifier:
@@ -140,7 +140,7 @@ When mission work produces a repository change:
 ## Local API and approval minimization
 
 - Prefer `pnpm api:local` for non-production reads, payload rehearsal, and load testing so those requests stay on loopback and do not require external network access.
-- Use `tloz-api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` for production calls. The repository's `pnpm tloz:api` alias is equivalent when operating inside Zipform.
+- Use `tloz-api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` for production calls. The repository's `pnpm tloz:api` alias is equivalent when operating inside TLOZ.
 - A persistent approval for the narrow wrapper command can prevent repeated permission prompts. If that approval is unavailable, do not substitute mock data for a production mutation or claim a current production read was verified; report the external-access blocker once.
 
 ## Report results

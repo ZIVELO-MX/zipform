@@ -2,6 +2,7 @@
 
 import {
   dataClient,
+  validateDocumentProperties,
   type TlozMissionCreateInput,
   type TlozMissionUpdateInput,
   type TlozProjectCreateInput,
@@ -9,8 +10,8 @@ import {
   type TlozQuestItemCreateInput,
   type TlozQuestItemUpdateInput,
   type TlozResourceInput,
-} from "@zipform/data";
-import type { TlozMissionStatus } from "@zipform/types";
+} from "@tloz/data";
+import type { TlozDocumentScalar, TlozDocumentUpdate, TlozFieldDefinition, TlozMissionStatus } from "@tloz/types";
 import { revalidatePath } from "next/cache";
 import { auth } from "../../auth";
 import {
@@ -25,7 +26,7 @@ import {
 } from "../../lib/authorization";
 import { getTlozMissionDetailWithAttachments } from "../../lib/tloz-data";
 
-const revalidateTloz = () => revalidatePath("/tloz", "layout");
+const revalidateTloz = () => revalidatePath("/", "layout");
 
 async function authenticatedActor() {
   const session = await auth();
@@ -58,10 +59,41 @@ async function authorizeQuestItem(itemId: string, operation: TlozOperation = "up
   return { actor, item };
 }
 
-export async function createMission(input: TlozMissionCreateInput) {
+export async function createMission(
+  input: TlozMissionCreateInput,
+  documentProperties: Record<string, TlozDocumentScalar> = {},
+) {
   const actor = await authenticatedActor();
   assertTlozOperation(actor, "create", { requestedOwnerId: input.ownerId });
-  const mission = await dataClient.tloz.createMission(input);
+  const projectDocument = await dataClient.documents.get(input.projectId);
+  const statusField = projectDocument?.contract?.fields.find((field) => field.key === "status");
+  const categoryField = projectDocument?.contract?.fields.find((field) => field.key === "category");
+  const status = input.status ?? contractFieldDefault(statusField, "next");
+  if (statusField && !statusField.options.some((option) => option.value === status)) {
+    throw new Error("El estado no pertenece al contrato del Project.");
+  }
+  if (categoryField && !categoryField.options.some((option) => option.value === input.type)) {
+    throw new Error("La categoría no pertenece al contrato del Project.");
+  }
+  if (projectDocument?.contract) {
+    validateDocumentProperties(projectDocument.contract.fields, {
+      ...documentProperties,
+      status,
+      category: input.type,
+    }, "mission");
+  } else if (Object.keys(documentProperties).length) {
+    throw new Error("El Project no tiene un contrato documental disponible.");
+  }
+  const mission = await dataClient.tloz.createMission({ ...input, status });
+  if (Object.keys(documentProperties).length) {
+    const document = await dataClient.documents.get(mission.id);
+    if (!document) throw new Error("No se pudo resolver el documento de la Mission creada.");
+    await dataClient.documents.update(
+      document.id,
+      { properties: documentProperties },
+      document.revision,
+    );
+  }
   revalidateTloz();
   return mission;
 }
@@ -69,8 +101,41 @@ export async function createMission(input: TlozMissionCreateInput) {
 export async function updateMission(missionId: string, input: TlozMissionUpdateInput) {
   const changesPlacement = ["ownerId", "projectId", "seasonId", "episodeId"]
     .some((field) => Object.prototype.hasOwnProperty.call(input, field));
-  await authorizeMission(missionId, changesPlacement ? "move" : "update");
-  const mission = await dataClient.tloz.updateMission(missionId, input);
+  const { mission: current } = await authorizeMission(
+    missionId,
+    changesPlacement ? "move" : "update",
+  );
+  const next = { ...input };
+  if (input.projectId !== undefined || input.status !== undefined || input.type !== undefined) {
+    const projectId = input.projectId ?? current.projectId;
+    const project = projectId ? await dataClient.documents.get(projectId) : null;
+    if (project?.contract) {
+      const statusField = project.contract.fields.find((field) => field.key === "status");
+      const categoryField = project.contract.fields.find((field) => field.key === "category");
+      const requestedStatus = input.status ?? current.status;
+      const requestedCategory = input.type ?? current.type;
+      const statusOption = statusField?.options.find((option) => option.value === requestedStatus);
+      const categoryOption = categoryField?.options.find((option) => option.value === requestedCategory);
+
+      if (!statusOption) {
+        if (input.projectId === undefined) throw new Error("El estado no pertenece al contrato del Project.");
+        next.status = contractFieldDefault(statusField, "later") as TlozMissionStatus;
+      }
+      if (!categoryOption) {
+        if (input.projectId === undefined) throw new Error("La categoría no pertenece al contrato del Project.");
+        next.type = contractFieldDefault(categoryField, "side_quest");
+      }
+
+      const effectiveStatus = statusOption
+        ?? statusField?.options.find((option) => option.value === next.status);
+      if (input.status !== undefined || input.projectId !== undefined) {
+        next.completedAt = effectiveStatus?.role === "done"
+          ? new Date().toISOString()
+          : undefined;
+      }
+    }
+  }
+  const mission = await dataClient.tloz.updateMission(missionId, next);
   revalidateTloz();
   return mission;
 }
@@ -90,17 +155,101 @@ export async function getMissionCapabilities(missionId: string) {
 
 export async function getMissionDetailOptions() {
   const actor = await authenticatedActor();
-  const [missions, projects, seasons, episodes, questItems, users] = await Promise.all([
+  const [missions, projects, questItems, users] = await Promise.all([
     dataClient.tloz.getMissions(),
     dataClient.tloz.getProjects(),
-    dataClient.tloz.getSeasons(),
-    dataClient.tloz.getEpisodes(),
     dataClient.tloz.getQuestItems(),
     dataClient.tloz.getUsers(),
   ]);
   return isReadOnlyAgent(actor)
-    ? { missions: missions.map(toPublicMissionOwner), projects, seasons, episodes, questItems, users: users.map(toPublicUserProfile) }
-    : { missions, projects, seasons, episodes, questItems, users };
+    ? { missions: missions.map(toPublicMissionOwner), projects, questItems, users: users.map(toPublicUserProfile) }
+    : { missions, projects, questItems, users };
+}
+
+export async function getMissionDocumentOptions(missionId: string) {
+  await authorizeMission(missionId, "read");
+  const document = await dataClient.documents.get(missionId);
+  if (!document || document.kind !== "mission") return { document: null, contract: [] };
+  const project = document.parentId ? await dataClient.documents.get(document.parentId) : null;
+  return {
+    document,
+    contract: project?.contract?.fields ?? [],
+  };
+}
+
+export async function getDocumentDetailOptions(documentId: string) {
+  const document = await dataClient.documents.get(documentId, {
+    includeChildren: true,
+    childrenPagination: { limit: 1 },
+  });
+  if (!document) throw new Error("Documento no encontrado.");
+  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id, "read");
+  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id, "read");
+  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id, "read");
+  else await authenticatedActor();
+
+  const definitionKey = document.kind === "project"
+    ? "projects"
+    : document.kind === "inventory"
+      ? "inventory"
+      : `project:${document.parentId}:children`;
+  const definition = await dataClient.documents.getDefinition(definitionKey);
+  if (!definition) throw new Error("Definición documental no encontrada.");
+  return { document, definition };
+}
+
+export async function updateDocumentProperties(
+  documentId: string,
+  properties: Record<string, string | number | boolean | string[] | null>,
+) {
+  const document = await dataClient.documents.get(documentId);
+  if (!document) throw new Error("Documento no encontrado.");
+  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id);
+  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id);
+  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id);
+  else await authenticatedActor();
+
+  const updated = await dataClient.documents.update(
+    document.id,
+    { properties },
+    document.revision,
+  );
+  revalidateTloz();
+  return updated;
+}
+
+export async function updateDocumentContent(
+  documentId: string,
+  input: Pick<TlozDocumentUpdate, "title" | "summary">,
+  revision: number,
+) {
+  const document = await dataClient.documents.get(documentId);
+  if (!document) throw new Error("Documento no encontrado.");
+  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id);
+  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id);
+  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id);
+  else await authenticatedActor();
+
+  const updated = await dataClient.documents.update(document.id, input, revision);
+  revalidateTloz();
+  return updated;
+}
+
+export async function updateDocumentBody(
+  documentId: string,
+  body: string,
+  revision: number,
+) {
+  const document = await dataClient.documents.get(documentId);
+  if (!document) throw new Error("Documento no encontrado.");
+  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id);
+  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id);
+  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id);
+  else await authenticatedActor();
+
+  const updated = await dataClient.documents.update(document.id, { body }, revision);
+  revalidateTloz();
+  return updated;
 }
 
 export async function getEntityResources(kind: "project" | "inventory", entityId: string) {
@@ -149,18 +298,18 @@ export async function updateQuestItem(itemId: string, input: TlozQuestItemUpdate
   return value;
 }
 
-export async function createSeason(name: string) {
+export async function replaceProjectContract(
+  documentId: string,
+  fields: TlozFieldDefinition[],
+  revision: number,
+) {
   const actor = await authenticatedActor();
-  assertTlozOperation(actor, "structure");
-  const value = await dataClient.tloz.createSeason(name);
-  revalidateTloz();
-  return value;
-}
-
-export async function createEpisode(name: string, seasonId: string) {
-  const actor = await authenticatedActor();
-  assertTlozOperation(actor, "structure");
-  const value = await dataClient.tloz.createEpisode(name, seasonId);
+  const document = await dataClient.documents.get(documentId);
+  if (!document || document.kind !== "project") throw new Error("Project document not found.");
+  assertTlozOperation(actor, "structure", {
+    ownerId: typeof document.properties.owner === "string" ? document.properties.owner : null,
+  });
+  const value = await dataClient.documents.replaceProjectContract(document.id, fields, revision);
   revalidateTloz();
   return value;
 }
@@ -250,10 +399,31 @@ export async function removeQuestItemResource(itemId: string, resourceId: string
 }
 
 export async function patchMissionStatus(missionId: string, status: TlozMissionStatus) {
-  await authorizeMission(missionId);
-  const mission = await dataClient.tloz.patchMissionStatus(missionId, status);
+  const { mission: current } = await authorizeMission(missionId);
+  const project = current.projectId ? await dataClient.documents.get(current.projectId) : null;
+  const statusOption = project?.contract?.fields
+    .find((field) => field.key === "status")
+    ?.options.find((option) => option.value === status);
+  if (project?.contract && !statusOption) {
+    throw new Error("El estado no pertenece al contrato del Project.");
+  }
+  const mission = await dataClient.tloz.updateMission(missionId, {
+    status,
+    completedAt: (statusOption?.role === "done" || (!statusOption && status === "completed"))
+      ? new Date().toISOString()
+      : undefined,
+  });
   revalidateTloz();
   return mission;
+}
+
+function contractFieldDefault(
+  field: TlozFieldDefinition | undefined,
+  fallback: string,
+) {
+  return typeof field?.defaultValue === "string"
+    ? field.defaultValue
+    : field?.options[0]?.value ?? fallback;
 }
 
 export async function deleteMission(missionId: string) {

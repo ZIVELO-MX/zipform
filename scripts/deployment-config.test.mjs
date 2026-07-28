@@ -21,7 +21,7 @@ test("Vercel builds the dashboard from the workspace root", async () => {
   assert.equal(config.outputDirectory, ".next");
   assert.match(config.installCommand, /cd \.\.\/\.\./);
   assert.match(config.buildCommand, /pnpm db:generate/);
-  assert.match(config.buildCommand, /@zipform\/dashboard build/);
+  assert.match(config.buildCommand, /@tloz\/dashboard build/);
 });
 
 test("CI delegates deployments to the Vercel Git integration", async () => {

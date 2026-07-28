@@ -15,9 +15,9 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@zipform/data": ["packages/data/src/index.ts"],
-      "@zipform/types": ["packages/types/src/index.ts"],
-      "@zipform/ui": ["packages/ui/src/index.ts"]
+      "@tloz/data": ["packages/data/src/index.ts"],
+      "@tloz/types": ["packages/types/src/index.ts"],
+      "@tloz/ui": ["packages/ui/src/index.ts"]
     }
   }
 }

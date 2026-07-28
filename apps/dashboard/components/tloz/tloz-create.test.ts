@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { initialDraft } from "./tloz-create-defaults";
-import { buildCreateInput } from "./tloz-create-input";
+import { buildCreateInput, documentPropertyDefaults } from "./tloz-create-input";
 
 describe("TLOZ mission creation defaults", () => {
   it("starts missions as later with the resolved owner and project", () => {
@@ -34,5 +34,32 @@ describe("TLOZ mission creation payload", () => {
       requiredQuestItemIds: ["quest-a"],
       resources: [{ type: "link", title: "Repository", icon: "Github" }],
     });
+  });
+
+  it("derives custom Mission defaults from the Project contract", () => {
+    expect(documentPropertyDefaults([
+      {
+        id: "status",
+        key: "status",
+        label: "Estado",
+        type: "select",
+        required: true,
+        visible: true,
+        position: 0,
+        defaultValue: "ready",
+        options: [{ value: "ready", label: "Ready", role: "ready" }],
+      },
+      {
+        id: "priority",
+        key: "priority",
+        label: "Prioridad",
+        type: "select",
+        required: false,
+        visible: true,
+        position: 1,
+        defaultValue: "high",
+        options: [{ value: "high", label: "Alta" }],
+      },
+    ])).toEqual({ priority: "high" });
   });
 });

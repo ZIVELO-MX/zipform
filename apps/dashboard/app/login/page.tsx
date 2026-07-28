@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Field, FieldError, FieldGroup, FieldLabel, FieldSeparator, Input } from "@zipform/ui";
+import { Button, Field, FieldError, FieldGroup, FieldLabel, FieldSeparator, Input } from "@tloz/ui";
 import { Eye, EyeOff, LoaderCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -60,7 +60,7 @@ export default function LoginPage() {
       <section className="w-full max-w-[22rem]" aria-labelledby="login-title">
         <div className="mb-9 text-center">
           <span className="mx-auto mb-5 grid size-11 place-items-center rounded-[14px] bg-zivelo text-lg font-black text-white shadow-[0_12px_28px_rgba(215,34,40,0.22)]" aria-hidden="true">Z</span>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-zivelo">Zipform</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-zivelo">TLOZ</p>
           <h1 id="login-title" className="m-0 text-2xl font-bold tracking-tight text-carbon">Iniciar sesión</h1>
           <p className="mt-2 text-sm text-carbon/55">Accede a la plataforma interna de Zivelo.</p>
         </div>

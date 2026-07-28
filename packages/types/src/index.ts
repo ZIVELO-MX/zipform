@@ -1,36 +1,3 @@
-export type AppStatus = "enabled" | "planned" | "external";
-
-export type RoadmapLane = "NOW" | "NEXT" | "LATER";
-
-export type AppModule = {
-  id: string;
-  name: string;
-  shortName: string;
-  description: string;
-  href: string;
-  status: AppStatus;
-  versionTarget?: string;
-  owner: "platform" | "quotes" | "tloz";
-};
-
-export type RoadmapTask = {
-  id: string;
-  lane: RoadmapLane;
-  category?: string;
-  label: string;
-  app: "PLATFORM" | "QUOTES" | "TLOZ" | "DOCUMENTATION" | "UI" | "AUTH";
-  human?: boolean;
-  dependsOn?: string[];
-};
-
-export type RoadmapSnapshot = {
-  currentVersion: string;
-  targetVersion: string;
-  now: RoadmapTask[];
-  next: RoadmapTask[];
-  later: RoadmapTask[];
-};
-
 export type UserType = "human" | "agent";
 
 export type UserProfile = {
@@ -74,13 +41,15 @@ export type Avatar = {
   imageUrl: string;
 };
 
-export type TlozMissionType =
+export type TlozDefaultMissionType =
   | "main_quest"
   | "side_quest"
   | "farming_quest"
   | "exploration_quest";
 
-export type TlozMissionStatus = "now" | "next" | "later" | "completed" | "blocked";
+export type TlozDefaultMissionStatus = "now" | "next" | "later" | "completed" | "blocked";
+export type TlozMissionType = string;
+export type TlozMissionStatus = string;
 
 export type TlozResourceType = "link" | "document" | "image" | "file" | "note";
 
@@ -235,4 +204,114 @@ export type TlozUserMissionState = {
   slot: TlozUserMissionSlot;
   createdAt: string;
   updatedAt: string;
+};
+
+export type TlozDocumentKind = "project" | "mission" | "inventory";
+
+export type TlozFieldType =
+  | "text"
+  | "number"
+  | "boolean"
+  | "date"
+  | "select"
+  | "multiselect"
+  | "person"
+  | "relation";
+
+export type TlozStatusRole = "backlog" | "ready" | "active" | "blocked" | "done";
+
+export type TlozDocumentScalar = string | number | boolean | string[] | null;
+
+export type TlozDocumentView =
+  | "dashboard"
+  | "list"
+  | "board"
+  | "table"
+  | "calendar"
+  | "detail";
+
+export type TlozFieldOption = {
+  value: string;
+  label: string;
+  color?: string;
+  role?: TlozStatusRole;
+};
+
+export type TlozFieldDefinition = {
+  id: string;
+  key: string;
+  label: string;
+  type: TlozFieldType;
+  required: boolean;
+  visible: boolean;
+  position: number;
+  defaultValue?: TlozDocumentScalar;
+  options: TlozFieldOption[];
+};
+
+export type TlozProjectContract = {
+  projectId: string;
+  fields: TlozFieldDefinition[];
+};
+
+export type TlozDocumentPresentationField = {
+  key: string;
+  label: string;
+  format: "text" | "status" | "date" | "person" | "number" | "id";
+  position: number;
+  visible: boolean;
+  options?: TlozFieldOption[];
+};
+
+export type TlozDocumentViewDefinition = {
+  id: TlozDocumentView;
+  fields: string[];
+  groupBy?: string;
+  dateField?: string;
+};
+
+export type TlozDocumentDefinition = {
+  id: string;
+  key: string;
+  kind: TlozDocumentKind;
+  scope: "collection" | "children";
+  ownerDocumentId?: string;
+  fields: TlozDocumentPresentationField[];
+  views: TlozDocumentViewDefinition[];
+  defaultView: TlozDocumentView;
+};
+
+export type TlozDocumentChildren = {
+  data: TlozDocument[];
+  nextCursor: string | null;
+  total: number;
+};
+
+export type TlozDocument = {
+  id: string;
+  publicId: string;
+  kind: TlozDocumentKind;
+  parentId?: string;
+  parentPublicId?: string;
+  projectSlug?: string;
+  title: string;
+  summary: string;
+  body: string;
+  revision: number;
+  properties: Record<string, TlozDocumentScalar>;
+  contract?: TlozProjectContract;
+  children?: TlozDocumentChildren;
+  source?: {
+    type: TlozDocumentKind;
+    id: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TlozDocumentUpdate = {
+  title?: string;
+  summary?: string;
+  body?: string;
+  properties?: Record<string, TlozDocumentScalar>;
 };

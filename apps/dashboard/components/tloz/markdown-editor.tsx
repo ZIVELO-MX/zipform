@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@zipform/ui";
+import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@tloz/ui";
 import { MermaidDiagram } from "./mermaid-diagram";
 import { isMermaidCodeBlock } from "./mermaid-utils";
 
@@ -92,7 +92,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   );
 }
 
-function MarkdownContent({ children, onToggleTask }: { children: string; onToggleTask?: (position: number, completed: boolean) => void }) {
+export function MarkdownContent({ children, onToggleTask }: { children: string; onToggleTask?: (position: number, completed: boolean) => void }) {
   let taskPosition = 0;
   return (
     <ReactMarkdown

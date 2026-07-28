@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
 }));
 
-vi.mock("@zipform/data", () => ({
+vi.mock("@tloz/data", () => ({
   dataClient: {
     tloz: { getUsers: mocks.getUsers },
     agent: { authenticateWithApiKey: mocks.authenticateWithApiKey },
@@ -17,7 +17,7 @@ vi.mock("../auth", () => ({ auth: mocks.auth }));
 
 import { authenticateRequest } from "./api-auth";
 
-const localUser = { id: "owner", name: "Owner", username: "owner", email: "owner@zipform.dev", role: "Platform Owner", type: "human", avatarUrl: "", theme: "system" };
+const localUser = { id: "owner", name: "Owner", username: "owner", email: "owner@tloz.dev", role: "Platform Owner", type: "human", avatarUrl: "", theme: "system" };
 const readerUser = { id: "zileo", name: "Zileo", username: "zileo", email: "zileo@zivelo.dev", role: "agent:reader", type: "agent", avatarUrl: "", theme: "system" };
 const ownerUser = { ...localUser, role: "Platform Owner" };
 const mutableEnv = process.env as Record<string, string | undefined>;

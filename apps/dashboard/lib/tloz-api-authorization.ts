@@ -1,5 +1,5 @@
-import { dataClient, type TlozMissionDetail } from "@zipform/data";
-import type { TlozProject, TlozQuestItem } from "@zipform/types";
+import { dataClient, type TlozMissionDetail } from "@tloz/data";
+import type { TlozProject, TlozQuestItem } from "@tloz/types";
 import { authorizeApiOperation, type TlozOperation } from "./authorization";
 
 type Actor = { id: string; type: string; role: string };

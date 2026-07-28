@@ -43,7 +43,6 @@ function createPrismaStub() {
     session: { findFirst: vi.fn(async () => ({ user: currentUser })) },
     user: { findFirst: vi.fn(async () => currentUser), findMany: findMany(users) },
     avatar: { findMany: findMany(avatarRows) },
-    platformMetric: { findMany: vi.fn(async () => [{ label: "Health", value: "100", tone: "good" }]) },
     tlozSeason: { findMany: findMany(seasons.map((item) => ({ ...withDates(item), endDate: nullable(item.endDate) }))) },
     tlozEpisode: { findMany: findMany(episodes.map((item) => ({ ...withDates(item), endDate: nullable(item.endDate) }))) },
     tlozProject: {
@@ -114,7 +113,6 @@ describe("prisma data driver", () => {
     const client = createPrismaDataClient(createPrismaStub());
     expect(await client.user.getCurrent()).toEqual(currentUser);
     expect(await client.tloz.getUsers()).toEqual(expect.arrayContaining([expect.objectContaining({ id: currentUser.id })]));
-    expect(await client.platform.getMetrics()).toEqual([{ label: "Health", value: "100", tone: "good" }]);
     expect(await client.platform.listAvatars()).toEqual([
       expect.objectContaining({ name: "Semielfo", imageUrl: expect.stringContaining("Semielfo") }),
       expect.objectContaining({ name: "Dragon", imageUrl: expect.stringContaining("Dragon") }),

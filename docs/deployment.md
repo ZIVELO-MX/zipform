@@ -21,13 +21,15 @@
 
 | Variable | Default | Description |
 |---|---|---|
-| `ZIPFORM_DATA_DRIVER` | `prisma` | Set to `mock` for in-memory data (dev/testing without a database) |
+| `TLOZ_DATA_DRIVER` | `prisma` | Set to `mock` for in-memory data (dev/testing without a database) |
+
+`ZIPFORM_DATA_DRIVER` is accepted only during the v1 compatibility release.
 
 ---
 
 ## Database Connection Model
 
-Zipform uses a **pooled + direct** connection strategy required by Supabase:
+TLOZ uses a **pooled + direct** connection strategy required by Supabase:
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -136,10 +138,11 @@ For the Vercel project settings, use `apps/dashboard` as the Root Directory and 
 
 ### 4. Post-Deployment Verification
 
-- Confirm the dashboard loads and shows platform metrics
-- Navigate to `/tloz` and verify TLOZ views load with seeded data
+- Confirm the document lobby loads at `/`
+- Navigate to a Project route such as `/tloz` and verify its Mission views
+- Open `/projects` and `/inventory` and verify the document collections
 - Confirm authentication works (login page, session persistence)
-- Check that mission CRUD operations work end-to-end
+- Check that Mission CRUD and Project contract editing work end-to-end
 
 ### Rollback
 
@@ -151,7 +154,7 @@ For the Vercel project settings, use `apps/dashboard` as the Root Directory and 
 
 ## CI/CD
 
-The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs `pnpm check` on every push to `main` and on pull requests.
+The repository includes a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs the workspace checks on pull requests and pushes to `main`.
 
 Deployments are managed by the Vercel Git integration. Pull requests receive Preview deployments and pushes to `main` deploy to Production. Vercel credentials are not stored in GitHub Actions because the Git integration authenticates deployments directly.
 
@@ -171,14 +174,14 @@ services:
   postgres:
     image: postgres:17-alpine
     env:
-      POSTGRES_USER: zipform
-      POSTGRES_PASSWORD: zipform
-      POSTGRES_DB: zipform_test
+      POSTGRES_USER: tloz
+      POSTGRES_PASSWORD: tloz
+      POSTGRES_DB: tloz_test
     ports:
       - 5432:5432
 
 env:
-  TEST_DATABASE_URL: "postgresql://zipform:zipform@localhost:5432/zipform_test"
+  TEST_DATABASE_URL: "postgresql://tloz:tloz@localhost:5432/tloz_test"
 ```
 
 ---
@@ -211,7 +214,7 @@ pnpm test:coverage # unit tests with coverage
 To develop without a database connection:
 
 ```bash
-ZIPFORM_DATA_DRIVER=mock pnpm dev
+TLOZ_DATA_DRIVER=mock pnpm dev
 ```
 
 The mock driver uses the same seed data and implements the same contract as the Prisma driver.

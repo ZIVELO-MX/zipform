@@ -18,5 +18,5 @@ export function verifyApiKey(plain: string, stored: string): boolean {
 }
 
 export function generateApiKey(): string {
-  return `zaf_${randomBytes(32).toString("hex")}`;
+  return `tloz_${randomBytes(32).toString("hex")}`;
 }

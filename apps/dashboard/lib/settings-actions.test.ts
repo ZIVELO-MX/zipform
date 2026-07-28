@@ -1,4 +1,4 @@
-import type { ApiKey, UserProfile } from "@zipform/types";
+import type { ApiKey, UserProfile } from "@tloz/types";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("react", () => ({ cache: <T extends (...args: never[]) => unknown>(callback: T) => callback }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("../auth", () => ({ auth: mocks.auth }));
-vi.mock("@zipform/data", () => ({
+vi.mock("@tloz/data", () => ({
   dataClient: {
     agent: {
       list: mocks.list,
@@ -33,7 +33,7 @@ const agentUser: UserProfile = {
   id: "d5ca1936-3240-4247-8c2b-a7152a681311",
   name: "Zibot",
   username: "zibot",
-  email: "zibot@zipform.dev",
+  email: "zibot@tloz.dev",
   role: "agent:operative",
   type: "agent",
   avatarUrl: "",

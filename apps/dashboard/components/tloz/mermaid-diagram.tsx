@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { ResourcePreview } from "@zipform/ui";
+import { ResourcePreview } from "@tloz/ui";
 import { createMermaidSvgBlob, getMermaidSvgDimensions } from "./mermaid-download";
 
 type MermaidState =

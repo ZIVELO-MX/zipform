@@ -19,8 +19,8 @@ import {
   BreadcrumbSeparator,
   Command,
   CommandDialog,
-} from "@zipform/ui";
-import type { TlozMissionType } from "@zipform/types";
+} from "@tloz/ui";
+import type { TlozMissionType } from "@tloz/types";
 import { missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { TlozControl } from "./tloz-control";
 
@@ -31,6 +31,7 @@ type TlozHeaderProps = {
   breadcrumb?: Array<string | { label: string; href: string }>;
   showSearch?: boolean;
   showHeader?: boolean;
+  showControls?: boolean;
   commandEntities: {
     missions: Array<{ id: string; label: string; icon: string; type: TlozMissionType; href: string }>;
     projects: Array<{ id: string; label: string; icon: string; href: string }>;
@@ -42,19 +43,19 @@ const commandGroups = [
   {
     heading: "Acciones",
     items: [
-      { label: "Abrir Inventory", href: "/tloz/inventory", icon: PackageOpen, keywords: "inventory inventario items" },
-      { label: "Abrir Projects", href: "/tloz/projects", icon: FolderKanban, keywords: "proyectos projects" },
+      { label: "Abrir Inventory", href: "/inventory", icon: PackageOpen, keywords: "inventory inventario items" },
+      { label: "Abrir Projects", href: "/projects", icon: FolderKanban, keywords: "proyectos projects" },
     ],
   },
   {
     heading: "Navegación",
     items: [
-      { label: "Lobby", href: "/tloz", icon: Sword, keywords: "lobby missions misiones" },
+      { label: "Lobby", href: "/", icon: Sword, keywords: "lobby missions misiones" },
     ],
   },
 ];
 
-export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showSearch = true, showHeader = true, commandEntities }: TlozHeaderProps) {
+export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showSearch = true, showHeader = true, showControls = true, commandEntities }: TlozHeaderProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   const router = useRouter();
 
@@ -126,9 +127,7 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           </button>
         </div>
 
-        <div className="tloz-header-trailing">
-          <TlozControl />
-        </div>
+        {showControls ? <div className="tloz-header-trailing"><TlozControl /></div> : null}
       </header>
 
       <CommandDialog
@@ -164,7 +163,7 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           <Command.Group heading="Misiones">
             {commandEntities.missions.map((mission) => { const MissionIcon = resolveMissionIcon(mission.icon); return (
               <Command.Item key={mission.id} value={`Misión ${mission.label}`} onSelect={() => runCommand(mission.href)}>
-                <span className="grid size-7 shrink-0 place-items-center rounded-lg" style={{ color: missionTypeTone[mission.type], backgroundColor: missionTypeBackground[mission.type] }}><MissionIcon aria-hidden="true" /></span>
+                <span className="grid size-7 shrink-0 place-items-center rounded-lg" style={{ color: missionTypeTone[mission.type], backgroundColor: missionTypeBackground[mission.type] ?? "#F1F0EE" }}><MissionIcon aria-hidden="true" /></span>
                 <span>{mission.label}</span>
               </Command.Item>
             ); })}
@@ -191,4 +190,4 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
   );
 }
 
-const missionTypeBackground: Record<TlozMissionType, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
+const missionTypeBackground: Record<string, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };

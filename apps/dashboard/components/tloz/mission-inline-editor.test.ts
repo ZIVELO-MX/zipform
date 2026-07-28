@@ -6,7 +6,7 @@ describe("mission status selector", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
 
     expect(source).toMatch(
-      /<SelectTrigger aria-label="Estado"><SelectValue><StatusValue status=\{status\} \/><\/SelectValue><\/SelectTrigger><SelectContent position="item-aligned">/,
+      /<SelectTrigger aria-label="Estado"><SelectValue><OptionValue value=\{status\} options=\{statusOptions\} status \/><\/SelectValue><\/SelectTrigger><SelectContent position="item-aligned">/,
     );
   });
 
@@ -19,8 +19,9 @@ describe("mission status selector", () => {
 
   it("shows category color and project icon with color in triggers and options", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
-    expect(source).toContain("<SelectValue><TypeValue type={values.type} /></SelectValue>");
-    expect(source).toContain("<TypeValue type={value} />");
+    expect(source).toContain("<SelectValue><OptionValue value={values.type} options={categoryOptions} /></SelectValue>");
+    expect(source).toContain("<OptionValue value={option.value} options={categoryOptions} />");
+    expect(source).toContain("style={{ background: `${color}18`, color }}");
     expect(source).toContain("iconComponent: resolveMissionIcon(project.icon)");
     expect(source).toContain("<ProjectValue project={values.project ?? selectedProject} />");
   });

@@ -30,12 +30,6 @@ export function validateMissionCreate(input: TlozMissionCreateInput) {
   required(input.projectId, "projectId", "El proyecto", fields);
   required(input.ownerId, "ownerId", "El responsable", fields);
   if ((input.title?.trim().length ?? 0) > 160) fields.title = "El título no puede superar 160 caracteres.";
-  if (input.type && !["main_quest", "side_quest", "farming_quest", "exploration_quest"].includes(input.type)) {
-    fields.type = "El tipo de misión no es válido.";
-  }
-  if (normalized.status && !["now", "next", "later", "completed", "blocked"].includes(normalized.status)) {
-    fields.status = "El estado de la misión no es válido.";
-  }
   if (normalized.description.length > 280) fields.description = "La descripción no puede superar 280 caracteres.";
   if (normalized.descriptionDetail.length > 20000) fields.descriptionDetail = "El detalle no puede superar 20000 caracteres.";
   if (!Number.isInteger(normalized.progress) || normalized.progress < 0 || normalized.progress > 100) {
@@ -61,6 +55,15 @@ export function validateQuestItemCreate(input: TlozQuestItemCreateInput) {
   finish(fields); return { ...input, name: input.name.trim(), description: input.description.trim() };
 }
 
+export const RESERVED_TLOZ_SLUGS = ["api", "inventory", "login", "new", "projects"] as const;
+
 export function slugify(value: string) { return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "project"; }
-export function uniqueSlug(name: string, existing: string[]) { const base = slugify(name); let candidate = base; let suffix = 2; while (existing.includes(candidate)) candidate = `${base}-${suffix++}`; return candidate; }
+export function uniqueSlug(name: string, existing: string[]) {
+  const base = slugify(name);
+  const occupied = new Set([...existing, ...RESERVED_TLOZ_SLUGS]);
+  let candidate = base;
+  let suffix = 2;
+  while (occupied.has(candidate)) candidate = `${base}-${suffix++}`;
+  return candidate;
+}
 export function nextMissionDisplayId(projectName: string, existing: string[]) { const key = projectName.normalize("NFKD").replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase().padEnd(3, "X"); const max = existing.filter((id) => id.startsWith(`${key}-`)).reduce((value, id) => Math.max(value, Number(id.slice(4)) || 0), 0); return `${key}-${String(max + 1).padStart(4, "0")}`; }

@@ -1,6 +1,6 @@
 "use client";
 
-import type { TlozEpisode, TlozProject, TlozSeason, UserProfile } from "@zipform/types";
+import type { TlozProject, UserProfile } from "@tloz/types";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { resolveResponsiveTlozViews, resolveTlozView, type TlozView } from "../../lib/tloz-routes";
@@ -12,8 +12,6 @@ export type TlozGrouping = "status" | "project" | "none";
 export type TlozUiState = {
   view: TlozView;
   projectId: string;
-  seasonId: string;
-  episodeId: string;
   ownerId: string;
   sort: TlozSort;
   grouping: TlozGrouping;
@@ -25,8 +23,6 @@ type TlozViewStateContextValue = {
   setState: (update: Partial<TlozUiState>) => void;
   supportedViews: readonly TlozView[];
   projects: TlozProject[];
-  seasons: TlozSeason[];
-  episodes: TlozEpisode[];
   users: UserProfile[];
   showMissionControls: boolean;
 };
@@ -39,8 +35,6 @@ export function TlozViewStateProvider({
   supportedViews,
   defaultView,
   projects,
-  seasons,
-  episodes,
   users,
   inventory = false,
   showMissionControls = true,
@@ -50,8 +44,6 @@ export function TlozViewStateProvider({
   supportedViews: TlozView[];
   defaultView: TlozView;
   projects: TlozProject[];
-  seasons: TlozSeason[];
-  episodes: TlozEpisode[];
   users: UserProfile[];
   inventory?: boolean;
   showMissionControls?: boolean;
@@ -106,11 +98,9 @@ export function TlozViewStateProvider({
     }),
     supportedViews: effectiveViews,
     projects,
-    seasons,
-    episodes,
     users,
     showMissionControls,
-  }), [episodes, projects, seasons, showMissionControls, state, effectiveViews, users]);
+  }), [projects, showMissionControls, state, effectiveViews, users]);
 
   return <TlozViewStateContext.Provider value={value}>{children}</TlozViewStateContext.Provider>;
 }
@@ -125,8 +115,6 @@ function initialState(view: TlozView): TlozUiState {
   return {
     view,
     projectId: "all",
-    seasonId: "all",
-    episodeId: "all",
     ownerId: "all",
     sort: "dependencies",
     grouping: "status",

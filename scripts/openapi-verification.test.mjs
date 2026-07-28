@@ -27,7 +27,7 @@ function deploymentFetch(openApiResponses, mission = validMission) {
 }
 
 function verify(fetchImpl, sampleCount = 1) {
-  return verifyOpenApiDeployment({ bypassSecret: "bypass", zipformToken: "token", sampleCount, fetchImpl });
+  return verifyOpenApiDeployment({ bypassSecret: "bypass", tlozToken: "token", sampleCount, fetchImpl });
 }
 
 test("calculates the requested percentile from unsorted samples", () => {

@@ -1,4 +1,4 @@
-import type { TlozMission } from "@zipform/types";
+import type { TlozMission } from "@tloz/types";
 
 export type MissionDependencyEdge = Pick<TlozMission, "id"> & { dependsOnMissionId: string };
 

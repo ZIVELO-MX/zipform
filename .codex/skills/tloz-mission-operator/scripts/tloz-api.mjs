@@ -2,7 +2,7 @@
 
 import { readFileSync } from "node:fs";
 
-export const PRODUCTION_ORIGIN = "https://zipform.zivelo.dev";
+export const PRODUCTION_ORIGIN = "https://tloz.zivelo.dev";
 const ALLOWED_METHODS = new Set(["GET", "POST", "PATCH", "PUT", "DELETE"]);
 
 export function parseArgs(args) {
@@ -21,7 +21,7 @@ export function help() {
   return "Uso: tloz-api /api/v1/projects [GET] [--data-file payload.json]";
 }
 
-export async function run(args, { token = process.env.ZIPFORM_TOKEN, fetchImpl = fetch, readFile = readFileSync, write = console.log, error = console.error } = {}) {
+export async function run(args, { token = process.env.TLOZ_TOKEN ?? process.env.ZIPFORM_TOKEN, fetchImpl = fetch, readFile = readFileSync, write = console.log, error = console.error } = {}) {
   let options;
   try {
     options = parseArgs(args);
@@ -34,7 +34,7 @@ export async function run(args, { token = process.env.ZIPFORM_TOKEN, fetchImpl =
     return 0;
   }
   if (!token) {
-    error("ZIPFORM_TOKEN no está configurado; no se imprimirá ni se solicitará el token.");
+    error("TLOZ_TOKEN no está configurado; no se imprimirá ni se solicitará el token.");
     return 2;
   }
 
