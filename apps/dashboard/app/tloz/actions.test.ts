@@ -165,6 +165,10 @@ describe("TLOZ Server Action authorization", () => {
 
     await createMission(createInput as never, { priority: "high" });
 
+    expect(mocks.tloz.createMission).toHaveBeenCalledWith({
+      ...createInput,
+      status: "next",
+    });
     expect(mocks.documents.update).toHaveBeenCalledWith(
       "document-1",
       { properties: { priority: "high" } },

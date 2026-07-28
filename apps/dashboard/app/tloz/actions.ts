@@ -68,7 +68,8 @@ export async function createMission(
   const projectDocument = await dataClient.documents.get(input.projectId);
   const statusField = projectDocument?.contract?.fields.find((field) => field.key === "status");
   const categoryField = projectDocument?.contract?.fields.find((field) => field.key === "category");
-  if (statusField && !statusField.options.some((option) => option.value === input.status)) {
+  const status = input.status ?? contractFieldDefault(statusField, "next");
+  if (statusField && !statusField.options.some((option) => option.value === status)) {
     throw new Error("El estado no pertenece al contrato del Project.");
   }
   if (categoryField && !categoryField.options.some((option) => option.value === input.type)) {
@@ -77,13 +78,13 @@ export async function createMission(
   if (projectDocument?.contract) {
     validateDocumentProperties(projectDocument.contract.fields, {
       ...documentProperties,
-      status: input.status ?? "next",
+      status,
       category: input.type,
     }, "mission");
   } else if (Object.keys(documentProperties).length) {
     throw new Error("El Project no tiene un contrato documental disponible.");
   }
-  const mission = await dataClient.tloz.createMission(input);
+  const mission = await dataClient.tloz.createMission({ ...input, status });
   if (Object.keys(documentProperties).length) {
     const document = await dataClient.documents.get(mission.id);
     if (!document) throw new Error("No se pudo resolver el documento de la Mission creada.");
