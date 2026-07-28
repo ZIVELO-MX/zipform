@@ -30,6 +30,7 @@ import type {
   TlozStatusRole,
 } from "@tloz/types";
 import { replaceProjectContract } from "../../app/tloz/actions";
+import { normalizeFieldPositions } from "./project-contract";
 
 const fieldTypeLabel: Record<TlozFieldType, string> = {
   text: "Texto",
@@ -437,10 +438,6 @@ function RuleButton({ active, label, icon: Icon, onClick }: {
       {label}
     </button>
   );
-}
-
-export function normalizeFieldPositions(fields: TlozFieldDefinition[]) {
-  return fields.map((field, position) => ({ ...field, position }));
 }
 
 function replaceOption(options: TlozFieldOption[], index: number, update: Partial<TlozFieldOption>) {

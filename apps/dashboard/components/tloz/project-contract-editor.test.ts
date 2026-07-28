@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TlozFieldDefinition } from "@tloz/types";
-import { normalizeFieldPositions } from "./project-contract-editor";
+import { normalizeFieldPositions } from "./project-contract";
 
 describe("Project contract field ordering", () => {
   it("normalizes positions without changing stable field keys or values", () => {

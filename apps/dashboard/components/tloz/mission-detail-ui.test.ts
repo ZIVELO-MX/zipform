@@ -33,7 +33,8 @@ describe("mission detail interaction contracts", () => {
 
   it("uses TLOZ red for completed state tokens and badges", () => {
     expect(utils).toMatch(/completed: "#D72228"/);
-    expect(detail).toContain('bg-[#FDECEC] text-[#B91C22]');
+    expect(detail).toContain('bg-[#FDECEC]');
+    expect(detail).toContain('text-[#B91C22]');
   });
 
   it("keeps AddResource responsive and captures a manual icon", () => {

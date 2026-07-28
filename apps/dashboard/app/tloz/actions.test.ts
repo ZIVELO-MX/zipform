@@ -154,7 +154,7 @@ describe("TLOZ Server Action authorization", () => {
         kind: "project",
         contract: {
           fields: [
-            { key: "status", options: [{ value: "later" }] },
+            { key: "status", options: [{ value: "next" }] },
             { key: "category", options: [{ value: "side_quest" }] },
             { key: "priority", options: [{ value: "high" }] },
           ],
