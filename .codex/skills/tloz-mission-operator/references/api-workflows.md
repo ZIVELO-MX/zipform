@@ -1,6 +1,6 @@
 # API workflows
 
-Consult `GET https://tloz.zivelo.dev/api/openapi` before relying on this route summary.
+Consult `GET https://zipform.zivelo.dev/api/openapi` before relying on this route summary.
 
 ## Core routes
 

@@ -45,7 +45,7 @@ Use these headers for authenticated JSON requests:
 curl --fail-with-body --silent --show-error \
   -H "Authorization: Bearer $TLOZ_TOKEN" \
   -H "Content-Type: application/json" \
-  "https://tloz.zivelo.dev/api/v1/projects"
+  "https://zipform.zivelo.dev/api/v1/projects"
 ```
 
 ## Diagnose failures

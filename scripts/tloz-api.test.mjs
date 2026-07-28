@@ -19,7 +19,7 @@ test("runs an authenticated JSON request against the fixed origin", async () => 
   });
   assert.equal(code, 0);
   assert.deepEqual(calls[0], {
-    url: "https://tloz.zivelo.dev/api/v1/projects",
+    url: "https://zipform.zivelo.dev/api/v1/projects",
     init: { method: "PATCH", headers: { Authorization: "Bearer zaf_test", Accept: "application/json" } },
   });
   assert.deepEqual(output, ['{"ok":true}']);

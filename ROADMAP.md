@@ -13,7 +13,7 @@
 - [x] Preserve v1 and legacy data projections for one compatibility release.
 - [x] Remove legacy application-launcher surfaces.
 - [ ] Rename the GitHub repository after this migration is merged.
-- [ ] Configure and verify the `tloz.zivelo.dev` production domain.
+- [x] Keep `zipform.zivelo.dev` as the production domain while the TLOZ alias remains deferred.
 - [ ] Remove v1 compatibility after consumers migrate to documents v2.
 
 ## Next
