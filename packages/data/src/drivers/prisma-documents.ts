@@ -1,13 +1,17 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import type {
   TlozDocument,
+  TlozDocumentDefinition,
+  TlozDocumentPresentationField,
   TlozDocumentScalar,
   TlozDocumentUpdate,
+  TlozDocumentViewDefinition,
   TlozFieldDefinition,
   TlozFieldOption,
 } from "@tloz/types";
 import type {
   DocumentFilters,
+  DocumentGetOptions,
   PaginatedResult,
   PaginationInput,
   TlozDocumentRepository,
@@ -43,17 +47,65 @@ const documentInclude = {
       fieldDefinition: true,
     },
   },
+  _count: {
+    select: { children: true },
+  },
 } satisfies Prisma.TlozDocumentInclude;
 
 type DocumentRow = Prisma.TlozDocumentGetPayload<{ include: typeof documentInclude }>;
+const definitionInclude = {
+  ownerDocument: {
+    include: {
+      projectDocument: {
+        include: {
+          fieldDefinitions: {
+            where: { retiredAt: null },
+            orderBy: { position: "asc" as const },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.TlozDocumentDefinitionInclude;
+type DefinitionRow = Prisma.TlozDocumentDefinitionGetPayload<{
+  include: typeof definitionInclude;
+}>;
 
 export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocumentRepository {
-  async function get(documentId: string): Promise<TlozDocument | null> {
+  async function get(
+    documentId: string,
+    options: DocumentGetOptions = {},
+  ): Promise<TlozDocument | null> {
     const row = await prisma.tlozDocument.findFirst({
       where: documentReferenceWhere(documentId),
       include: documentInclude,
     });
-    return row ? mapDocument(row) : null;
+    if (!row) return null;
+    const document = mapDocument(row);
+    if (!options.includeChildren) return document;
+
+    const limit = Math.min(Math.max(options.childrenPagination?.limit ?? 25, 1), 100);
+    const [children, total] = await Promise.all([
+      prisma.tlozDocument.findMany({
+        where: { projectId: row.id },
+        include: documentInclude,
+        orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+        take: limit + 1,
+        ...(options.childrenPagination?.cursor && isUuid(options.childrenPagination.cursor)
+          ? { cursor: { id: options.childrenPagination.cursor }, skip: 1 }
+          : {}),
+      }),
+      prisma.tlozDocument.count({ where: { projectId: row.id } }),
+    ]);
+    const data = children.slice(0, limit).map(mapDocument);
+    return {
+      ...document,
+      children: {
+        data,
+        nextCursor: children.length > limit ? data.at(-1)?.id ?? null : null,
+        total,
+      },
+    };
   }
 
   return {
@@ -61,10 +113,15 @@ export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocume
       const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
       const projectReference = filters.projectId
         ? documentReferenceWhere(filters.projectId)
-        : undefined;
+        : filters.parentId
+          ? documentReferenceWhere(filters.parentId)
+          : undefined;
       const rows = await prisma.tlozDocument.findMany({
         where: {
           ...(filters.kind ? { kind: filters.kind } : {}),
+          ...(!filters.includeSystem ? {
+            publicId: { notIn: ["project-inventory", "project-unassigned"] },
+          } : {}),
           ...(projectReference ? {
             project: { is: projectReference },
           } : {}),
@@ -92,6 +149,24 @@ export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocume
       };
     },
     get,
+    async getDefinition(definitionKey: string) {
+      let row = await prisma.tlozDocumentDefinition.findUnique({
+        where: { key: definitionKey },
+        include: definitionInclude,
+      });
+      if (!row && definitionKey.endsWith(":children")) {
+        const ownerReference = definitionKey.slice(0, -":children".length);
+        row = await prisma.tlozDocumentDefinition.findFirst({
+          where: {
+            scope: "children",
+            ownerDocument: { is: documentReferenceWhere(ownerReference) },
+          },
+          include: definitionInclude,
+        });
+      }
+      if (!row) return null;
+      return mapDefinition(row);
+    },
     async update(documentId: string, input: TlozDocumentUpdate, expectedRevision: number) {
       const current = await prisma.tlozDocument.findFirst({
         where: documentReferenceWhere(documentId),
@@ -312,6 +387,7 @@ function mapDocument(row: DocumentRow): TlozDocument {
           acquired: row.inventoryDocument.acquiredAt,
         })
         : {};
+  if (row.projectDocument) builtIn.mission_count = row._count.children;
   const values = Object.fromEntries(
     row.fieldValues
       .filter((value) => value.fieldDefinition.projectId === (
@@ -325,13 +401,14 @@ function mapDocument(row: DocumentRow): TlozDocument {
   const projectSlug = row.projectDocument?.slug ?? row.project?.projectDocument?.slug;
   const fields = row.projectDocument?.fieldDefinitions.map(mapFieldDefinition);
 
+  const inventoryRoot = row.kind === "inventory" && row.project?.publicId === "project-inventory";
   return {
     id: row.id,
     publicId: row.publicId,
     kind: row.kind as TlozDocument["kind"],
-    parentId: row.projectId ?? undefined,
-    parentPublicId: row.project?.publicId,
-    projectSlug,
+    parentId: inventoryRoot ? undefined : row.projectId ?? undefined,
+    parentPublicId: inventoryRoot ? undefined : row.project?.publicId,
+    projectSlug: inventoryRoot ? undefined : projectSlug,
     title: row.title,
     summary: row.summary,
     body: row.body,
@@ -344,6 +421,99 @@ function mapDocument(row: DocumentRow): TlozDocument {
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+function mapDefinition(row: DefinitionRow): TlozDocumentDefinition {
+  const storedFields = parsePresentationFields(row.fields);
+  const contractFields = row.ownerDocument?.projectDocument?.fieldDefinitions.map((field) => ({
+    key: field.key,
+    label: field.label,
+    format: field.fieldType === "date"
+      ? "date" as const
+      : field.fieldType === "number"
+        ? "number" as const
+        : field.key === "status"
+          ? "status" as const
+          : field.fieldType === "person"
+            ? "person" as const
+            : "text" as const,
+    position: field.position,
+    visible: field.visible,
+    options: fromJsonOptions(field.options),
+  })) ?? [];
+  const fields = row.scope === "children"
+    ? mergePresentationFields([
+      { key: "publicId", label: "ID", format: "id", position: 0, visible: true },
+      { key: "title", label: "Mission", format: "text", position: 1, visible: true },
+      ...contractFields.map((field) => ({ ...field, position: field.position + 2 })),
+      { key: "assignee", label: "Responsable", format: "person", position: 100, visible: true },
+      { key: "start", label: "Inicio", format: "date", position: 101, visible: true },
+      { key: "due", label: "Vence", format: "date", position: 102, visible: true },
+      { key: "progress", label: "Progreso", format: "number", position: 103, visible: true },
+      { key: "blocked_reason", label: "Bloqueo", format: "text", position: 104, visible: true },
+    ])
+    : storedFields;
+  const views = parseViewDefinitions(row.views);
+  if (!["project", "mission", "inventory"].includes(row.kind)
+    || !["collection", "children"].includes(row.scope)
+    || !views.some((view) => view.id === row.defaultView)) {
+    throw new TlozDocumentError(
+      "DOCUMENT_INVALID",
+      `La definición ${row.key} no es válida.`,
+    );
+  }
+  return {
+    id: row.id,
+    key: row.key,
+    kind: row.kind as TlozDocumentDefinition["kind"],
+    scope: row.scope as TlozDocumentDefinition["scope"],
+    ...(row.ownerDocumentId ? { ownerDocumentId: row.ownerDocumentId } : {}),
+    fields,
+    views,
+    defaultView: row.defaultView as TlozDocumentDefinition["defaultView"],
+  };
+}
+
+function mergePresentationFields(
+  fields: TlozDocumentPresentationField[],
+): TlozDocumentPresentationField[] {
+  const byKey = new Map<string, TlozDocumentPresentationField>();
+  for (const field of fields) byKey.set(field.key, field);
+  return [...byKey.values()].sort((left, right) => left.position - right.position);
+}
+
+function parsePresentationFields(value: Prisma.JsonValue): TlozDocumentPresentationField[] {
+  const formats = new Set(["text", "status", "date", "person", "number", "id"]);
+  if (!Array.isArray(value) || value.some((field) => (
+    typeof field !== "object"
+    || field === null
+    || Array.isArray(field)
+    || typeof field.key !== "string"
+    || typeof field.label !== "string"
+    || typeof field.position !== "number"
+    || typeof field.visible !== "boolean"
+    || typeof field.format !== "string"
+    || !formats.has(field.format)
+  ))) {
+    throw new TlozDocumentError("DOCUMENT_INVALID", "La configuración fields no es válida.");
+  }
+  return value as TlozDocumentPresentationField[];
+}
+
+function parseViewDefinitions(value: Prisma.JsonValue): TlozDocumentViewDefinition[] {
+  const views = new Set(["dashboard", "list", "board", "table", "calendar", "detail"]);
+  if (!Array.isArray(value) || value.some((view) => (
+    typeof view !== "object"
+    || view === null
+    || Array.isArray(view)
+    || typeof view.id !== "string"
+    || !views.has(view.id)
+    || !Array.isArray(view.fields)
+    || !view.fields.every((field) => typeof field === "string")
+  ))) {
+    throw new TlozDocumentError("DOCUMENT_INVALID", "La configuración views no es válida.");
+  }
+  return value as TlozDocumentViewDefinition[];
 }
 
 function mapFieldDefinition(

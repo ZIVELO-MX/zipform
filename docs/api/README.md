@@ -63,6 +63,7 @@ in `ETag`.
 |--------|----------|---------|
 | `GET`, `POST` | `/api/v2/documents` | Search or create documents |
 | `GET`, `PATCH`, `DELETE` | `/api/v2/documents/{documentId}` | Read or mutate a document |
+| `GET` | `/api/v2/document-definitions/{definitionKey}` | Read collection or child view configuration |
 | `GET`, `PUT` | `/api/v2/documents/{documentId}/document` | Export or replace Markdown |
 | `GET`, `PUT` | `/api/v2/documents/{documentId}/contract` | Read or replace a Project contract |
 | `GET`, `POST` | `/api/v2/documents/{documentId}/resources` | List or attach resources |

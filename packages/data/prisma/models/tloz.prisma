@@ -248,11 +248,30 @@ model TlozDocument {
   outgoingRelations TlozDocumentRelation[]   @relation("DocumentRelationsFrom")
   incomingRelations TlozDocumentRelation[]   @relation("DocumentRelationsTo")
   resources         TlozResource[]
+  ownedDefinitions  TlozDocumentDefinition[]
 
   @@unique([sourceType, sourceId])
   @@index([kind, projectId])
   @@index([updatedAt])
   @@map("tloz_documents")
+}
+
+model TlozDocumentDefinition {
+  id              String       @id @default(uuid()) @db.Uuid
+  key             String       @unique
+  kind            String
+  scope           String
+  ownerDocumentId String?      @db.Uuid
+  ownerDocument   TlozDocument? @relation(fields: [ownerDocumentId], references: [id], onDelete: Cascade)
+  fields          Json
+  views           Json
+  defaultView     String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([kind, scope])
+  @@index([ownerDocumentId])
+  @@map("tloz_document_definitions")
 }
 
 model TlozProjectDocument {

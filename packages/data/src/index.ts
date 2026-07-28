@@ -12,6 +12,7 @@ export type {
   DataClientOptions,
   DataDriver,
   DocumentFilters,
+  DocumentGetOptions,
   PaginatedResult,
   PaginationInput,
   ProjectFilters,

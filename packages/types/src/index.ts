@@ -222,6 +222,14 @@ export type TlozStatusRole = "backlog" | "ready" | "active" | "blocked" | "done"
 
 export type TlozDocumentScalar = string | number | boolean | string[] | null;
 
+export type TlozDocumentView =
+  | "dashboard"
+  | "list"
+  | "board"
+  | "table"
+  | "calendar"
+  | "detail";
+
 export type TlozFieldOption = {
   value: string;
   label: string;
@@ -246,6 +254,39 @@ export type TlozProjectContract = {
   fields: TlozFieldDefinition[];
 };
 
+export type TlozDocumentPresentationField = {
+  key: string;
+  label: string;
+  format: "text" | "status" | "date" | "person" | "number" | "id";
+  position: number;
+  visible: boolean;
+  options?: TlozFieldOption[];
+};
+
+export type TlozDocumentViewDefinition = {
+  id: TlozDocumentView;
+  fields: string[];
+  groupBy?: string;
+  dateField?: string;
+};
+
+export type TlozDocumentDefinition = {
+  id: string;
+  key: string;
+  kind: TlozDocumentKind;
+  scope: "collection" | "children";
+  ownerDocumentId?: string;
+  fields: TlozDocumentPresentationField[];
+  views: TlozDocumentViewDefinition[];
+  defaultView: TlozDocumentView;
+};
+
+export type TlozDocumentChildren = {
+  data: TlozDocument[];
+  nextCursor: string | null;
+  total: number;
+};
+
 export type TlozDocument = {
   id: string;
   publicId: string;
@@ -259,6 +300,7 @@ export type TlozDocument = {
   revision: number;
   properties: Record<string, TlozDocumentScalar>;
   contract?: TlozProjectContract;
+  children?: TlozDocumentChildren;
   source?: {
     type: TlozDocumentKind;
     id: string;

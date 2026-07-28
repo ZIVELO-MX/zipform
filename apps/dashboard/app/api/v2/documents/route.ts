@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   try {
     const result = await dataClient.documents.find({
       kind: kindValue as TlozDocumentKind | undefined,
-      projectId: request.nextUrl.searchParams.get("parent") ?? undefined,
+      parentId: request.nextUrl.searchParams.get("parent") ?? undefined,
       query: request.nextUrl.searchParams.get("q") ?? undefined,
     }, {
       limit,

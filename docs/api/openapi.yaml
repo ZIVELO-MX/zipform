@@ -1781,6 +1781,23 @@ paths:
       operationId: getDocument
       summary: Get a document as JSON or Markdown
       tags: [Documents]
+      parameters:
+        - name: include
+          in: query
+          schema:
+            type: string
+            enum: [children]
+        - name: childLimit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: childCursor
+          in: query
+          schema:
+            type: string
       responses:
         "200":
           description: Current document.
@@ -1873,6 +1890,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /document-definitions/{definitionKey}:
+    servers:
+      - url: /api/v2
+    get:
+      operationId: getDocumentDefinition
+      summary: Get persisted collection or child presentation configuration
+      tags: [Documents]
+      parameters:
+        - name: definitionKey
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 160
+      responses:
+        "200":
+          description: Document definition.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/DocumentDefinition"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
   /documents/{documentId}/document:
@@ -2292,6 +2345,21 @@ components:
             $ref: "#/components/schemas/DocumentScalar"
         contract:
           $ref: "#/components/schemas/ProjectContract"
+        children:
+          type: object
+          required: [data, nextCursor, total]
+          properties:
+            data:
+              type: array
+              items:
+                $ref: "#/components/schemas/Document"
+            nextCursor:
+              oneOf:
+                - type: string
+                - type: "null"
+            total:
+              type: integer
+              minimum: 0
         source:
           type: object
           required: [type, id]
@@ -2306,6 +2374,64 @@ components:
         updatedAt:
           type: string
           format: date-time
+    DocumentDefinition:
+      type: object
+      additionalProperties: false
+      required: [id, key, kind, scope, fields, views, defaultView]
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+        kind:
+          $ref: "#/components/schemas/DocumentKind"
+        scope:
+          type: string
+          enum: [collection, children]
+        ownerDocumentId:
+          type: string
+          format: uuid
+        fields:
+          type: array
+          items:
+            type: object
+            required: [key, label, format, position, visible]
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              format:
+                type: string
+                enum: [text, status, date, person, number, id]
+              position:
+                type: integer
+              visible:
+                type: boolean
+              options:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FieldOption"
+        views:
+          type: array
+          items:
+            type: object
+            required: [id, fields]
+            properties:
+              id:
+                type: string
+                enum: [dashboard, list, board, table, calendar, detail]
+              fields:
+                type: array
+                items:
+                  type: string
+              groupBy:
+                type: string
+              dateField:
+                type: string
+        defaultView:
+          type: string
+          enum: [dashboard, list, board, table, calendar, detail]
     DocumentResponse:
       type: object
       required: [data]

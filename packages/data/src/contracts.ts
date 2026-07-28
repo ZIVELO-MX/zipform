@@ -3,6 +3,7 @@ import type {
   Avatar,
   TlozChecklistItem,
   TlozDocument,
+  TlozDocumentDefinition,
   TlozDocumentKind,
   TlozDocumentUpdate,
   TlozEpisode,
@@ -146,12 +147,20 @@ export type ResourceFilters = {
 export type DocumentFilters = {
   kind?: TlozDocumentKind;
   projectId?: string;
+  parentId?: string;
   query?: string;
+  includeSystem?: boolean;
+};
+
+export type DocumentGetOptions = {
+  includeChildren?: boolean;
+  childrenPagination?: PaginationInput;
 };
 
 export type TlozDocumentRepository = {
   find(filters?: DocumentFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozDocument>>;
-  get(documentId: string): Promise<TlozDocument | null>;
+  get(documentId: string, options?: DocumentGetOptions): Promise<TlozDocument | null>;
+  getDefinition(definitionKey: string): Promise<TlozDocumentDefinition | null>;
   update(documentId: string, input: TlozDocumentUpdate, expectedRevision: number): Promise<TlozDocument>;
   replaceProjectContract(projectId: string, fields: TlozFieldDefinition[], expectedRevision: number): Promise<TlozDocument>;
   delete(documentId: string, expectedRevision: number): Promise<void>;

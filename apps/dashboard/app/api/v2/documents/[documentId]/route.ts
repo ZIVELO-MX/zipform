@@ -16,9 +16,24 @@ export async function GET(request: Request, { params }: RouteContext) {
   if (auth instanceof Response) return auth;
   const { documentId } = await params;
   if (!validReference(documentId)) return invalidReference();
+  const url = new URL(request.url);
+  const include = url.searchParams.get("include");
+  if (include && include !== "children") {
+    return errorResponse("INVALID_REQUEST", "include solo admite children.", 400);
+  }
+  const childLimit = Number(url.searchParams.get("childLimit") ?? "25");
+  if (!Number.isInteger(childLimit) || childLimit < 1 || childLimit > 100) {
+    return errorResponse("INVALID_REQUEST", "childLimit debe ser un entero entre 1 y 100.", 400);
+  }
 
   try {
-    const document = await dataClient.documents.get(documentId);
+    const document = await dataClient.documents.get(documentId, {
+      includeChildren: include === "children",
+      childrenPagination: {
+        limit: childLimit,
+        cursor: url.searchParams.get("childCursor") ?? undefined,
+      },
+    });
     if (!document) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
     return documentResponse(request, document);
   } catch (error) {

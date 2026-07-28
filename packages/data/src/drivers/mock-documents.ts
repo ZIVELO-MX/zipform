@@ -1,5 +1,6 @@
 import type {
   TlozDocument,
+  TlozDocumentDefinition,
   TlozDocumentScalar,
   TlozDocumentUpdate,
   TlozFieldDefinition,
@@ -9,6 +10,7 @@ import type {
 } from "@tloz/types";
 import type {
   DocumentFilters,
+  DocumentGetOptions,
   PaginatedResult,
   PaginationInput,
   TlozDocumentRepository,
@@ -113,6 +115,7 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
           icon: project.icon,
           start: project.startDate,
           due: project.dueDate ?? null,
+          mission_count: data.missions.filter((mission) => mission.projectId === project.id).length,
         }),
         contract: { projectId: `project-${project.slug}`, fields },
         source: { type: "project" as const, id: project.id },
@@ -159,9 +162,6 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
         id: documentState.id,
         publicId: inventoryPublicId(inventoryPublicIds, item.id),
         kind: "inventory" as const,
-        parentId: inventoryProject.id,
-        parentPublicId: inventoryProject.publicId,
-        projectSlug: "inventory",
         title: item.name,
         summary: item.description,
         body: item.descriptionDetail,
@@ -184,12 +184,30 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
     return [inventoryProject, unassignedProject, ...projectDocuments, ...missionDocuments, ...inventoryDocuments];
   }
 
-  async function get(documentId: string) {
-    return allDocuments().find((document) => (
-      document.id === documentId
-      || document.publicId === documentId
-      || document.source?.id === documentId
+  async function get(documentId: string, options: DocumentGetOptions = {}) {
+    const document = allDocuments().find((candidate) => (
+      candidate.id === documentId
+      || candidate.publicId === documentId
+      || candidate.source?.id === documentId
     )) ?? null;
+    if (!document || !options.includeChildren) return document;
+    const children = allDocuments()
+      .filter((candidate) => candidate.parentId === document.id)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+    const limit = Math.min(Math.max(options.childrenPagination?.limit ?? 25, 1), 100);
+    const cursorIndex = options.childrenPagination?.cursor
+      ? children.findIndex((candidate) => candidate.id === options.childrenPagination?.cursor)
+      : -1;
+    const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+    const data = children.slice(start, start + limit);
+    return {
+      ...document,
+      children: {
+        data,
+        nextCursor: start + data.length < children.length ? data.at(-1)?.id ?? null : null,
+        total: children.length,
+      },
+    };
   }
 
   return {
@@ -197,8 +215,14 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
       const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
       const query = filters.query?.trim().toLocaleLowerCase();
       const documents = allDocuments()
+        .filter((document) => filters.includeSystem || !["project-inventory", "project-unassigned"].includes(document.publicId))
         .filter((document) => !filters.kind || document.kind === filters.kind)
-        .filter((document) => !filters.projectId || document.parentId === filters.projectId || document.parentPublicId === filters.projectId)
+        .filter((document) => {
+          const parentReference = filters.parentId ?? filters.projectId;
+          return !parentReference
+            || document.parentId === parentReference
+            || document.parentPublicId === parentReference;
+        })
         .filter((document) => !query || `${document.publicId} ${document.title} ${document.summary}`.toLocaleLowerCase().includes(query))
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id));
       const cursorIndex = pagination.cursor
@@ -212,6 +236,9 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
       };
     },
     get,
+    async getDefinition(definitionKey: string) {
+      return mockDefinition(definitionKey, allDocuments());
+    },
     async update(documentId: string, input: TlozDocumentUpdate, expectedRevision: number) {
       const document = await requiredDocument(get, documentId);
       assertRevision(document, expectedRevision);
@@ -399,6 +426,118 @@ function visibleCustomProperties(state: DocumentState, projectId: string) {
 
 function compactProperties(properties: Record<string, TlozDocumentScalar>) {
   return Object.fromEntries(Object.entries(properties).filter(([, value]) => value !== null));
+}
+
+function mockDefinition(
+  definitionKey: string,
+  documents: TlozDocument[],
+): TlozDocumentDefinition | null {
+  if (definitionKey === "projects") {
+    return {
+      id: "definition-projects",
+      key: "projects",
+      kind: "project",
+      scope: "collection",
+      fields: [
+        presentationField("publicId", "ID", "id", 0),
+        presentationField("title", "Project", "text", 1),
+        presentationField("status", "Estado", "status", 2, [
+          { value: "planned", label: "Planeado", role: "backlog", color: "#3A47B5" },
+          { value: "active", label: "Activo", role: "active", color: "#1E6B3C" },
+          { value: "archived", label: "Archivado", role: "done", color: "#6B6B6B" },
+        ]),
+        presentationField("category", "Tipo", "text", 3),
+        presentationField("mission_count", "Missions", "number", 4),
+        presentationField("due", "Vence", "date", 5),
+      ],
+      views: [
+        { id: "table", fields: ["title", "status", "category", "mission_count", "due"] },
+        { id: "list", fields: ["title", "status"] },
+        { id: "detail", fields: ["publicId", "status", "category", "owner", "start", "due", "mission_count"] },
+      ],
+      defaultView: "table",
+    };
+  }
+  if (definitionKey === "inventory") {
+    const inventoryOptions = defaultInventoryFields("definition");
+    return {
+      id: "definition-inventory",
+      key: "inventory",
+      kind: "inventory",
+      scope: "collection",
+      fields: [
+        presentationField("publicId", "ID", "id", 0),
+        presentationField("title", "Inventory item", "text", 1),
+        presentationField("status", "Estado", "status", 2, inventoryOptions[0]?.options),
+        presentationField("category", "Categoría", "text", 3, inventoryOptions[1]?.options),
+        presentationField("assignee", "Responsable", "person", 4),
+        presentationField("acquired", "Adquirido", "date", 5),
+      ],
+      views: [
+        { id: "table", fields: ["title", "status", "category", "assignee", "acquired"] },
+        { id: "list", fields: ["title", "status"] },
+        { id: "detail", fields: ["publicId", "status", "category", "assignee", "acquired"] },
+      ],
+      defaultView: "table",
+    };
+  }
+
+  const owner = documents.find((document) => (
+    definitionKey === `project:${document.id}:children`
+    || definitionKey === `${document.publicId}:children`
+  ));
+  if (!owner || owner.kind !== "project") return null;
+  return {
+    id: `definition-${owner.id}`,
+    key: `project:${owner.id}:children`,
+    kind: "mission",
+    scope: "children",
+    ownerDocumentId: owner.id,
+    fields: [
+      presentationField("publicId", "ID", "id", 0),
+      presentationField("title", "Mission", "text", 1),
+      ...(owner.contract?.fields ?? []).map((field) => ({
+        key: field.key,
+        label: field.label,
+        format: field.type === "date"
+          ? "date" as const
+          : field.type === "number"
+            ? "number" as const
+            : field.key === "status"
+              ? "status" as const
+              : field.type === "person"
+                ? "person" as const
+                : "text" as const,
+        position: field.position + 2,
+        visible: field.visible,
+        options: field.options,
+      })),
+      presentationField("assignee", "Responsable", "person", 100),
+      presentationField("start", "Inicio", "date", 101),
+      presentationField("due", "Vence", "date", 102),
+      presentationField("progress", "Progreso", "number", 103),
+      presentationField("blocked_reason", "Bloqueo", "text", 104),
+    ],
+    views: [
+      { id: "dashboard", fields: ["title", "status", "category", "assignee", "due", "progress"] },
+      { id: "list", fields: ["title", "status", "category", "assignee", "due"] },
+      { id: "board", fields: ["title", "status", "category", "assignee", "due"], groupBy: "status" },
+      { id: "table", fields: ["title", "status", "category", "assignee", "due", "progress"] },
+      { id: "calendar", fields: ["title", "status", "assignee", "due"], dateField: "due" },
+      { id: "detail", fields: ["publicId", "status", "category", "assignee", "start", "due", "progress", "blocked_reason"] },
+    ],
+    defaultView: "dashboard",
+  };
+}
+
+function presentationField(
+  key: string,
+  label: string,
+  format: TlozDocumentDefinition["fields"][number]["format"],
+  position: number,
+  options?: TlozDocumentDefinition["fields"][number]["options"],
+): TlozDocumentDefinition["fields"][number] {
+  return { key, label, format, position, visible: true, ...(options ? { options } : {}) };
 }
 
 function inventoryPublicId(values: Map<string, string>, itemId: string) {
