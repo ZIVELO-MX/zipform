@@ -18,7 +18,14 @@ import { TlozDocumentError } from "../document-errors";
 const documentInclude = {
   project: {
     include: {
-      projectDocument: true,
+      projectDocument: {
+        include: {
+          fieldDefinitions: {
+            where: { retiredAt: null },
+            orderBy: { position: "asc" as const },
+          },
+        },
+      },
     },
   },
   projectDocument: {
@@ -233,6 +240,8 @@ export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocume
       if (!current.sourceType || !current.sourceId) {
         throw new TlozDocumentError("DOCUMENT_INVALID", "Los Projects de sistema no se pueden eliminar.");
       }
+      const sourceType = current.sourceType;
+      const sourceId = current.sourceId;
       assertRevision(current.revision, expectedRevision);
 
       await prisma.$transaction(async (tx) => {
@@ -241,31 +250,31 @@ export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocume
           data: { revision: { increment: 1 } },
         });
         if (claimed.count !== 1) throw revisionConflict(expectedRevision);
-        if (current.sourceType === "project") {
+        if (sourceType === "project") {
           const children = await tx.tlozDocument.count({ where: { projectId: current.id } });
           if (children > 0) {
             throw new TlozDocumentError("DOCUMENT_INVALID", "El Project conserva documentos y no se puede eliminar.");
           }
-          await tx.tlozResource.deleteMany({ where: { projectId: current.sourceId } });
-          await tx.tlozProject.delete({ where: { id: current.sourceId } });
-        } else if (current.sourceType === "mission") {
-          await tx.tlozUserMissionState.deleteMany({ where: { missionId: current.sourceId } });
-          await tx.tlozResource.deleteMany({ where: { missionId: current.sourceId } });
-          await tx.tlozChecklistItem.deleteMany({ where: { missionId: current.sourceId } });
-          await tx.tlozMissionQuestItem.deleteMany({ where: { missionId: current.sourceId } });
+          await tx.tlozResource.deleteMany({ where: { projectId: sourceId } });
+          await tx.tlozProject.delete({ where: { id: sourceId } });
+        } else if (sourceType === "mission") {
+          await tx.tlozUserMissionState.deleteMany({ where: { missionId: sourceId } });
+          await tx.tlozResource.deleteMany({ where: { missionId: sourceId } });
+          await tx.tlozChecklistItem.deleteMany({ where: { missionId: sourceId } });
+          await tx.tlozMissionQuestItem.deleteMany({ where: { missionId: sourceId } });
           await tx.tlozMissionDependency.deleteMany({
             where: {
               OR: [
-                { missionId: current.sourceId },
-                { dependsOnMissionId: current.sourceId },
+                { missionId: sourceId },
+                { dependsOnMissionId: sourceId },
               ],
             },
           });
-          await tx.tlozMission.delete({ where: { id: current.sourceId } });
+          await tx.tlozMission.delete({ where: { id: sourceId } });
         } else {
-          await tx.tlozResource.deleteMany({ where: { questItemId: current.sourceId } });
-          await tx.tlozMissionQuestItem.deleteMany({ where: { questItemId: current.sourceId } });
-          await tx.tlozQuestItem.delete({ where: { id: current.sourceId } });
+          await tx.tlozResource.deleteMany({ where: { questItemId: sourceId } });
+          await tx.tlozMissionQuestItem.deleteMany({ where: { questItemId: sourceId } });
+          await tx.tlozQuestItem.delete({ where: { id: sourceId } });
         }
       });
     },
