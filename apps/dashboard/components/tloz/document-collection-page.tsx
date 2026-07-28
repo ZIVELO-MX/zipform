@@ -27,16 +27,21 @@ export async function DocumentCollectionPage({
     getTlozUsers(),
   ]);
   if (!definition || definition.kind !== kind) notFound();
-  const collectionViews = definition.views
-    .map((view) => view.id)
-    .filter((view): view is TlozView => view !== "detail");
+  const configuredViews = new Set(definition.views.map((view) => view.id));
+  const collectionViews: TlozView[] = (["list", "table"] satisfies TlozView[])
+    .filter((view) => configuredViews.has(view));
+  const defaultView = collectionViews.includes(definition.defaultView as TlozView)
+    ? definition.defaultView as TlozView
+    : collectionViews.includes("table")
+      ? "table"
+      : "list";
 
   return (
     <TlozPageShell
       title={title}
       breadcrumb={["Lobby", title]}
       supportedViews={collectionViews}
-      defaultView={definition.defaultView as TlozView}
+      defaultView={defaultView}
       missionControls={false}
       inventoryControls={kind === "inventory"}
       createKind={createKind}

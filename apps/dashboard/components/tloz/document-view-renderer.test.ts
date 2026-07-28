@@ -4,6 +4,7 @@ import type {
 } from "@tloz/types";
 import { describe, expect, it } from "vitest";
 import {
+  documentToMissionView,
   documentValue,
   resolveVisibleDocumentFields,
 } from "./document-view-model";
@@ -45,6 +46,42 @@ describe("document view model", () => {
     };
 
     expect(documentValue(project, "mission_count")).toBe(12);
+  });
+
+  it("adapts Projects and Inventory to the Mission view contract", () => {
+    const project = {
+      ...document("project-tloz", {
+        status: "active",
+        owner: "user-1",
+        color: "#D72228",
+        icon: "FolderKanban",
+      }),
+      kind: "project" as const,
+    };
+    const record = documentToMissionView(project, [{
+      id: "user-1",
+      name: "Zelda",
+      username: "zelda",
+      email: "zelda@example.com",
+      role: "Platform Owner",
+      type: "human",
+      avatarUrl: "",
+      theme: "system",
+    }]);
+
+    expect(record).toMatchObject({
+      displayId: "project-tloz",
+      title: "Item project-tloz",
+      status: "active",
+      owner: { name: "Zelda" },
+      presentation: {
+        typeLabel: "Project",
+        typeTone: "#D72228",
+        icon: "FolderKanban",
+      },
+    });
+    expect(record.dependencies).toEqual([]);
+    expect(record.requiredQuestItems).toEqual([]);
   });
 });
 

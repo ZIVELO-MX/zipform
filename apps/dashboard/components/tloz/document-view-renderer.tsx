@@ -8,7 +8,7 @@ import type {
   UserProfile,
 } from "@tloz/types";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, Button, Input, SlideOver, toast } from "@tloz/ui";
-import { ArrowUpRight, List, Table } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -22,20 +22,22 @@ import {
 } from "../../app/tloz/actions";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { inventoryItemHref } from "../../lib/tloz-routes";
-import { EntityList, EntityTable, type EntityColumn } from "./entity-views";
-import { documentValue, resolveVisibleDocumentFields } from "./document-view-model";
+import { documentValue, documentToMissionView } from "./document-view-model";
 import { MarkdownEditor } from "./markdown-editor";
 import { ProjectContractEditor } from "./project-contract-editor";
 import { resolveMissionIcon } from "./tloz-utils";
 import { useTlozViewState } from "./tloz-view-state";
 import type { TlozMissionDetail } from "../../lib/tloz-data";
 import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
+import type { TlozMissionRecord } from "../../lib/tloz-data";
+import { MissionList, MissionTable, type MissionViewRecord } from "./mission-views";
 
 type DocumentViewRendererProps = {
   documents: TlozDocument[];
   definition: TlozDocumentDefinition;
   users: UserProfile[];
   fallback?: React.ReactNode;
+  missionRecords?: TlozMissionRecord[];
 };
 
 type DocumentUser = Pick<UserProfile, "id" | "name">;
@@ -45,35 +47,17 @@ export function DocumentViewRenderer({
   definition,
   users,
   fallback,
+  missionRecords,
 }: DocumentViewRendererProps) {
-  const { state, setState } = useTlozViewState();
+  const { state } = useTlozViewState();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<TlozDocument | null>(null);
-  const view = definition.views.find((candidate) => candidate.id === state.view)
-    ?? definition.views.find((candidate) => candidate.id === definition.defaultView)
-    ?? definition.views[0];
-  const fieldsByKey = useMemo(
-    () => new Map(definition.fields.map((field) => [field.key, field])),
-    [definition.fields],
+  const displayRecords = useMemo<MissionViewRecord[]>(
+    () => missionRecords ?? documents.map((document) => documentToMissionView(document, users)),
+    [documents, missionRecords, users],
   );
-  const visibleFields = resolveVisibleDocumentFields(
-    documents,
-    view?.fields ?? [],
-    fieldsByKey,
-  );
-  const usersById = useMemo(
-    () => new Map(users.map((user) => [user.id, user])),
-    [users],
-  );
-  const columns: EntityColumn<TlozDocument>[] = visibleFields.map((field) => ({
-    id: field.key,
-    label: field.label,
-    align: field.format === "date" || field.format === "number" ? "right" : "left",
-    render: (document) => field.key === "title"
-      ? <DocumentName document={document} />
-      : <DocumentValue document={document} field={field} usersById={usersById} />,
-  }));
+  const statusOptions = definition.fields.find((field) => field.key === "status")?.options ?? [];
 
   function openDocument(document: TlozDocument) {
     const href = documentHref(document);
@@ -81,45 +65,22 @@ export function DocumentViewRenderer({
     else setSelected(document);
   }
 
+  function openRecord(record: MissionViewRecord) {
+    const document = documents.find((candidate) => (
+      candidate.id === record.id || candidate.source?.id === record.id
+    ));
+    if (document) openDocument(document);
+  }
+
   if (state.view !== "list" && state.view !== "table" && fallback) return fallback;
 
-  const secondaryField = visibleFields.find((field) => field.key !== "title");
   return (
     <>
       <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
-        <DocumentCollectionToolbar
-          kind={definition.kind}
-          count={documents.length}
-          activeView={state.view === "table" ? "table" : "list"}
-          onViewChange={(view) => setState({ view })}
-        />
         {state.view === "list" ? (
-          <EntityList
-            title={definition.kind === "project" ? "Projects" : definition.kind === "mission" ? "Missions" : "Inventory"}
-            tone={definition.kind === "project" ? "#3A47B5" : definition.kind === "mission" ? "#D72228" : "#7A5A12"}
-            items={documents}
-            onSelect={openDocument}
-            render={(document) => (
-              <>
-                <DocumentName document={document} />
-                {secondaryField ? (
-                  <span className="ml-auto">
-                    <DocumentValue
-                      document={document}
-                      field={secondaryField}
-                      usersById={usersById}
-                    />
-                  </span>
-                ) : null}
-              </>
-            )}
-          />
+          <MissionList missions={displayRecords} grouping={state.grouping} statusOptions={statusOptions} onSelect={openRecord} />
         ) : (
-          <EntityTable
-            items={documents}
-            columns={columns}
-            onSelect={openDocument}
-          />
+          <MissionTable missions={displayRecords} statusOptions={statusOptions} onSelect={openRecord} />
         )}
       </div>
       <SlideOver
@@ -141,44 +102,6 @@ export function DocumentViewRenderer({
         ) : null}
       </SlideOver>
     </>
-  );
-}
-
-function DocumentCollectionToolbar({
-  kind,
-  count,
-  activeView,
-  onViewChange,
-}: {
-  kind: TlozDocumentDefinition["kind"];
-  count: number;
-  activeView: "list" | "table";
-  onViewChange: (view: "list" | "table") => void;
-}) {
-  const label = kind === "project" ? "Todos los proyectos" : kind === "mission" ? "Todas las misiones" : "Todo el inventario";
-  return (
-    <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-1 md:px-0">
-      <span className="text-xs font-semibold text-carbon/60">
-        {label} <span className="font-mono text-[11px] text-carbon/40">({count})</span>
-      </span>
-      <div className="inline-flex rounded-lg border border-carbon/10 bg-white p-0.5" aria-label="Cambiar vista">
-        {(["list", "table"] as const).map((view) => {
-          const Icon = view === "list" ? List : Table;
-          return (
-            <button
-              key={view}
-              type="button"
-              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold ${activeView === view ? "bg-carbon/10 text-carbon" : "text-carbon/50 hover:bg-carbon/5"}`}
-              aria-pressed={activeView === view}
-              onClick={() => onViewChange(view)}
-            >
-              <Icon size={13} aria-hidden="true" />
-              {view === "list" ? "Lista" : "Tabla"}
-            </button>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
@@ -452,35 +375,6 @@ function DocumentRecordDetail({
   );
 }
 
-function DocumentName({ document }: { document: TlozDocument }) {
-  const Icon = resolveMissionIcon(
-    typeof document.properties.icon === "string"
-      ? document.properties.icon
-      : document.kind === "inventory"
-        ? "PackageOpen"
-        : document.kind === "mission"
-          ? "Sword"
-          : "FolderKanban",
-  );
-  const tone = typeof document.properties.color === "string"
-    ? document.properties.color
-    : document.kind === "inventory"
-      ? "#7A5A12"
-      : document.kind === "mission"
-        ? "#D72228"
-        : "#3A47B5";
-  return (
-    <span className="flex min-w-0 flex-1 items-center gap-2.5 font-semibold text-carbon">
-      <span
-        className="grid size-7 shrink-0 place-items-center rounded-lg [&_svg]:size-3.5"
-        style={{ background: `${tone}18`, color: tone }}
-      >
-        <Icon aria-hidden="true" />
-      </span>
-      <span className="truncate">{document.title}</span>
-    </span>
-  );
-}
 
 function DocumentValue({
   document,

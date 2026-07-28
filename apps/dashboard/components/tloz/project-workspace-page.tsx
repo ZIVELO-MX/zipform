@@ -68,6 +68,7 @@ export async function ProjectWorkspacePage({ projectSlug }: { projectSlug: strin
         documents={missionDocuments.data}
         definition={documentDefinition}
         users={users}
+        missionRecords={missions}
         fallback={(
           <TlozViewRenderer
             summary={projectSummary}

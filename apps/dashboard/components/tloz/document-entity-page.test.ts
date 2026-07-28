@@ -8,6 +8,7 @@ const inventoryRoute = readFileSync(new URL("../../app/inventory/[inventoryId]/p
 const missionPage = readFileSync(new URL("./mission-detail-page.tsx", import.meta.url), "utf8");
 const systemDetail = readFileSync(new URL("./system-project-detail.tsx", import.meta.url), "utf8");
 const projectWorkspace = readFileSync(new URL("./project-workspace-page.tsx", import.meta.url), "utf8");
+const collectionPage = readFileSync(new URL("./document-collection-page.tsx", import.meta.url), "utf8");
 
 describe("document entity routes", () => {
   it("routes project and inventory documents through the agnostic detail view", () => {
@@ -31,5 +32,12 @@ describe("document entity routes", () => {
   it("renders project missions through the document collection filtered by parent", () => {
     expect(projectWorkspace).toContain('getTlozDocuments("mission", projectDocument.id)');
     expect(projectWorkspace).toContain("<DocumentViewRenderer");
+  });
+
+  it("uses Mission list and table UI without a duplicate document toolbar", () => {
+    expect(renderer).toContain("<MissionList");
+    expect(renderer).toContain("<MissionTable");
+    expect(renderer).not.toContain("DocumentCollectionToolbar");
+    expect(collectionPage).toContain('(["list", "table"] satisfies TlozView[])');
   });
 });
