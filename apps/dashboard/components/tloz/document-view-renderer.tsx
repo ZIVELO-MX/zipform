@@ -98,7 +98,6 @@ export function DocumentViewRenderer({
             items={documents}
             columns={columns}
             onSelect={openDocument}
-            minWidth={Math.max(680, columns.length * 150)}
           />
         )}
       </div>
@@ -213,22 +212,22 @@ export function DocumentDetailView({
         ) : null}
         {panel || (document.kind === "project" && document.projectSlug) ? (
           <div className="mt-4 flex flex-wrap gap-2">
-          {panel ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={documentHref(document)}>
-                Abrir detalle
-                <ArrowUpRight aria-hidden="true" />
-              </Link>
-            </Button>
-          ) : null}
-          {document.kind === "project" && document.projectSlug ? (
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/${document.projectSlug}`}>
-                Abrir workspace
-                <ArrowUpRight aria-hidden="true" />
-              </Link>
-            </Button>
-          ) : null}
+            {panel ? (
+              <Button asChild variant="outline" size="sm">
+                <Link href={documentHref(document)}>
+                  Abrir detalle
+                  <ArrowUpRight aria-hidden="true" />
+                </Link>
+              </Button>
+            ) : null}
+            {document.kind === "project" && document.projectSlug ? (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/${document.projectSlug}`}>
+                  Abrir workspace
+                  <ArrowUpRight aria-hidden="true" />
+                </Link>
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </header>
