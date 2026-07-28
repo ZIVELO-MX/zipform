@@ -34,4 +34,4 @@ pnpm tloz:api /api/v1/projects GET
 pnpm tloz:api /api/v1/missions/<id>/status PATCH --data-file /tmp/status.json
 ```
 
-El wrapper fija `https://tloz.zivelo.dev`, toma `TLOZ_TOKEN` del entorno y no lo imprime. `ZIPFORM_TOKEN` se acepta durante una versión de compatibilidad. Úsalo para datos actuales y verificaciones de misiones; el servidor local no es evidencia de producción.
+El wrapper fija `https://zipform.zivelo.dev`, toma `TLOZ_TOKEN` del entorno y no lo imprime. `ZIPFORM_TOKEN` se acepta durante una versión de compatibilidad. Úsalo para datos actuales y verificaciones de misiones; el servidor local no es evidencia de producción.

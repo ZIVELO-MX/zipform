@@ -1,4 +1,4 @@
-const DEFAULT_URL = "https://tloz.zivelo.dev";
+const DEFAULT_URL = "https://zipform.zivelo.dev";
 const DEFAULT_MISSION_ID = "620ac6cc-60c4-43a3-b227-1b384e7311fb";
 
 export function percentile(values, rank = 0.95) {

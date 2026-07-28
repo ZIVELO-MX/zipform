@@ -5,7 +5,7 @@ description: Consult, create, review, correct, document, or update TLOZ missions
 
 # TLOZ Mission and Project Operator
 
-Operate TLOZ data through the TLOZ Data API. Use `https://tloz.zivelo.dev` for current production data and mission mutations; use the explicitly configured local API only for contract rehearsal, read-only development, and performance tests. Prefer the computer-level `tloz-api` CLI so the same API wrapper works from any repository.
+Operate TLOZ data through the TLOZ Data API. Use `https://zipform.zivelo.dev` for current production data and mission mutations; use the explicitly configured local API only for contract rehearsal, read-only development, and performance tests. Prefer the computer-level `tloz-api` CLI so the same API wrapper works from any repository.
 
 ## Guardrails
 
@@ -37,11 +37,11 @@ The installer places it in `${HOME}/.local/bin/tloz-api`. If that directory is n
 ## Resolve a mission
 
 1. Select the API origin:
-   - For mission consultation, mutation, and final verification, use `https://tloz.zivelo.dev` and continue with the production token below.
+   - For mission consultation, mutation, and final verification, use `https://zipform.zivelo.dev` and continue with the production token below.
    - For local contract rehearsal or benchmarks, use `http://127.0.0.1:3100` with the key printed by `pnpm api:local`; local data is not evidence about production.
 2. Confirm `TLOZ_TOKEN` exists without printing it when the production origin is selected:
    - If neither token variable is set, do not abort. Inform the user that they need to export it: `export TLOZ_TOKEN="tloz_..."` in their terminal, then wait for confirmation before continuing.
-   - Validate with `curl -s -H "Authorization: Bearer $TLOZ_TOKEN" "https://tloz.zivelo.dev/api/v1/projects"`; if 401, report that the token is invalid or expired and ask the user to provide a valid one.
+   - Validate with `curl -s -H "Authorization: Bearer $TLOZ_TOKEN" "https://zipform.zivelo.dev/api/v1/projects"`; if 401, report that the token is invalid or expired and ask the user to provide a valid one.
 3. Call `GET /api/v1/users/me` and resolve the authenticated user before discovering work.
 4. If the user supplied a mission `displayId`, resolve that exact mission. Ownership priority must never replace an explicit identifier.
 5. If the user asked to choose or suggest work without a mission identifier:

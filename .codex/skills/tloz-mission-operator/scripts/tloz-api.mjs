@@ -2,7 +2,7 @@
 
 import { readFileSync } from "node:fs";
 
-export const PRODUCTION_ORIGIN = "https://tloz.zivelo.dev";
+export const PRODUCTION_ORIGIN = "https://zipform.zivelo.dev";
 const ALLOWED_METHODS = new Set(["GET", "POST", "PATCH", "PUT", "DELETE"]);
 
 export function parseArgs(args) {
