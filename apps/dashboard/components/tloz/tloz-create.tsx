@@ -4,17 +4,18 @@ import { createContext, useContext, useMemo, useState, useTransition } from "rea
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { Plus } from "lucide-react";
-import { Button, ColorPicker, DatePicker, EntityPicker, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, useOverlayToasterId, UserPicker, type IconPickerOption } from "@zipform/ui";
-import type { TlozProject, TlozQuestItem, UserProfile } from "@zipform/types";
+import { Button, ColorPicker, DatePicker, EntityPicker, IconPicker, Input, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, useOverlayToasterId, UserPicker, type IconPickerOption } from "@tloz/ui";
+import type { TlozDocumentScalar, TlozFieldDefinition, TlozProject, TlozQuestItem, UserProfile } from "@tloz/types";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
-import { TlozValidationError, validateMissionCreate, validateProjectCreate, validateQuestItemCreate, type TlozResourceInput } from "@zipform/data";
+import { TlozValidationError, validateMissionCreate, validateProjectCreate, validateQuestItemCreate, type TlozResourceInput } from "@tloz/data";
 import { createMission, createProject, createQuestItem } from "../../app/tloz/actions";
 import { resolveMissionIcon } from "./tloz-utils";
 import { TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
-import { buildCreateInput, splitCreateIds } from "./tloz-create-input";
+import { buildCreateInput, documentPropertyDefaults, splitCreateIds } from "./tloz-create-input";
 import { initialDraft } from "./tloz-create-defaults";
 import { AddDependency, AddResource } from "./mission-detail";
 import { MissionPropertyFields, type MissionPropertyValues } from "./mission-inline-editor";
+import { CreateDocumentPropertyInputs } from "./document-property-fields";
 
 export type TlozCreateKind = "mission" | "project" | "inventory";
 type CreateContextValue = { kind: TlozCreateKind; label: string; openCreate: () => void };
@@ -22,7 +23,7 @@ const CreateContext = createContext<CreateContextValue | null>(null);
 const kindLabel = { mission: "Mission", project: "Project", inventory: "Inventory item" } as const;
 const icons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
 
-export function TlozCreateProvider({ children, kind, projects, users, missions = [], questItems = [], fixedProjectId }: { children: React.ReactNode; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; fixedProjectId?: string }) {
+export function TlozCreateProvider({ children, kind, projects, users, missions = [], questItems = [], projectContracts = {}, fixedProjectId }: { children: React.ReactNode; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; projectContracts?: Record<string, TlozFieldDefinition[]>; fixedProjectId?: string }) {
   const router = useRouter();
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
@@ -31,13 +32,13 @@ export function TlozCreateProvider({ children, kind, projects, users, missions =
     label: kindLabel[kind],
     openCreate: () => {
       if (isMobile) {
-        router.push(`/tloz/new?kind=${kind}`);
+        router.push(`/new?kind=${kind}`);
       } else {
         setOpen(true);
       }
     },
   }), [isMobile, kind, router]);
-  return <CreateContext.Provider value={value}>{children}<CreateEntitySlideOver open={open} onOpenChange={setOpen} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} fixedProjectId={fixedProjectId} /></CreateContext.Provider>;
+  return <CreateContext.Provider value={value}>{children}<CreateEntitySlideOver open={open} onOpenChange={setOpen} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={fixedProjectId} /></CreateContext.Provider>;
 }
 
 export function useTlozCreate() {
@@ -53,19 +54,57 @@ export function CreateNewEntityButton({ variant = "row" }: { variant?: "row" | "
     : <button type="button" className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-carbon/15 bg-white/60 text-[13px] font-semibold text-carbon/55 transition-colors hover:border-zivelo/30 hover:text-zivelo" onClick={openCreate}><Plus className="size-3.5" />Crear nuevo {label}</button>;
 }
 
-export function CreateForm({ kind, projects, users, missions = [], questItems = [], fixedProjectId, onDone }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; fixedProjectId?: string; onDone?: () => void }) {
+export function CreateForm({ kind, projects, users, missions = [], questItems = [], projectContracts = {}, fixedProjectId, onDone }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; projectContracts?: Record<string, TlozFieldDefinition[]>; fixedProjectId?: string; onDone?: () => void }) {
   const router = useRouter();
   const toasterId = useOverlayToasterId();
   const [pending, startTransition] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
   const defaultOwnerId = users.find((user) => user.username === "zibot")?.id ?? users[0]?.id ?? "";
   const defaultProjectId = fixedProjectId ?? projects.find((project) => project.slug === "zivelo")?.id ?? projects[0]?.id ?? "";
-  const [draft, setDraft] = useState<Record<string, string>>(() => initialDraft(kind, defaultOwnerId, defaultProjectId, today));
+  function freshDraft() {
+    const next = initialDraft(kind, defaultOwnerId, defaultProjectId, today);
+    if (kind !== "mission") return next;
+    const contract = projectContracts[defaultProjectId] ?? [];
+    const status = contract.find((item) => item.key === "status")?.defaultValue;
+    const category = contract.find((item) => item.key === "category")?.defaultValue;
+    return {
+      ...next,
+      ...(typeof status === "string" ? { status } : {}),
+      ...(typeof category === "string" ? { type: category } : {}),
+    };
+  }
+  const [draft, setDraft] = useState<Record<string, string>>(freshDraft);
+  const [documentProperties, setDocumentProperties] = useState<Record<string, TlozDocumentScalar>>(
+    () => documentPropertyDefaults(projectContracts[defaultProjectId] ?? []),
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [resources, setResources] = useState<TlozResourceInput[]>([]);
+  const missionContract = projectContracts[draft.projectId] ?? [];
   const formId = `create-${kind}-form`;
   function field(name: string, value: string) { setDraft((current) => ({ ...current, [name]: value })); setErrors((current) => ({ ...current, [name]: "", ...(name === "name" ? { title: "" } : {}) })); }
-  function reset() { setDraft(initialDraft(kind, defaultOwnerId, defaultProjectId, today)); setErrors({}); setResources([]); }
+  function missionField(name: string, value: string) {
+    if (name !== "projectId") {
+      field(name, value);
+      return;
+    }
+    const nextContract = projectContracts[value] ?? [];
+    const status = nextContract.find((item) => item.key === "status")?.defaultValue;
+    const category = nextContract.find((item) => item.key === "category")?.defaultValue;
+    setDraft((current) => ({
+      ...current,
+      projectId: value,
+      ...(typeof status === "string" ? { status } : {}),
+      ...(typeof category === "string" ? { type: category } : {}),
+    }));
+    setDocumentProperties(documentPropertyDefaults(nextContract));
+    setErrors((current) => ({ ...current, projectId: "" }));
+  }
+  function reset() {
+    setDraft(freshDraft());
+    setDocumentProperties(documentPropertyDefaults(projectContracts[defaultProjectId] ?? []));
+    setErrors({});
+    setResources([]);
+  }
   function submit(event: React.FormEvent) {
     event.preventDefault();
     try {
@@ -76,7 +115,7 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
       startTransition(async () => {
         const toastId = toast.loading(`Creando ${kindLabel[kind]}…`, { toasterId });
         try {
-          if (kind === "mission") await createMission(input as never);
+          if (kind === "mission") await createMission(input as never, documentProperties);
           else if (kind === "project") await createProject(input as never);
           else await createQuestItem(input as never);
           toast.success(`${kindLabel[kind]} creado`, { id: toastId, toasterId }); reset(); onDone?.(); router.refresh();
@@ -87,22 +126,23 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
   return (
     <form id={formId} onSubmit={submit} className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6" noValidate>
       <div><h3 className="mb-1 text-xl font-bold text-carbon">Nuevo {kindLabel[kind]}</h3><p className="m-0 text-sm text-carbon/55">Completa los datos requeridos antes de guardar.</p></div>
-      {kind === "mission" ? <div className="flex items-end gap-2"><IconPicker icons={icons} value={draft.icon} label="Icono de misión" recentStorageKey="zipform-tloz-recent-icons" onValueChange={(icon) => field("icon", icon)} iconOnly className="size-10 shrink-0 justify-center" /><div className="min-w-0 flex-1"><FormField label="Título" error={errors.title} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField></div></div> : <FormField label="Nombre" error={errors.name} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField>}
+      {kind === "mission" ? <div className="flex items-end gap-2"><IconPicker icons={icons} value={draft.icon} label="Icono de misión" recentStorageKey="tloz-recent-icons" onValueChange={(icon) => field("icon", icon)} iconOnly className="size-10 shrink-0 justify-center" /><div className="min-w-0 flex-1"><FormField label="Título" error={errors.title} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField></div></div> : <FormField label="Nombre" error={errors.name} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField>}
       <FormField label={kind === "mission" ? "Descripción" : "Descripción"} error={errors.description}><textarea className="min-h-24 w-full rounded-xl border border-carbon/15 bg-white px-3 py-2 text-sm outline-none transition focus:border-zivelo/50 focus:ring-2 focus:ring-zivelo/10" value={draft.description} rows={4} maxLength={kind === "mission" ? 280 : 5000} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => field("description", event.target.value)} /></FormField>
       {kind === "mission" ? <FormField label="Detalle" error={errors.descriptionDetail}><textarea className="min-h-40 w-full rounded-xl border border-carbon/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] outline-none transition focus:border-zivelo/50 focus:ring-2 focus:ring-zivelo/10" value={draft.descriptionDetail} rows={8} maxLength={20000} placeholder="Markdown, incluyendo - [ ] tasks…" onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => field("descriptionDetail", event.target.value)} /></FormField> : null}
       {kind !== "mission" ? <div className="grid gap-4 sm:grid-cols-2"><FormField label="Icono" error={errors.icon} required><IconPicker icons={icons} value={draft.icon} onValueChange={(icon) => field("icon", icon)} /></FormField>
         {kind === "inventory" ? <FormField label="Categoría"><Select value={draft.category} onValueChange={(value) => field("category", value)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{[["tool","Herramienta"],["access","Acceso"],["asset","Activo"],["document","Documento"],["other","Otro"]].map(([id,label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select></FormField> : kind === "project" ? <FormField label="Color" error={errors.color}><ColorPicker value={draft.color} onValueChange={(color) => field("color", color)} /></FormField> : null}
       </div> : null}
-      {kind === "mission" ? <CreateSection title="Propiedades"><MissionPropertyFields layout="grid" values={{ status: draft.status as MissionPropertyValues["status"], type: draft.type as MissionPropertyValues["type"], ownerId: draft.ownerId, projectId: draft.projectId, startDate: draft.startDate, dueDate: draft.dueDate }} options={{ projects, users, episodes: [], missions }} onChange={(name, value) => field(name, value)} /></CreateSection> : <FormField label="Responsable" error={errors.ownerId} required={kind !== "inventory"}><UserPicker users={users} value={draft.ownerId || undefined} allowEmpty={kind === "inventory"} onValueChange={(ownerId) => field("ownerId", ownerId)} /></FormField>}
+      {kind === "mission" ? <CreateSection title="Propiedades"><MissionPropertyFields layout="grid" values={{ status: draft.status as MissionPropertyValues["status"], type: draft.type as MissionPropertyValues["type"], ownerId: draft.ownerId, projectId: draft.projectId, startDate: draft.startDate, dueDate: draft.dueDate }} options={{ projects, users, missions, contract: missionContract }} onChange={missionField} /></CreateSection> : <FormField label="Responsable" error={errors.ownerId} required={kind !== "inventory"}><UserPicker users={users} value={draft.ownerId || undefined} allowEmpty={kind === "inventory"} onValueChange={(ownerId) => field("ownerId", ownerId)} /></FormField>}
+      {kind === "mission" ? <CreateSection title="Campos del Project"><CreateDocumentPropertyInputs fields={missionContract} values={documentProperties} users={users} onChange={(key, value) => setDocumentProperties((current) => ({ ...current, [key]: value }))} /></CreateSection> : null}
       {kind === "mission" ? <MissionRelations draft={draft} field={field} missions={missions} questItems={questItems} resources={resources} setResources={setResources} /> : null}
       {kind !== "inventory" && kind !== "mission" ? <div className="grid gap-4 sm:grid-cols-2"><FormField label="Inicio" error={errors.startDate} required><DatePicker value={draft.startDate || undefined} label="Fecha de inicio" onValueChange={(value) => field("startDate", value ?? "")} /></FormField><FormField label="Vence" error={errors.dueDate}><DatePicker value={draft.dueDate || undefined} label="Fecha límite" onValueChange={(value) => field("dueDate", value ?? "")} /></FormField></div> : null}
     </form>
   );
 }
 
-function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, missions, questItems, fixedProjectId }: { open: boolean; onOpenChange: (open: boolean) => void; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions: TlozMissionRecord[]; questItems: TlozQuestItem[]; fixedProjectId?: string }) {
+function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, missions, questItems, projectContracts, fixedProjectId }: { open: boolean; onOpenChange: (open: boolean) => void; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions: TlozMissionRecord[]; questItems: TlozQuestItem[]; projectContracts: Record<string, TlozFieldDefinition[]>; fixedProjectId?: string }) {
   return <SlideOver open={open} title={`Crear ${kindLabel[kind]}`} onOpenChange={onOpenChange} footer={<><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button><Button type="submit" form={`create-${kind}-form`}>Guardar</Button></>}>
-    <CreateForm key={String(open)} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} fixedProjectId={fixedProjectId} onDone={() => onOpenChange(false)} />
+    <CreateForm key={String(open)} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={fixedProjectId} onDone={() => onOpenChange(false)} />
   </SlideOver>;
 }
 

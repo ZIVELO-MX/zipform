@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozQuestItem } from "@zipform/types";
+import type { TlozQuestItem } from "@tloz/types";
 import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 import { SystemEntitySlideOver } from "./system-project-detail";
 import { MissionSlideOver } from "./mission-slide-over";

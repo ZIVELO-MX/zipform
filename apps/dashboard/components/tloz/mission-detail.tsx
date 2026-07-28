@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ChevronDown, FileStack, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@zipform/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozAttachmentGroup, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@zipform/types";
+import type { TlozAttachmentGroup, TlozFieldOption, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@tloz/types";
 import {
   addMissionDependency,
   addMissionResource,
@@ -24,7 +24,8 @@ import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-rout
 import { appendTaskLine, updateTaskLine } from "./mission-document";
 import { MarkdownEditor } from "./markdown-editor";
 import { inferResourceIconId, isGithubUrl, RESOURCE_ICON_OPTIONS, resourceTypeLabel, resolveResourceIcon, resolveResourceImageUrl, resourceUsesFileId, TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
-import type { TlozResourceInput } from "@zipform/data";
+import type { TlozResourceInput } from "@tloz/data";
+import { DocumentPropertyFields } from "./document-property-fields";
 
 const missionIcons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
 const defaultMissionContentSections = ["description", "detail", "checklist"];
@@ -46,7 +47,7 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
   onNavigateQuestItem?: (questItemId: string) => void;
   variant?: "panel" | "full";
 }) {
-  const fullMissionHref = mission.project ? missionHref(mission.project, mission.displayId) : "/tloz";
+  const fullMissionHref = mission.project ? missionHref(mission.project, mission.displayId) : "/";
   const [current, setCurrent] = useState(mission);
   const [detailMarkdown, setDetailMarkdown] = useState(mission.descriptionDetail);
   const [descriptionDraft, setDescriptionDraft] = useState(mission.description);
@@ -64,6 +65,11 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
   const [isPending, startTransition] = useTransition();
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
+  const completionStatus = options.contract
+    ?.find((field) => field.key === "status")
+    ?.options.find((option) => option.role === "done")
+    ?.value ?? "completed";
+  const isCompleted = current.status === completionStatus;
   const checklistProgress = current.checklist.length ? Math.round((current.checklist.filter((item) => item.completed).length / current.checklist.length) * 100) : 0;
 
   useEffect(() => { setCurrent(mission); setDetailMarkdown(mission.descriptionDetail); setDescriptionDraft(mission.description); setTitleDraft(mission.title); }, [mission]);
@@ -180,9 +186,15 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
     setDeletingChecklist(null);
   }
 
-  const typeBadgeClass = current.type === "main_quest" ? "bg-[#FDECEC] text-[#B91C22]" : current.type === "side_quest" ? "bg-[#EEF2FF] text-[#2D6CDF]" : current.type === "farming_quest" ? "bg-[#E6F4EA] text-[#1E6B3C]" : "bg-[#F2EAFE] text-[#7A4ED9]";
-  const iconSurfaceClass = missionTypeSurfaceClass[current.type];
-  const statusBadgeClass = current.status === "now" ? "bg-[#E6F4EA] text-[#1E8E5A]" : current.status === "next" ? "bg-[#EEF2FF] text-[#2D6CDF]" : current.status === "later" ? "bg-[#F2EAFE] text-[#7A4ED9]" : "bg-[#FDECEC] text-[#B91C22]";
+  const categoryOption = options.contract
+    ?.find((field) => field.key === "category")
+    ?.options.find((option) => option.value === current.type);
+  const statusOption = options.contract
+    ?.find((field) => field.key === "status")
+    ?.options.find((option) => option.value === current.status);
+  const typeColor = categoryOption?.color ?? tone;
+  const statusColor = statusOption?.color ?? missionStatusTone[current.status];
+  const iconSurfaceClass = missionTypeSurfaceClass[current.type] ?? "bg-carbon/5 text-carbon";
 
   return (
     <article className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-[26px] md:py-7" aria-busy={isPending}>
@@ -201,12 +213,12 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
         <main className="min-w-0">
           <header>
             <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
-              {(() => { const TypeIcon = missionTypeIcon[current.type]; return <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold ${typeBadgeClass}`}><TypeIcon className="size-[13px]" aria-hidden="true" />{missionTypeLabel[current.type]}</span>; })()}
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold ${statusBadgeClass}`}><span className={`size-[7px] rounded-full bg-current ${current.status === "now" ? "animate-pulse" : ""}`} aria-hidden="true" />{missionStatusLabel[current.status]}</span>
+              {(() => { const TypeIcon = missionTypeIcon[current.type]; return <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold" style={{ backgroundColor: `${typeColor}18`, color: typeColor }}><TypeIcon className="size-[13px]" aria-hidden="true" />{categoryOption?.label ?? missionTypeLabel[current.type]}</span>; })()}
+              <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold" style={{ backgroundColor: `${statusColor}18`, color: statusColor }}><span className={`size-[7px] rounded-full bg-current ${statusOption?.role === "active" || (!statusOption && current.status === "now") ? "animate-pulse" : ""}`} aria-hidden="true" />{statusOption?.label ?? missionStatusLabel[current.status]}</span>
               <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.displayId}</span>
             </div>
             <div className="flex items-start gap-2.5">
-              <IconPicker icons={missionIcons} value={current.icon} color={tone} recentStorageKey="zipform-tloz-recent-icons" onValueChange={saveIcon} iconOnly className={`mt-0.5 size-8 shrink-0 justify-center rounded-lg border-0 p-0 shadow-none [&_svg]:size-[15px] ${iconSurfaceClass}`} />
+              <IconPicker icons={missionIcons} value={current.icon} color={tone} recentStorageKey="tloz-recent-icons" onValueChange={saveIcon} iconOnly className={`mt-0.5 size-8 shrink-0 justify-center rounded-lg border-0 p-0 shadow-none [&_svg]:size-[15px] ${iconSurfaceClass}`} />
               {editingTitle ? <Input autoFocus className="h-auto border border-[#1D1D1B]/15 bg-white px-2 py-0 text-[30px] font-bold leading-[1.12] tracking-[-0.025em] shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : <button type="button" className="max-w-full rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="m-0 text-balance text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-[#1D1D1B]">{current.title}</h1></button>}
             </div>
           </header>
@@ -278,15 +290,15 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
 
           <div className="flex flex-col gap-7">
             <RelationsSection title="Dependencias">
-              <MissionReferences missions={current.dependencies} project={current.project} onRemove={(id) => mutate("Quitando dependencia…", () => removeMissionDependency(current.id, id))} onNavigate={onNavigateMission} />
+              <MissionReferences missions={current.dependencies} project={current.project} statusOptions={options.contract?.find((field) => field.key === "status")?.options} onRemove={(id) => mutate("Quitando dependencia…", () => removeMissionDependency(current.id, id))} onNavigate={onNavigateMission} />
               <div className="flex flex-col gap-[9px]">{current.questItems.map((item) => <QuestReference key={item.id} item={item} required={current.missionQuestItems.find((link) => link.questItemId === item.id)?.required ?? false} onNavigate={onNavigateQuestItem} onRequiredChange={(checked) => mutate("Actualizando requisito…", () => setMissionQuestItem(current.id, item.id, checked))} onRemove={() => mutate("Quitando item…", () => removeMissionQuestItem(current.id, item.id))} />)}</div>
               <AddDependency
-                missions={options.missions.filter((item) => Boolean(current.projectId) && item.projectId === current.projectId && item.id !== current.id && !current.dependencies.some((dependency) => dependency.id === item.id)).map((item) => ({ id: item.id, name: item.title, iconComponent: resolveMissionIcon(item.icon), iconColor: missionTypeTone[item.type], iconBackground: missionTypeBackground[item.type] }))}
+                missions={options.missions.filter((item) => Boolean(current.projectId) && item.projectId === current.projectId && item.id !== current.id && !current.dependencies.some((dependency) => dependency.id === item.id)).map((item) => ({ id: item.id, name: item.title, iconComponent: resolveMissionIcon(item.icon), iconColor: missionTypeTone[item.type], iconBackground: missionTypeBackground[item.type] ?? "#F1F0EE" }))}
                 questItems={options.questItems.filter((item) => !current.questItems.some((linked) => linked.id === item.id)).map((item) => ({ id: item.id, name: item.name, iconComponent: resolveMissionIcon(item.icon), iconColor: "#7A5A12", iconBackground: "#FFF4DE" }))}
                 onAddMission={(id) => mutate("Agregando dependencia…", () => addMissionDependency(current.id, id))}
                 onAddQuestItem={(id) => mutate("Agregando item…", () => setMissionQuestItem(current.id, id, false))}
               />
-              {current.requiredBy.length ? <><Separator /><h3 className="m-0 text-xs font-semibold text-carbon/45">Requerida por</h3><MissionReferences missions={current.requiredBy} project={current.project} onNavigate={onNavigateMission} /></> : null}
+              {current.requiredBy.length ? <><Separator /><h3 className="m-0 text-xs font-semibold text-carbon/45">Requerida por</h3><MissionReferences missions={current.requiredBy} project={current.project} statusOptions={options.contract?.find((field) => field.key === "status")?.options} onNavigate={onNavigateMission} /></> : null}
             </RelationsSection>
           </div>
 
@@ -307,9 +319,9 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
               Abrir en página completa
             </Link>
           ) : null}
-          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} /></div></section>
+          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} users={options.users} /></div></section>
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]"><ActivityItem label={`Estado: ${missionStatusLabel[current.status]}`} date={current.updatedAt} tone={missionStatusTone[current.status]} /><ActivityItem label="Misión actualizada" date={current.updatedAt} tone={tone} /><ActivityItem label="Misión creada" date={current.createdAt} /></div></section>
-          <Button className="min-h-11 rounded-xl" disabled={current.status === "completed"} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, "completed")) }))}><Check data-icon="inline-start" aria-hidden="true" />{current.status === "completed" ? "Misión completada" : "Marcar como completada"}</Button>
+          <Button className="min-h-11 rounded-xl" disabled={isCompleted} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button>
         </aside>
       </div>
     </article>
@@ -362,12 +374,14 @@ function QuestReference({ item, required, onNavigate, onRequiredChange, onRemove
   </div>;
 }
 
-function MissionReferences({ missions, project, onRemove, onNavigate }: { missions: Array<{ id: string; displayId: string; title: string; status: TlozMissionRecord["status"]; icon: string; type: TlozMissionRecord["type"] }>; project?: Pick<TlozProject, "name" | "slug">; onRemove?: (id: string) => void; onNavigate?: (id: string) => void }) {
+function MissionReferences({ missions, project, statusOptions = [], onRemove, onNavigate }: { missions: Array<{ id: string; displayId: string; title: string; status: TlozMissionRecord["status"]; completedAt?: string; icon: string; type: TlozMissionRecord["type"] }>; project?: Pick<TlozProject, "name" | "slug">; statusOptions?: TlozFieldOption[]; onRemove?: (id: string) => void; onNavigate?: (id: string) => void }) {
   if (!missions.length) return null;
   return <div className="flex flex-col gap-[9px]">{missions.map((item) => {
-    const Icon = resolveMissionIcon(item.icon); const itemTone = missionTypeTone[item.type]; const href = project ? missionHref(project, item.displayId) : "/tloz";
-    const content = <><span className="grid size-7 shrink-0 place-items-center rounded-lg [&_svg]:size-3" style={{ color: itemTone, backgroundColor: missionTypeBackground[item.type] }}><Icon aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold text-[#1D1D1B]">{item.title}</span><span className="mt-px block text-[11.5px] text-[#9A9A98]">Mission · {missionStatusLabel[item.status]}</span></span></>;
-    return <div key={item.id} className="group/mission flex min-h-[54px] items-center gap-2 rounded-xl border border-[#1D1D1B]/10 bg-white px-3.5 py-3 transition-colors hover:border-[#D72228]/25">{onNavigate ? <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onNavigate(item.id)}>{content}</button> : <Link className="flex min-w-0 flex-1 items-center gap-3 text-inherit" href={href}>{content}</Link>}{item.status === "completed" ? <span className="rounded-full bg-[#FDECEC] px-[9px] py-1 text-[11px] font-bold text-[#B91C22]">Completada</span> : null}<OpenReferenceButton label={`Abrir ${item.title}`} href={href} onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/mission:opacity-100 focus:opacity-100" /><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md opacity-0 group-hover/mission:opacity-100 focus:opacity-100 [&_svg]:size-3" aria-label={`Acciones para ${item.title}`}><MoreHorizontal aria-hidden="true" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>{onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir Mission</DropdownMenuItem> : <DropdownMenuItem asChild><Link href={href}><PanelRightOpen aria-hidden="true" />Abrir Mission</Link></DropdownMenuItem>}{onRemove ? <><DropdownMenuSeparator /><DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={() => onRemove(item.id)}><X aria-hidden="true" />Eliminar dependencia</DropdownMenuItem></> : null}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>;
+    const Icon = resolveMissionIcon(item.icon); const itemTone = missionTypeTone[item.type]; const href = project ? missionHref(project, item.displayId) : "/";
+    const status = statusOptions.find((option) => option.value === item.status);
+    const completed = status?.role === "done" || (!status && (item.completedAt || item.status === "completed"));
+    const content = <><span className="grid size-7 shrink-0 place-items-center rounded-lg [&_svg]:size-3" style={{ color: itemTone, backgroundColor: missionTypeBackground[item.type] ?? "#F1F0EE" }}><Icon aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold text-[#1D1D1B]">{item.title}</span><span className="mt-px block text-[11.5px] text-[#9A9A98]">Mission · {status?.label ?? missionStatusLabel[item.status]}</span></span></>;
+    return <div key={item.id} className="group/mission flex min-h-[54px] items-center gap-2 rounded-xl border border-[#1D1D1B]/10 bg-white px-3.5 py-3 transition-colors hover:border-[#D72228]/25">{onNavigate ? <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => onNavigate(item.id)}>{content}</button> : <Link className="flex min-w-0 flex-1 items-center gap-3 text-inherit" href={href}>{content}</Link>}{completed ? <span className="rounded-full bg-[#FDECEC] px-[9px] py-1 text-[11px] font-bold text-[#B91C22]">Completada</span> : null}<OpenReferenceButton label={`Abrir ${item.title}`} href={href} onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/mission:opacity-100 focus:opacity-100" /><DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md opacity-0 group-hover/mission:opacity-100 focus:opacity-100 [&_svg]:size-3" aria-label={`Acciones para ${item.title}`}><MoreHorizontal aria-hidden="true" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>{onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir Mission</DropdownMenuItem> : <DropdownMenuItem asChild><Link href={href}><PanelRightOpen aria-hidden="true" />Abrir Mission</Link></DropdownMenuItem>}{onRemove ? <><DropdownMenuSeparator /><DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={() => onRemove(item.id)}><X aria-hidden="true" />Eliminar dependencia</DropdownMenuItem></> : null}</DropdownMenuGroup></DropdownMenuContent></DropdownMenu></div>;
   })}</div>;
 }
 
@@ -434,6 +448,6 @@ function IconButton({ label, onClick, className }: { label: string; onClick: () 
 function EmptyText({ children }: { children: React.ReactNode }) { return <p className="m-0 text-sm text-carbon/45">{children}</p>; }
 function ActivityItem({ label, date, tone = "#9a9a98" }: { label: string; date: string; tone?: string }) { return <div className="flex gap-2.5"><span className="mt-1 size-2 shrink-0 rounded-full" style={{ backgroundColor: tone }} aria-hidden="true" /><span><strong className="block font-semibold text-carbon/75">{label}</strong><time className="font-mono text-[10.5px] text-carbon/40" dateTime={date}>{new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" }).format(new Date(date))}</time></span></div>; }
 
-const missionTypeBackground: Record<TlozMissionRecord["type"], string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
+const missionTypeBackground: Record<string, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
 const missionTypeSurfaceClass: Record<TlozMissionRecord["type"], string> = { main_quest: "bg-[#FDECEC] hover:bg-[#F9DDDE]", side_quest: "bg-[#EEF2FF] hover:bg-[#E1E8FF]", farming_quest: "bg-[#E6F4EA] hover:bg-[#D9EEDF]", exploration_quest: "bg-[#F2EAFE] hover:bg-[#E8DBFA]" };
 function snapshotOf(mission: TlozMissionDetail): EditableSnapshot { return { title: mission.title, description: mission.description, descriptionDetail: mission.descriptionDetail, icon: mission.icon }; }

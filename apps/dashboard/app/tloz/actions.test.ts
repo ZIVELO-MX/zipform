@@ -4,6 +4,11 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   revalidatePath: vi.fn(),
   getTlozMissionDetailWithAttachments: vi.fn(),
+  documents: {
+    get: vi.fn(),
+    update: vi.fn(),
+    replaceProjectContract: vi.fn(),
+  },
   tloz: {
     getMissionDetail: vi.fn(),
     getMissions: vi.fn(),
@@ -19,8 +24,6 @@ const mocks = vi.hoisted(() => ({
     createQuestItem: vi.fn(),
     updateProject: vi.fn(),
     updateQuestItem: vi.fn(),
-    createSeason: vi.fn(),
-    createEpisode: vi.fn(),
     saveMissionDocument: vi.fn(),
     addMissionDependency: vi.fn(),
     removeMissionDependency: vi.fn(),
@@ -39,17 +42,20 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../../auth", () => ({ auth: mocks.auth }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-vi.mock("@zipform/data", () => ({ dataClient: { tloz: mocks.tloz } }));
+vi.mock("@tloz/data", () => ({
+  dataClient: { tloz: mocks.tloz, documents: mocks.documents },
+  validateDocumentProperties: vi.fn(),
+}));
 vi.mock("../../lib/tloz-data", () => ({
   getTlozMissionDetailWithAttachments: mocks.getTlozMissionDetailWithAttachments,
 }));
 
 import {
   createMission,
-  createSeason,
   deleteMission,
   getMissionCapabilities,
   getMissionDetailOptions,
+  patchMissionStatus,
   saveMissionDocument,
   updateMission,
 } from "./actions";
@@ -63,7 +69,7 @@ const publicOwner = {
   id: "developer-1",
   name: "Developer",
   username: "developer",
-  email: "developer@zipform.dev",
+  email: "developer@tloz.dev",
   role: "Full Stack Developer",
   type: "human",
   avatarUrl: "",
@@ -84,6 +90,7 @@ describe("TLOZ Server Action authorization", () => {
     mocks.tloz.getQuestItems.mockResolvedValue([]);
     mocks.tloz.getResources.mockResolvedValue([]);
     mocks.tloz.getUsers.mockResolvedValue([publicOwner]);
+    mocks.documents.get.mockResolvedValue(null);
     mocks.tloz.createMission.mockResolvedValue(mission);
     mocks.tloz.updateMission.mockResolvedValue(mission);
   });
@@ -116,6 +123,55 @@ describe("TLOZ Server Action authorization", () => {
     expect(mocks.tloz.createMission).not.toHaveBeenCalled();
   });
 
+  it("accepts only Mission values declared by the Project contract", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    mocks.documents.get.mockResolvedValue({
+      kind: "project",
+      contract: {
+        fields: [
+          { key: "status", options: [{ value: "in_progress" }] },
+          { key: "category", options: [{ value: "engineering" }] },
+        ],
+      },
+    });
+
+    await expect(createMission({
+      ...createInput,
+      status: "in_progress",
+      type: "engineering",
+    } as never)).resolves.toEqual(mission);
+    await expect(createMission({
+      ...createInput,
+      status: "unknown",
+      type: "engineering",
+    } as never)).rejects.toThrow("contrato");
+  });
+
+  it("persists custom Mission properties after validating the Project contract", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    mocks.documents.get
+      .mockResolvedValueOnce({
+        kind: "project",
+        contract: {
+          fields: [
+            { key: "status", options: [{ value: "later" }] },
+            { key: "category", options: [{ value: "side_quest" }] },
+            { key: "priority", options: [{ value: "high" }] },
+          ],
+        },
+      })
+      .mockResolvedValueOnce({ id: "document-1", revision: 1 });
+    mocks.documents.update.mockResolvedValue({ id: "document-1", revision: 2 });
+
+    await createMission(createInput as never, { priority: "high" });
+
+    expect(mocks.documents.update).toHaveBeenCalledWith(
+      "document-1",
+      { properties: { priority: "high" } },
+      1,
+    );
+  });
+
   it("allows operative global updates and Mission deletion", async () => {
     mocks.auth.mockResolvedValue({ user: operative });
     mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, ownerId: "owner-1" });
@@ -128,15 +184,64 @@ describe("TLOZ Server Action authorization", () => {
     expect(mocks.tloz.deleteMission).toHaveBeenCalledWith("mission-1");
   });
 
-  it("restricts structural writes to Platform Owners and operative agents", async () => {
+  it("uses the Project status role to complete a Mission", async () => {
     mocks.auth.mockResolvedValue({ user: developer });
-    await expect(createSeason("Season II"))
-      .rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
-    expect(mocks.tloz.createSeason).not.toHaveBeenCalled();
+    mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, projectId: "project-1" });
+    mocks.documents.get.mockResolvedValue({
+      kind: "project",
+      contract: {
+        fields: [{
+          key: "status",
+          options: [{ value: "shipped", role: "done" }],
+        }],
+      },
+    });
 
+    await patchMissionStatus("mission-1", "shipped" as never);
+
+    expect(mocks.tloz.updateMission).toHaveBeenCalledWith("mission-1", {
+      status: "shipped",
+      completedAt: expect.any(String),
+    });
+  });
+
+  it("inherits valid defaults when a Mission moves to another Project", async () => {
     mocks.auth.mockResolvedValue({ user: operative });
-    mocks.tloz.createSeason.mockResolvedValue({ id: "season-2" });
-    await expect(createSeason("Season II")).resolves.toEqual({ id: "season-2" });
+    mocks.tloz.getMissionDetail.mockResolvedValue({
+      ...mission,
+      projectId: "project-old",
+      status: "old-status",
+      type: "old-category",
+    });
+    mocks.documents.get.mockResolvedValue({
+      kind: "project",
+      contract: {
+        fields: [
+          {
+            key: "status",
+            defaultValue: "queue",
+            options: [
+              { value: "queue", role: "backlog" },
+              { value: "shipped", role: "done" },
+            ],
+          },
+          {
+            key: "category",
+            defaultValue: "engineering",
+            options: [{ value: "engineering" }],
+          },
+        ],
+      },
+    });
+
+    await updateMission("mission-1", { projectId: "project-new" });
+
+    expect(mocks.tloz.updateMission).toHaveBeenCalledWith("mission-1", {
+      projectId: "project-new",
+      status: "queue",
+      type: "engineering",
+      completedAt: undefined,
+    });
   });
 
   it("returns sanitized global options to readers and rejects mutations", async () => {

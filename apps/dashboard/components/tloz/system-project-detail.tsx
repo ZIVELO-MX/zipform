@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowLeft, ClipboardCopy, Edit3, ExternalLink, FileText, Lock, MoreHorizontal, Unlock, X } from "lucide-react";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, ColorPicker, DatePicker, displayUsername, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, IconPicker, ResourcePreview, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, useOverlayToasterId, UserAvatarLabel, UserPicker, type IconPickerOption, type ResourcePreviewSlide } from "@zipform/ui";
-import type { TlozInventoryCategory, TlozProject, TlozProjectStatus, TlozProjectType, TlozQuestItem, TlozResource } from "@zipform/types";
-import type { TlozResourceInput } from "@zipform/data";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, ColorPicker, DatePicker, displayUsername, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, IconPicker, ResourcePreview, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, SlideOver, toast, useOverlayToasterId, UserAvatarLabel, UserPicker, type IconPickerOption, type ResourcePreviewSlide } from "@tloz/ui";
+import type { TlozInventoryCategory, TlozProject, TlozProjectStatus, TlozProjectType, TlozQuestItem, TlozResource } from "@tloz/types";
+import type { TlozResourceInput } from "@tloz/data";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { addProjectResource, addQuestItemResource, getEntityResources, removeProjectResource, removeQuestItemResource, updateProject, updateQuestItem } from "../../app/tloz/actions";
 import { inventoryItemHref, missionHref, projectDetailHref, projectHref } from "../../lib/tloz-routes";
@@ -37,8 +37,9 @@ type DetailProps = {
   resources: TlozResource[];
 };
 
-export function SystemEntitySlideOver({ detail, onClose, onChange, users, missions, resources, onNavigateMission }: {
+export function SystemEntitySlideOver({ detail, documentId, onClose, onChange, users, missions, resources, onNavigateMission }: {
   detail: ({ variant: "project"; entity: TlozProject } | { variant: "inventory"; entity: TlozQuestItem }) | null;
+  documentId?: string;
   onClose: () => void;
   onChange: (entity: TlozProject | TlozQuestItem) => void;
   users: DetailUser[];
@@ -47,7 +48,11 @@ export function SystemEntitySlideOver({ detail, onClose, onChange, users, missio
   onNavigateMission?: (mission: TlozMissionRecord) => void;
 }) {
   const router = useRouter();
-  const fullHref = detail?.variant === "project" ? projectDetailHref(detail.entity.id) : detail ? inventoryItemHref(detail.entity.id) : "/tloz";
+  const fullHref = detail?.variant === "project"
+    ? projectDetailHref(detail.entity)
+    : detail
+      ? inventoryItemHref(documentId ?? detail.entity.id)
+      : "/";
   return <SlideOver open={Boolean(detail)} title={detail?.entity.name ?? "Detalle"} onOpenChange={(open) => !open && onClose()}>
     {detail ? <SystemEntityDetail variant={detail.variant} entity={detail.entity as never} users={users} missions={missions} resources={resources} panel onChange={onChange} onNavigateMission={onNavigateMission} onOpenFullPage={() => { onClose(); router.push(fullHref); }} /> : null}
   </SlideOver>;
@@ -94,8 +99,8 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
   }
 
   return <article className={`mission-detail-workspace ${panel ? "px-5 py-6 min-h-full bg-[#FAFAF9]" : "mx-auto w-full max-w-[1052px] px-[26px] py-7"}`}>
-    {!panel ? <header className="sticky top-0 z-10 -mx-[26px] mb-5 flex items-center gap-3 border-b border-carbon/10 bg-[#FAFAF9]/95 px-4 py-3 backdrop-blur md:hidden"><Link href={variant === "project" ? "/tloz/projects" : "/tloz/inventory"} className="grid size-10 place-items-center rounded-lg text-carbon/60 hover:bg-carbon/5" aria-label="Volver"><ArrowLeft aria-hidden="true" /></Link><p className="m-0 min-w-0 flex-1 truncate text-sm font-bold text-carbon/75">{entity.name}</p></header> : null}
-    {!panel ? <Breadcrumb className="mb-5"><BreadcrumbList className="flex-nowrap text-carbon/60"><BreadcrumbItem><BreadcrumbLink asChild><Link href={variant === "project" ? "/tloz/projects" : "/tloz/inventory"}>{variant === "project" ? "Projects" : "Inventory"}</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem className="min-w-0"><BreadcrumbPage className="truncate">{entity.name}</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb> : null}
+    {!panel ? <header className="sticky top-0 z-10 -mx-[26px] mb-5 flex items-center gap-3 border-b border-carbon/10 bg-[#FAFAF9]/95 px-4 py-3 backdrop-blur md:hidden"><Link href={variant === "project" ? "/projects" : "/inventory"} className="grid size-10 place-items-center rounded-lg text-carbon/60 hover:bg-carbon/5" aria-label="Volver"><ArrowLeft aria-hidden="true" /></Link><p className="m-0 min-w-0 flex-1 truncate text-sm font-bold text-carbon/75">{entity.name}</p></header> : null}
+    {!panel ? <Breadcrumb className="mb-5"><BreadcrumbList className="flex-nowrap text-carbon/60"><BreadcrumbItem><BreadcrumbLink asChild><Link href={variant === "project" ? "/projects" : "/inventory"}>{variant === "project" ? "Projects" : "Inventory"}</Link></BreadcrumbLink></BreadcrumbItem><BreadcrumbSeparator /><BreadcrumbItem className="min-w-0"><BreadcrumbPage className="truncate">{entity.name}</BreadcrumbPage></BreadcrumbItem></BreadcrumbList></Breadcrumb> : null}
     <div className="mission-detail-layout grid min-w-0 gap-[30px]">
       <main className="min-w-0">
         <header className="mb-6">
@@ -105,7 +110,7 @@ export function SystemEntityDetail(props: DetailProps & { panel?: boolean; onCha
         <DescriptionEditor value={entity.description} placeholder="Añadir descripción corta…" onSave={(description) => persist({ description })} />
         <MarkdownEditor value={entity.descriptionDetail} onSave={(descriptionDetail) => persist({ descriptionDetail })} />
 
-        <section className="mt-7"><button type="button" className="mb-[13px] flex w-full items-center justify-between text-left" aria-expanded={missionsOpen} onClick={() => setMissionsOpen((open) => !open)}><h2 className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">{project ? "Missions" : "Usado por"}</h2><span className="text-xs text-carbon/45">{missionsOpen ? "Ocultar" : "Mostrar"}</span></button>{missionsOpen ? <div className="flex flex-col gap-2">{relatedMissions.map((mission) => props.onNavigateMission ? <button key={mission.id} type="button" onClick={() => props.onNavigateMission?.(mission)} className="flex items-center gap-3 rounded-xl border border-carbon/10 bg-white px-3.5 py-3 text-left text-carbon hover:border-zivelo/25"><span className="grid size-7 place-items-center rounded-lg bg-carbon/5"><FileText size={13} /></span><span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{mission.title}</span><span className="text-[11px] text-carbon/45">{mission.status}</span></button> : <Link key={mission.id} href={mission.project ? missionHref(mission.project, mission.displayId) : "/tloz"} className="flex items-center gap-3 rounded-xl border border-carbon/10 bg-white px-3.5 py-3 text-carbon no-underline hover:border-zivelo/25"><span className="grid size-7 place-items-center rounded-lg bg-carbon/5"><FileText size={13} /></span><span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{mission.title}</span><span className="text-[11px] text-carbon/45">{mission.status}</span></Link>)}{!relatedMissions.length ? <p className="text-sm text-carbon/45">Sin missions relacionadas.</p> : null}</div> : null}</section>
+        <section className="mt-7"><button type="button" className="mb-[13px] flex w-full items-center justify-between text-left" aria-expanded={missionsOpen} onClick={() => setMissionsOpen((open) => !open)}><h2 className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">{project ? "Missions" : "Usado por"}</h2><span className="text-xs text-carbon/45">{missionsOpen ? "Ocultar" : "Mostrar"}</span></button>{missionsOpen ? <div className="flex flex-col gap-2">{relatedMissions.map((mission) => props.onNavigateMission ? <button key={mission.id} type="button" onClick={() => props.onNavigateMission?.(mission)} className="flex items-center gap-3 rounded-xl border border-carbon/10 bg-white px-3.5 py-3 text-left text-carbon hover:border-zivelo/25"><span className="grid size-7 place-items-center rounded-lg bg-carbon/5"><FileText size={13} /></span><span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{mission.title}</span><span className="text-[11px] text-carbon/45">{mission.status}</span></button> : <Link key={mission.id} href={mission.project ? missionHref(mission.project, mission.displayId) : "/"} className="flex items-center gap-3 rounded-xl border border-carbon/10 bg-white px-3.5 py-3 text-carbon no-underline hover:border-zivelo/25"><span className="grid size-7 place-items-center rounded-lg bg-carbon/5"><FileText size={13} /></span><span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold">{mission.title}</span><span className="text-[11px] text-carbon/45">{mission.status}</span></Link>)}{!relatedMissions.length ? <p className="text-sm text-carbon/45">Sin missions relacionadas.</p> : null}</div> : null}</section>
 
         <DetailSection title="Recursos" className="mt-7"><div className="mission-resource-grid grid grid-cols-2 gap-2.5">{resources.map((resource) => <ResourceCard key={resource.id} resource={resource} previewSlides={resources.flatMap((candidate) => { const src = resolveResourceImageUrl(candidate); return src ? [{ id: candidate.id, src, alt: candidate.title, title: candidate.title }] : []; })} onRemove={() => void removeResource(resource.id)} />)}<AddResource onAdd={(input) => void addResource(input)} /></div></DetailSection>
       </main>

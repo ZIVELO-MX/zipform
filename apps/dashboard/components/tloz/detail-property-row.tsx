@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Edit3 } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@zipform/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@tloz/ui";
 
 export function DetailPropertyRow({ label, display, children, readOnly = false }: {
   label: string;

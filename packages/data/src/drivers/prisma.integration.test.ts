@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createPrismaDataClient } from "./prisma";
-import type { ZipformDataClient } from "../contracts";
+import type { TlozDataClient } from "../contracts";
 
 const SCHEMA_DIR = resolve(import.meta.dirname ?? __dirname, "../../prisma");
 
@@ -67,7 +67,7 @@ async function seedReferenceData(prisma: PrismaClient) {
         id: "int-user-benji",
         name: "Benji",
         username: "benji",
-        email: "benji@zipform.local",
+        email: "benji@tloz.local",
         role: "admin",
         avatarUrl: "/avatars/benji.png",
         createdAt: now,
@@ -77,7 +77,7 @@ async function seedReferenceData(prisma: PrismaClient) {
         id: "int-user-raul",
         name: "Raul",
         username: "raul",
-        email: "raul@zipform.local",
+        email: "raul@tloz.local",
         role: "member",
         avatarUrl: "/avatars/raul.png",
         createdAt: now,
@@ -175,7 +175,7 @@ const hasDb = !!testDbUrl;
 const itIf = (condition: boolean) => (condition ? it : it.skip);
 
 describe("prisma integration", () => {
-  let client: ZipformDataClient;
+  let client: TlozDataClient;
   let prisma: PrismaClient;
 
   beforeAll(async () => {
@@ -198,7 +198,7 @@ describe("prisma integration", () => {
     itIf(hasDb)("retrieves users", async () => {
       const users = await client.tloz.getUsers();
       expect(users).toHaveLength(2);
-      expect(users.map((u) => u.email)).toContain("benji@zipform.local");
+      expect(users.map((u) => u.email)).toContain("benji@tloz.local");
     });
 
     itIf(hasDb)("retrieves projects", async () => {

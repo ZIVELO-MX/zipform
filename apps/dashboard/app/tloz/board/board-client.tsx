@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import type { TlozEpisode, TlozMissionStatus, TlozProject, TlozQuestItem, TlozSeason, UserProfile } from "@zipform/types";
+import type { TlozFieldOption, TlozMissionStatus, TlozProject, TlozQuestItem, UserProfile } from "@tloz/types";
 import { MissionBoard } from "../../../components/tloz/mission-views";
 import { MissionSlideOver } from "../../../components/tloz/mission-slide-over";
-import { toast } from "@zipform/ui";
+import { toast } from "@tloz/ui";
 import type { TlozMissionRecord } from "../../../lib/tloz-data";
 import { patchMissionStatus } from "../actions";
 
-export function BoardClient({ missions, allMissions, projects, seasons, episodes, users, questItems }: { missions: TlozMissionRecord[]; allMissions: TlozMissionRecord[]; projects: TlozProject[]; seasons: TlozSeason[]; episodes: TlozEpisode[]; users: UserProfile[]; questItems: TlozQuestItem[] }) {
+export function BoardClient({ missions, allMissions, projects, users, questItems, statusOptions }: { missions: TlozMissionRecord[]; allMissions: TlozMissionRecord[]; projects: TlozProject[]; users: UserProfile[]; questItems: TlozQuestItem[]; statusOptions?: TlozFieldOption[] }) {
   const [currentMissions, setCurrentMissions] = useState(missions);
   const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -42,11 +42,11 @@ export function BoardClient({ missions, allMissions, projects, seasons, episodes
   return (
     <>
       {error ? <p role="alert" className="mb-3 text-sm font-semibold text-destructive">{error}</p> : null}
-      <MissionBoard missions={currentMissions} onSelect={setSelectedMission} onStatusChange={moveMission} />
+      <MissionBoard missions={currentMissions} statusOptions={statusOptions} onSelect={setSelectedMission} onStatusChange={moveMission} />
       <MissionSlideOver
         mission={selectedMission}
         onClose={() => setSelectedMission(null)}
-        editorOptions={{ projects, seasons, episodes, users, missions: allMissions, questItems }}
+        editorOptions={{ projects, users, missions: allMissions, questItems }}
         onMissionChange={updateMissionInView}
       />
     </>

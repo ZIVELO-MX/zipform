@@ -1,4 +1,4 @@
-import type { DataClientOptions, DataDriver, ZipformDataClient } from "./contracts";
+import type { DataClientOptions, DataDriver, TlozDataClient } from "./contracts";
 import { createMockDataClient } from "./drivers/mock";
 import { createPrismaDataClient } from "./drivers/prisma";
 export { getPrismaClient } from "./drivers/prisma";
@@ -11,12 +11,14 @@ export type {
   ApiKeyCreateResult,
   DataClientOptions,
   DataDriver,
+  DocumentFilters,
   PaginatedResult,
   PaginationInput,
   ProjectFilters,
   QuestItemFilters,
   ResourceFilters,
   TlozDashboardSummary,
+  TlozDocumentRepository,
   TlozMissionDetail,
   TlozMissionFilters,
   TlozMissionCreateInput,
@@ -31,19 +33,27 @@ export type {
   UserFilters,
   UserRole,
   UserUpdateInput,
-  ZipformDataClient
+  TlozDataClient
 } from "./contracts";
 export { currentUser, raulUser } from "./seed-data";
 export { assertProjectScopedDependency } from "./dependency-rules";
 export { TlozValidationError, nextMissionDisplayId, slugify, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
 export { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "./tloz-attachment-errors";
+export { TlozDocumentError } from "./document-errors";
+export {
+  defaultInventoryFields,
+  defaultMissionFields,
+  validateDocumentProperties,
+  validateProjectFields,
+} from "./document-contract";
+export { parseTlozDocumentMarkdown, serializeTlozDocumentMarkdown } from "./document-markdown";
 
 function resolveDataDriver(driver?: DataDriver): DataDriver {
   if (driver) {
     return driver;
   }
 
-  const configuredDriver = process.env.ZIPFORM_DATA_DRIVER;
+  const configuredDriver = process.env.TLOZ_DATA_DRIVER ?? process.env.ZIPFORM_DATA_DRIVER;
 
   if (configuredDriver === "mock" || configuredDriver === "prisma") {
     return configuredDriver;
@@ -52,7 +62,7 @@ function resolveDataDriver(driver?: DataDriver): DataDriver {
   return "prisma";
 }
 
-export function createDataClient(options: DataClientOptions | DataDriver = {}): ZipformDataClient {
+export function createDataClient(options: DataClientOptions | DataDriver = {}): TlozDataClient {
   const driver = typeof options === "string" ? options : resolveDataDriver(options.driver);
 
   if (driver === "mock") {
@@ -67,14 +77,14 @@ export function createDataClient(options: DataClientOptions | DataDriver = {}): 
 }
 
 const globalForData = globalThis as typeof globalThis & {
-  __zipformDataClient?: ZipformDataClient;
+  __tlozDataClient?: TlozDataClient;
 };
 
-export const dataClient = new Proxy({} as ZipformDataClient, {
+export const dataClient = new Proxy({} as TlozDataClient, {
   get(_, prop) {
-    if (!globalForData.__zipformDataClient) {
-      globalForData.__zipformDataClient = createDataClient();
+    if (!globalForData.__tlozDataClient) {
+      globalForData.__tlozDataClient = createDataClient();
     }
-    return Reflect.get(globalForData.__zipformDataClient, prop, globalForData.__zipformDataClient);
+    return Reflect.get(globalForData.__tlozDataClient, prop, globalForData.__tlozDataClient);
   }
 });

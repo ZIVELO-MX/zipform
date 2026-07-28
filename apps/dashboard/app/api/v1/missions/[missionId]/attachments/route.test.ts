@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dataClient } from "@zipform/data";
+import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { getTlozAttachmentStorage } from "../../../../../../lib/tloz-attachment-storage";
 import { POST, PUT } from "./route";
 
-vi.mock("@zipform/data", () => ({
+vi.mock("@tloz/data", () => ({
   dataClient: { tloz: { prepareAttachmentBatch: vi.fn(), getAttachmentBatch: vi.fn(), finalizeAttachmentBatch: vi.fn(), getAttachmentGroups: vi.fn(), getMissionDetail: vi.fn() } },
   TlozAttachmentError: class TlozAttachmentError extends Error { code: string; constructor(code: string, message: string) { super(message); this.code = code; } },
 }));
@@ -41,7 +41,7 @@ describe("/api/v1/missions/:missionId/attachments", () => {
   });
 
   it("rejects invalid manifests before creating signed URLs", async () => {
-    const response = await POST(new Request("https://zipform.test/api/v1/missions/mission-1/attachments", { method: "POST", body: JSON.stringify({ ...manifest, files: [{ ...manifest.files[0], contentType: "image/svg+xml" }] }) }), { params: Promise.resolve({ missionId: "mission-1" }) });
+    const response = await POST(new Request("https://tloz.test/api/v1/missions/mission-1/attachments", { method: "POST", body: JSON.stringify({ ...manifest, files: [{ ...manifest.files[0], contentType: "image/svg+xml" }] }) }), { params: Promise.resolve({ missionId: "mission-1" }) });
     expect(response.status).toBe(400);
     expect(storage.createSignedUpload).not.toHaveBeenCalled();
     expect(dataClient.tloz.prepareAttachmentBatch).not.toHaveBeenCalled();
@@ -51,7 +51,7 @@ describe("/api/v1/missions/:missionId/attachments", () => {
     vi.mocked(authenticateRequest).mockResolvedValue({
       user: { id: "reader-1", type: "agent", role: "agent:reader" },
     } as never);
-    const response = await POST(new Request("https://zipform.test/api/v1/missions/mission-1/attachments", {
+    const response = await POST(new Request("https://tloz.test/api/v1/missions/mission-1/attachments", {
       method: "POST",
       body: JSON.stringify(manifest),
     }), { params: Promise.resolve({ missionId: "mission-1" }) });
@@ -61,7 +61,7 @@ describe("/api/v1/missions/:missionId/attachments", () => {
   });
 
   it("prepares a direct-upload batch without receiving image bytes", async () => {
-    const response = await POST(new Request("https://zipform.test/api/v1/missions/mission-1/attachments", { method: "POST", body: JSON.stringify(manifest) }), { params: Promise.resolve({ missionId: "mission-1" }) });
+    const response = await POST(new Request("https://tloz.test/api/v1/missions/mission-1/attachments", { method: "POST", body: JSON.stringify(manifest) }), { params: Promise.resolve({ missionId: "mission-1" }) });
     expect(response.status).toBe(200);
     expect(dataClient.tloz.prepareAttachmentBatch).toHaveBeenCalledWith("mission-1", "pr-57", manifest.sourceRevision, expect.arrayContaining([expect.objectContaining({ key: "home-desktop", storagePath: expect.stringContaining("missions/mission-1/pr-57/home-desktop/") })]));
     await expect(response.json()).resolves.toMatchObject({ data: { uploadBatchId: "batch-1", uploads: [{ key: "home-desktop", uploadUrl: "https://storage.test/upload" }] } });
@@ -70,7 +70,7 @@ describe("/api/v1/missions/:missionId/attachments", () => {
   it("does not finalize a batch when an uploaded object is missing", async () => {
     vi.mocked(dataClient.tloz.getAttachmentBatch).mockResolvedValue({ uploadBatchId: "batch-1", missionId: "mission-1", groupKey: "pr-57", sourceRevision: manifest.sourceRevision, generation: 1, status: "prepared", files: [{ ...manifest.files[0], storagePath: "missions/mission-1/pr-57/home-desktop/id.png" }] });
     storage.inspectObject.mockResolvedValue(null);
-    const response = await PUT(new Request("https://zipform.test/api/v1/missions/mission-1/attachments", { method: "PUT", body: JSON.stringify({ uploadBatchId: "batch-1" }) }), { params: Promise.resolve({ missionId: "mission-1" }) });
+    const response = await PUT(new Request("https://tloz.test/api/v1/missions/mission-1/attachments", { method: "PUT", body: JSON.stringify({ uploadBatchId: "batch-1" }) }), { params: Promise.resolve({ missionId: "mission-1" }) });
     expect(response.status).toBe(400);
     expect(dataClient.tloz.finalizeAttachmentBatch).not.toHaveBeenCalled();
   });
@@ -82,7 +82,7 @@ describe("/api/v1/missions/:missionId/attachments", () => {
       group: { groupKey: "pr-57", sourceRevision: manifest.sourceRevision, generation: 1, attachments: [{ id: "resource-1", missionId: "mission-1", type: "image", title: "Home desktop", storagePath: "missions/mission-1/pr-57/home-desktop/id.png", externalKey: "home-desktop", groupKey: "pr-57", contentType: "image/png", sizeBytes: 1024, width: 1440, height: 900, sourceRevision: manifest.sourceRevision, createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", url: "" }] },
       previousStoragePaths: ["missions/mission-1/pr-57/home-desktop/old.png"],
     });
-    const response = await PUT(new Request("https://zipform.test/api/v1/missions/mission-1/attachments", { method: "PUT", body: JSON.stringify({ uploadBatchId: "batch-1" }) }), { params: Promise.resolve({ missionId: "mission-1" }) });
+    const response = await PUT(new Request("https://tloz.test/api/v1/missions/mission-1/attachments", { method: "PUT", body: JSON.stringify({ uploadBatchId: "batch-1" }) }), { params: Promise.resolve({ missionId: "mission-1" }) });
     expect(response.status).toBe(200);
     expect(storage.inspectObject).toHaveBeenCalledWith("missions/mission-1/pr-57/home-desktop/id.png");
     expect(storage.removeObject).toHaveBeenCalledWith("missions/mission-1/pr-57/home-desktop/old.png");

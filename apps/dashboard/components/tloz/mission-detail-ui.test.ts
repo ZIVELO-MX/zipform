@@ -72,6 +72,6 @@ describe("mission detail interaction contracts", () => {
     expect(attachmentClient).toContain("MAX_ATTACHMENT_COUNT = 20");
     expect(attachmentClient).toContain('credentials: "same-origin"');
     expect(attachmentClient).toContain('credentials: "omit"');
-    expect(attachmentClient).not.toContain("ZIPFORM_TOKEN");
+    expect(attachmentClient).not.toContain("TLOZ_TOKEN");
   });
 });

@@ -1,5 +1,5 @@
-import { dataClient, type TlozDashboardSummary, type TlozMissionDetail, type TlozMissionRecord } from "@zipform/data";
-import type { TlozAttachmentGroup } from "@zipform/types";
+import { dataClient, type TlozDashboardSummary, type TlozMissionDetail, type TlozMissionRecord } from "@tloz/data";
+import type { TlozAttachmentGroup, TlozDocumentKind } from "@tloz/types";
 import { cache } from "react";
 import { getTlozAttachmentStorage } from "./tloz-attachment-storage";
 
@@ -34,8 +34,12 @@ export async function hydrateTlozMissionResources(
   return { ...mission, resources };
 }
 export const getTlozProjects = cache(() => dataClient.tloz.getProjects());
-export const getTlozSeasons = cache(() => dataClient.tloz.getSeasons());
-export const getTlozEpisodes = cache(() => dataClient.tloz.getEpisodes());
 export const getTlozQuestItems = cache(() => dataClient.tloz.getQuestItems());
 export const getTlozResources = cache(() => dataClient.tloz.getResources());
 export const getTlozUsers = cache(() => dataClient.tloz.getUsers());
+export const getTlozDocuments = cache((kind?: TlozDocumentKind) => (
+  dataClient.documents.find(kind ? { kind } : {}, { limit: 100 })
+));
+export const getTlozProjectDocuments = () => getTlozDocuments("project");
+export const getTlozInventoryDocuments = () => getTlozDocuments("inventory");
+export const getTlozDocument = cache((documentId: string) => dataClient.documents.get(documentId));

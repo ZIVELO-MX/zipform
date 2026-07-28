@@ -9,7 +9,7 @@ export default function NotFound() {
       </div>
       <p className="eyebrow">404</p>
       <h2>Page not found</h2>
-      <p>The route is not part of the Zipform platform map yet.</p>
+      <p>La ruta no pertenece al mapa de documentos de TLOZ.</p>
       <div className="not-found-actions">
         <Link className="button-link" href="/">
           <Home size={17} />

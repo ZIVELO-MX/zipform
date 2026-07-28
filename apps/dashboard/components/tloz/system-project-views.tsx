@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
+import type { TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@tloz/types";
 import { resolveMissionIcon } from "./tloz-utils";
 import { useTlozViewState } from "./tloz-view-state";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
@@ -18,7 +18,13 @@ const categoryLabel = { tool: "Herramienta", access: "Acceso", asset: "Activo", 
 
 function Badge({ label, tone }: { label: string; tone: string }) { return <span className="inline-block rounded-full px-[9px] py-[3px] text-[11px] font-bold" style={{ background: `${tone}18`, color: tone }}>{label}</span>; }
 
-export function InventoryProjectView({ items: initialItems, missions, users, resources }: { items: TlozQuestItem[]; missions: TlozMissionRecord[]; users: UserProfile[]; resources: TlozResource[] }) {
+export function InventoryProjectView({ items: initialItems, missions, users, resources, publicIds = {} }: {
+  items: TlozQuestItem[];
+  missions: TlozMissionRecord[];
+  users: UserProfile[];
+  resources: TlozResource[];
+  publicIds?: Record<string, string>;
+}) {
   const { state } = useTlozViewState();
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -32,8 +38,10 @@ export function InventoryProjectView({ items: initialItems, missions, users, res
     { id: "category", label: "Categoría", render: (item) => <span className="text-xs text-carbon/65">{categoryLabel[item.category]}</span> },
     { id: "acquired", label: "Adquirido", align: "right", render: (item) => <span className="font-mono text-[11.5px] text-carbon/50">{item.acquiredAt ?? "—"}</span> },
   ];
-  const openItem = (item: TlozQuestItem) => isMobile ? router.push(inventoryItemHref(item.id)) : setSelected(item);
-  return <><div className="tloz-scrl overflow-auto px-[26px] pb-[26px]">{state.view === "list" ? <EntityList title="Inventory" tone="#7A5A12" items={items} onSelect={openItem} render={(item) => <><Name entity={item} /><span className="ml-auto"><Badge label={inventoryStatus[item.status]} tone={item.status === "unlocked" ? "#1E6B3C" : "#7A5A12"} /></span></>} /> : <EntityTable items={items} columns={columns} onSelect={openItem} />}</div><SystemEntitySlideOver detail={selected ? { variant: "inventory", entity: selected } : null} onClose={() => setSelected(null)} onChange={update} users={users} missions={missions} resources={selected ? resources.filter((resource) => resource.questItemId === selected.id) : []} onNavigateMission={(mission) => { setSelected(null); setSelectedMission(mission); }} /><MissionSlideOver mission={selectedMission} onClose={() => setSelectedMission(null)} /></>;
+  const openItem = (item: TlozQuestItem) => isMobile
+    ? router.push(inventoryItemHref(publicIds[item.id] ?? item.id))
+    : setSelected(item);
+  return <><div className="tloz-scrl overflow-auto px-[26px] pb-[26px]">{state.view === "list" ? <EntityList title="Inventory" tone="#7A5A12" items={items} onSelect={openItem} render={(item) => <><Name entity={item} /><span className="ml-auto"><Badge label={inventoryStatus[item.status]} tone={item.status === "unlocked" ? "#1E6B3C" : "#7A5A12"} /></span></>} /> : <EntityTable items={items} columns={columns} onSelect={openItem} />}</div><SystemEntitySlideOver detail={selected ? { variant: "inventory", entity: selected } : null} documentId={selected ? publicIds[selected.id] : undefined} onClose={() => setSelected(null)} onChange={update} users={users} missions={missions} resources={selected ? resources.filter((resource) => resource.questItemId === selected.id) : []} onNavigateMission={(mission) => { setSelected(null); setSelectedMission(mission); }} /><MissionSlideOver mission={selectedMission} onClose={() => setSelectedMission(null)} /></>;
 }
 
 export function ProjectsSystemView({ projects: initialProjects, missions, users, resources }: { projects: TlozProject[]; missions: TlozMissionRecord[]; users: UserProfile[]; resources: TlozResource[] }) {
@@ -51,7 +59,7 @@ export function ProjectsSystemView({ projects: initialProjects, missions, users,
     { id: "missions", label: "Missions", render: (project) => <span className="font-mono text-[12px] text-carbon/55">{missions.filter((mission) => mission.projectId === project.id).length}</span> },
     { id: "due", label: "Vence", align: "right", render: (project) => <span className="font-mono text-[11.5px] text-carbon/50">{project.dueDate ?? "—"}</span> },
   ];
-  const openProject = (project: TlozProject) => isMobile ? router.push(projectDetailHref(project.id)) : setSelected(project);
+  const openProject = (project: TlozProject) => isMobile ? router.push(projectDetailHref(project)) : setSelected(project);
   return <><div className="tloz-scrl overflow-auto px-[26px] pb-[26px]">{state.view === "list" ? <EntityList title="Projects" tone="#3A47B5" items={projects} onSelect={openProject} render={(project) => <><Name entity={project} /><span className="ml-auto"><Badge label={projectStatus[project.status]} tone={project.color} /></span></>} /> : <EntityTable items={projects} columns={columns} onSelect={openProject} />}</div><SystemEntitySlideOver detail={selected ? { variant: "project", entity: selected } : null} onClose={() => setSelected(null)} onChange={update} users={users} missions={missions} resources={selected ? resources.filter((resource) => resource.projectId === selected.id) : []} onNavigateMission={(mission) => { setSelected(null); setSelectedMission(mission); }} /><MissionSlideOver mission={selectedMission} onClose={() => setSelectedMission(null)} /></>;
 }
 

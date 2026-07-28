@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
+import type { TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@tloz/types";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { MissionSlideOver } from "./mission-slide-over";
 import { SystemEntityDetail } from "./system-project-detail";

@@ -1,29 +1,31 @@
 openapi: 3.1.0
 info:
-  title: Zipform Data API
-  version: 1.3.0-draft
+  title: TLOZ Data API
+  version: 2.0.0-draft
   description: |
-    Full CRUD access to Zipform platform data: users, projects, missions,
-    seasons, episodes, quest items, resources, agents, and API keys.
+    Document-first API for TLOZ Projects, Missions and Inventory.
+    The v1 routes remain available temporarily as a compatibility bridge.
 
     Authentication is via Bearer token (agent API key) or browser session cookie.
     If both are present, the Bearer token takes priority.
   contact:
-    name: Zivelo Platform
+    name: TLOZ
   license:
     name: Proprietary
     identifier: LicenseRef-Zivelo-Proprietary
 servers:
   - url: /api/v1
-    description: Current Zipform deployment
+    description: Legacy v1 compatibility API
 security:
   - bearerToken: []
   - sessionCookie: []
 tags:
+  - name: Documents
+    description: Shared Project, Mission and Inventory document contract.
   - name: Users
     description: User profile data (no passwords or sessions exposed).
   - name: Agents
-    description: Automated agent accounts that act on behalf of the platform.
+    description: Automated agent accounts that operate TLOZ.
   - name: API Keys
     description: API key management for agent authentication.
   - name: Projects
@@ -31,9 +33,9 @@ tags:
   - name: Missions
     description: Missions with filters, detail, and full CRUD.
   - name: Seasons
-    description: TLOZ seasons.
+    description: Legacy v1 season compatibility; not part of the document UI.
   - name: Episodes
-    description: TLOZ episodes.
+    description: Legacy v1 episode compatibility; not part of the document UI.
   - name: Quest Items
     description: Inventory / quest items with full CRUD.
   - name: Resources
@@ -1621,7 +1623,7 @@ paths:
     post:
       operationId: createAgentApiKey
       summary: Create a new API key for an agent
-      description: Generates a new zaf_-prefixed key. The raw key is returned only once.
+      description: Generates a new tloz_-prefixed key. The raw key is returned only once.
       tags: [API Keys]
       parameters:
         - name: agentId
@@ -1696,6 +1698,391 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  # ── Documents v2 ──────────────────────────────────────────────────
+  /documents:
+    servers:
+      - url: /api/v2
+    get:
+      operationId: listDocuments
+      summary: List and search documents
+      tags: [Documents]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: type
+          in: query
+          schema:
+            $ref: "#/components/schemas/DocumentKind"
+        - name: parent
+          in: query
+          description: Internal UUID or public Project ID.
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cursor-paginated documents.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createDocument
+      summary: Create a Project, Mission or Inventory document
+      tags: [Documents]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentCreate"
+          text/markdown:
+            schema:
+              type: string
+      responses:
+        "201":
+          description: Document created.
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+            text/markdown:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /documents/{documentId}:
+    servers:
+      - url: /api/v2
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    get:
+      operationId: getDocument
+      summary: Get a document as JSON or Markdown
+      tags: [Documents]
+      responses:
+        "200":
+          description: Current document.
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+            text/markdown:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    patch:
+      operationId: updateDocument
+      summary: Update structured document fields
+      tags: [Documents]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DocumentUpdate"
+      responses:
+        "200":
+          description: Updated document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The supplied revision is stale.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "428":
+          description: If-Match is required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    delete:
+      operationId: deleteDocument
+      summary: Delete an empty or deletable document
+      tags: [Documents]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "204":
+          description: Document deleted.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The supplied revision is stale.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "428":
+          description: If-Match is required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /documents/{documentId}/document:
+    servers:
+      - url: /api/v2
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    get:
+      operationId: exportDocument
+      summary: Export canonical YAML frontmatter and Markdown
+      tags: [Documents]
+      responses:
+        "200":
+          description: Canonical Markdown document.
+          content:
+            text/markdown:
+              schema:
+                type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: importDocument
+      summary: Replace a document from YAML frontmatter and Markdown
+      tags: [Documents]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          text/markdown:
+            schema:
+              type: string
+          application/json:
+            schema:
+              type: object
+              required: [markdown]
+              properties:
+                markdown:
+                  type: string
+      responses:
+        "200":
+          description: Imported document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The supplied revision is stale.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "428":
+          description: If-Match is required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /documents/{documentId}/contract:
+    servers:
+      - url: /api/v2
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    get:
+      operationId: getProjectContract
+      summary: Get a Project child-document contract
+      tags: [Documents]
+      responses:
+        "200":
+          description: Project contract.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    put:
+      operationId: replaceProjectContract
+      summary: Replace active fields while preserving retired values
+      tags: [Documents]
+      parameters:
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields]
+              properties:
+                fields:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/FieldDefinition"
+      responses:
+        "200":
+          description: Updated Project document.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: The supplied revision is stale.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "428":
+          description: If-Match is required.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /documents/{documentId}/resources:
+    servers:
+      - url: /api/v2
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+    get:
+      operationId: listDocumentResources
+      summary: List resources attached to any document kind
+      tags: [Documents, Resources]
+      responses:
+        "200":
+          description: Document resources.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /documents/{documentId}/resources/{resourceId}:
+    servers:
+      - url: /api/v2
+    parameters:
+      - $ref: "#/components/parameters/DocumentId"
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+    delete:
+      operationId: deleteDocumentResource
+      summary: Remove a resource attached to a document
+      tags: [Documents, Resources]
+      responses:
+        "204":
+          description: Resource removed.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createDocumentResource
+      summary: Attach a resource to any document kind
+      tags: [Documents, Resources]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceInput"
+      responses:
+        "201":
+          description: Resource created.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
 components:
   securitySchemes:
     sessionCookie:
@@ -1706,12 +2093,13 @@ components:
     bearerToken:
       type: http
       scheme: bearer
-      bearerFormat: zaf_
+      bearerFormat: tloz_
       description: |
-        Agent API key. Prefix is always `zaf_` followed by 64 hex characters.
+        New agent API keys use `tloz_` followed by 64 hex characters.
+        Legacy `zaf_` keys remain valid during the v1 grace release.
         To authenticate, include the header:
         ```
-        Authorization: Bearer zaf_<64-hex-chars>
+        Authorization: Bearer tloz_<64-hex-chars>
         ```
         If both Bearer token and session cookie are present, the Bearer token takes priority.
   parameters:
@@ -1753,6 +2141,22 @@ components:
         type: string
         minLength: 1
         maxLength: 128
+    DocumentId:
+      name: documentId
+      in: path
+      required: true
+      description: Internal UUID or stable public ID such as TLO-0023.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Quoted revision ETag returned by the previous read.
+      schema:
+        type: string
   responses:
     BadRequest:
       description: Invalid path or query input.
@@ -1792,6 +2196,177 @@ components:
             $ref: "#/components/schemas/ApiError"
   schemas:
     # ── Shared ───────────────────────────────────────────────────────
+    DocumentKind:
+      type: string
+      enum: [project, mission, inventory]
+    DocumentScalar:
+      oneOf:
+        - type: string
+        - type: number
+        - type: boolean
+        - type: array
+          items:
+            type: string
+        - type: "null"
+    FieldOption:
+      type: object
+      additionalProperties: false
+      required: [value, label]
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+        color:
+          type: string
+        role:
+          type: string
+          enum: [backlog, ready, active, blocked, done]
+    FieldDefinition:
+      type: object
+      additionalProperties: false
+      required: [key, label, type, required, visible, position, options]
+      properties:
+        id:
+          type: string
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+          enum: [text, number, boolean, date, select, multiselect, person, relation]
+        required:
+          type: boolean
+        visible:
+          type: boolean
+        position:
+          type: integer
+          minimum: 0
+        defaultValue:
+          $ref: "#/components/schemas/DocumentScalar"
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldOption"
+    ProjectContract:
+      type: object
+      required: [projectId, fields]
+      properties:
+        projectId:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldDefinition"
+    Document:
+      type: object
+      required: [id, publicId, kind, title, summary, body, revision, properties, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        publicId:
+          type: string
+        kind:
+          $ref: "#/components/schemas/DocumentKind"
+        parentId:
+          type: string
+          format: uuid
+        parentPublicId:
+          type: string
+        projectSlug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        body:
+          type: string
+        revision:
+          type: integer
+          minimum: 1
+        properties:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/DocumentScalar"
+        contract:
+          $ref: "#/components/schemas/ProjectContract"
+        source:
+          type: object
+          required: [type, id]
+          properties:
+            type:
+              $ref: "#/components/schemas/DocumentKind"
+            id:
+              type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DocumentResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: "#/components/schemas/Document"
+    DocumentListResponse:
+      type: object
+      required: [data, nextCursor]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        nextCursor:
+          oneOf:
+            - type: string
+            - type: "null"
+    DocumentCreate:
+      type: object
+      additionalProperties: false
+      required: [kind, title]
+      properties:
+        kind:
+          $ref: "#/components/schemas/DocumentKind"
+        parentPublicId:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        body:
+          type: string
+        properties:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/DocumentScalar"
+        contract:
+          description: Mission field contract. Only valid when kind is project.
+          type: object
+          additionalProperties: false
+          required: [fields]
+          properties:
+            fields:
+              type: array
+              items:
+                $ref: "#/components/schemas/FieldDefinition"
+    DocumentUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+        summary:
+          type: string
+        body:
+          type: string
+        properties:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/DocumentScalar"
     ApiError:
       type: object
       additionalProperties: false
@@ -1804,7 +2379,7 @@ components:
           properties:
             code:
               type: string
-              enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR, INVALID_ATTACHMENT_MANIFEST, ATTACHMENT_STORAGE_NOT_CONFIGURED, ATTACHMENT_STORAGE_ERROR, attachment_object_missing, attachment_object_invalid, batch_superseded]
+              enum: [INVALID_REQUEST, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, INTERNAL_ERROR, DOCUMENT_INVALID, DOCUMENT_NOT_FOUND, DOCUMENT_REVISION_CONFLICT, PRECONDITION_REQUIRED, INVALID_ATTACHMENT_MANIFEST, ATTACHMENT_STORAGE_NOT_CONFIGURED, ATTACHMENT_STORAGE_ERROR, attachment_object_missing, attachment_object_invalid, batch_superseded]
             message:
               type: string
             fields:
@@ -2318,7 +2893,7 @@ components:
       properties:
         key:
           type: string
-          description: "Raw API key (shown only once, begins with zaf_)"
+          description: "Raw API key (shown only once, begins with tloz_)"
         apiKey:
           $ref: "#/components/schemas/ApiKey"
 

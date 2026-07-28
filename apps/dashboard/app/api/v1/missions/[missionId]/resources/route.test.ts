@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dataClient } from "@zipform/data";
+import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { POST } from "./route";
 
-vi.mock("@zipform/data", () => ({ dataClient: { tloz: { addMissionResource: vi.fn(), getMissionDetail: vi.fn() } } }));
+vi.mock("@tloz/data", () => ({ dataClient: { tloz: { addMissionResource: vi.fn(), getMissionDetail: vi.fn() } } }));
 vi.mock("../../../../../../lib/api-auth", () => ({ authenticateRequest: vi.fn() }));
 
 describe("POST /api/v1/missions/:missionId/resources", () => {
@@ -14,7 +14,7 @@ describe("POST /api/v1/missions/:missionId/resources", () => {
   });
 
   it("persists a manually selected resource icon", async () => {
-    const response = await POST(new Request("https://zipform.test/api/v1/missions/mission-1/resources", {
+    const response = await POST(new Request("https://tloz.test/api/v1/missions/mission-1/resources", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ type: "link", title: "Repository", url: "https://github.com/org/repo", icon: "Github" }),

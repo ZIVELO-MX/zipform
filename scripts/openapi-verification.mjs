@@ -1,4 +1,4 @@
-const DEFAULT_URL = "https://zipform.zivelo.dev";
+const DEFAULT_URL = "https://tloz.zivelo.dev";
 const DEFAULT_MISSION_ID = "620ac6cc-60c4-43a3-b227-1b384e7311fb";
 
 export function percentile(values, rank = 0.95) {
@@ -26,17 +26,17 @@ async function requestOpenApi(url, headers, fetchImpl = fetch) {
 export async function verifyOpenApiDeployment({
   url = DEFAULT_URL,
   bypassSecret,
-  zipformToken,
+  tlozToken,
   missionId = DEFAULT_MISSION_ID,
   sampleCount = 20,
   fetchImpl = fetch,
 } = {}) {
   if (!bypassSecret) throw new Error("VERCEL_AUTOMATION_BYPASS_SECRET is required");
-  if (!zipformToken) throw new Error("ZIPFORM_TOKEN is required");
+  if (!tlozToken) throw new Error("TLOZ_TOKEN is required");
 
   const headers = {
     "x-vercel-protection-bypass": bypassSecret,
-    Authorization: `Bearer ${zipformToken}`,
+    Authorization: `Bearer ${tlozToken}`,
   };
   const wallDurations = [];
   const serverDurations = [];
@@ -73,7 +73,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   verifyOpenApiDeployment({
     url: process.env.OPENAPI_VERIFY_URL ?? DEFAULT_URL,
     bypassSecret: process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
-    zipformToken: process.env.ZIPFORM_TOKEN,
+    tlozToken: process.env.TLOZ_TOKEN ?? process.env.ZIPFORM_TOKEN,
   }).then((result) => {
     for (const warning of result.warnings) console.log(`::warning::${warning}`);
     console.log(JSON.stringify(result, null, 2));

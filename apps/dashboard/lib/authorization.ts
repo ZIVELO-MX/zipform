@@ -1,4 +1,4 @@
-import type { UserProfile } from "@zipform/types";
+import type { UserProfile } from "@tloz/types";
 
 export const PLATFORM_OWNER_ROLE = "Platform Owner" as const;
 export const FULL_STACK_DEVELOPER_ROLE = "Full Stack Developer" as const;
@@ -136,6 +136,7 @@ export function authorizeApiOperation(actor: Actor, operation: TlozOperation, co
 }
 
 const TLOZ_API_PREFIXES = [
+  "/api/v2/documents",
   "/api/v1/missions",
   "/api/v1/projects",
   "/api/v1/quest-items",

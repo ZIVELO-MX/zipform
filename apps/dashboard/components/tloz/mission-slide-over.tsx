@@ -2,10 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { SlideOver } from "@zipform/ui";
+import { SlideOver } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozQuestItem } from "@zipform/types";
-import { getMissionCapabilities, getMissionDetail, getMissionDetailOptions } from "../../app/tloz/actions";
+import type { TlozQuestItem } from "@tloz/types";
+import { getMissionCapabilities, getMissionDetail, getMissionDetailOptions, getMissionDocumentOptions } from "../../app/tloz/actions";
 import { inventoryItemHref } from "../../lib/tloz-routes";
 import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 import { SystemEntityDetail } from "./system-project-detail";
@@ -30,19 +30,30 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
     setHistory([]);
     setSelectedQuestItem(null);
     setCanUpdate(false);
-    if (mission) Promise.all([getMissionDetail(mission.id), editorOptions ? Promise.resolve(null) : getMissionDetailOptions(), getMissionCapabilities(mission.id)]).then(([result, options, capabilities]) => {
-      if (active) { setDetail(result); setCanUpdate(capabilities.canUpdate); if (options) setLoadedOptions(options); }
+    if (mission) Promise.all([getMissionDetail(mission.id), editorOptions ? Promise.resolve(null) : getMissionDetailOptions(), getMissionCapabilities(mission.id), getMissionDocumentOptions(mission.id)]).then(([result, options, capabilities, documentOptions]) => {
+      if (active) {
+        setDetail(result);
+        setCanUpdate(capabilities.canUpdate);
+        setLoadedOptions({
+          projects: editorOptions?.projects ?? options?.projects ?? (mission.project ? [mission.project] : []),
+          users: editorOptions?.users ?? options?.users ?? [mission.owner],
+          missions: editorOptions?.missions ?? options?.missions ?? [mission],
+          questItems: editorOptions?.questItems ?? options?.questItems ?? mission.questItems,
+          document: documentOptions.document ?? undefined,
+          contract: documentOptions.contract,
+        });
+      }
     });
     return () => { active = false; };
   }, [mission]);
 
   const options: MissionDetailOptions = {
     projects: editorOptions?.projects ?? loadedOptions?.projects ?? (mission?.project ? [mission.project] : []),
-    seasons: editorOptions?.seasons ?? loadedOptions?.seasons ?? (mission?.season ? [mission.season] : []),
-    episodes: editorOptions?.episodes ?? loadedOptions?.episodes ?? (mission?.episode ? [mission.episode] : []),
     users: editorOptions?.users ?? loadedOptions?.users ?? (mission ? [mission.owner] : []),
     missions: editorOptions?.missions ?? loadedOptions?.missions ?? (mission ? [mission] : []),
     questItems: editorOptions?.questItems ?? loadedOptions?.questItems ?? mission?.questItems ?? [],
+    document: loadedOptions?.document ?? editorOptions?.document,
+    contract: loadedOptions?.contract ?? editorOptions?.contract ?? [],
   };
 
   async function navigateToMission(missionId: string) {

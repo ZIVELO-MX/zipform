@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
   Separator,
-} from "@zipform/ui";
+} from "@tloz/ui";
 import type { TlozView } from "../../lib/tloz-routes";
 import { useTlozViewState } from "./tloz-view-state";
 import { CreateNewEntityButton } from "./tloz-create";
@@ -29,7 +29,7 @@ const viewConfig: Record<TlozView, { label: string; icon: React.ElementType }> =
 };
 
 export function TlozControl() {
-  const { state, setState, supportedViews, projects, seasons, episodes, users, showMissionControls } = useTlozViewState();
+  const { state, setState, supportedViews, projects, users, showMissionControls } = useTlozViewState();
 
   return (
     <Popover>
@@ -72,8 +72,6 @@ export function TlozControl() {
             <Separator className="my-4" />
             <ControlSection label="Filtros">
               {projects.length > 1 ? <ControlSelect label="Proyecto" value={state.projectId} onValueChange={(projectId) => setState({ projectId })} options={[{ id: "all", name: "Todos los proyectos" }, ...projects]} /> : null}
-              <ControlSelect label="Season" value={state.seasonId} onValueChange={(seasonId) => setState({ seasonId, episodeId: "all" })} options={[{ id: "all", name: "Todas las Seasons" }, ...seasons]} />
-              <ControlSelect label="Episode" value={state.episodeId} onValueChange={(episodeId) => setState({ episodeId })} options={[{ id: "all", name: "Todos los Episodes" }, ...episodes.filter((episode) => state.seasonId === "all" || episode.seasonId === state.seasonId)]} />
               <ControlSelect label="Owner" value={state.ownerId} onValueChange={(ownerId) => setState({ ownerId })} options={[{ id: "all", name: "Todos los owners" }, ...users]} />
             </ControlSection>
 

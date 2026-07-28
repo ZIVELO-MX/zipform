@@ -1,5 +1,5 @@
 {
-  "name": "@zipform/data",
+  "name": "@tloz/data",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
-    "@zipform/types": "workspace:*"
+    "@tloz/types": "workspace:*",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

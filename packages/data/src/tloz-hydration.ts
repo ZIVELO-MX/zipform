@@ -10,7 +10,7 @@ import type {
   TlozSeason,
   TlozUserMissionState,
   UserProfile
-} from "@zipform/types";
+} from "@tloz/types";
 import type { TlozDashboardSummary, TlozMissionDetail, TlozMissionRecord } from "./contracts";
 import { recentActivity } from "./seed-data";
 

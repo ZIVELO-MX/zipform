@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { dataClient } from "@zipform/data";
-import type { UserProfile } from "@zipform/types";
+import { dataClient } from "@tloz/data";
+import type { UserProfile } from "@tloz/types";
 import { auth } from "../auth";
 import { authorizeApiRequest } from "./authorization";
 
@@ -26,11 +26,13 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     if (!authHeader.startsWith("Bearer ")) return unauthorizedResponse();
     const apiKey = authHeader.slice(7).trim();
     if (apiKey) {
-      const localKey = process.env.ZIPFORM_LOCAL_API_KEY;
-      const localMode = process.env.ZIPFORM_DATA_DRIVER === "mock" && process.env.ZIPFORM_LOCAL_API_MODE === "1" && process.env.VERCEL !== "1";
+      const localKey = process.env.TLOZ_LOCAL_API_KEY ?? process.env.ZIPFORM_LOCAL_API_KEY;
+      const driver = process.env.TLOZ_DATA_DRIVER ?? process.env.ZIPFORM_DATA_DRIVER;
+      const localApiMode = process.env.TLOZ_LOCAL_API_MODE ?? process.env.ZIPFORM_LOCAL_API_MODE;
+      const localMode = driver === "mock" && localApiMode === "1" && process.env.VERCEL !== "1";
       if (localMode && localKey && apiKey === localKey) {
         const users = await dataClient.tloz.getUsers();
-        const localUserId = process.env.ZIPFORM_LOCAL_API_USER_ID ?? "owner";
+        const localUserId = process.env.TLOZ_LOCAL_API_USER_ID ?? process.env.ZIPFORM_LOCAL_API_USER_ID ?? "owner";
         const localUser = users.find((candidate) => candidate.id === localUserId);
         if (localUser) return authenticated(localUser, request);
       }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dataClient } from "@zipform/data";
-import type { TlozProjectStatus } from "@zipform/types";
+import { dataClient } from "@tloz/data";
+import type { TlozProjectStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation, isFullStackDeveloper } from "../../../../lib/authorization";
 

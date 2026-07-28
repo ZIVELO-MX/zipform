@@ -71,12 +71,15 @@ describe("TLOZ authorization policy", () => {
   });
 
   it("allows semantic query reads but rejects reader mutations and admin routes", async () => {
-    expect(authorizeApiRequest(new Request("https://zipform.test/api/v1/missions"), actors.reader as never)).toBeNull();
-    expect(authorizeApiRequest(new Request("https://zipform.test/api/v1/missions/query", { method: "POST" }), actors.reader as never)).toBeNull();
+    expect(authorizeApiRequest(new Request("https://tloz.test/api/v1/missions"), actors.reader as never)).toBeNull();
+    expect(authorizeApiRequest(new Request("https://tloz.test/api/v1/missions/query", { method: "POST" }), actors.reader as never)).toBeNull();
+    expect(authorizeApiRequest(new Request("https://tloz.test/api/v2/documents"), actors.reader as never)).toBeNull();
 
-    const mutation = authorizeApiRequest(new Request("https://zipform.test/api/v1/missions", { method: "POST" }), actors.reader as never);
-    const agents = authorizeApiRequest(new Request("https://zipform.test/api/v1/agents"), actors.operative as never);
+    const mutation = authorizeApiRequest(new Request("https://tloz.test/api/v1/missions", { method: "POST" }), actors.reader as never);
+    const documentMutation = authorizeApiRequest(new Request("https://tloz.test/api/v2/documents/TLO-0023", { method: "PATCH" }), actors.reader as never);
+    const agents = authorizeApiRequest(new Request("https://tloz.test/api/v1/agents"), actors.operative as never);
     expect(mutation).toBeInstanceOf(Response);
+    expect(documentMutation).toBeInstanceOf(Response);
     expect(agents).toBeInstanceOf(Response);
     await expect(mutation?.json()).resolves.toMatchObject({ error: { code: "FORBIDDEN" } });
   });

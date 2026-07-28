@@ -2,7 +2,7 @@ import type { TlozUiState } from "./tloz-view-state";
 
 export function tlozStorageKeys(scope: string) {
   return {
-    current: `zipform-${scope}-v1`,
+    current: `tloz-${scope}-v2`,
     legacy: `tloz:${scope}-controls`,
   };
 }
@@ -43,8 +43,6 @@ export function normalizeStoredState(state: Partial<TlozUiState>): Partial<TlozU
   return {
     view: views.includes(state.view as TlozUiState["view"]) ? state.view : undefined,
     projectId: typeof state.projectId === "string" ? state.projectId : "all",
-    seasonId: typeof state.seasonId === "string" ? state.seasonId : "all",
-    episodeId: typeof state.episodeId === "string" ? state.episodeId : "all",
     ownerId: typeof state.ownerId === "string" ? state.ownerId : "all",
     sort: sorts.includes(state.sort as TlozUiState["sort"]) ? state.sort : "dependencies",
     grouping: groupings.includes(state.grouping as TlozUiState["grouping"]) ? state.grouping : "status",

@@ -79,3 +79,24 @@ describe("OpenAPI authorization errors", () => {
     expect(user).not.toContain("required: [id, name, username, email");
   });
 });
+
+describe("OpenAPI document v2 contract", () => {
+  it("documents JSON and Markdown representations with optimistic concurrency", () => {
+    expect(spec).toContain("title: TLOZ Data API");
+    expect(spec).toContain("/documents/{documentId}/document:");
+    expect(spec).toContain("operationId: importDocument");
+    expect(spec).toContain("text/markdown:");
+    expect(spec).toContain("name: If-Match");
+    expect(spec).toContain('"409":');
+    expect(spec).toContain('"428":');
+  });
+
+  it("documents project contracts and the shared document kinds", () => {
+    expect(spec).toContain("operationId: replaceProjectContract");
+    expect(spec).toContain("operationId: deleteDocumentResource");
+    expect(schemaBlock("DocumentKind")).toContain("enum: [project, mission, inventory]");
+    expect(schemaBlock("DocumentCreate")).toContain("contract:");
+    expect(schemaBlock("FieldDefinition")).toContain("enum: [text, number, boolean, date, select, multiselect, person, relation]");
+    expect(schemaBlock("FieldOption")).toContain("enum: [backlog, ready, active, blocked, done]");
+  });
+});

@@ -1,28 +1,45 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "../lib/data";
-import { getTlozMissions, getTlozProjects } from "../lib/tloz-data";
+import { getTlozMissions, getTlozProjectDocuments, getTlozProjects } from "../lib/tloz-data";
 import { AppShell } from "../components/app-shell";
-import { Toaster } from "@zipform/ui";
-import type { TlozProject } from "@zipform/types";
+import { Toaster } from "@tloz/ui";
+import type { TlozProject } from "@tloz/types";
 import "./globals.css";
 import "yet-another-react-lightbox/styles.css";
 
 export const metadata: Metadata = {
-  title: "Zipform",
-  description: "Dashboard interno de la plataforma Zivelo"
+  title: "TLOZ",
+  description: "Workspace documental de Zivelo"
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [user, projects, missions] = await Promise.all([
+  const [user, projects, missions, documents] = await Promise.all([
     getCurrentUser(),
     getTlozProjects(),
     getTlozMissions(),
+    getTlozProjectDocuments(),
   ]);
 
+  const doneStatuses = new Map(
+    documents.data
+      .filter((document) => document.source)
+      .map((document) => [
+        document.source!.id,
+        new Set(
+          document.contract?.fields
+            .find((field) => field.key === "status")
+            ?.options.filter((option) => option.role === "done")
+            .map((option) => option.value) ?? ["completed"],
+        ),
+      ]),
+  );
   const projectActiveCounts = new Map<string, number>();
   const projectActivity = new Map<string, string>();
   for (const mission of missions) {
-    if (mission.projectId && mission.status !== "completed") {
+    const completed = mission.projectId
+      ? doneStatuses.get(mission.projectId)?.has(mission.status) ?? mission.status === "completed"
+      : mission.status === "completed";
+    if (mission.projectId && !completed) {
       projectActiveCounts.set(mission.projectId, (projectActiveCounts.get(mission.projectId) ?? 0) + 1);
       if (!projectActivity.has(mission.projectId) || mission.updatedAt > projectActivity.get(mission.projectId)!) projectActivity.set(mission.projectId, mission.updatedAt);
     }

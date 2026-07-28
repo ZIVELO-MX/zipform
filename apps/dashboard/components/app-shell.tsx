@@ -1,26 +1,20 @@
 "use client";
 
 import {
-  ArrowLeft,
-  FileText,
   FolderKanban,
-  Home,
   LayoutDashboard,
-  Menu,
   PackageOpen,
-  Sword,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import type { TlozProject, UserProfile } from "@zipform/types";
+import type { TlozProject, UserProfile } from "@tloz/types";
 import {
   DesktopSidebar,
-  isActive,
   MobileMenuPanel,
-  NavItem,
-  NavSection,
   TooltipProvider,
-} from "@zipform/ui";
+  type NavItem,
+  type NavSection,
+} from "@tloz/ui";
 import { Suspense, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { resolveMissionIcon } from "./tloz/tloz-utils";
 import { projectHref } from "../lib/tloz-routes";
@@ -35,20 +29,8 @@ type AppShellProps = {
   projectActivity?: Map<string, string>;
 };
 
-const SIDEBAR_STATE_KEY = "zipform-sidebar-state";
-const SIDEBAR_WIDTH_KEY = "zipform-sidebar-width";
-
-function getEnabledApps(): NavItem[] {
-  return [
-    { label: "Panel", href: "/", icon: Home },
-    { label: "Cotizaciones", href: "/quotes", icon: FileText },
-    { label: "TLOZ", href: "/tloz", icon: Sword },
-  ];
-}
-
-const navItems = getEnabledApps();
-
-const tlozContextItem: NavItem = { label: "TLOZ", href: "/", icon: ArrowLeft };
+const SIDEBAR_STATE_KEY = "tloz-sidebar-state";
+const SIDEBAR_WIDTH_KEY = "tloz-sidebar-width";
 
 export function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<string, number>, projectActivity: Map<string, string>): NavSection[] {
   const projectItems: NavItem[] = sortProjectsByActivity(projects, projectActivity).map((project) => {
@@ -64,7 +46,7 @@ export function buildTlozSections(projects: TlozProject[], projectActiveCounts: 
   return [
     {
       items: [
-        { label: "Lobby", href: "/tloz", icon: LayoutDashboard, exact: true },
+        { label: "Lobby", href: "/", icon: LayoutDashboard, exact: true },
       ],
     },
     {
@@ -72,8 +54,8 @@ export function buildTlozSections(projects: TlozProject[], projectActiveCounts: 
       collapsible: true,
       defaultCollapsed: false,
       items: [
-        { label: "Inventory", href: "/tloz/inventory", icon: PackageOpen },
-        { label: "Projects", href: "/tloz/projects", icon: FolderKanban },
+        { label: "Inventory", href: "/inventory", icon: PackageOpen },
+        { label: "Projects", href: "/projects", icon: FolderKanban },
       ],
     },
     ...(projectItems.length > 0
@@ -107,7 +89,6 @@ export function AppShell({ children, user, tlozProjects = [], projectActiveCount
 
 function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCounts, projectActivity }: AppShellProps) {
   const pathname = usePathname();
-  const isTloz = pathname === "/tloz" || pathname.startsWith("/tloz/");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(284);
@@ -176,24 +157,17 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
     };
   }, [mobileMenuOpen]);
 
-  const title = useMemo(() => {
-    if (pathname === "/") return "Panel";
-    const current = navItems.find((item) => isActive(pathname, item.href));
-    return current?.label ?? "Zipform";
-  }, [pathname]);
-
   return (
     <div
-      className={`shell min-h-dvh bg-ivory text-carbon${isTloz ? " shell-tloz" : ""}`}
+      className="shell shell-tloz min-h-dvh bg-ivory text-carbon"
       data-sidebar={collapsed ? "collapsed" : "expanded"}
     >
       <DesktopSidebar
         collapsed={collapsed}
         pathname={pathname}
         user={user}
-        items={navItems}
-        sections={isTloz ? tlozSections : undefined}
-        contextItem={isTloz ? tlozContextItem : undefined}
+        items={[]}
+        sections={tlozSections}
         sidebarWidth={sidebarWidth}
         onResize={handleResize}
         onToggleCollapsed={() => setCollapsed((current) => !current)}
@@ -201,34 +175,20 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <main className={`main-surface min-w-0${isTloz ? " tloz-main-surface" : ""}`}>{children}</main>
+      <main className="main-surface tloz-main-surface min-w-0">{children}</main>
 
       <MobileMenuPanel
         open={mobileMenuOpen}
         pathname={pathname}
         user={user}
-        items={navItems}
-        sections={isTloz ? tlozSections : undefined}
-        contextItem={isTloz ? tlozContextItem : undefined}
+        items={[]}
+        sections={tlozSections}
         onClose={() => setMobileMenuOpen(false)}
         onSignOut={() => signOut({ callbackUrl: "/login" })}
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} />
-
-          {!isTloz ? <div className="fixed inset-x-0 top-0 z-20 flex h-12 items-center border-b border-carbon/10 bg-paper/90 backdrop-blur md:hidden">
-        <button
-          type="button"
-          className="grid size-12 shrink-0 place-items-center text-carbon/70"
-          aria-label={mobileMenuOpen ? "Cerrar menú" : "Abrir menú"}
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
-        >
-          {mobileMenuOpen ? <Menu size={20} /> : <Menu size={20} />}
-        </button>
-        <span className="flex-1 text-center text-sm font-black">{title}</span>
-        <div className="size-12 shrink-0" />
-      </div> : null}
     </div>
   );
 }

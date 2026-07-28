@@ -1,8 +1,8 @@
 "use server";
 
-import type { ApiKey, Avatar, UserProfile } from "@zipform/types";
+import type { ApiKey, Avatar, UserProfile } from "@tloz/types";
 import { auth } from "../auth";
-import { dataClient, type UserUpdateInput } from "@zipform/data";
+import { dataClient, type UserUpdateInput } from "@tloz/data";
 import { revalidatePath } from "next/cache";
 import { assertTlozOperation, isReadOnlyAgent, TlozAuthorizationError } from "./authorization";
 

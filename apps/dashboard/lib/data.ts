@@ -1,4 +1,4 @@
-import { dataClient } from "@zipform/data";
+import { dataClient } from "@tloz/data";
 import { cache } from "react";
 import { auth } from "../auth";
 

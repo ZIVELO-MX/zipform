@@ -5,17 +5,17 @@ describe("TLOZ routes", () => {
   const project = { name: "Core Platform", slug: "core" };
 
   it("keeps project and mission public identifiers in canonical URLs", () => {
-    expect(projectHref(project)).toBe("/tloz/core");
-    expect(missionHref(project, "COR-0007")).toBe("/tloz/core/COR-0007");
+    expect(projectHref(project)).toBe("/core");
+    expect(missionHref(project, "COR-0007")).toBe("/core/COR-0007");
   });
 
   it("encodes entity identifiers in system detail URLs", () => {
-    expect(inventoryItemHref("access/key")).toBe("/tloz/inventory/access%2Fkey");
-    expect(projectDetailHref("project core")).toBe("/tloz/projects/project%20core");
+    expect(inventoryItemHref("access/key")).toBe("/inventory/access%2Fkey");
+    expect(projectDetailHref(project)).toBe("/projects/core");
   });
 
   it("links a project lobby breadcrumb to canonical project detail", () => {
-    expect(projectBreadcrumb({ id: "project-tloz", name: "TLOZ" })).toEqual({ label: "TLOZ", href: "/tloz/projects/project-tloz" });
+    expect(projectBreadcrumb({ slug: "tloz", name: "TLOZ" })).toEqual({ label: "TLOZ", href: "/projects/tloz" });
   });
 
   it("falls back to the context default when a view is unsupported", () => {

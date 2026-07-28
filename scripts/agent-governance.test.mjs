@@ -37,8 +37,8 @@ test("documents the local API and keeps production calls on the fixed origin", (
 
   assert.match(skill, /pnpm api:local/);
   assert.match(skill, /pnpm perf:api/);
-  assert.match(wrapper, /https:\/\/zipform\.zivelo\.dev/);
-  assert.doesNotMatch(wrapper, /process\.env\.ZIPFORM_API_BASE_URL/);
+  assert.match(wrapper, /https:\/\/tloz\.zivelo\.dev/);
+  assert.doesNotMatch(wrapper, /process\.env\.TLOZ_API_BASE_URL/);
   assert.match(skill, /install-tloz-api\.mjs/);
   assert.match(skill, /tloz-api \/api\/v1/);
 });

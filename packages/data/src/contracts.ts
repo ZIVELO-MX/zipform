@@ -1,11 +1,12 @@
 import type {
   ApiKey,
-  AppModule,
   Avatar,
-  PlatformMetric,
-  RoadmapSnapshot,
   TlozChecklistItem,
+  TlozDocument,
+  TlozDocumentKind,
+  TlozDocumentUpdate,
   TlozEpisode,
+  TlozFieldDefinition,
   TlozMission,
   TlozMissionQuestItem,
   TlozProject,
@@ -15,7 +16,7 @@ import type {
   TlozAttachmentGroup,
   TlozSeason,
   UserProfile
-} from "@zipform/types";
+} from "@tloz/types";
 
 export type DataDriver = "mock" | "prisma";
 
@@ -142,6 +143,20 @@ export type ResourceFilters = {
   type?: TlozResource["type"];
 };
 
+export type DocumentFilters = {
+  kind?: TlozDocumentKind;
+  projectId?: string;
+  query?: string;
+};
+
+export type TlozDocumentRepository = {
+  find(filters?: DocumentFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozDocument>>;
+  get(documentId: string): Promise<TlozDocument | null>;
+  update(documentId: string, input: TlozDocumentUpdate, expectedRevision: number): Promise<TlozDocument>;
+  replaceProjectContract(projectId: string, fields: TlozFieldDefinition[], expectedRevision: number): Promise<TlozDocument>;
+  delete(documentId: string, expectedRevision: number): Promise<void>;
+};
+
 export type TlozDashboardSummary = {
   activeQuest: TlozMissionRecord | null;
   activeSupportQuest: TlozMissionRecord | null;
@@ -209,20 +224,12 @@ export type ApiKeyCreateResult = {
   apiKey: ApiKey;
 };
 
-export type ZipformDataClient = {
-  apps: {
-    list(): Promise<AppModule[]>;
-    getById(id: string): Promise<AppModule | null>;
-  };
-  roadmap: {
-    getSnapshot(): Promise<RoadmapSnapshot>;
-  };
+export type TlozDataClient = {
   user: {
     getCurrent(): Promise<UserProfile>;
     update(userId: string, input: UserUpdateInput): Promise<UserProfile>;
   };
   platform: {
-    getMetrics(): Promise<PlatformMetric[]>;
     listAvatars(): Promise<Avatar[]>;
   };
   agent: {
@@ -233,5 +240,6 @@ export type ZipformDataClient = {
     revokeApiKey(keyId: string): Promise<void>;
     authenticateWithApiKey(key: string): Promise<UserProfile | null>;
   };
+  documents: TlozDocumentRepository;
   tloz: TlozRepository;
 };

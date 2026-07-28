@@ -1,5 +1,5 @@
-import { PageSubHeader } from "@zipform/ui";
-import { getTlozEpisodes, getTlozMissions, getTlozProjects, getTlozQuestItems, getTlozSeasons, getTlozUsers } from "../../lib/tloz-data";
+import { PageSubHeader } from "@tloz/ui";
+import { getTlozMissions, getTlozProjectDocuments, getTlozProjects, getTlozQuestItems, getTlozUsers } from "../../lib/tloz-data";
 import { TlozHeader } from "./tloz-header";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import type { TlozView } from "../../lib/tloz-routes";
@@ -43,25 +43,25 @@ export async function TlozPageShell({
   createKind = "mission",
   children
 }: TlozPageShellProps) {
-  const [missions, projects, seasons, episodes, questItems, allUsers] = await Promise.all([
+  const [missions, projects, questItems, allUsers, documents] = await Promise.all([
     getTlozMissions(),
     getTlozProjects(),
-    getTlozSeasons(),
-    getTlozEpisodes(),
     getTlozQuestItems(),
     getTlozUsers(),
+    getTlozProjectDocuments(),
   ]);
   const controlMissions = controlProjectId ? missions.filter((mission) => mission.projectId === controlProjectId) : missions;
   const users = controlProjectId ? allUsers.filter((user) => controlMissions.some((mission) => mission.ownerId === user.id)) : allUsers;
   const controlProjects = controlProjectId ? projects.filter((project) => project.id === controlProjectId) : projects;
-  const seasonIds = new Set(controlMissions.map((mission) => mission.seasonId).filter(Boolean));
-  const episodeIds = new Set(controlMissions.map((mission) => mission.episodeId).filter(Boolean));
-  const controlSeasons = controlProjectId ? seasons.filter((season) => seasonIds.has(season.id)) : seasons;
-  const controlEpisodes = controlProjectId ? episodes.filter((episode) => episodeIds.has(episode.id)) : episodes;
+  const projectContracts = Object.fromEntries(
+    documents.data
+      .filter((document) => document.source)
+      .map((document) => [document.source!.id, document.contract?.fields ?? []]),
+  );
 
   return (
-    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} fixedProjectId={createKind === "mission" ? controlProjectId : undefined}>
-    <TlozViewStateProvider supportedViews={supportedViews} defaultView={defaultView} projects={controlProjects} seasons={controlSeasons} episodes={controlEpisodes} users={users} inventory={inventoryControls} showMissionControls={missionControls} storageScope={stateScope}>
+    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={createKind === "mission" ? controlProjectId : undefined}>
+    <TlozViewStateProvider supportedViews={supportedViews} defaultView={defaultView} projects={controlProjects} users={users} inventory={inventoryControls} showMissionControls={missionControls} storageScope={stateScope}>
       <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
         <TlozHeader
           title={title}
@@ -71,7 +71,7 @@ export async function TlozPageShell({
           showSearch={showSearch}
           showHeader={showHeader}
           commandEntities={{
-            missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type, href: mission.project ? missionHref(mission.project, mission.displayId) : "/tloz" })),
+            missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type, href: mission.project ? missionHref(mission.project, mission.displayId) : "/" })),
             projects: projects.map((project) => ({ id: project.id, label: project.name, icon: project.icon, href: projectHref(project) })),
             questItems: questItems.map((questItem) => ({ id: questItem.id, label: questItem.name, icon: questItem.icon, href: inventoryItemHref(questItem.id) })),
           }}

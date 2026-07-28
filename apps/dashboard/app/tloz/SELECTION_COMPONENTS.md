@@ -2,7 +2,7 @@
 
 ## Arquitectura
 
-Los patrones visuales y de interacción reutilizables viven en `@zipform/ui`:
+Los patrones visuales y de interacción reutilizables viven en `@tloz/ui`:
 
 - `IconPicker`: buscador de iconos con historial reciente en `localStorage`.
 - `UserPicker`: selección de usuarios por nombre o username.
@@ -38,4 +38,4 @@ El picker expone fechas como `YYYY-MM-DD` para evitar acoplar la capa UI al form
 
 ## Dependencias
 
-Los primitives siguen la documentación vigente de shadcn/ui para Popover, Calendar, Sonner y Skeleton. Las dependencias se administran desde el workspace `@zipform/ui` con pnpm.
+Los primitives siguen la documentación vigente de shadcn/ui para Popover, Calendar, Sonner y Skeleton. Las dependencias se administran desde el workspace `@tloz/ui` con pnpm.

@@ -17,7 +17,7 @@ const nextConfig = {
       "../../docs/api/openapi.yaml"
     ]
   },
-  transpilePackages: ["@zipform/data", "@zipform/types"],
+  transpilePackages: ["@tloz/data", "@tloz/types"],
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

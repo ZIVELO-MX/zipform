@@ -2,26 +2,26 @@
 
 ## Configure the token
 
-Use `ZIPFORM_TOKEN` in the environment that launches the agent.
+Use `TLOZ_TOKEN` in the environment that launches the agent. `ZIPFORM_TOKEN` remains a one-release compatibility fallback for existing installations.
 
 For Bash, Zsh, macOS, Linux, or WSL:
 
 ```bash
-export ZIPFORM_TOKEN="zaf_REPLACE_WITH_TOKEN"
+export TLOZ_TOKEN="tloz_REPLACE_WITH_TOKEN"
 codex
 ```
 
 For PowerShell:
 
 ```powershell
-$env:ZIPFORM_TOKEN = "zaf_REPLACE_WITH_TOKEN"
+$env:TLOZ_TOKEN = "tloz_REPLACE_WITH_TOKEN"
 codex
 ```
 
 For CMD:
 
 ```cmd
-set ZIPFORM_TOKEN=zaf_REPLACE_WITH_TOKEN
+set TLOZ_TOKEN=tloz_REPLACE_WITH_TOKEN
 codex
 ```
 
@@ -32,20 +32,20 @@ Graphical applications may not inherit variables from a terminal. Launch VS Code
 Never print the token. In a Unix-like shell:
 
 ```bash
-if [ -z "$ZIPFORM_TOKEN" ]; then
-  echo "ZIPFORM_TOKEN is not configured"
+if [ -z "$TLOZ_TOKEN" ]; then
+  echo "TLOZ_TOKEN is not configured"
   exit 1
 fi
-echo "ZIPFORM_TOKEN is configured"
+echo "TLOZ_TOKEN is configured"
 ```
 
 Use these headers for authenticated JSON requests:
 
 ```bash
 curl --fail-with-body --silent --show-error \
-  -H "Authorization: Bearer $ZIPFORM_TOKEN" \
+  -H "Authorization: Bearer $TLOZ_TOKEN" \
   -H "Content-Type: application/json" \
-  "https://zipform.zivelo.dev/api/v1/projects"
+  "https://tloz.zivelo.dev/api/v1/projects"
 ```
 
 ## Diagnose failures

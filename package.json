@@ -1,12 +1,12 @@
 {
-  "name": "zipform",
+  "name": "tloz",
   "version": "1.0.0",
   "private": true,
   "packageManager": "pnpm@11.9.0+sha512.bd682d5d03fe525ef7c9fd6780c6884d1e756ac4c9c9fe00c538782824310dcf90e3ddc4f53835f06dfaebd5085e41855e0bcbb3b60de2ac5bbab89e5036f03b",
   "scripts": {
-    "dev": "pnpm --filter @zipform/dashboard dev",
-    "build": "pnpm --filter @zipform/dashboard build",
-    "lint": "pnpm --filter @zipform/dashboard lint",
+    "dev": "pnpm --filter @tloz/dashboard dev",
+    "build": "pnpm --filter @tloz/dashboard build",
+    "lint": "pnpm --filter @tloz/dashboard lint",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test && node --test scripts/agent-governance.test.mjs scripts/deployment-config.test.mjs scripts/openapi-verification.test.mjs scripts/api-load-test.test.mjs scripts/tloz-api.test.mjs scripts/ensure-tloz-attachments-bucket.test.mjs",
     "verify:openapi": "node scripts/openapi-verification.mjs",
@@ -15,13 +15,13 @@
     "tloz:api": "node .codex/skills/tloz-mission-operator/scripts/tloz-api.mjs",
     "tloz:attachments:bucket": "node scripts/ensure-tloz-attachments-bucket.mjs",
     "check": "pnpm db:generate && pnpm typecheck && pnpm test && pnpm build",
-    "db:generate": "pnpm --filter @zipform/data db:generate",
-    "db:migrate": "pnpm --filter @zipform/data db:migrate",
-    "db:migrate:deploy": "pnpm --filter @zipform/data db:migrate:deploy",
+    "db:generate": "pnpm --filter @tloz/data db:generate",
+    "db:migrate": "pnpm --filter @tloz/data db:migrate",
+    "db:migrate:deploy": "pnpm --filter @tloz/data db:migrate:deploy",
     "db:deploy": "pnpm db:generate && pnpm db:migrate:deploy",
-    "db:seed": "pnpm --filter @zipform/data db:seed",
-    "db:prepare-release-1": "pnpm --filter @zipform/data db:prepare-release-1",
-    "db:studio": "pnpm --filter @zipform/data db:studio"
+    "db:seed": "pnpm --filter @tloz/data db:seed",
+    "db:prepare-release-1": "pnpm --filter @tloz/data db:prepare-release-1",
+    "db:studio": "pnpm --filter @tloz/data db:studio"
   },
   "devDependencies": {
     "supabase": "^2.109.0",

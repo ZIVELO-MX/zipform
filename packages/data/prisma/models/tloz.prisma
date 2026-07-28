@@ -159,6 +159,8 @@ model TlozChecklistItem {
 
 model TlozResource {
   id        String      @id
+  documentId String?     @db.Uuid
+  document   TlozDocument? @relation(fields: [documentId], references: [id], onDelete: Cascade)
   missionId String?
   mission   TlozMission? @relation(fields: [missionId], references: [id], onDelete: Cascade)
   projectId String?
@@ -181,6 +183,7 @@ model TlozResource {
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
+  @@index([documentId])
   @@index([missionId])
   @@index([projectId])
   @@index([questItemId])
@@ -220,4 +223,170 @@ model TlozUserMissionState {
   @@unique([userId, slot])
   @@index([missionId])
   @@map("tloz_user_mission_states")
+}
+
+model TlozDocument {
+  id                String                   @id @default(uuid()) @db.Uuid
+  publicId          String                   @unique
+  kind              String
+  projectId         String?                  @db.Uuid
+  project           TlozDocument?            @relation("DocumentProject", fields: [projectId], references: [id], onDelete: Restrict)
+  children          TlozDocument[]           @relation("DocumentProject")
+  title             String
+  summary           String                   @default("")
+  body              String                   @default("")
+  revision          Int                      @default(1)
+  sourceType        String?
+  sourceId          String?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  projectDocument   TlozProjectDocument?
+  missionDocument   TlozMissionDocument?
+  inventoryDocument TlozInventoryDocument?
+  fieldValues       TlozFieldValue[]         @relation("DocumentFieldValues")
+  relationValues    TlozFieldValue[]         @relation("RelatedDocumentFieldValues")
+  outgoingRelations TlozDocumentRelation[]   @relation("DocumentRelationsFrom")
+  incomingRelations TlozDocumentRelation[]   @relation("DocumentRelationsTo")
+  resources         TlozResource[]
+
+  @@unique([sourceType, sourceId])
+  @@index([kind, projectId])
+  @@index([updatedAt])
+  @@map("tloz_documents")
+}
+
+model TlozProjectDocument {
+  documentId      String                @id @db.Uuid
+  document        TlozDocument          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  slug            String                @unique
+  ownerId         String?               @db.Uuid
+  color           String                @default("#6B6B6B")
+  icon            String                @default("FolderKanban")
+  status          String                @default("active")
+  projectType     String                @default("normal")
+  startDate       String?
+  dueDate         String?
+  fieldDefinitions TlozFieldDefinition[]
+  statusOptions   TlozStatusOption[]
+  missions        TlozMissionDocument[]
+  inventoryItems  TlozInventoryDocument[]
+
+  @@index([ownerId])
+  @@map("tloz_project_documents")
+}
+
+model TlozMissionDocument {
+  documentId  String              @id @db.Uuid
+  document    TlozDocument        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  projectId   String              @db.Uuid
+  project     TlozProjectDocument @relation(fields: [projectId], references: [documentId], onDelete: Restrict)
+  ownerId     String              @db.Uuid
+  category    String
+  status      String
+  icon        String              @default("Sword")
+  startDate   String?
+  dueDate     String?
+  completedAt DateTime?
+  blockedReason String?
+  progress    Int                 @default(0)
+
+  @@index([projectId, status])
+  @@index([ownerId])
+  @@map("tloz_mission_documents")
+}
+
+model TlozInventoryDocument {
+  documentId  String              @id @db.Uuid
+  document    TlozDocument        @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  projectId   String              @db.Uuid
+  project     TlozProjectDocument @relation(fields: [projectId], references: [documentId], onDelete: Restrict)
+  ownerId     String?             @db.Uuid
+  category    String              @default("other")
+  status      String              @default("locked")
+  icon        String              @default("PackageOpen")
+  acquiredAt  String?
+
+  @@index([projectId, status])
+  @@index([ownerId])
+  @@map("tloz_inventory_documents")
+}
+
+model TlozFieldDefinition {
+  id             String              @id @default(uuid()) @db.Uuid
+  projectId      String              @db.Uuid
+  project        TlozProjectDocument @relation(fields: [projectId], references: [documentId], onDelete: Cascade)
+  key            String
+  label          String
+  fieldType      String
+  required       Boolean             @default(false)
+  visible        Boolean             @default(true)
+  position       Int
+  defaultValue   Json?
+  options        Json?
+  retiredAt      DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  values         TlozFieldValue[]
+
+  @@unique([projectId, key])
+  @@index([projectId, position])
+  @@map("tloz_field_definitions")
+}
+
+model TlozFieldValue {
+  id                  String              @id @default(uuid()) @db.Uuid
+  documentId          String              @db.Uuid
+  document            TlozDocument        @relation("DocumentFieldValues", fields: [documentId], references: [id], onDelete: Cascade)
+  fieldDefinitionId   String              @db.Uuid
+  fieldDefinition     TlozFieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Restrict)
+  stringValue         String?
+  numberValue         Decimal?
+  booleanValue        Boolean?
+  dateValue           DateTime?
+  stringListValue     String[]            @default([])
+  personId            String?             @db.Uuid
+  relatedDocumentId   String?             @db.Uuid
+  relatedDocument     TlozDocument?       @relation("RelatedDocumentFieldValues", fields: [relatedDocumentId], references: [id], onDelete: SetNull)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@unique([documentId, fieldDefinitionId])
+  @@index([fieldDefinitionId, stringValue])
+  @@index([fieldDefinitionId, numberValue])
+  @@index([fieldDefinitionId, booleanValue])
+  @@index([fieldDefinitionId, dateValue])
+  @@index([personId])
+  @@index([relatedDocumentId])
+  @@map("tloz_field_values")
+}
+
+model TlozStatusOption {
+  id        String              @id @default(uuid()) @db.Uuid
+  projectId String              @db.Uuid
+  project   TlozProjectDocument @relation(fields: [projectId], references: [documentId], onDelete: Cascade)
+  key       String
+  label     String
+  role      String
+  color     String?
+  position  Int
+  active    Boolean             @default(true)
+
+  @@unique([projectId, key])
+  @@index([projectId, role])
+  @@map("tloz_status_options")
+}
+
+model TlozDocumentRelation {
+  id             String       @id @default(uuid()) @db.Uuid
+  sourceDocumentId String     @db.Uuid
+  sourceDocument TlozDocument @relation("DocumentRelationsFrom", fields: [sourceDocumentId], references: [id], onDelete: Cascade)
+  targetDocumentId String     @db.Uuid
+  targetDocument TlozDocument @relation("DocumentRelationsTo", fields: [targetDocumentId], references: [id], onDelete: Cascade)
+  relationType   String
+  required       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@unique([sourceDocumentId, targetDocumentId, relationType])
+  @@index([targetDocumentId, relationType])
+  @@map("tloz_document_relations")
 }

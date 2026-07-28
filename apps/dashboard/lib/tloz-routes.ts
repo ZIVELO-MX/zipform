@@ -1,4 +1,4 @@
-import type { TlozProject } from "@zipform/types";
+import type { TlozProject } from "@tloz/types";
 
 export const TLOZ_VIEWS = ["dashboard", "list", "board", "table", "calendar"] as const;
 export type TlozView = (typeof TLOZ_VIEWS)[number];
@@ -53,6 +53,14 @@ export const SYSTEM_PROJECTS = {
 
 export type SystemProjectSlug = keyof typeof SYSTEM_PROJECTS;
 
+export const RESERVED_PROJECT_SLUGS = new Set([
+  "api",
+  "inventory",
+  "login",
+  "new",
+  "projects",
+]);
+
 export function getSystemProject(slug: string) {
   return SYSTEM_PROJECTS[slug as SystemProjectSlug];
 }
@@ -71,21 +79,21 @@ export function findProjectBySlug(projects: TlozProject[], slug: string) {
 }
 
 export function projectHref(project: Pick<TlozProject, "name" | "slug">) {
-  return `/tloz/${projectSlug(project)}`;
+  return `/${projectSlug(project)}`;
 }
 
 export function missionHref(project: Pick<TlozProject, "name" | "slug">, missionId: string) {
-  return `/tloz/${projectSlug(project)}/${missionId}`;
+  return `/${projectSlug(project)}/${encodeURIComponent(missionId)}`;
 }
 
 export function inventoryItemHref(itemId: string) {
-  return `/tloz/inventory/${encodeURIComponent(itemId)}`;
+  return `/inventory/${encodeURIComponent(itemId)}`;
 }
 
-export function projectDetailHref(projectId: string) {
-  return `/tloz/projects/${encodeURIComponent(projectId)}`;
+export function projectDetailHref(project: Pick<TlozProject, "name" | "slug">) {
+  return `/projects/${projectSlug(project)}`;
 }
 
-export function projectBreadcrumb(project: Pick<TlozProject, "id" | "name">) {
-  return { label: project.name, href: projectDetailHref(project.id) };
+export function projectBreadcrumb(project: Pick<TlozProject, "name" | "slug">) {
+  return { label: project.name, href: projectDetailHref(project) };
 }

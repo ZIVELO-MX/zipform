@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { dataClient } from "@zipform/data";
-import type { TlozMissionStatus } from "@zipform/types";
+import { dataClient } from "@tloz/data";
+import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation, isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
 

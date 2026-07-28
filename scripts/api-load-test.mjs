@@ -104,7 +104,7 @@ async function collectEndpoint(baseUrl, endpoint, token, { samples, concurrency,
 
 export async function benchmarkApi({
   baseUrl = DEFAULT_BASE_URL,
-  token = process.env.ZIPFORM_LOCAL_API_KEY,
+  token = process.env.TLOZ_LOCAL_API_KEY ?? process.env.ZIPFORM_LOCAL_API_KEY,
   samples = DEFAULT_SAMPLES,
   concurrency = DEFAULT_CONCURRENCY,
   fetchImpl = fetch,
