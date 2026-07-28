@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, LayoutDashboard, List, Columns, Table, Calendar, SlidersHorizontal } from "lucide-react";
+import { Check, LayoutDashboard, List, Columns, Table, Calendar, FileText, SlidersHorizontal } from "lucide-react";
 import {
   Button,
   Popover,
@@ -26,6 +26,7 @@ const viewConfig: Record<TlozView, { label: string; icon: React.ElementType }> =
   board: { label: "Board", icon: Columns },
   table: { label: "Tabla", icon: Table },
   calendar: { label: "Calendario", icon: Calendar },
+  detail: { label: "Detalle", icon: FileText },
 };
 
 export function TlozControl() {

@@ -3,6 +3,7 @@ import { getTlozMissions, getTlozProjectDocuments, getTlozProjects, getTlozQuest
 import { TlozHeader } from "./tloz-header";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import type { TlozView } from "../../lib/tloz-routes";
+import type { TlozDocument, UserProfile } from "@tloz/types";
 import { TlozViewStateProvider } from "./tloz-view-state";
 import { TlozCreateProvider, type TlozCreateKind } from "./tloz-create";
 
@@ -23,6 +24,10 @@ type TlozPageShellProps = {
   stateScope?: string;
   controlProjectId?: string;
   createKind?: TlozCreateKind;
+  documentNavigation?: {
+    documents: TlozDocument[];
+    users: UserProfile[];
+  };
 };
 
 export async function TlozPageShell({
@@ -41,15 +46,18 @@ export async function TlozPageShell({
   stateScope,
   controlProjectId,
   createKind = "mission",
+  documentNavigation,
   children
 }: TlozPageShellProps) {
-  const [missions, projects, questItems, allUsers, documents] = await Promise.all([
-    getTlozMissions(),
-    getTlozProjects(),
-    getTlozQuestItems(),
-    getTlozUsers(),
-    getTlozProjectDocuments(),
-  ]);
+  const [missions, projects, questItems, allUsers, documents] = documentNavigation
+    ? [[], [], [], documentNavigation.users, { data: [], nextCursor: null }]
+    : await Promise.all([
+      getTlozMissions(),
+      getTlozProjects(),
+      getTlozQuestItems(),
+      getTlozUsers(),
+      getTlozProjectDocuments(),
+    ]);
   const controlMissions = controlProjectId ? missions.filter((mission) => mission.projectId === controlProjectId) : missions;
   const users = controlProjectId ? allUsers.filter((user) => controlMissions.some((mission) => mission.ownerId === user.id)) : allUsers;
   const controlProjects = controlProjectId ? projects.filter((project) => project.id === controlProjectId) : projects;
@@ -72,8 +80,26 @@ export async function TlozPageShell({
           showHeader={showHeader}
           commandEntities={{
             missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type, href: mission.project ? missionHref(mission.project, mission.displayId) : "/" })),
-            projects: projects.map((project) => ({ id: project.id, label: project.name, icon: project.icon, href: projectHref(project) })),
-            questItems: questItems.map((questItem) => ({ id: questItem.id, label: questItem.name, icon: questItem.icon, href: inventoryItemHref(questItem.id) })),
+            projects: documentNavigation
+              ? documentNavigation.documents
+                .filter((document) => document.kind === "project")
+                .map((document) => ({
+                  id: document.id,
+                  label: document.title,
+                  icon: typeof document.properties.icon === "string" ? document.properties.icon : "FolderKanban",
+                  href: document.projectSlug ? `/${document.projectSlug}` : `/projects/${document.publicId}`,
+                }))
+              : projects.map((project) => ({ id: project.id, label: project.name, icon: project.icon, href: projectHref(project) })),
+            questItems: documentNavigation
+              ? documentNavigation.documents
+                .filter((document) => document.kind === "inventory")
+                .map((document) => ({
+                  id: document.id,
+                  label: document.title,
+                  icon: typeof document.properties.icon === "string" ? document.properties.icon : "PackageOpen",
+                  href: inventoryItemHref(document.publicId),
+                }))
+              : questItems.map((questItem) => ({ id: questItem.id, label: questItem.name, icon: questItem.icon, href: inventoryItemHref(questItem.id) })),
           }}
         />
 

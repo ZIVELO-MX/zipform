@@ -1,6 +1,6 @@
 import type { TlozProject } from "@tloz/types";
 
-export const TLOZ_VIEWS = ["dashboard", "list", "board", "table", "calendar"] as const;
+export const TLOZ_VIEWS = ["dashboard", "list", "board", "table", "calendar", "detail"] as const;
 export type TlozView = (typeof TLOZ_VIEWS)[number];
 
 export function resolveTlozView(preferredView: TlozView, supportedViews: readonly TlozView[], defaultView: TlozView): TlozView {
@@ -22,37 +22,6 @@ export function resolveResponsiveTlozViews(
   };
 }
 
-export const SYSTEM_PROJECTS = {
-  inventory: {
-    slug: "inventory",
-    type: "system",
-    label: "Inventory",
-    availableViews: ["table", "list"],
-    defaultView: "table",
-    detailVariant: "inventory",
-    showMissionControls: false,
-  },
-  projects: {
-    slug: "projects",
-    type: "system",
-    label: "Projects",
-    availableViews: ["table", "list"],
-    defaultView: "table",
-    detailVariant: "project",
-    showMissionControls: false,
-  },
-} as const satisfies Record<string, {
-  slug: string;
-  type: "system";
-  label: string;
-  availableViews: readonly TlozView[];
-  defaultView: TlozView;
-  detailVariant: "inventory" | "project";
-  showMissionControls: boolean;
-}>;
-
-export type SystemProjectSlug = keyof typeof SYSTEM_PROJECTS;
-
 export const RESERVED_PROJECT_SLUGS = new Set([
   "api",
   "inventory",
@@ -60,10 +29,6 @@ export const RESERVED_PROJECT_SLUGS = new Set([
   "new",
   "projects",
 ]);
-
-export function getSystemProject(slug: string) {
-  return SYSTEM_PROJECTS[slug as SystemProjectSlug];
-}
 
 export function projectSlug(project: Pick<TlozProject, "name" | "slug">): string {
   return project.slug || project.name
@@ -90,8 +55,8 @@ export function inventoryItemHref(itemId: string) {
   return `/inventory/${encodeURIComponent(itemId)}`;
 }
 
-export function projectDetailHref(project: Pick<TlozProject, "name" | "slug">) {
-  return `/projects/${projectSlug(project)}`;
+export function projectDetailHref(project: Pick<TlozProject, "name" | "slug"> & { publicId?: string }) {
+  return `/projects/${encodeURIComponent(project.publicId ?? `project-${projectSlug(project)}`)}`;
 }
 
 export function projectBreadcrumb(project: Pick<TlozProject, "name" | "slug">) {

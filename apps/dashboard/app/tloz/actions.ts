@@ -197,6 +197,23 @@ export async function updateDocumentProperties(
   return updated;
 }
 
+export async function updateDocumentBody(
+  documentId: string,
+  body: string,
+  revision: number,
+) {
+  const document = await dataClient.documents.get(documentId);
+  if (!document) throw new Error("Documento no encontrado.");
+  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id);
+  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id);
+  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id);
+  else await authenticatedActor();
+
+  const updated = await dataClient.documents.update(document.id, { body }, revision);
+  revalidateTloz();
+  return updated;
+}
+
 export async function getEntityResources(kind: "project" | "inventory", entityId: string) {
   await authenticatedActor();
   const resources = await dataClient.tloz.getResources();

@@ -92,7 +92,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   );
 }
 
-function MarkdownContent({ children, onToggleTask }: { children: string; onToggleTask?: (position: number, completed: boolean) => void }) {
+export function MarkdownContent({ children, onToggleTask }: { children: string; onToggleTask?: (position: number, completed: boolean) => void }) {
   let taskPosition = 0;
   return (
     <ReactMarkdown

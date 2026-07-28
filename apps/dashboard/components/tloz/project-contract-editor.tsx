@@ -50,7 +50,13 @@ const statusRoleLabel: Record<TlozStatusRole, string> = {
   done: "Done",
 };
 
-export function ProjectContractEditor({ document }: { document: TlozDocument }) {
+export function ProjectContractEditor({
+  document,
+  onChange,
+}: {
+  document: TlozDocument;
+  onChange?: (document: TlozDocument) => void;
+}) {
   const [current, setCurrent] = useState(document);
   const [fields, setFields] = useState(() => normalizeFieldPositions(document.contract?.fields ?? []));
   const [dirty, setDirty] = useState(false);
@@ -110,6 +116,7 @@ export function ProjectContractEditor({ document }: { document: TlozDocument }) 
       try {
         const updated = await replaceProjectContract(current.id, fields, current.revision);
         setCurrent(updated);
+        onChange?.(updated);
         setFields(normalizeFieldPositions(updated.contract?.fields ?? []));
         setDirty(false);
         toast.success("Contrato actualizado", { id: toastId, toasterId });

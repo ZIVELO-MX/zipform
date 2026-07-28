@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getSystemProject, inventoryItemHref, missionHref, projectBreadcrumb, projectDetailHref, projectHref, resolveResponsiveTlozViews, resolveTlozView } from "./tloz-routes";
+import { inventoryItemHref, missionHref, projectBreadcrumb, projectDetailHref, projectHref, resolveResponsiveTlozViews, resolveTlozView } from "./tloz-routes";
 
 describe("TLOZ routes", () => {
   const project = { name: "Core Platform", slug: "core" };
@@ -11,16 +11,15 @@ describe("TLOZ routes", () => {
 
   it("encodes entity identifiers in system detail URLs", () => {
     expect(inventoryItemHref("access/key")).toBe("/inventory/access%2Fkey");
-    expect(projectDetailHref(project)).toBe("/projects/core");
+    expect(projectDetailHref(project)).toBe("/projects/project-core");
   });
 
   it("links a project lobby breadcrumb to canonical project detail", () => {
-    expect(projectBreadcrumb({ slug: "tloz", name: "TLOZ" })).toEqual({ label: "TLOZ", href: "/projects/tloz" });
+    expect(projectBreadcrumb({ slug: "tloz", name: "TLOZ" })).toEqual({ label: "TLOZ", href: "/projects/project-tloz" });
   });
 
   it("falls back to the context default when a view is unsupported", () => {
     expect(resolveTlozView("board", ["table", "list"], "table")).toBe("table");
-    expect(getSystemProject("inventory")?.detailVariant).toBe("inventory");
   });
 
   it("exposes only list and table on mobile", () => {

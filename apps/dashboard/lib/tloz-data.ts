@@ -1,5 +1,6 @@
 import { dataClient, type TlozDashboardSummary, type TlozMissionDetail, type TlozMissionRecord } from "@tloz/data";
 import type { TlozAttachmentGroup, TlozDocumentKind } from "@tloz/types";
+import type { DocumentGetOptions } from "@tloz/data";
 import { cache } from "react";
 import { getTlozAttachmentStorage } from "./tloz-attachment-storage";
 
@@ -42,4 +43,10 @@ export const getTlozDocuments = cache((kind?: TlozDocumentKind) => (
 ));
 export const getTlozProjectDocuments = () => getTlozDocuments("project");
 export const getTlozInventoryDocuments = () => getTlozDocuments("inventory");
-export const getTlozDocument = cache((documentId: string) => dataClient.documents.get(documentId));
+export const getTlozDocument = cache((
+  documentId: string,
+  options?: DocumentGetOptions,
+) => dataClient.documents.get(documentId, options));
+export const getTlozDocumentDefinition = cache((
+  definitionKey: string,
+) => dataClient.documents.getDefinition(definitionKey));
