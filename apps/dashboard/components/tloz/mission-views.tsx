@@ -39,6 +39,7 @@ import { QuestItemDots } from "./mission-card";
 import { projectHref } from "../../lib/tloz-routes";
 import { useTlozViewState, type TlozGrouping } from "./tloz-view-state";
 import { EntityList, EntityTable, type EntityColumn } from "./entity-views";
+import { orderMissionListStatuses } from "./mission-list-order";
 import {
   formatDate,
   missionPreviewDescription,
@@ -561,7 +562,7 @@ export function MissionList({ missions, grouping = "status", statusOptions = [],
     ? Array.from(new Map(missions.map((mission) => [mission.projectId ?? "none", mission.project?.name ?? "Sin proyecto"]))).map(([id, label]) => ({ id, label, missions: missions.filter((mission) => (mission.projectId ?? "none") === id) }))
     : grouping === "none"
       ? [{ id: "all", label: "Todas", missions }]
-      : Array.from(new Set(missions.map((mission) => mission.status))).map((status) => ({
+      : orderMissionListStatuses(missions.map((mission) => mission.status), statusOptions).map((status) => ({
         id: status,
         label: statusPresentation(status, statusOptions).label,
         missions: missions.filter((mission) => mission.status === status),
