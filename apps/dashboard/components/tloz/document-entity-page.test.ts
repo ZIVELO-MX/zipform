@@ -19,7 +19,9 @@ describe("document entity routes", () => {
     expect(renderer).toContain("export function DocumentDetail");
     expect(renderer).toContain("function documentToDetailMission");
     expect(renderer).toContain("<MissionDetail");
-    expect(renderer).toContain('view.id === "detail"');
+    expect(renderer).toContain("resolveDocumentDetailPropertyProjection");
+    expect(renderer).toContain("presentationFields: props.definition.fields");
+    expect(renderer).not.toContain("DocumentRecordEditorDetail");
     expect(projectRoute).not.toContain("<SystemEntityDetailPage");
     expect(inventoryRoute).not.toContain("<SystemEntityDetailPage");
     expect(systemDetail).toContain("<DocumentDetail");

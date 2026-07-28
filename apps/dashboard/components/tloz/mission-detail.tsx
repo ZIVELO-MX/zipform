@@ -17,7 +17,7 @@ import {
   patchMissionStatus,
   updateMission,
 } from "../../app/tloz/actions";
-import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
+import { detailFieldOptions, MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 import { MissionAttachmentUploader } from "./mission-attachment-uploader";
 import { missionStatusLabel, missionStatusTone, missionTypeIcon, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
@@ -65,9 +65,14 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
   const [isPending, startTransition] = useTransition();
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
-  const completionStatus = options.contract
-    ?.find((field) => field.key === "status")
-    ?.options.find((option) => option.role === "done")
+  const completionStatus = (
+    options.presentationFields
+      ?.find((field) => field.key === "status")
+      ?.options
+    ?? options.contract
+      ?.find((field) => field.key === "status")
+      ?.options
+  )?.find((option) => option.role === "done")
     ?.value ?? "completed";
   const isCompleted = current.status === completionStatus;
   const checklistProgress = current.checklist.length ? Math.round((current.checklist.filter((item) => item.completed).length / current.checklist.length) * 100) : 0;
@@ -186,12 +191,10 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
     setDeletingChecklist(null);
   }
 
-  const categoryOption = options.contract
-    ?.find((field) => field.key === "category")
-    ?.options.find((option) => option.value === current.type);
-  const statusOption = options.contract
-    ?.find((field) => field.key === "status")
-    ?.options.find((option) => option.value === current.status);
+  const categoryOption = detailFieldOptions(options, "category", [])
+    .find((option) => option.value === current.type);
+  const statusOption = detailFieldOptions(options, "status", [])
+    .find((option) => option.value === current.status);
   const typeColor = categoryOption?.color ?? tone;
   const statusColor = statusOption?.color ?? missionStatusTone[current.status];
   const iconSurfaceClass = missionTypeSurfaceClass[current.type] ?? "bg-carbon/5 text-carbon";
@@ -319,9 +322,9 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
               Abrir en página completa
             </Link>
           ) : null}
-          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} users={options.users} /></div></section>
+          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} readOnly={!canUpdate} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdate} /></div></section>
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]"><ActivityItem label={`Estado: ${missionStatusLabel[current.status]}`} date={current.updatedAt} tone={missionStatusTone[current.status]} /><ActivityItem label="Misión actualizada" date={current.updatedAt} tone={tone} /><ActivityItem label="Misión creada" date={current.createdAt} /></div></section>
-          <Button className="min-h-11 rounded-xl" disabled={isCompleted} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button>
+          {canUpdate ? <Button className="min-h-11 rounded-xl" disabled={isCompleted} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button> : null}
         </aside>
       </div>
     </article>

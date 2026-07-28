@@ -25,4 +25,12 @@ describe("mission status selector", () => {
     expect(source).toContain("iconComponent: resolveMissionIcon(project.icon)");
     expect(source).toContain("<ProjectValue project={values.project ?? selectedProject} />");
   });
+
+  it("uses the shared projection and presentation metadata in detail rows", () => {
+    const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
+    expect(source).toContain("options?.detailProperties?.core");
+    expect(source).toContain('visibleProperties.has("project")');
+    expect(source).toContain("options?.presentationFields");
+    expect(source).toContain("readOnly={readOnly}");
+  });
 });

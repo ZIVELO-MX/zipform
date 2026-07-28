@@ -15,20 +15,30 @@ import {
 } from "@tloz/ui";
 import type {
   TlozDocument,
+  TlozDocumentPresentationField,
   TlozDocumentScalar,
   TlozFieldDefinition,
 } from "@tloz/types";
 import { updateDocumentProperties } from "../../app/tloz/actions";
 import { DetailPropertyRow } from "./detail-property-row";
+import {
+  documentValue,
+  isDocumentDetailValuePresent,
+} from "./document-view-model";
+import { formatDate } from "./tloz-utils";
 
 export function DocumentPropertyFields({
   document,
   fields,
+  presentationFields = [],
   users,
+  readOnly = false,
 }: {
   document?: TlozDocument;
   fields: TlozFieldDefinition[];
+  presentationFields?: TlozDocumentPresentationField[];
   users: Array<{ id: string; name: string }>;
+  readOnly?: boolean;
 }) {
   const [current, setCurrent] = useState(document);
   const [pending, startTransition] = useTransition();
@@ -40,7 +50,15 @@ export function DocumentPropertyFields({
   const customFields = fields.filter(
     (field) => field.visible && field.key !== "status" && field.key !== "category",
   );
-  if (!customFields.length) return null;
+  const visibleCustomFields = customFields.flatMap((field) => {
+    const value = current.properties[field.key] ?? null;
+    return isDocumentDetailValuePresent(value) ? [{ field, value }] : [];
+  });
+  const visiblePresentationFields = presentationFields.flatMap((field) => {
+    const value = documentValue(current, field.key);
+    return isDocumentDetailValuePresent(value) ? [{ field, value }] : [];
+  });
+  if (!visibleCustomFields.length && !visiblePresentationFields.length) return null;
 
   function persist(field: TlozFieldDefinition, value: TlozDocumentScalar) {
     if (!current) return;
@@ -58,23 +76,31 @@ export function DocumentPropertyFields({
 
   return (
     <div className="flex flex-col border-t border-carbon/[0.07] pt-1" aria-busy={pending}>
-      {customFields.map((field) => {
-        const value = current.properties[field.key] ?? field.defaultValue ?? null;
-        return (
-          <DetailPropertyRow
-            key={field.id}
-            label={field.label}
-            display={<PropertyValue field={field} value={value} users={users} />}
-          >
-            <PropertyEditor
-              field={field}
-              value={value}
-              users={users}
-              onChange={(next) => persist(field, next)}
-            />
-          </DetailPropertyRow>
-        );
-      })}
+      {visibleCustomFields.map(({ field, value }) => (
+        <DetailPropertyRow
+          key={field.id}
+          label={field.label}
+          display={<PropertyValue field={field} value={value} users={users} />}
+          readOnly={readOnly}
+        >
+          <PropertyEditor
+            field={field}
+            value={value}
+            users={users}
+            onChange={(next) => persist(field, next)}
+          />
+        </DetailPropertyRow>
+      ))}
+      {visiblePresentationFields.map(({ field, value }) => (
+        <DetailPropertyRow
+          key={field.key}
+          label={field.label}
+          display={<PresentationValue field={field} value={value} users={users} />}
+          readOnly
+        >
+          {null}
+        </DetailPropertyRow>
+      ))}
     </div>
   );
 }
@@ -139,6 +165,39 @@ function PropertyValue({
   return <span className={field.type === "number" || field.type === "date" ? "font-mono text-[12px]" : ""}>{String(value)}</span>;
 }
 
+function PresentationValue({
+  field,
+  value,
+  users,
+}: {
+  field: TlozDocumentPresentationField;
+  value: TlozDocumentScalar;
+  users: Array<{ id: string; name: string }>;
+}) {
+  if (field.format === "status" && typeof value === "string") {
+    const option = field.options?.find((candidate) => candidate.value === value);
+    const tone = option?.color ?? statusTone(option?.role, value);
+    return (
+      <span
+        className="inline-block rounded-full px-[9px] py-[3px] text-[11px] font-bold"
+        style={{ background: `${tone}18`, color: tone }}
+      >
+        {option?.label ?? humanize(value)}
+      </span>
+    );
+  }
+  if (field.format === "person" && typeof value === "string") {
+    return <span>{users.find((user) => user.id === value)?.name ?? value}</span>;
+  }
+  if (field.format === "date" && typeof value === "string") {
+    return <span className="font-mono text-[11.5px] text-carbon/55">{formatDate(value)}</span>;
+  }
+  if (field.format === "id" || field.format === "number") {
+    return <span className="font-mono text-[11.5px] text-carbon/55">{displayValue(value, field)}</span>;
+  }
+  return <span className="text-xs text-carbon/65">{displayValue(value, field)}</span>;
+}
+
 function PropertyEditor({
   field,
   value,
@@ -200,6 +259,36 @@ function PropertyEditor({
       onSave={(next) => onChange(field.type === "number" ? (next ? Number(next) : null) : next || null)}
     />
   );
+}
+
+function displayValue(
+  value: TlozDocumentScalar,
+  field: TlozDocumentPresentationField,
+) {
+  if (value === null) return "";
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => field.options?.find((option) => option.value === item)?.label ?? item)
+      .join(", ");
+  }
+  if (typeof value === "boolean") return value ? "Sí" : "No";
+  if (typeof value === "string") {
+    return field.options?.find((option) => option.value === value)?.label ?? value;
+  }
+  return String(value);
+}
+
+function humanize(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function statusTone(role: string | undefined, value: string) {
+  if (role === "done" || value === "active" || value === "unlocked") return "#1E6B3C";
+  if (role === "blocked" || value === "blocked") return "#B91C22";
+  if (role === "ready" || value === "planned") return "#3A47B5";
+  return "#7A5A12";
 }
 
 function CreatePropertyEditor({
