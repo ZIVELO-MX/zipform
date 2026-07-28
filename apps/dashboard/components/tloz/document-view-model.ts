@@ -7,6 +7,7 @@ import type {
 export function documentValue(document: TlozDocument, key: string): TlozDocumentScalar {
   if (key === "title") return document.title;
   if (key === "publicId") return document.publicId;
+  if (key === "mission_count" && document.children) return document.children.total;
   return document.properties[key] ?? null;
 }
 

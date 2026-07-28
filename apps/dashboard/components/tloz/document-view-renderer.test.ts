@@ -36,6 +36,16 @@ describe("document view model", () => {
     expect(documentValue(documents[0], "publicId")).toBe("INV-0001");
     expect(documentValue(documents[0], "due")).toBeNull();
   });
+
+  it("reads child totals as the project mission count", () => {
+    const project = {
+      ...document("project-tloz", {}),
+      kind: "project" as const,
+      children: { data: [], nextCursor: null, total: 12 },
+    };
+
+    expect(documentValue(project, "mission_count")).toBe(12);
+  });
 });
 
 function document(
