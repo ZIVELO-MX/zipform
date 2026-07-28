@@ -86,7 +86,19 @@ function contractOptions(contract: TlozFieldDefinition[] | undefined, key: strin
 
 function OptionValue({ value, options, status = false }: { value: string; options: ContractOption[]; status?: boolean }) {
   const option = options.find((candidate) => candidate.value === value);
-  const color = option?.color ?? "#6B6B6B";
+  const color = option?.color ?? optionColor(value, status);
   if (status) return <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color }}><span className="size-[7px] rounded-full bg-current" aria-hidden="true" />{option?.label ?? value}</span>;
-  return <span className="inline-flex rounded-full px-[9px] py-[3px] text-xs font-bold" style={{ background: `${color}18`, color }}>{option?.label ?? value}</span>;
+  const Icon = resolveMissionIcon(optionIcon(value));
+  return <span className="inline-flex items-center gap-1.5 rounded-full px-[9px] py-[3px] text-xs font-bold" style={{ background: `${color}18`, color }}><Icon className="size-3.5" aria-hidden="true" />{option?.label ?? value}</span>;
+}
+
+function optionColor(value: string, status: boolean) {
+  if (status) {
+    return ({ now: "#1E8E5A", next: "#2D6CDF", later: "#7A4ED9", blocked: "#B91C22", completed: "#D72228", locked: "#7A5A12", unlocked: "#1E6B3C" } as Record<string, string>)[value] ?? "#6B6B6B";
+  }
+  return ({ main_quest: "#D72228", side_quest: "#2D6CDF", farming_quest: "#1E8E5A", exploration_quest: "#7A4ED9", tool: "#2D6CDF", access: "#7A4ED9", asset: "#1E8E5A", document: "#7A5A12", other: "#6B6B6B", normal: "#3A47B5" } as Record<string, string>)[value] ?? "#6B6B6B";
+}
+
+function optionIcon(value: string) {
+  return ({ main_quest: "Star", side_quest: "Flag", farming_quest: "CircleDot", exploration_quest: "Compass", tool: "Wrench", access: "KeyRound", asset: "Package", document: "FileText", other: "Box", normal: "FolderKanban" } as Record<string, string>)[value] ?? "CircleDot";
 }
