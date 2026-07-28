@@ -9,7 +9,7 @@ import {
   getTlozQuestItems,
   getTlozUsers,
 } from "../../lib/tloz-data";
-import { findProjectBySlug, projectBreadcrumb, projectHref } from "../../lib/tloz-routes";
+import { findProjectBySlug, projectHref } from "../../lib/tloz-routes";
 import { getMissionCapabilities } from "../../app/tloz/actions";
 import { MissionDetailPage } from "./mission-detail-page";
 import { TlozPageShell } from "./tloz-shell";
@@ -39,7 +39,7 @@ export async function MissionDocumentPage({
   return (
     <TlozPageShell
       title={mission.title}
-      breadcrumb={["Lobby", projectBreadcrumb(project), mission.title]}
+      breadcrumb={["Lobby", { label: project.name, href: projectHref(project) }, mission.title]}
       showSearch={false}
       showControls={false}
     >

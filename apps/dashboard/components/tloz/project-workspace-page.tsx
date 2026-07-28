@@ -7,7 +7,7 @@ import {
   getTlozProjects,
   getTlozQuestItems,
 } from "../../lib/tloz-data";
-import { findProjectBySlug, projectBreadcrumb } from "../../lib/tloz-routes";
+import { findProjectBySlug } from "../../lib/tloz-routes";
 import { TlozViewRenderer } from "../../app/tloz/tloz-view-renderer";
 import { TlozPageShell } from "./tloz-shell";
 
@@ -44,7 +44,7 @@ export async function ProjectWorkspacePage({ projectSlug }: { projectSlug: strin
   return (
     <TlozPageShell
       title={project.name}
-      breadcrumb={["Lobby", projectBreadcrumb(project)]}
+      breadcrumb={["Lobby", project.name]}
       fullWidth
       controlProjectId={project.id}
       stateScope={`project:${project.slug}`}
