@@ -9,7 +9,7 @@ import {
   getTlozQuestItems,
   getTlozUsers,
 } from "../../lib/tloz-data";
-import { findProjectBySlug, projectHref } from "../../lib/tloz-routes";
+import { findProjectBySlug, projectBreadcrumb, projectHref } from "../../lib/tloz-routes";
 import { getMissionCapabilities } from "../../app/tloz/actions";
 import { MissionDetailPage } from "./mission-detail-page";
 import { TlozPageShell } from "./tloz-shell";
@@ -37,7 +37,12 @@ export async function MissionDocumentPage({
   const projectDocument = document?.parentId ? await getTlozDocument(document.parentId) : null;
 
   return (
-    <TlozPageShell title={mission.title} showHeader={false}>
+    <TlozPageShell
+      title={mission.title}
+      breadcrumb={["Lobby", projectBreadcrumb(project), mission.title]}
+      showSearch={false}
+      showControls={false}
+    >
       <div className="min-h-full bg-[#FAFAF9]">
         <header className="sticky top-0 z-10 flex items-center gap-3 border-b border-carbon/10 bg-[#FAFAF9]/95 px-4 py-3 backdrop-blur md:hidden">
           <Link

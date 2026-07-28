@@ -34,6 +34,7 @@ export async function DocumentCollectionPage({
   return (
     <TlozPageShell
       title={title}
+      breadcrumb={["Lobby", { label: title, href: kind === "project" ? "/projects" : "/inventory" }]}
       supportedViews={collectionViews}
       defaultView={definition.defaultView as TlozView}
       missionControls={false}

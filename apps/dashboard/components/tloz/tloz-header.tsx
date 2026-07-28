@@ -31,6 +31,7 @@ type TlozHeaderProps = {
   breadcrumb?: Array<string | { label: string; href: string }>;
   showSearch?: boolean;
   showHeader?: boolean;
+  showControls?: boolean;
   commandEntities: {
     missions: Array<{ id: string; label: string; icon: string; type: TlozMissionType; href: string }>;
     projects: Array<{ id: string; label: string; icon: string; href: string }>;
@@ -54,7 +55,7 @@ const commandGroups = [
   },
 ];
 
-export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showSearch = true, showHeader = true, commandEntities }: TlozHeaderProps) {
+export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showSearch = true, showHeader = true, showControls = true, commandEntities }: TlozHeaderProps) {
   const [commandOpen, setCommandOpen] = useState(false);
   const router = useRouter();
 
@@ -126,9 +127,7 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           </button>
         </div>
 
-        <div className="tloz-header-trailing">
-          <TlozControl />
-        </div>
+        {showControls ? <div className="tloz-header-trailing"><TlozControl /></div> : null}
       </header>
 
       <CommandDialog

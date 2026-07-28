@@ -8,7 +8,7 @@ import type {
   UserProfile,
 } from "@tloz/types";
 import { Button, SlideOver, toast } from "@tloz/ui";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, List, Table } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
@@ -33,7 +33,7 @@ export function DocumentViewRenderer({
   definition,
   users,
 }: DocumentViewRendererProps) {
-  const { state } = useTlozViewState();
+  const { state, setState } = useTlozViewState();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<TlozDocument | null>(null);
@@ -72,6 +72,12 @@ export function DocumentViewRenderer({
   return (
     <>
       <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
+        <DocumentCollectionToolbar
+          kind={definition.kind}
+          count={documents.length}
+          activeView={state.view === "table" ? "table" : "list"}
+          onViewChange={(view) => setState({ view })}
+        />
         {state.view === "list" ? (
           <EntityList
             title={definition.key === "projects" ? "Projects" : "Inventory"}
@@ -120,6 +126,44 @@ export function DocumentViewRenderer({
         ) : null}
       </SlideOver>
     </>
+  );
+}
+
+function DocumentCollectionToolbar({
+  kind,
+  count,
+  activeView,
+  onViewChange,
+}: {
+  kind: TlozDocumentDefinition["kind"];
+  count: number;
+  activeView: "list" | "table";
+  onViewChange: (view: "list" | "table") => void;
+}) {
+  const label = kind === "project" ? "Todos los proyectos" : "Todo el inventario";
+  return (
+    <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-1 md:px-0">
+      <span className="text-xs font-semibold text-carbon/60">
+        {label} <span className="font-mono text-[11px] text-carbon/40">({count})</span>
+      </span>
+      <div className="inline-flex rounded-lg border border-carbon/10 bg-white p-0.5" aria-label="Cambiar vista">
+        {(["list", "table"] as const).map((view) => {
+          const Icon = view === "list" ? List : Table;
+          return (
+            <button
+              key={view}
+              type="button"
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold ${activeView === view ? "bg-carbon/10 text-carbon" : "text-carbon/50 hover:bg-carbon/5"}`}
+              aria-pressed={activeView === view}
+              onClick={() => onViewChange(view)}
+            >
+              <Icon size={13} aria-hidden="true" />
+              {view === "list" ? "Lista" : "Tabla"}
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

@@ -44,7 +44,7 @@ export async function ProjectWorkspacePage({ projectSlug }: { projectSlug: strin
   return (
     <TlozPageShell
       title={project.name}
-      breadcrumb={[projectBreadcrumb(project)]}
+      breadcrumb={["Lobby", projectBreadcrumb(project)]}
       fullWidth
       controlProjectId={project.id}
       stateScope={`project:${project.slug}`}

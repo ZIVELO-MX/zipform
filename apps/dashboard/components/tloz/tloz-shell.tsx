@@ -16,6 +16,7 @@ type TlozPageShellProps = {
   breadcrumb?: Array<string | { label: string; href: string }>;
   showSearch?: boolean;
   showHeader?: boolean;
+  showControls?: boolean;
   fullWidth?: boolean;
   supportedViews?: TlozView[];
   defaultView?: TlozView;
@@ -38,6 +39,7 @@ export async function TlozPageShell({
   breadcrumb,
   showSearch = true,
   showHeader = true,
+  showControls = true,
   fullWidth = false,
   supportedViews = ["dashboard", "list", "board", "table", "calendar"],
   defaultView = "dashboard",
@@ -78,6 +80,7 @@ export async function TlozPageShell({
           breadcrumb={breadcrumb}
           showSearch={showSearch}
           showHeader={showHeader}
+          showControls={showControls}
           commandEntities={{
             missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type, href: mission.project ? missionHref(mission.project, mission.displayId) : "/" })),
             projects: documentNavigation
