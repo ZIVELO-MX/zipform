@@ -25,6 +25,8 @@ describe("document entity routes", () => {
     expect(renderer).toContain("documentMutation={mutate}");
     expect(renderer).toContain("canUpdateDocument={detail.canUpdate}");
     expect(renderer).toContain("canMove={detail.canMove}");
+    expect(renderer).toContain("function DocumentDetailLoading");
+    expect(renderer).toContain('return <DocumentDetailLoading label="Cargando documento…" />');
     expect(renderer).toContain("updateDocument(");
     expect(renderer).not.toContain("DocumentRecordEditorDetail");
     expect(projectRoute).not.toContain("<SystemEntityDetailPage");

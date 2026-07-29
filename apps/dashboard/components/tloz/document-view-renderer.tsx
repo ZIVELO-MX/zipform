@@ -218,7 +218,7 @@ function MissionDocumentDetail({ document, panel = false }: { document: TlozDocu
   }, [document.publicId, document.source?.id]);
 
   if (error) return <div className="p-6 text-sm font-semibold text-[#B91C22]" role="alert">No se pudo cargar la Mission.</div>;
-  if (!result) return <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando Mission…</div>;
+  if (!result) return <DocumentDetailLoading label="Cargando Mission…" />;
   return <MissionDetail mission={result.mission} options={result.options} canUpdate={result.canUpdate} canMove={result.canMove} variant={panel ? "panel" : "full"} />;
 }
 
@@ -236,9 +236,11 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
     canMove: false,
     resources: [],
   });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
     setDetail((current) => ({ ...current, document: props.document }));
     const entityId = props.document.source?.id ?? props.document.id;
     void Promise.all([
@@ -253,18 +255,24 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
         canMove: result.capabilities.canMove,
         resources,
       });
+      setLoading(false);
       props.onChange?.(result.document);
     }).catch(() => {
-      if (active) setDetail((current) => ({
-        ...current,
-        canUpdate: false,
-        canMove: false,
-      }));
+      if (active) {
+        setLoading(false);
+        setDetail((current) => ({
+          ...current,
+          canUpdate: false,
+          canMove: false,
+        }));
+      }
     });
     return () => {
       active = false;
     };
   }, [props.document.id]);
+
+  if (loading) return <DocumentDetailLoading label="Cargando documento…" />;
 
   const mission = documentToDetailMission(detail.document, props.users, detail.resources);
   const detailProperties = resolveDocumentDetailPropertyProjection(
@@ -338,6 +346,10 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
       onNavigateQuestItem={undefined}
     />
   );
+}
+
+function DocumentDetailLoading({ label }: { label: string }) {
+  return <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />{label}</div>;
 }
 
 function documentToDetailMission(document: TlozDocument, users: DocumentUser[], resources: DocumentResource[] = []): TlozMissionDetail {
