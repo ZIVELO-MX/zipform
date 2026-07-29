@@ -59,6 +59,7 @@ import {
   getMissionDetailOptions,
   patchMissionStatus,
   saveMissionDocument,
+  updateDocument,
   updateDocumentContent,
   updateMission,
 } from "./actions";
@@ -265,14 +266,14 @@ describe("TLOZ Server Action authorization", () => {
   it("resolves Mission attachment capabilities from role and ownership", async () => {
     mocks.auth.mockResolvedValue({ user: developer });
     mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, ownerId: developer.id });
-    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: true });
+    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: true, canMove: false });
 
     mocks.auth.mockResolvedValue({ user: reader });
-    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: false });
+    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: false, canMove: false });
 
     mocks.auth.mockResolvedValue({ user: developer });
     mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, ownerId: "owner-1" });
-    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: false });
+    await expect(getMissionCapabilities("mission-1")).resolves.toEqual({ canUpdate: false, canMove: false });
   });
 
   it("loads the matching definition for a document detail", async () => {
@@ -281,6 +282,7 @@ describe("TLOZ Server Action authorization", () => {
       id: "inventory-document",
       publicId: "inventory-item",
       kind: "inventory",
+      properties: { assignee: developer.id },
       source: { type: "inventory", id: "inventory-1" },
     };
     const definition = { id: "inventory-definition", key: "inventory", kind: "inventory" };
@@ -288,7 +290,12 @@ describe("TLOZ Server Action authorization", () => {
     mocks.documents.getDefinition.mockResolvedValue(definition);
     mocks.tloz.getQuestItems.mockResolvedValue([{ id: "inventory-1", ownerId: developer.id }]);
 
-    await expect(getDocumentDetailOptions("inventory-document")).resolves.toEqual({ document, definition });
+    await expect(getDocumentDetailOptions("inventory-document")).resolves.toEqual({
+      document,
+      definition,
+      contract: [],
+      capabilities: { canUpdate: true, canMove: false },
+    });
     expect(mocks.documents.getDefinition).toHaveBeenCalledWith("inventory");
   });
 
@@ -298,6 +305,7 @@ describe("TLOZ Server Action authorization", () => {
       id: "project-document",
       kind: "project",
       revision: 4,
+      properties: { owner: developer.id },
       source: { type: "project", id: "project-1" },
     };
     const updated = { ...document, title: "Updated", revision: 5 };
@@ -307,6 +315,50 @@ describe("TLOZ Server Action authorization", () => {
 
     await expect(updateDocumentContent(document.id, { title: "Updated" }, 4)).resolves.toEqual(updated);
     expect(mocks.documents.update).toHaveBeenCalledWith(document.id, { title: "Updated" }, 4);
+  });
+
+  it("uses the document repository for Mission-native fields", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    const document = {
+      id: "mission-document",
+      kind: "mission",
+      revision: 3,
+      properties: { assignee: developer.id },
+      source: { type: "mission", id: "mission-1" },
+    };
+    mocks.documents.get.mockResolvedValue(document);
+    mocks.documents.update.mockResolvedValue({
+      ...document,
+      revision: 4,
+      title: "Updated",
+      properties: { ...document.properties, status: "now" },
+    });
+
+    await updateMission("mission-1", { title: "Updated", status: "now" });
+
+    expect(mocks.documents.update).toHaveBeenCalledWith(
+      document.id,
+      { title: "Updated", properties: { status: "now" } },
+      3,
+    );
+    expect(mocks.tloz.updateMission).not.toHaveBeenCalled();
+  });
+
+  it("requires move capability for a document owner change", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    const document = {
+      id: "project-document",
+      kind: "project",
+      revision: 1,
+      properties: { owner: developer.id },
+      source: { type: "project", id: "project-1" },
+    };
+    mocks.documents.get.mockResolvedValue(document);
+
+    await expect(updateDocument(document.id, {
+      properties: { owner: owner.id },
+    }, 1)).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+    expect(mocks.documents.update).not.toHaveBeenCalled();
   });
 
   it("uses an explicit 401 error when no session exists", async () => {

@@ -18,6 +18,7 @@ import type {
 } from "../contracts";
 import { validateDocumentProperties, validateProjectFields } from "../document-contract";
 import { TlozDocumentError } from "../document-errors";
+import { parseMarkdownChecklist } from "../tloz-hydration";
 
 const documentInclude = {
   project: {
@@ -206,6 +207,7 @@ export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocume
 
         await updateLegacySource(tx, current, input);
         await updateTypedProperties(tx, current, input.properties ?? {});
+        await updateMissionBodyProjection(tx, current, input.body);
       });
 
       const document = await get(current.id);
@@ -670,6 +672,40 @@ async function updateLegacySource(
       });
     }
   }
+}
+
+async function updateMissionBodyProjection(
+  tx: Prisma.TransactionClient,
+  current: DocumentRow,
+  body: string | undefined,
+) {
+  if (body === undefined || !current.missionDocument) return;
+  const checklist = parseMarkdownChecklist(body);
+  const progress = checklist.length
+    ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100)
+    : 0;
+  if (current.sourceId) {
+    await tx.tlozChecklistItem.deleteMany({
+      where: { missionId: current.sourceId },
+    });
+    await Promise.all(checklist.map((item, position) => tx.tlozChecklistItem.create({
+      data: {
+        id: crypto.randomUUID(),
+        missionId: current.sourceId!,
+        title: item.title,
+        completed: item.completed,
+        position,
+      },
+    })));
+    await tx.tlozMission.updateMany({
+      where: { id: current.sourceId },
+      data: { progress },
+    });
+  }
+  await tx.tlozMissionDocument.update({
+    where: { documentId: current.id },
+    data: { progress },
+  });
 }
 
 function projectDocumentProperties(properties: Record<string, TlozDocumentScalar>) {

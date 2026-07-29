@@ -72,7 +72,11 @@ describe("mock document repository", () => {
       revision: document.revision + 1,
       properties: { priority: "high" },
     });
-    expect((await client.tloz.getMissionDetail(source.id))?.title).toBe("Documento actualizado");
+    expect(await client.tloz.getMissionDetail(source.id)).toMatchObject({
+      title: "Documento actualizado",
+      progress: 0,
+      checklist: [expect.objectContaining({ title: "Verificar", completed: false })],
+    });
     await expect(client.documents.update(document.id, { title: "Stale" }, document.revision))
       .rejects.toMatchObject({ code: "DOCUMENT_REVISION_CONFLICT" });
 
@@ -102,6 +106,34 @@ describe("mock document repository", () => {
       },
     ], retired.revision);
     expect((await client.documents.get(document.id))?.properties.priority).toBe("high");
+  });
+
+  it("projects responsible changes through kind-specific document keys", async () => {
+    const client = createMockDataClient();
+    const nextOwner = "responsible-user";
+    const project = (await client.documents.find({ kind: "project" }, { limit: 20 })).data
+      .find((document) => document.source)!;
+    const inventory = (await client.documents.find({ kind: "inventory" }, { limit: 1 })).data[0];
+    const mission = (await client.documents.find({ kind: "mission" }, { limit: 1 })).data[0];
+
+    const updatedProject = await client.documents.update(project.id, {
+      properties: { owner: nextOwner },
+    }, project.revision);
+    const updatedInventory = await client.documents.update(inventory.id, {
+      properties: { assignee: nextOwner },
+    }, inventory.revision);
+    const updatedMission = await client.documents.update(mission.id, {
+      properties: { assignee: nextOwner },
+    }, mission.revision);
+
+    expect(updatedProject.properties.owner).toBe(nextOwner);
+    expect(updatedInventory.properties.assignee).toBe(nextOwner);
+    expect(updatedMission.properties.assignee).toBe(nextOwner);
+    expect((await client.tloz.getProjects()).find((item) => item.id === project.source!.id)?.ownerId)
+      .toBe(nextOwner);
+    expect((await client.tloz.getQuestItems()).find((item) => item.id === inventory.source!.id)?.ownerId)
+      .toBe(nextOwner);
+    expect((await client.tloz.getMissionDetail(mission.source!.id))?.ownerId).toBe(nextOwner);
   });
 
   it("advances cursor pagination without repeating records", async () => {
