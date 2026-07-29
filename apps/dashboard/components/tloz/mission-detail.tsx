@@ -343,6 +343,14 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
             </div>
             <AddResource onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} />
           </RelationsSection></> : null}
+
+          {!isMissionDocument ? (
+            <RelationsSection className="mt-7" title="Recursos">
+              <div className="rounded-xl border border-[#1D1D1B]/10 bg-white px-3.5 py-3">
+                <EmptyText>Sin recursos adjuntos.</EmptyText>
+              </div>
+            </RelationsSection>
+          ) : null}
         </main>
 
         <aside className="mission-detail-properties flex self-start flex-col gap-3.5" aria-label="Información de la misión">

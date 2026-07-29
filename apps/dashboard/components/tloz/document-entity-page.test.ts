@@ -43,6 +43,12 @@ describe("document entity routes", () => {
     expect(missionDetail).toContain("isMissionDocument ? <><div");
   });
 
+  it("shows an empty resources section for non-Mission documents", () => {
+    expect(missionDetail).toContain('!isMissionDocument ? (');
+    expect(missionDetail).toContain('<RelationsSection className="mt-7" title="Recursos">');
+    expect(missionDetail).toContain("<EmptyText>Sin recursos adjuntos.</EmptyText>");
+  });
+
   it("canonicalizes aliases to public document identifiers", () => {
     expect(documentPage).toContain("permanentRedirect(");
     expect(documentPage).toContain("resolvedDocument.publicId");
