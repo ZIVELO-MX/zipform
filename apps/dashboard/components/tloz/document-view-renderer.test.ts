@@ -170,6 +170,19 @@ describe("document view model", () => {
     expect(projection.core).not.toContain("project");
   });
 
+  it("keeps an unassigned responsible field available for future assignment", () => {
+    const inventory = document("INV-0003", {
+      status: "locked",
+      category: "other",
+      assignee: null,
+    });
+
+    expect(resolveDocumentDetailPropertyProjection(
+      inventory,
+      detailDefinition("inventory"),
+    ).core).toContain("responsible");
+  });
+
   it("treats null, empty text and empty selections as absent without hiding zero or false", () => {
     expect(isDocumentDetailValuePresent(null)).toBe(false);
     expect(isDocumentDetailValuePresent("")).toBe(false);

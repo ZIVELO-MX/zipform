@@ -3,6 +3,7 @@
 import type {
   TlozDocument,
   TlozDocumentDefinition,
+  TlozDocumentUpdate,
   TlozProject,
   UserProfile,
 } from "@tloz/types";
@@ -11,9 +12,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   getMissionCapabilities,
+  getDocumentDetailOptions,
   getMissionDetail,
   getMissionDetailOptions,
   getMissionDocumentOptions,
+  updateDocument,
 } from "../../app/tloz/actions";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { inventoryItemHref } from "../../lib/tloz-routes";
@@ -137,6 +140,7 @@ type DocumentDetailProps = {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
   canUpdate?: boolean;
+  canMove?: boolean;
   panel?: boolean;
   onMissionChange?: (mission: TlozMissionDetail) => void;
   onNavigateMission?: (missionId: string) => void;
@@ -150,6 +154,7 @@ export function DocumentDetail(props: DocumentDetailProps) {
         mission={props.mission}
         options={props.options}
         canUpdate={props.canUpdate}
+        canMove={props.canMove}
         variant={props.panel ? "panel" : "full"}
         onMissionChange={props.onMissionChange}
         onNavigateMission={props.onNavigateMission}
@@ -168,6 +173,7 @@ function MissionDocumentDetail({ document, panel = false }: { document: TlozDocu
     mission: TlozMissionDetail;
     options: MissionDetailOptions;
     canUpdate: boolean;
+    canMove: boolean;
   } | null>(null);
   const [error, setError] = useState(false);
 
@@ -194,6 +200,7 @@ function MissionDocumentDetail({ document, panel = false }: { document: TlozDocu
           contract: documentOptions.contract,
         },
         canUpdate: capabilities.canUpdate,
+        canMove: capabilities.canMove,
       });
     }).catch(() => {
       if (active) setError(true);
@@ -205,15 +212,81 @@ function MissionDocumentDetail({ document, panel = false }: { document: TlozDocu
 
   if (error) return <div className="p-6 text-sm font-semibold text-[#B91C22]" role="alert">No se pudo cargar la Mission.</div>;
   if (!result) return <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando Mission…</div>;
-  return <MissionDetail mission={result.mission} options={result.options} canUpdate={result.canUpdate} variant={panel ? "panel" : "full"} />;
+  return <MissionDetail mission={result.mission} options={result.options} canUpdate={result.canUpdate} canMove={result.canMove} variant={panel ? "panel" : "full"} />;
 }
 
 function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: TlozDocument }>) {
-  const mission = documentToDetailMission(props.document, props.users);
+  const [detail, setDetail] = useState<{
+    document: TlozDocument;
+    contract: NonNullable<MissionDetailOptions["contract"]>;
+    canUpdate: boolean;
+    canMove: boolean;
+  }>({
+    document: props.document,
+    contract: [],
+    canUpdate: false,
+    canMove: false,
+  });
+
+  useEffect(() => {
+    let active = true;
+    setDetail((current) => ({ ...current, document: props.document }));
+    void getDocumentDetailOptions(props.document.id).then((result) => {
+      if (!active) return;
+      setDetail({
+        document: result.document,
+        contract: result.contract,
+        canUpdate: result.capabilities.canUpdate,
+        canMove: result.capabilities.canMove,
+      });
+      props.onChange?.(result.document);
+    }).catch(() => {
+      if (active) setDetail((current) => ({
+        ...current,
+        canUpdate: false,
+        canMove: false,
+      }));
+    });
+    return () => {
+      active = false;
+    };
+  }, [props.document.id]);
+
+  const mission = documentToDetailMission(detail.document, props.users);
   const detailProperties = resolveDocumentDetailPropertyProjection(
-    props.document,
+    detail.document,
     props.definition,
   );
+
+  function acceptDocument(document: TlozDocument) {
+    setDetail((current) => ({ ...current, document }));
+    props.onChange?.(document);
+    return documentToDetailMission(document, props.users);
+  }
+
+  async function mutate(input: TlozDocumentUpdate) {
+    try {
+      const updated = await updateDocument(
+        detail.document.id,
+        input,
+        detail.document.revision,
+      );
+      return acceptDocument(updated);
+    } catch (error) {
+      const refreshed = await getDocumentDetailOptions(detail.document.id).catch(() => null);
+      if (refreshed) {
+        setDetail({
+          document: refreshed.document,
+          contract: refreshed.contract,
+          canUpdate: refreshed.capabilities.canUpdate,
+          canMove: refreshed.capabilities.canMove,
+        });
+        props.onChange?.(refreshed.document);
+      }
+      throw error;
+    }
+  }
+
   return (
     <MissionDetail
       mission={mission}
@@ -222,13 +295,19 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
         users: props.users,
         missions: [],
         questItems: [],
-        document: props.document,
-        contract: [],
+        document: detail.document,
+        contract: detail.contract,
         presentationFields: props.definition.fields,
         detailProperties,
         hideEmptyFields: true,
       }}
       canUpdate={false}
+      canMove={detail.canMove}
+      canUpdateDocument={detail.canUpdate}
+      documentMutation={mutate}
+      onBackingDocumentChange={(document) => {
+        acceptDocument(document);
+      }}
       variant={props.panel ? "panel" : "full"}
       onNavigateMission={undefined}
       onNavigateQuestItem={undefined}
@@ -249,7 +328,7 @@ function documentToDetailMission(document: TlozDocument, users: DocumentUser[]):
     ? document.properties.owner
     : typeof document.properties.assignee === "string"
       ? document.properties.assignee
-      : users[0]?.id ?? "document-owner";
+      : "unassigned";
   const project = document.kind === "project"
     ? {
         id: document.source?.id ?? document.id,

@@ -33,12 +33,16 @@ export function DocumentPropertyFields({
   presentationFields = [],
   users,
   readOnly = false,
+  moveReadOnly = readOnly,
+  onDocumentChange,
 }: {
   document?: TlozDocument;
   fields: TlozFieldDefinition[];
   presentationFields?: TlozDocumentPresentationField[];
   users: Array<{ id: string; name: string }>;
   readOnly?: boolean;
+  moveReadOnly?: boolean;
+  onDocumentChange?: (document: TlozDocument) => void;
 }) {
   const [current, setCurrent] = useState(document);
   const [pending, startTransition] = useTransition();
@@ -50,13 +54,19 @@ export function DocumentPropertyFields({
   const customFields = fields.filter(
     (field) => field.visible && field.key !== "status" && field.key !== "category",
   );
+  const customKeys = new Set(customFields.map((field) => field.key));
   const visibleCustomFields = customFields.flatMap((field) => {
     const value = current.properties[field.key] ?? null;
-    return isDocumentDetailValuePresent(value) ? [{ field, value }] : [];
+    return isDocumentDetailValuePresent(value) || !readOnly ? [{ field, value }] : [];
   });
   const visiblePresentationFields = presentationFields.flatMap((field) => {
     const value = documentValue(current, field.key);
-    return isDocumentDetailValuePresent(value) ? [{ field, value }] : [];
+    const editable = !readOnly
+      && !customKeys.has(field.key)
+      && EDITABLE_SYSTEM_PRESENTATION_FIELDS.has(field.key)
+      && !READ_ONLY_PRESENTATION_FIELDS.has(field.key)
+      && field.format !== "id";
+    return isDocumentDetailValuePresent(value) || editable ? [{ field, value, editable }] : [];
   });
   if (!visibleCustomFields.length && !visiblePresentationFields.length) return null;
 
@@ -65,11 +75,16 @@ export function DocumentPropertyFields({
     const toastId = toast.loading(`Guardando ${field.label}…`, { toasterId });
     startTransition(async () => {
       try {
-        const updated = await updateDocumentProperties(current.id, { [field.key]: value });
+        const updated = await updateDocumentProperties(
+          current.id,
+          { [field.key]: value },
+          current.revision,
+        );
         setCurrent(updated);
+        onDocumentChange?.(updated);
         toast.success(`${field.label} actualizado`, { id: toastId, toasterId });
-      } catch {
-        toast.error(`No se pudo guardar ${field.label}`, { id: toastId, toasterId });
+      } catch (error) {
+        toast.error(documentMutationError(error, `No se pudo guardar ${field.label}`), { id: toastId, toasterId });
       }
     });
   }
@@ -91,18 +106,86 @@ export function DocumentPropertyFields({
           />
         </DetailPropertyRow>
       ))}
-      {visiblePresentationFields.map(({ field, value }) => (
+      {visiblePresentationFields.map(({ field, value, editable }) => {
+        const definition = presentationFieldDefinition(field);
+        const fieldReadOnly = !editable
+          || ((field.key === "owner" || field.key === "assignee") && moveReadOnly);
+        return (
         <DetailPropertyRow
           key={field.key}
           label={field.label}
           display={<PresentationValue field={field} value={value} users={users} />}
-          readOnly
+          readOnly={fieldReadOnly}
         >
-          {null}
+          {fieldReadOnly ? null : (
+            <PropertyEditor
+              field={definition}
+              value={value}
+              users={users}
+              onChange={(next) => persist(definition, next)}
+            />
+          )}
         </DetailPropertyRow>
-      ))}
+        );
+      })}
     </div>
   );
+}
+
+const READ_ONLY_PRESENTATION_FIELDS = new Set([
+  "publicId",
+  "project",
+  "mission_count",
+]);
+
+const EDITABLE_SYSTEM_PRESENTATION_FIELDS = new Set([
+  "status",
+  "category",
+  "owner",
+  "assignee",
+  "color",
+  "icon",
+  "start",
+  "due",
+  "progress",
+  "blocked_reason",
+  "acquired",
+]);
+
+function presentationFieldDefinition(
+  field: TlozDocumentPresentationField,
+): TlozFieldDefinition {
+  const type = field.format === "status"
+    ? "select"
+    : field.format === "person"
+      ? "person"
+      : field.format === "date"
+        ? "date"
+        : field.format === "number"
+          ? "number"
+          : "text";
+  return {
+    id: `presentation:${field.key}`,
+    key: field.key,
+    label: field.label,
+    type,
+    required: false,
+    visible: field.visible,
+    position: field.position,
+    options: field.options ?? [],
+  };
+}
+
+function documentMutationError(error: unknown, fallback: string) {
+  if (
+    typeof error === "object"
+    && error !== null
+    && "code" in error
+    && error.code === "DOCUMENT_REVISION_CONFLICT"
+  ) {
+    return "El documento cambió. Recarga el detalle e intenta de nuevo.";
+  }
+  return fallback;
 }
 
 export function CreateDocumentPropertyInputs({

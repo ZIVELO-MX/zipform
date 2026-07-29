@@ -14,9 +14,10 @@ type MarkdownEditorProps = {
   onToggleTask?: (position: number, completed: boolean) => void;
   placeholder?: string;
   showHeader?: boolean;
+  readOnly?: boolean;
 };
 
-export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true, readOnly = false }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,7 +56,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
               <ClipboardCopy className="size-3.5" />
               Copiar
             </DropdownMenuItem>
-            {!editing ? (
+            {!editing && !readOnly ? (
               <DropdownMenuItem onSelect={() => setEditing(true)}>
                 <Edit3 className="size-3.5" />
                 Editar

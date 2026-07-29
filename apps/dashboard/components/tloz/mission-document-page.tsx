@@ -68,6 +68,7 @@ export async function MissionDocumentPage({
             contract: projectDocument?.contract?.fields ?? [],
           }}
           canUpdate={capabilities.canUpdate}
+          canMove={capabilities.canMove}
         />
       </div>
     </TlozPageShell>

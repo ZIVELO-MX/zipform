@@ -105,9 +105,7 @@ export function resolveDocumentDetailPropertyProjection(
   const core = DOCUMENT_DETAIL_PROPERTY_MATRIX[document.kind]
     .flatMap((key) => {
       const property = CORE_PROPERTY_BY_KEY[key];
-      return property && isDocumentDetailValuePresent(documentValue(document, key))
-        ? [property]
-        : [];
+      return property ? [property] : [];
     })
     .filter((property, index, properties) => properties.indexOf(property) === index);
 

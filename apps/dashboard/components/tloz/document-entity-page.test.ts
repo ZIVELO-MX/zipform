@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 const documentPage = readFileSync(new URL("./document-entity-page.tsx", import.meta.url), "utf8");
 const renderer = readFileSync(new URL("./document-view-renderer.tsx", import.meta.url), "utf8");
+const missionDetail = readFileSync(new URL("./mission-detail.tsx", import.meta.url), "utf8");
 const projectRoute = readFileSync(new URL("../../app/projects/[projectSlug]/page.tsx", import.meta.url), "utf8");
 const inventoryRoute = readFileSync(new URL("../../app/inventory/[inventoryId]/page.tsx", import.meta.url), "utf8");
 const missionPage = readFileSync(new URL("./mission-detail-page.tsx", import.meta.url), "utf8");
@@ -21,11 +22,25 @@ describe("document entity routes", () => {
     expect(renderer).toContain("<MissionDetail");
     expect(renderer).toContain("resolveDocumentDetailPropertyProjection");
     expect(renderer).toContain("presentationFields: props.definition.fields");
+    expect(renderer).toContain("documentMutation={mutate}");
+    expect(renderer).toContain("canUpdateDocument={detail.canUpdate}");
+    expect(renderer).toContain("canMove={detail.canMove}");
+    expect(renderer).toContain("updateDocument(");
     expect(renderer).not.toContain("DocumentRecordEditorDetail");
     expect(projectRoute).not.toContain("<SystemEntityDetailPage");
     expect(inventoryRoute).not.toContain("<SystemEntityDetailPage");
     expect(systemDetail).toContain("<DocumentDetail");
     expect(systemDetail).not.toContain("export function SystemEntityDetail");
+  });
+
+  it("keeps document content and properties on the shared mutation adapter", () => {
+    expect(renderer).toContain("getDocumentDetailOptions(props.document.id)");
+    expect(renderer).toContain("detail.document.revision");
+    expect(renderer).toContain("onBackingDocumentChange");
+    expect(missionPage).toContain("canMove={canMove}");
+    expect(missionDetail).toContain('kind === "project" ? "owner" : "assignee"');
+    expect(missionDetail).toContain("documentMutation({ body: nextMarkdown })");
+    expect(missionDetail).toContain("isMissionDocument ? <><div");
   });
 
   it("canonicalizes aliases to public document identifiers", () => {

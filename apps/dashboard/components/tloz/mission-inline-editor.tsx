@@ -36,7 +36,23 @@ export type MissionPropertyValues = {
 const statuses: TlozMissionStatus[] = ["now", "next", "later", "blocked", "completed"];
 const missionTypes: TlozMissionType[] = ["main_quest", "side_quest", "farming_quest", "exploration_quest"];
 
-export function MissionInlineEditor({ mission, options, onMissionChange, readOnly = false }: { mission: TlozMissionRecord; options?: MissionEditorOptions; onMissionChange?: (mission: TlozMissionRecord) => void; readOnly?: boolean }) {
+export function MissionInlineEditor({
+  mission,
+  options,
+  onMissionChange,
+  onUpdate = (missionId, input) => updateMission(missionId, input),
+  onStatusUpdate = (missionId, status) => patchMissionStatus(missionId, status),
+  readOnly = false,
+  responsibleReadOnly = readOnly,
+}: {
+  mission: TlozMissionRecord;
+  options?: MissionEditorOptions;
+  onMissionChange?: (mission: TlozMissionRecord) => void;
+  onUpdate?: (missionId: string, input: TlozMissionUpdateInput) => Promise<TlozMissionRecord>;
+  onStatusUpdate?: (missionId: string, status: TlozMissionStatus) => Promise<TlozMissionRecord>;
+  readOnly?: boolean;
+  responsibleReadOnly?: boolean;
+}) {
   const [current, setCurrent] = useState(mission);
   const [projects, setProjects] = useState(options?.projects ?? []);
   const [isPending, startTransition] = useTransition();
@@ -49,22 +65,22 @@ export function MissionInlineEditor({ mission, options, onMissionChange, readOnl
   function persist(input: TlozMissionUpdateInput, success: string) {
     const toastId = toast.loading("Guardando cambios…", { toasterId });
     startTransition(async () => {
-      try { apply(await updateMission(current.id, input)); toast.success(success, { id: toastId, toasterId }); }
+      try { apply(await onUpdate(current.id, input)); toast.success(success, { id: toastId, toasterId }); }
       catch { toast.error("No se pudieron guardar los cambios", { id: toastId, toasterId }); }
     });
   }
   function changeStatus(value: TlozMissionStatus) {
     const toastId = toast.loading("Actualizando estado…", { toasterId });
     startTransition(async () => {
-      try { apply(await patchMissionStatus(current.id, value)); toast.success("Estado actualizado", { id: toastId, toasterId }); }
+      try { apply(await onStatusUpdate(current.id, value)); toast.success("Estado actualizado", { id: toastId, toasterId }); }
       catch { toast.error("No se pudo actualizar el estado", { id: toastId, toasterId }); }
     });
   }
 
-  return <MissionPropertyFields values={current} options={options} onChange={(field, value) => field === "status" ? changeStatus(value as TlozMissionStatus) : persist({ [field]: value }, `${field === "type" ? "Tipo" : field === "ownerId" ? "Responsable" : field === "projectId" ? "Proyecto" : "Fecha"} actualizado`)} ariaBusy={isPending} readOnly={readOnly} />;
+  return <MissionPropertyFields values={current} options={options} onChange={(field, value) => field === "status" ? changeStatus(value as TlozMissionStatus) : persist({ [field]: value }, `${field === "type" ? "Tipo" : field === "ownerId" ? "Responsable" : field === "projectId" ? "Proyecto" : "Fecha"} actualizado`)} ariaBusy={isPending} readOnly={readOnly} responsibleReadOnly={responsibleReadOnly} />;
 }
 
-export function MissionPropertyFields({ values, options, onChange, ariaBusy = false, layout = "stacked", readOnly = false }: { values: MissionPropertyValues & { owner?: { name: string; username?: string; avatarUrl?: string }; project?: { name: string; color?: string; icon?: string } }; options?: MissionEditorOptions; onChange: (field: keyof MissionPropertyValues, value: string) => void; ariaBusy?: boolean; layout?: "stacked" | "grid"; readOnly?: boolean }) {
+export function MissionPropertyFields({ values, options, onChange, ariaBusy = false, layout = "stacked", readOnly = false, responsibleReadOnly = readOnly }: { values: MissionPropertyValues & { owner?: { name: string; username?: string; avatarUrl?: string }; project?: { name: string; color?: string; icon?: string } }; options?: MissionEditorOptions; onChange: (field: keyof MissionPropertyValues, value: string) => void; ariaBusy?: boolean; layout?: "stacked" | "grid"; readOnly?: boolean; responsibleReadOnly?: boolean }) {
   const projects = options?.projects ?? [];
   const statusOptions = detailFieldOptions(options, "status", statuses.map((value) => ({ value, label: missionStatusLabel[value], color: missionStatusTone[value] })));
   const categoryOptions = detailFieldOptions(options, "category", missionTypes.map((value) => ({ value, label: missionTypeLabel[value], color: missionTypeTone[value] })));
@@ -77,7 +93,7 @@ export function MissionPropertyFields({ values, options, onChange, ariaBusy = fa
   return <div className={layout === "grid" ? "grid grid-cols-1 gap-1 sm:grid-cols-2" : "flex flex-col"} data-layout={layout} aria-busy={ariaBusy}>
     {visibleProperties.has("status") ? <DetailPropertyRow label="Estado" display={<OptionValue value={status} options={statusOptions} status />} readOnly={readOnly}><Select value={status} onValueChange={(value) => onChange("status", value)}><SelectTrigger aria-label="Estado"><SelectValue><OptionValue value={status} options={statusOptions} status /></SelectValue></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{statusOptions.map((option) => <SelectItem key={option.value} value={option.value}><OptionValue value={option.value} options={statusOptions} status /></SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow> : null}
     {visibleProperties.has("category") ? <DetailPropertyRow label="Categoría" display={<OptionValue value={values.type} options={categoryOptions} />} readOnly={readOnly}><Select value={values.type} onValueChange={(value) => onChange("type", value)}><SelectTrigger aria-label="Tipo"><SelectValue><OptionValue value={values.type} options={categoryOptions} /></SelectValue></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{categoryOptions.map((option) => <SelectItem key={option.value} value={option.value}><OptionValue value={option.value} options={categoryOptions} /></SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow> : null}
-    {visibleProperties.has("responsible") && options?.users.length && (!options.hideEmptyFields || values.ownerId) ? <DetailPropertyRow label="Responsable" display={<UserAvatarLabel name={values.owner?.name ?? selectedOwner?.name ?? "Sin responsable"} label={values.owner?.username ?? selectedOwner?.username ?? "Sin responsable"} labelOnly imageUrl={values.owner?.avatarUrl ?? selectedOwner?.avatarUrl} size="sm" />} readOnly={readOnly}><UserPicker users={options.users} value={values.ownerId} label="Responsable" onValueChange={(value) => onChange("ownerId", value)} /></DetailPropertyRow> : null}
+    {visibleProperties.has("responsible") && options?.users.length && (!options.hideEmptyFields || values.ownerId) ? <DetailPropertyRow label="Responsable" display={<UserAvatarLabel name={values.owner?.name ?? selectedOwner?.name ?? "Sin responsable"} label={values.owner?.username ?? selectedOwner?.username ?? "Sin responsable"} labelOnly imageUrl={values.owner?.avatarUrl ?? selectedOwner?.avatarUrl} size="sm" />} readOnly={responsibleReadOnly}><UserPicker users={options.users} value={values.ownerId} label="Responsable" onValueChange={(value) => onChange("ownerId", value)} /></DetailPropertyRow> : null}
     {visibleProperties.has("project") && (!options?.hideEmptyFields || values.projectId) ? <DetailPropertyRow label="Proyecto" display={<ProjectValue project={values.project ?? selectedProject} />} readOnly={readOnly}><EntityPicker label="Proyecto" options={projects.map((project) => ({ ...project, iconComponent: resolveMissionIcon(project.icon), color: project.color }))} value={values.projectId} onValueChange={(value) => onChange("projectId", value)} /></DetailPropertyRow> : null}
     {visibleProperties.has("start") && (!options?.hideEmptyFields || values.startDate) ? <DetailPropertyRow label="Inicio" display={<span className="font-mono text-[12.5px] font-semibold">{formatDate(values.startDate)}</span>} readOnly={readOnly}><DatePicker value={values.startDate} label="Fecha de inicio" onValueChange={(value) => onChange("startDate", value ?? "")} /></DetailPropertyRow> : null}
     {visibleProperties.has("due") && (!options?.hideEmptyFields || values.dueDate) ? <DetailPropertyRow label="Vence" display={<span className="font-mono text-[12.5px] font-semibold text-[#B91C22]">{formatDate(values.dueDate)}</span>} readOnly={readOnly}><DatePicker value={values.dueDate} label="Fecha límite" onValueChange={(value) => onChange("dueDate", value ?? "")} /></DetailPropertyRow> : null}
