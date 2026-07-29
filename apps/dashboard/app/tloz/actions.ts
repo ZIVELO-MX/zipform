@@ -188,11 +188,11 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
       const statusOption = statusField?.options.find((option) => option.value === requestedStatus);
       const categoryOption = categoryField?.options.find((option) => option.value === requestedCategory);
 
-      if (!statusOption) {
+      if (statusField && !statusOption) {
         if (input.projectId === undefined) throw new Error("El estado no pertenece al contrato del Project.");
         next.status = contractFieldDefault(statusField, "later") as TlozMissionStatus;
       }
-      if (!categoryOption) {
+      if (categoryField && !categoryOption) {
         if (input.projectId === undefined) throw new Error("La categoría no pertenece al contrato del Project.");
         next.type = contractFieldDefault(categoryField, "side_quest");
       }
