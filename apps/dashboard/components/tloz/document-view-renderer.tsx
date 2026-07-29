@@ -7,6 +7,7 @@ import type {
   TlozProject,
   UserProfile,
 } from "@tloz/types";
+import { parseMarkdownChecklist } from "@tloz/data";
 import { SlideOver } from "@tloz/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -16,6 +17,11 @@ import {
   getMissionDetail,
   getMissionDetailOptions,
   getMissionDocumentOptions,
+  getEntityResources,
+  addProjectResource,
+  removeProjectResource,
+  addQuestItemResource,
+  removeQuestItemResource,
   updateDocument,
 } from "../../app/tloz/actions";
 import { useIsMobile } from "../../hooks/use-is-mobile";
@@ -46,6 +52,7 @@ type DocumentViewRendererProps = {
 };
 
 type DocumentUser = Pick<UserProfile, "id" | "name">;
+type DocumentResource = import("@tloz/types").TlozResource;
 
 export function DocumentViewRenderer({
   documents,
@@ -221,23 +228,30 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
     contract: NonNullable<MissionDetailOptions["contract"]>;
     canUpdate: boolean;
     canMove: boolean;
+    resources: DocumentResource[];
   }>({
     document: props.document,
     contract: [],
     canUpdate: false,
     canMove: false,
+    resources: [],
   });
 
   useEffect(() => {
     let active = true;
     setDetail((current) => ({ ...current, document: props.document }));
-    void getDocumentDetailOptions(props.document.id).then((result) => {
+    const entityId = props.document.source?.id ?? props.document.id;
+    void Promise.all([
+      getDocumentDetailOptions(props.document.id),
+      getEntityResources(props.document.kind, entityId).catch(() => []),
+    ]).then(([result, resources]) => {
       if (!active) return;
       setDetail({
         document: result.document,
         contract: result.contract,
         canUpdate: result.capabilities.canUpdate,
         canMove: result.capabilities.canMove,
+        resources,
       });
       props.onChange?.(result.document);
     }).catch(() => {
@@ -252,7 +266,7 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
     };
   }, [props.document.id]);
 
-  const mission = documentToDetailMission(detail.document, props.users);
+  const mission = documentToDetailMission(detail.document, props.users, detail.resources);
   const detailProperties = resolveDocumentDetailPropertyProjection(
     detail.document,
     props.definition,
@@ -261,7 +275,7 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
   function acceptDocument(document: TlozDocument) {
     setDetail((current) => ({ ...current, document }));
     props.onChange?.(document);
-    return documentToDetailMission(document, props.users);
+    return documentToDetailMission(document, props.users, detail.resources);
   }
 
   async function mutate(input: TlozDocumentUpdate) {
@@ -273,15 +287,20 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
       );
       return acceptDocument(updated);
     } catch (error) {
-      const refreshed = await getDocumentDetailOptions(detail.document.id).catch(() => null);
+      const refreshed = await Promise.all([
+        getDocumentDetailOptions(detail.document.id),
+        getEntityResources(detail.document.kind, detail.document.source?.id ?? detail.document.id).catch(() => []),
+      ]).catch(() => null);
       if (refreshed) {
+        const [result, resources] = refreshed;
         setDetail({
-          document: refreshed.document,
-          contract: refreshed.contract,
-          canUpdate: refreshed.capabilities.canUpdate,
-          canMove: refreshed.capabilities.canMove,
+          document: result.document,
+          contract: result.contract,
+          canUpdate: result.capabilities.canUpdate,
+          canMove: result.capabilities.canMove,
+          resources,
         });
-        props.onChange?.(refreshed.document);
+        props.onChange?.(result.document);
       }
       throw error;
     }
@@ -305,6 +324,12 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
       canMove={detail.canMove}
       canUpdateDocument={detail.canUpdate}
       documentMutation={mutate}
+      onAddResource={(input) => detail.document.kind === "project"
+        ? addProjectResource(detail.document.source?.id ?? detail.document.id, input)
+        : addQuestItemResource(detail.document.source?.id ?? detail.document.id, input)}
+      onRemoveResource={(resourceId) => detail.document.kind === "project"
+        ? removeProjectResource(detail.document.source?.id ?? detail.document.id, resourceId)
+        : removeQuestItemResource(detail.document.source?.id ?? detail.document.id, resourceId)}
       onBackingDocumentChange={(document) => {
         acceptDocument(document);
       }}
@@ -315,7 +340,7 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
   );
 }
 
-function documentToDetailMission(document: TlozDocument, users: DocumentUser[]): TlozMissionDetail {
+function documentToDetailMission(document: TlozDocument, users: DocumentUser[], resources: DocumentResource[] = []): TlozMissionDetail {
   const stringValue = (key: string) => {
     const value = documentValue(document, key);
     return typeof value === "string" && value ? value : undefined;
@@ -347,6 +372,15 @@ function documentToDetailMission(document: TlozDocument, users: DocumentUser[]):
         updatedAt: document.updatedAt,
       } satisfies TlozProject
     : undefined;
+  const checklist = parseMarkdownChecklist(document.body).map((item, position) => ({
+    id: `${document.id}-checklist-${position}`,
+    missionId: document.source?.id ?? document.id,
+    title: item.title,
+    completed: item.completed,
+    position,
+    createdAt: document.createdAt,
+    updatedAt: document.updatedAt,
+  }));
   return {
     id: document.source?.id ?? document.id,
     displayId: document.publicId,
@@ -368,10 +402,10 @@ function documentToDetailMission(document: TlozDocument, users: DocumentUser[]):
     dependencies: [],
     questItems: [],
     requiredQuestItems: [],
-    checklist: [],
-    checklistCount: 0,
-    completed: 0,
-    resources: [],
+    checklist,
+    checklistCount: checklist.length,
+    completed: checklist.filter((item) => item.completed).length,
+    resources,
     requiredBy: [],
     missionQuestItems: [],
   };

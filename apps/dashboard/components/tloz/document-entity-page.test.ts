@@ -44,9 +44,16 @@ describe("document entity routes", () => {
   });
 
   it("shows an empty resources section for non-Mission documents", () => {
-    expect(missionDetail).toContain('!isMissionDocument ? (');
     expect(missionDetail).toContain('<RelationsSection className="mt-7" title="Recursos">');
     expect(missionDetail).toContain("<EmptyText>Sin recursos adjuntos.</EmptyText>");
+    expect(missionDetail).toContain("<MissionResourceReferences resources={current.resources}");
+    expect(missionDetail).toContain("onAddResource?: (input: TlozResourceInput)");
+  });
+
+  it("derives project and inventory checklists from document Markdown", () => {
+    expect(renderer).toContain("parseMarkdownChecklist(document.body)");
+    expect(renderer).toContain("checklistCount: checklist.length");
+    expect(missionDetail).toContain('<AccordionItem value="checklist" className="border-0">');
   });
 
   it("canonicalizes aliases to public document identifiers", () => {

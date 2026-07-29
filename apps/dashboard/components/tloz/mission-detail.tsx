@@ -38,7 +38,7 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
 
 type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "descriptionDetail" | "icon">;
 
-export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
+export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onAddResource, onRemoveResource, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
   canUpdate?: boolean;
@@ -46,6 +46,8 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   canUpdateDocument?: boolean;
   documentMutation?: (input: TlozDocumentUpdate) => Promise<TlozMissionDetail>;
   onBackingDocumentChange?: (document: TlozDocument) => void;
+  onAddResource?: (input: TlozResourceInput) => Promise<TlozResource[]>;
+  onRemoveResource?: (resourceId: string) => Promise<TlozResource[]>;
   onMissionChange?: (mission: TlozMissionDetail) => void;
   onNavigateMission?: (missionId: string) => void;
   onNavigateQuestItem?: (questItemId: string) => void;
@@ -209,6 +211,26 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
     accept({ ...current, resources: nextResources });
   }
 
+  function addResource(input: TlozResourceInput) {
+    mutate("Adjuntando recurso…", async () => {
+      if (onAddResource) {
+        const resources = await onAddResource(input);
+        return { ...current, resources };
+      }
+      return addMissionResource(current.id, input);
+    });
+  }
+
+  function removeResource(resource: TlozResource) {
+    mutate("Quitando recurso…", async () => {
+      if (onRemoveResource) {
+        const resources = await onRemoveResource(resource.id);
+        return { ...current, resources };
+      }
+      return removeMissionResource(current.id, resource.id);
+    });
+  }
+
   function renameChecklistItem(position: number) {
     const title = checklistTitleDraft.trim();
     setRenamingChecklist(null);
@@ -285,7 +307,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
               </AccordionContent>
             </AccordionItem>
 
-            {isMissionDocument ? <AccordionItem value="checklist" className="border-0">
+            <AccordionItem value="checklist" className="border-0">
               <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">
                 <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
                   <span>Checklist</span>
@@ -301,7 +323,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
               {current.checklist.map((item, position) => ({ item, position })).filter(({ item }) => checklistFilter === "all" || !item.completed).map(({ item, position }) => (
                 <div key={item.id} className="group flex items-center gap-[11px] rounded-[10px] px-3 py-2 transition-colors hover:bg-[#D72228]/[0.04]">
                   <label className="relative grid size-[19px] shrink-0 cursor-pointer place-items-center">
-                    <input type="checkbox" className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} />
+                    <input type="checkbox" disabled={!canUpdateDocument} className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] disabled:cursor-default disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} />
                     <Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" />
                     <span className="sr-only">{item.title}</span>
                   </label>
@@ -314,11 +336,11 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
                   </DropdownMenu>
                 </div>
               ))}
-              <AddChecklistTask onAdd={(title) => saveDocument(appendTaskLine(detailMarkdown, title))} />
+              {canUpdateDocument ? <AddChecklistTask onAdd={(title) => saveDocument(appendTaskLine(detailMarkdown, title))} /> : null}
                 </div>
                 <AlertDialog open={deletingChecklist !== null} onOpenChange={(open) => !open && setDeletingChecklist(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Eliminar checkbox</AlertDialogTitle><AlertDialogDescription>Esta acción quitará “{deletingChecklist === null ? "" : current.checklist[deletingChecklist]?.title}” del documento de la misión.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletingChecklist !== null && deleteChecklistItem(deletingChecklist)}>Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
               </AccordionContent>
-            </AccordionItem> : null}
+            </AccordionItem>
           </Accordion>
 
           {isMissionDocument ? <><div className="flex flex-col gap-7">
@@ -346,9 +368,11 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
           {!isMissionDocument ? (
             <RelationsSection className="mt-7" title="Recursos">
-              <div className="rounded-xl border border-[#1D1D1B]/10 bg-white px-3.5 py-3">
-                <EmptyText>Sin recursos adjuntos.</EmptyText>
+              <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
+                <MissionResourceReferences resources={current.resources} onRemove={removeResource} />
+                {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
               </div>
+              {canUpdateDocument ? <AddResource onAdd={addResource} /> : null}
             </RelationsSection>
           ) : null}
         </main>
