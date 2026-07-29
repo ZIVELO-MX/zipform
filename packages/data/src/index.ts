@@ -48,6 +48,7 @@ export {
   validateProjectFields,
 } from "./document-contract";
 export { parseTlozDocumentMarkdown, serializeTlozDocumentMarkdown } from "./document-markdown";
+export { parseMarkdownChecklist } from "./tloz-hydration";
 
 function resolveDataDriver(driver?: DataDriver): DataDriver {
   if (driver) {

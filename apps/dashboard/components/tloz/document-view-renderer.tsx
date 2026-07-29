@@ -243,7 +243,7 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
     const entityId = props.document.source?.id ?? props.document.id;
     void Promise.all([
       getDocumentDetailOptions(props.document.id),
-      getEntityResources(props.document.kind, entityId).catch(() => []),
+      getEntityResources(documentResourceKind(props.document.kind), entityId).catch(() => []),
     ]).then(([result, resources]) => {
       if (!active) return;
       setDetail({
@@ -289,7 +289,7 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
     } catch (error) {
       const refreshed = await Promise.all([
         getDocumentDetailOptions(detail.document.id),
-        getEntityResources(detail.document.kind, detail.document.source?.id ?? detail.document.id).catch(() => []),
+        getEntityResources(documentResourceKind(detail.document.kind), detail.document.source?.id ?? detail.document.id).catch(() => []),
       ]).catch(() => null);
       if (refreshed) {
         const [result, resources] = refreshed;
@@ -409,6 +409,10 @@ function documentToDetailMission(document: TlozDocument, users: DocumentUser[], 
     requiredBy: [],
     missionQuestItems: [],
   };
+}
+
+function documentResourceKind(kind: TlozDocument["kind"]): "project" | "inventory" {
+  return kind === "project" ? "project" : "inventory";
 }
 
 function documentHref(document: TlozDocument) {
