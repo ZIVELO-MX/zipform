@@ -57,7 +57,11 @@ export async function ProjectWorkspacePage({ projectSlug }: { projectSlug: strin
   return (
     <TlozPageShell
       title={project.name}
-      breadcrumb={["Lobby", project.name]}
+      breadcrumb={[
+        { label: "Lobby", href: "/" },
+        { label: "Projects", href: "/projects" },
+        project.name,
+      ]}
       fullWidth
       supportedViews={supportedViews}
       defaultView={documentDefinition.defaultView as TlozView}

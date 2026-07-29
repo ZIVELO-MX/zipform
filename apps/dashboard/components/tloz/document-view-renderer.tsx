@@ -32,6 +32,7 @@ import {
   resolveDocumentDetailPropertyProjection,
 } from "./document-view-model";
 import { useTlozViewState } from "./tloz-view-state";
+import { filterAndSortTlozRecords } from "./tloz-view-query";
 import type { TlozMissionDetail } from "../../lib/tloz-data";
 import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
@@ -70,6 +71,15 @@ export function DocumentViewRenderer({
     [documents, missionRecords, users],
   );
   const statusOptions = definition.fields.find((field) => field.key === "status")?.options ?? [];
+  const visibleRecords = useMemo(
+    () => filterAndSortTlozRecords(
+      displayRecords,
+      state,
+      statusOptions,
+      { defaultSort: definition.kind === "mission" ? "dependencies" : "source" },
+    ),
+    [definition.kind, displayRecords, state, statusOptions],
+  );
 
   function openDocument(document: TlozDocument) {
     const href = documentHref(document);
@@ -96,9 +106,9 @@ export function DocumentViewRenderer({
         />
         <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
           {state.view === "list" ? (
-            <MissionList missions={displayRecords} grouping={state.grouping} statusOptions={statusOptions} onSelect={openRecord} />
+            <MissionList missions={visibleRecords} grouping={state.grouping} statusOptions={statusOptions} onSelect={openRecord} />
           ) : (
-            <MissionTable missions={displayRecords} statusOptions={statusOptions} onSelect={openRecord} />
+            <MissionTable missions={visibleRecords} statusOptions={statusOptions} onSelect={openRecord} />
           )}
         </div>
       </div>

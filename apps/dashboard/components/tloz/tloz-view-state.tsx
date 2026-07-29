@@ -4,9 +4,14 @@ import type { TlozProject, UserProfile } from "@tloz/types";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { resolveResponsiveTlozViews, resolveTlozView, type TlozView } from "../../lib/tloz-routes";
+import {
+  resolveTlozControlCapabilities,
+  type TlozControlCapabilities,
+  type TlozControlKind,
+} from "./tloz-control-capabilities";
 import { loadTlozUiState, saveTlozUiState } from "./tloz-view-storage";
 
-export type TlozSort = "default" | "due-date" | "title" | "dependencies";
+export type TlozSort = "default" | "due-date" | "acquired-date" | "title" | "dependencies";
 export type TlozGrouping = "status" | "project" | "none";
 
 export type TlozUiState = {
@@ -24,11 +29,10 @@ type TlozViewStateContextValue = {
   supportedViews: readonly TlozView[];
   projects: TlozProject[];
   users: UserProfile[];
-  showMissionControls: boolean;
+  capabilities: TlozControlCapabilities;
 };
 
 const TlozViewStateContext = createContext<TlozViewStateContextValue | null>(null);
-let sharedUiState: TlozUiState | undefined;
 
 export function TlozViewStateProvider({
   children,
@@ -36,8 +40,8 @@ export function TlozViewStateProvider({
   defaultView,
   projects,
   users,
-  inventory = false,
-  showMissionControls = true,
+  controlKind = "mission",
+  fixedProject = false,
   storageScope = "tloz-controls",
 }: {
   children: React.ReactNode;
@@ -45,23 +49,31 @@ export function TlozViewStateProvider({
   defaultView: TlozView;
   projects: TlozProject[];
   users: UserProfile[];
-  inventory?: boolean;
-  showMissionControls?: boolean;
+  controlKind?: TlozControlKind;
+  fixedProject?: boolean;
   storageScope?: string;
 }) {
   const isMobile = useIsMobile();
-  const responsiveViews = resolveResponsiveTlozViews(isMobile, supportedViews, defaultView);
+  const responsiveViews = useMemo(
+    () => resolveResponsiveTlozViews(isMobile, supportedViews, defaultView),
+    [defaultView, isMobile, supportedViews],
+  );
   const effectiveViews = responsiveViews.views;
   const effectiveDefault = responsiveViews.defaultView;
+  const capabilities = useMemo(
+    () => resolveTlozControlCapabilities(controlKind, fixedProject),
+    [controlKind, fixedProject],
+  );
 
-  const [preferredState, replaceState] = useState<TlozUiState>(() => sharedUiState ?? initialState(effectiveDefault));
+  const [preferredState, replaceState] = useState<TlozUiState>(
+    () => initialState(effectiveDefault),
+  );
   const [storageLoaded, setStorageLoaded] = useState(false);
 
   useEffect(() => {
     const storage = browserStorage();
     const stored = storage ? loadTlozUiState(storage, storageScope) : null;
     if (!stored) {
-      sharedUiState = preferredState;
       setStorageLoaded(true);
       return;
     }
@@ -71,7 +83,6 @@ export function TlozViewStateProvider({
         ...stored,
         view: stored.view ?? current.view,
       };
-      sharedUiState = next;
       return next;
     });
     setStorageLoaded(true);
@@ -87,20 +98,29 @@ export function TlozViewStateProvider({
   const state = useMemo<TlozUiState>(() => ({
     ...preferredState,
     view: resolveTlozView(preferredState.view, effectiveViews, effectiveDefault),
-  }), [effectiveDefault, preferredState, effectiveViews]);
+    projectId: capabilities.projectFilter
+      && projects.some((project) => project.id === preferredState.projectId)
+      ? preferredState.projectId
+      : "all",
+    ownerId: users.some((user) => user.id === preferredState.ownerId)
+      ? preferredState.ownerId
+      : "all",
+    sort: capabilities.sortOptions.some((option) => option.id === preferredState.sort)
+      ? preferredState.sort
+      : "default",
+    grouping: capabilities.groupingOptions.some((option) => option.id === preferredState.grouping)
+      ? preferredState.grouping
+      : "none",
+  }), [capabilities, effectiveDefault, preferredState, effectiveViews, projects, users]);
 
   const value = useMemo<TlozViewStateContextValue>(() => ({
     state,
-    setState: (update) => replaceState((current) => {
-      const next = { ...current, ...update };
-      sharedUiState = next;
-      return next;
-    }),
+    setState: (update) => replaceState((current) => ({ ...current, ...update })),
     supportedViews: effectiveViews,
     projects,
     users,
-    showMissionControls,
-  }), [projects, showMissionControls, state, effectiveViews, users]);
+    capabilities,
+  }), [capabilities, projects, state, effectiveViews, users]);
 
   return <TlozViewStateContext.Provider value={value}>{children}</TlozViewStateContext.Provider>;
 }
@@ -116,7 +136,7 @@ function initialState(view: TlozView): TlozUiState {
     view,
     projectId: "all",
     ownerId: "all",
-    sort: "dependencies",
+    sort: "default",
     grouping: "status",
     showCompleted: true,
   };

@@ -20,8 +20,6 @@ type TlozPageShellProps = {
   fullWidth?: boolean;
   supportedViews?: TlozView[];
   defaultView?: TlozView;
-  inventoryControls?: boolean;
-  missionControls?: boolean;
   stateScope?: string;
   controlProjectId?: string;
   createKind?: TlozCreateKind;
@@ -43,8 +41,6 @@ export async function TlozPageShell({
   fullWidth = false,
   supportedViews = ["dashboard", "list", "board", "table", "calendar"],
   defaultView = "dashboard",
-  inventoryControls = false,
-  missionControls = true,
   stateScope,
   controlProjectId,
   createKind = "mission",
@@ -71,7 +67,15 @@ export async function TlozPageShell({
 
   return (
     <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={createKind === "mission" ? controlProjectId : undefined}>
-    <TlozViewStateProvider supportedViews={supportedViews} defaultView={defaultView} projects={controlProjects} users={users} inventory={inventoryControls} showMissionControls={missionControls} storageScope={stateScope}>
+    <TlozViewStateProvider
+      supportedViews={supportedViews}
+      defaultView={defaultView}
+      projects={controlProjects}
+      users={users}
+      controlKind={createKind}
+      fixedProject={Boolean(controlProjectId)}
+      storageScope={stateScope}
+    >
       <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
         <TlozHeader
           title={title}

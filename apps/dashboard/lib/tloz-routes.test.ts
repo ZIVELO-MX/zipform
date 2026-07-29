@@ -31,6 +31,10 @@ describe("TLOZ routes", () => {
       views: ["list", "table"],
       defaultView: "table",
     });
+    expect(resolveResponsiveTlozViews(true, ["board", "table"], "board")).toEqual({
+      views: ["table"],
+      defaultView: "table",
+    });
   });
 
   it("preserves configured views and defaults on desktop", () => {

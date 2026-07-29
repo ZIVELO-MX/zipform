@@ -16,13 +16,14 @@ export type UserPickerOption = {
   avatarUrl?: string;
 };
 
-export function UserPicker({ users, value, onValueChange, label = "Responsable", className, allowEmpty = false }: {
+export function UserPicker({ users, value, onValueChange, label = "Responsable", className, allowEmpty = false, emptyLabel = "Sin responsable" }: {
   users: UserPickerOption[];
   value?: string;
   onValueChange: (value: string) => void;
   label?: string;
   className?: string;
   allowEmpty?: boolean;
+  emptyLabel?: string;
 }) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -34,7 +35,7 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" className={cn("w-full justify-start [&_svg]:size-3.5", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
           {selected ? <UserAvatar user={selected} /> : <UserRound aria-hidden="true" />}
-          <span className="min-w-0 truncate text-left">{selected?.username ? displayUsername(selected.username) : selected?.name ?? `Seleccionar ${label.toLowerCase()}`}</span>
+          <span className="min-w-0 truncate text-left">{selected?.username ? displayUsername(selected.username) : selected?.name ?? (allowEmpty ? emptyLabel : `Seleccionar ${label.toLowerCase()}`)}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[min(340px,calc(100vw-32px))]">
@@ -47,7 +48,7 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
           <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuarios…" className="pl-9" autoComplete="off" />
         </label>
         <div className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto overscroll-contain">
-          {allowEmpty ? <button type="button" className="flex min-h-11 items-center gap-3 rounded-xl px-2.5 text-left text-carbon/55 transition-colors hover:bg-carbon/5" onClick={() => { onValueChange(""); setOpen(false); setQuery(""); }}><span className="grid size-7 place-items-center rounded-full bg-carbon/5"><X className="size-3.5" /></span><span className="text-sm font-semibold">Sin responsable</span></button> : null}
+          {allowEmpty ? <button type="button" className="flex min-h-11 items-center gap-3 rounded-xl px-2.5 text-left text-carbon/55 transition-colors hover:bg-carbon/5" onClick={() => { onValueChange(""); setOpen(false); setQuery(""); }}><span className="grid size-7 place-items-center rounded-full bg-carbon/5"><X className="size-3.5" /></span><span className="text-sm font-semibold">{emptyLabel}</span></button> : null}
           {filtered.map((user) => (
             <button
               key={user.id}

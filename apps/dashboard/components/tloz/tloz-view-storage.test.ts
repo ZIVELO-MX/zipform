@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TlozUiState } from "./tloz-view-state";
-import { loadTlozUiState, saveTlozUiState, tlozStorageKeys } from "./tloz-view-storage";
+import { loadTlozUiState, normalizeStoredState, saveTlozUiState, tlozStorageKeys } from "./tloz-view-storage";
 
 const state: TlozUiState = {
   view: "board",
@@ -45,6 +45,13 @@ describe("TLOZ view storage", () => {
     const unavailable = memoryStorage({ failReads: true, failWrites: true });
     expect(loadTlozUiState(unavailable, "tloz-controls")).toBeNull();
     expect(saveTlozUiState(unavailable, "tloz-controls", state)).toBe(false);
+  });
+
+  it("keeps contextual Inventory sorting in persisted state", () => {
+    expect(normalizeStoredState({
+      ...state,
+      sort: "acquired-date",
+    }).sort).toBe("acquired-date");
   });
 });
 

@@ -45,10 +45,9 @@ export async function DocumentEntityPage({
   return (
     <TlozPageShell
       title={document.title}
-      breadcrumb={["Lobby", { label: kind === "project" ? "Projects" : "Inventory", href: kind === "project" ? "/projects" : "/inventory" }, document.title]}
+      breadcrumb={[{ label: "Lobby", href: "/" }, { label: kind === "project" ? "Projects" : "Inventory", href: kind === "project" ? "/projects" : "/inventory" }, document.title]}
       showSearch={false}
       showControls={false}
-      missionControls={false}
       createKind={kind}
       documentNavigation={{ documents: [document], users }}
     >

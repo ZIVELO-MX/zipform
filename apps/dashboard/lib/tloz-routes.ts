@@ -16,9 +16,13 @@ export function resolveResponsiveTlozViews(
 ): { views: readonly TlozView[]; defaultView: TlozView } {
   if (!isMobile) return { views: supportedViews, defaultView };
 
+  const views = TLOZ_MOBILE_VIEWS.filter((view) => supportedViews.includes(view));
+  const mobileDefault = views.includes(defaultView as (typeof views)[number])
+    ? defaultView
+    : views[0] ?? defaultView;
   return {
-    views: TLOZ_MOBILE_VIEWS,
-    defaultView: TLOZ_MOBILE_VIEWS.includes(defaultView as (typeof TLOZ_MOBILE_VIEWS)[number]) ? defaultView : "list",
+    views,
+    defaultView: mobileDefault,
   };
 }
 

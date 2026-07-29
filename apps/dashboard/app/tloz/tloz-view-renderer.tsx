@@ -9,7 +9,10 @@ import { DashboardClient } from "./dashboard-client";
 import { TlozViewHeader } from "../../components/tloz/tloz-shell";
 import { useTlozViewState } from "../../components/tloz/tloz-view-state";
 import { CreateNewEntityButton } from "../../components/tloz/tloz-create";
-import { topologicalMissionOrder } from "../../components/tloz/tloz-utils";
+import {
+  filterAndSortTlozRecords,
+  tlozStatusRole,
+} from "../../components/tloz/tloz-view-query";
 
 const BoardClient = dynamic(() => import("./board/board-client").then((module) => module.BoardClient), { loading: ViewLoading });
 const ListClient = dynamic(() => import("./list/list-client").then((module) => module.ListClient), { loading: ViewLoading });
@@ -45,22 +48,15 @@ export function TlozViewRenderer(props: ViewRendererProps) {
   const { state } = useTlozViewState();
   const view = state.view;
   const config = viewConfig[view] ?? viewConfig.dashboard;
-  const projectFilterActive = projects.length > 1 && projects.some((project) => project.id === state.projectId);
-  const ownerFilterActive = users.some((user) => user.id === state.ownerId);
-  const visibleMissions = useMemo(() => {
-    const visible = missions.filter((mission) => (
-      (!projectFilterActive || mission.projectId === state.projectId)
-      && (!ownerFilterActive || mission.ownerId === state.ownerId)
-      && (state.showCompleted || statusRole(mission.status, statusOptions) !== "done")
-    ));
-
-    if (state.sort === "dependencies" || state.sort === "default") return topologicalMissionOrder(visible);
-    return visible.sort((left, right) => state.sort === "title"
-      ? left.title.localeCompare(right.title)
-      : state.sort === "due-date"
-        ? (left.dueDate ?? "9999-12-31").localeCompare(right.dueDate ?? "9999-12-31")
-        : left.createdAt.localeCompare(right.createdAt));
-  }, [missions, ownerFilterActive, projectFilterActive, state, statusOptions]);
+  const visibleMissions = useMemo(
+    () => filterAndSortTlozRecords(
+      missions,
+      state,
+      statusOptions,
+      { defaultSort: "dependencies" },
+    ),
+    [missions, state, statusOptions],
+  );
 
   if (view === "dashboard") {
     if (!summary) return null;
@@ -69,10 +65,10 @@ export function TlozViewRenderer(props: ViewRendererProps) {
       ...summary,
       activeQuest: summary.activeQuest && visibleIds.has(summary.activeQuest.id) ? summary.activeQuest : null,
       activeSupportQuest: summary.activeSupportQuest && visibleIds.has(summary.activeSupportQuest.id) ? summary.activeSupportQuest : null,
-      nowMissions: visibleMissions.filter((mission) => ["active", "blocked"].includes(statusRole(mission.status, statusOptions))),
-      mainQuests: visibleMissions.filter((mission) => mission.type === "main_quest" && statusRole(mission.status, statusOptions) !== "done"),
-      upcomingMissions: visibleMissions.filter((mission) => statusRole(mission.status, statusOptions) === "ready"),
-      futureMissions: visibleMissions.filter((mission) => statusRole(mission.status, statusOptions) === "backlog"),
+      nowMissions: visibleMissions.filter((mission) => ["active", "blocked"].includes(tlozStatusRole(mission.status, statusOptions))),
+      mainQuests: visibleMissions.filter((mission) => mission.type === "main_quest" && tlozStatusRole(mission.status, statusOptions) !== "done"),
+      upcomingMissions: visibleMissions.filter((mission) => tlozStatusRole(mission.status, statusOptions) === "ready"),
+      futureMissions: visibleMissions.filter((mission) => tlozStatusRole(mission.status, statusOptions) === "backlog"),
       projects: summary.projects.filter((project) => visibleMissions.some((mission) => mission.projectId === project.id)),
     };
     return <DashboardClient summary={filteredSummary} detailOptions={detailOptions} statusOptions={statusOptions} hideProjectSections={hideProjectSections} />;
@@ -104,15 +100,4 @@ export function TlozViewRenderer(props: ViewRendererProps) {
       </div>
     </div>
   );
-}
-
-function statusRole(status: string, options: TlozFieldOption[]) {
-  const defaults: Record<string, "active" | "blocked" | "ready" | "backlog" | "done"> = {
-    now: "active",
-    blocked: "blocked",
-    next: "ready",
-    later: "backlog",
-    completed: "done",
-  };
-  return options.find((option) => option.value === status)?.role ?? defaults[status] ?? "backlog";
 }

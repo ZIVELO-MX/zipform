@@ -201,6 +201,7 @@ export function documentToMissionView(
       typeLabel: document.kind === "project" ? "Project" : "Inventory",
       typeTone: tone,
       icon,
+      acquiredDate: stringProperty(document, "acquired") ?? undefined,
     },
   };
 }

@@ -75,6 +75,7 @@ export type MissionViewRecord = TlozMissionRecord & {
     typeLabel: string;
     typeTone: string;
     icon: string;
+    acquiredDate?: string;
   };
 };
 
