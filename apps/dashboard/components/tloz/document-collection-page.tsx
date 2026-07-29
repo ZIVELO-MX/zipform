@@ -39,11 +39,9 @@ export async function DocumentCollectionPage({
   return (
     <TlozPageShell
       title={title}
-      breadcrumb={["Lobby", title]}
+      breadcrumb={[{ label: "Lobby", href: "/" }, title]}
       supportedViews={collectionViews}
       defaultView={defaultView}
-      missionControls={false}
-      inventoryControls={kind === "inventory"}
       createKind={createKind}
       stateScope={definition.key}
       documentNavigation={{ documents: documents.data, users }}

@@ -20,7 +20,12 @@ import {
 import { detailFieldOptions, MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 import { MissionAttachmentUploader } from "./mission-attachment-uploader";
 import { missionStatusLabel, missionStatusTone, missionTypeIcon, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
-import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
+import {
+  inventoryItemHref,
+  missionHref,
+  projectDetailHref,
+  projectHref,
+} from "../../lib/tloz-routes";
 import { appendTaskLine, updateTaskLine } from "./mission-document";
 import { MarkdownEditor } from "./markdown-editor";
 import { inferResourceIconId, isGithubUrl, RESOURCE_ICON_OPTIONS, resourceTypeLabel, resolveResourceIcon, resolveResourceImageUrl, resourceUsesFileId, TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
@@ -53,7 +58,6 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   onNavigateQuestItem?: (questItemId: string) => void;
   variant?: "panel" | "full";
 }) {
-  const fullMissionHref = mission.project ? missionHref(mission.project, mission.displayId) : "/";
   const [current, setCurrent] = useState(mission);
   const [detailMarkdown, setDetailMarkdown] = useState(mission.descriptionDetail);
   const [descriptionDraft, setDescriptionDraft] = useState(mission.description);
@@ -72,6 +76,10 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
+  const fullDetailHref = resolveFullDetailHref(current, options.document);
+  const projectMissionsHref = options.document?.kind === "project" && current.project
+    ? projectHref(current.project)
+    : null;
   const completionStatus = (
     options.presentationFields
       ?.find((field) => field.key === "status")
@@ -379,10 +387,14 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
         <aside className="mission-detail-properties flex self-start flex-col gap-3.5" aria-label="Información de la misión">
           {variant === "panel" ? (
-            <Link href={fullMissionHref} className="flex items-center justify-center gap-2 rounded-xl border border-carbon/10 bg-white px-4 py-3 text-[13px] font-semibold text-carbon/60 no-underline transition-colors hover:border-carbon/20 hover:text-carbon">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M9 8h6" /><path d="M9 12h6" /><path d="M9 16h4" /></svg>
-              Abrir en página completa
-            </Link>
+            <DetailNavigationLink href={fullDetailHref} label="Abrir en página completa">
+              <PanelRightOpen aria-hidden="true" />
+            </DetailNavigationLink>
+          ) : null}
+          {projectMissionsHref ? (
+            <DetailNavigationLink href={projectMissionsHref} label="Abrir Missions">
+              <FileStack aria-hidden="true" />
+            </DetailNavigationLink>
           ) : null}
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} onUpdate={documentMutation ? async (_missionId, input) => documentMutation(missionInputToDocumentUpdate(input, options.document?.kind ?? "mission")) : undefined} onStatusUpdate={documentMutation ? async (_missionId, status) => documentMutation({ properties: { status } }) : undefined} readOnly={!canUpdateDocument} responsibleReadOnly={!canMove} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdateDocument} moveReadOnly={!canMove} onDocumentChange={onBackingDocumentChange} /></div></section>
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]"><ActivityItem label={`Estado: ${missionStatusLabel[current.status]}`} date={current.updatedAt} tone={missionStatusTone[current.status]} /><ActivityItem label="Misión actualizada" date={current.updatedAt} tone={tone} /><ActivityItem label="Misión creada" date={current.createdAt} /></div></section>
@@ -391,6 +403,41 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
       </div>
     </article>
   );
+}
+
+function DetailNavigationLink({
+  href,
+  label,
+  children,
+}: {
+  href: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-center gap-2 rounded-xl border border-carbon/10 bg-white px-4 py-3 text-[13px] font-semibold text-carbon/60 no-underline transition-colors hover:border-carbon/20 hover:text-carbon"
+    >
+      <span className="[&_svg]:size-3.5">{children}</span>
+      {label}
+    </Link>
+  );
+}
+
+function resolveFullDetailHref(
+  mission: TlozMissionDetail,
+  document: TlozDocument | undefined,
+) {
+  if (document?.kind === "project") {
+    return projectDetailHref({
+      name: document.title,
+      slug: document.projectSlug ?? document.publicId,
+      publicId: document.publicId,
+    });
+  }
+  if (document?.kind === "inventory") return inventoryItemHref(document.publicId);
+  return mission.project ? missionHref(mission.project, mission.displayId) : "/";
 }
 
 function AddChecklistTask({ onAdd }: { onAdd: (title: string) => void }) {

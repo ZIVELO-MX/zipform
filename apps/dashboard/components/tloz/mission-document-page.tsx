@@ -39,7 +39,7 @@ export async function MissionDocumentPage({
   return (
     <TlozPageShell
       title={mission.title}
-      breadcrumb={["Lobby", { label: project.name, href: projectHref(project) }, mission.title]}
+      breadcrumb={[{ label: "Lobby", href: "/" }, { label: project.name, href: projectHref(project) }, mission.title]}
       showSearch={false}
       showControls={false}
     >

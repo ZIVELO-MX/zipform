@@ -105,7 +105,7 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
                   const label = typeof segment === "string" ? segment : segment.label;
                   return <Fragment key={`${label}-${index}`}>
                     {index > 0 ? <BreadcrumbSeparator /> : null}
-                    <BreadcrumbItem className={`min-w-0 ${index > 1 ? "hidden md:flex" : ""}`}>
+                    <BreadcrumbItem className="min-w-0">
                       {typeof segment === "string" ? <BreadcrumbPage className="truncate">{label}</BreadcrumbPage> : <BreadcrumbLink asChild><Link className="truncate" href={segment.href}>{label}</Link></BreadcrumbLink>}
                     </BreadcrumbItem>
                   </Fragment>;

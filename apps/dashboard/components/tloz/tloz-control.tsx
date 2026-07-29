@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
   Separator,
+  UserPicker,
 } from "@tloz/ui";
 import type { TlozView } from "../../lib/tloz-routes";
 import { useTlozViewState } from "./tloz-view-state";
@@ -30,7 +31,14 @@ const viewConfig: Record<TlozView, { label: string; icon: React.ElementType }> =
 };
 
 export function TlozControl() {
-  const { state, setState, supportedViews, projects, users, showMissionControls } = useTlozViewState();
+  const {
+    state,
+    setState,
+    supportedViews,
+    projects,
+    users,
+    capabilities,
+  } = useTlozViewState();
 
   return (
     <Popover>
@@ -68,37 +76,68 @@ export function TlozControl() {
           </div>
         </ControlSection>
 
-        {showMissionControls ? (
+        {capabilities.ownerFilter || capabilities.projectFilter ? (
           <>
             <Separator className="my-4" />
             <ControlSection label="Filtros">
-              {projects.length > 1 ? <ControlSelect label="Proyecto" value={state.projectId} onValueChange={(projectId) => setState({ projectId })} options={[{ id: "all", name: "Todos los proyectos" }, ...projects]} /> : null}
-              <ControlSelect label="Owner" value={state.ownerId} onValueChange={(ownerId) => setState({ ownerId })} options={[{ id: "all", name: "Todos los owners" }, ...users]} />
+              {capabilities.projectFilter && projects.length > 1 ? (
+                <ControlSelect
+                  label="Proyecto"
+                  value={state.projectId}
+                  onValueChange={(projectId) => setState({ projectId })}
+                  options={[{ id: "all", name: "Todos los proyectos" }, ...projects]}
+                />
+              ) : null}
+              {capabilities.ownerFilter ? (
+                <UserPicker
+                  users={users}
+                  value={state.ownerId === "all" ? undefined : state.ownerId}
+                  onValueChange={(ownerId) => setState({ ownerId: ownerId || "all" })}
+                  allowEmpty
+                  emptyLabel="Todos los responsables"
+                  label="Responsable"
+                  className="h-9 rounded-lg text-xs"
+                />
+              ) : null}
             </ControlSection>
 
             <Separator className="my-4" />
-            <div className={state.view === "list" ? "grid grid-cols-2 gap-3" : "grid gap-3"}>
+            <div className={state.view === "list" && capabilities.groupingOptions.length ? "grid grid-cols-2 gap-3" : "grid gap-3"}>
               <ControlSection label="Orden">
-                <ControlSelect label="Orden" value={state.sort} onValueChange={(sort) => setState({ sort: sort as typeof state.sort })} options={[{ id: "default", name: "Predeterminado" }, { id: "due-date", name: "Fecha límite" }, { id: "title", name: "Título" }, { id: "dependencies", name: "Dependencias" }]} />
+                <ControlSelect
+                  label="Orden"
+                  value={state.sort}
+                  onValueChange={(sort) => setState({ sort: sort as typeof state.sort })}
+                  options={capabilities.sortOptions}
+                />
               </ControlSection>
-              {state.view === "list" ? <ControlSection label="Agrupar">
-                <ControlSelect label="Agrupación" value={state.grouping} onValueChange={(grouping) => setState({ grouping: grouping as typeof state.grouping })} options={[{ id: "status", name: "Estado" }, { id: "project", name: "Proyecto" }, { id: "none", name: "Sin agrupar" }]} />
+              {state.view === "list" && capabilities.groupingOptions.length ? <ControlSection label="Agrupar">
+                <ControlSelect
+                  label="Agrupación"
+                  value={state.grouping}
+                  onValueChange={(grouping) => setState({ grouping: grouping as typeof state.grouping })}
+                  options={capabilities.groupingOptions}
+                />
               </ControlSection> : null}
             </div>
 
-            <Separator className="my-4" />
-            <label className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-carbon/5">
-              Mostrar completadas
-              <span className="relative grid size-5 shrink-0 place-items-center">
-                <input
-                  type="checkbox"
-                  className="peer size-5 cursor-pointer appearance-none rounded-md border-2 border-carbon/25 bg-white transition-colors checked:border-zivelo checked:bg-zivelo"
-                  checked={state.showCompleted}
-                  onChange={(e) => setState({ showCompleted: e.target.checked })}
-                />
-                <Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" />
-              </span>
-            </label>
+            {capabilities.completedFilter ? (
+              <>
+                <Separator className="my-4" />
+                <label className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-carbon/5">
+                  Mostrar completadas
+                  <span className="relative grid size-5 shrink-0 place-items-center">
+                    <input
+                      type="checkbox"
+                      className="peer size-5 cursor-pointer appearance-none rounded-md border-2 border-carbon/25 bg-white transition-colors checked:border-zivelo checked:bg-zivelo"
+                      checked={state.showCompleted}
+                      onChange={(e) => setState({ showCompleted: e.target.checked })}
+                    />
+                    <Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" />
+                  </span>
+                </label>
+              </>
+            ) : null}
           </>
         ) : null}
         <Separator className="my-4" />
@@ -112,7 +151,7 @@ function ControlSection({ label, children }: { label: string; children: React.Re
   return <section className="flex flex-col gap-2"><h3 className="m-0 text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/55">{label}</h3>{children}</section>;
 }
 
-function ControlSelect({ label, value, options, onValueChange }: { label: string; value: string; options: Array<{ id: string; name: string }>; onValueChange: (value: string) => void }) {
+function ControlSelect({ label, value, options, onValueChange }: { label: string; value: string; options: readonly { id: string; name: string }[]; onValueChange: (value: string) => void }) {
   return (
     <Select value={value} onValueChange={onValueChange}>
       <SelectTrigger aria-label={label}><SelectValue /></SelectTrigger>

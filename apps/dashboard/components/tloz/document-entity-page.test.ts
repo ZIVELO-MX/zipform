@@ -10,6 +10,8 @@ const missionPage = readFileSync(new URL("./mission-detail-page.tsx", import.met
 const systemDetail = readFileSync(new URL("./system-project-detail.tsx", import.meta.url), "utf8");
 const projectWorkspace = readFileSync(new URL("./project-workspace-page.tsx", import.meta.url), "utf8");
 const collectionPage = readFileSync(new URL("./document-collection-page.tsx", import.meta.url), "utf8");
+const missionDocumentPage = readFileSync(new URL("./mission-document-page.tsx", import.meta.url), "utf8");
+const header = readFileSync(new URL("./tloz-header.tsx", import.meta.url), "utf8");
 
 describe("document entity routes", () => {
   it("routes project and inventory documents through the agnostic detail view", () => {
@@ -76,5 +78,21 @@ describe("document entity routes", () => {
     expect(renderer).toContain('Todas las missions · todas las propiedades');
     expect(renderer).not.toContain("DocumentCollectionToolbar");
     expect(collectionPage).toContain('(["list", "table"] satisfies TlozView[])');
+  });
+
+  it("keeps Lobby, container, and content in navigable breadcrumbs", () => {
+    expect(collectionPage).toContain('{ label: "Lobby", href: "/" }');
+    expect(documentPage).toContain('{ label: "Lobby", href: "/" }');
+    expect(projectWorkspace).toContain('{ label: "Projects", href: "/projects" }');
+    expect(missionDocumentPage).toContain('{ label: project.name, href: projectHref(project) }');
+    expect(header).not.toContain('index > 1 ? "hidden md:flex"');
+  });
+
+  it("uses canonical Project detail and workspace links", () => {
+    expect(missionDetail).toContain("resolveFullDetailHref(current, options.document)");
+    expect(missionDetail).toContain("projectDetailHref({");
+    expect(missionDetail).toContain('label="Abrir en página completa"');
+    expect(missionDetail).toContain('label="Abrir Missions"');
+    expect(missionDetail).toContain("projectMissionsHref");
   });
 });

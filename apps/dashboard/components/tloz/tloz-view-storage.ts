@@ -38,13 +38,13 @@ export function saveTlozUiState(storage: Storage, scope: string, state: TlozUiSt
 
 export function normalizeStoredState(state: Partial<TlozUiState>): Partial<TlozUiState> {
   const views: TlozUiState["view"][] = ["dashboard", "list", "board", "table", "calendar"];
-  const sorts: TlozUiState["sort"][] = ["default", "due-date", "title", "dependencies"];
+  const sorts: TlozUiState["sort"][] = ["default", "due-date", "acquired-date", "title", "dependencies"];
   const groupings: TlozUiState["grouping"][] = ["status", "project", "none"];
   return {
     view: views.includes(state.view as TlozUiState["view"]) ? state.view : undefined,
     projectId: typeof state.projectId === "string" ? state.projectId : "all",
     ownerId: typeof state.ownerId === "string" ? state.ownerId : "all",
-    sort: sorts.includes(state.sort as TlozUiState["sort"]) ? state.sort : "dependencies",
+    sort: sorts.includes(state.sort as TlozUiState["sort"]) ? state.sort : "default",
     grouping: groupings.includes(state.grouping as TlozUiState["grouping"]) ? state.grouping : "status",
     showCompleted: typeof state.showCompleted === "boolean" ? state.showCompleted : true,
   };

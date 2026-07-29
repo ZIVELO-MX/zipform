@@ -89,6 +89,16 @@ describe("document view model", () => {
     expect(record.requiredQuestItems).toEqual([]);
   });
 
+  it("projects the Inventory acquired date for contextual sorting", () => {
+    const inventory = document("INV-0073", {
+      status: "unlocked",
+      acquired: "2026-07-20",
+    });
+
+    expect(documentToMissionView(inventory, []).presentation?.acquiredDate)
+      .toBe("2026-07-20");
+  });
+
   it("defines the typed detail property matrix without type-specific renderers", () => {
     expect(DOCUMENT_DETAIL_PROPERTY_MATRIX).toEqual({
       mission: ["status", "category", "assignee", "project", "start", "due"],
