@@ -15,20 +15,34 @@ import {
 } from "@tloz/ui";
 import type {
   TlozDocument,
+  TlozDocumentPresentationField,
   TlozDocumentScalar,
   TlozFieldDefinition,
 } from "@tloz/types";
 import { updateDocumentProperties } from "../../app/tloz/actions";
 import { DetailPropertyRow } from "./detail-property-row";
+import {
+  documentValue,
+  isDocumentDetailValuePresent,
+} from "./document-view-model";
+import { formatDate } from "./tloz-utils";
 
 export function DocumentPropertyFields({
   document,
   fields,
+  presentationFields = [],
   users,
+  readOnly = false,
+  moveReadOnly = readOnly,
+  onDocumentChange,
 }: {
   document?: TlozDocument;
   fields: TlozFieldDefinition[];
+  presentationFields?: TlozDocumentPresentationField[];
   users: Array<{ id: string; name: string }>;
+  readOnly?: boolean;
+  moveReadOnly?: boolean;
+  onDocumentChange?: (document: TlozDocument) => void;
 }) {
   const [current, setCurrent] = useState(document);
   const [pending, startTransition] = useTransition();
@@ -40,43 +54,138 @@ export function DocumentPropertyFields({
   const customFields = fields.filter(
     (field) => field.visible && field.key !== "status" && field.key !== "category",
   );
-  if (!customFields.length) return null;
+  const customKeys = new Set(customFields.map((field) => field.key));
+  const visibleCustomFields = customFields.flatMap((field) => {
+    const value = current.properties[field.key] ?? null;
+    return isDocumentDetailValuePresent(value) || !readOnly ? [{ field, value }] : [];
+  });
+  const visiblePresentationFields = presentationFields.flatMap((field) => {
+    const value = documentValue(current, field.key);
+    const editable = !readOnly
+      && !customKeys.has(field.key)
+      && EDITABLE_SYSTEM_PRESENTATION_FIELDS.has(field.key)
+      && !READ_ONLY_PRESENTATION_FIELDS.has(field.key)
+      && field.format !== "id";
+    return isDocumentDetailValuePresent(value) || editable ? [{ field, value, editable }] : [];
+  });
+  if (!visibleCustomFields.length && !visiblePresentationFields.length) return null;
 
   function persist(field: TlozFieldDefinition, value: TlozDocumentScalar) {
     if (!current) return;
     const toastId = toast.loading(`Guardando ${field.label}…`, { toasterId });
     startTransition(async () => {
       try {
-        const updated = await updateDocumentProperties(current.id, { [field.key]: value });
+        const updated = await updateDocumentProperties(
+          current.id,
+          { [field.key]: value },
+          current.revision,
+        );
         setCurrent(updated);
+        onDocumentChange?.(updated);
         toast.success(`${field.label} actualizado`, { id: toastId, toasterId });
-      } catch {
-        toast.error(`No se pudo guardar ${field.label}`, { id: toastId, toasterId });
+      } catch (error) {
+        toast.error(documentMutationError(error, `No se pudo guardar ${field.label}`), { id: toastId, toasterId });
       }
     });
   }
 
   return (
     <div className="flex flex-col border-t border-carbon/[0.07] pt-1" aria-busy={pending}>
-      {customFields.map((field) => {
-        const value = current.properties[field.key] ?? field.defaultValue ?? null;
+      {visibleCustomFields.map(({ field, value }) => (
+        <DetailPropertyRow
+          key={field.id}
+          label={field.label}
+          display={<PropertyValue field={field} value={value} users={users} />}
+          readOnly={readOnly}
+        >
+          <PropertyEditor
+            field={field}
+            value={value}
+            users={users}
+            onChange={(next) => persist(field, next)}
+          />
+        </DetailPropertyRow>
+      ))}
+      {visiblePresentationFields.map(({ field, value, editable }) => {
+        const definition = presentationFieldDefinition(field);
+        const fieldReadOnly = !editable
+          || ((field.key === "owner" || field.key === "assignee") && moveReadOnly);
         return (
-          <DetailPropertyRow
-            key={field.id}
-            label={field.label}
-            display={<PropertyValue field={field} value={value} users={users} />}
-          >
+        <DetailPropertyRow
+          key={field.key}
+          label={field.label}
+          display={<PresentationValue field={field} value={value} users={users} />}
+          readOnly={fieldReadOnly}
+        >
+          {fieldReadOnly ? null : (
             <PropertyEditor
-              field={field}
+              field={definition}
               value={value}
               users={users}
-              onChange={(next) => persist(field, next)}
+              onChange={(next) => persist(definition, next)}
             />
-          </DetailPropertyRow>
+          )}
+        </DetailPropertyRow>
         );
       })}
     </div>
   );
+}
+
+const READ_ONLY_PRESENTATION_FIELDS = new Set([
+  "publicId",
+  "project",
+  "mission_count",
+]);
+
+const EDITABLE_SYSTEM_PRESENTATION_FIELDS = new Set([
+  "status",
+  "category",
+  "owner",
+  "assignee",
+  "color",
+  "icon",
+  "start",
+  "due",
+  "progress",
+  "blocked_reason",
+  "acquired",
+]);
+
+function presentationFieldDefinition(
+  field: TlozDocumentPresentationField,
+): TlozFieldDefinition {
+  const type = field.format === "status"
+    ? "select"
+    : field.format === "person"
+      ? "person"
+      : field.format === "date"
+        ? "date"
+        : field.format === "number"
+          ? "number"
+          : "text";
+  return {
+    id: `presentation:${field.key}`,
+    key: field.key,
+    label: field.label,
+    type,
+    required: false,
+    visible: field.visible,
+    position: field.position,
+    options: field.options ?? [],
+  };
+}
+
+function documentMutationError(error: unknown, fallback: string) {
+  if (
+    typeof error === "object"
+    && error !== null
+    && "code" in error
+    && error.code === "DOCUMENT_REVISION_CONFLICT"
+  ) {
+    return "El documento cambió. Recarga el detalle e intenta de nuevo.";
+  }
+  return fallback;
 }
 
 export function CreateDocumentPropertyInputs({
@@ -137,6 +246,39 @@ function PropertyValue({
     return <span className="line-clamp-2">{value.map((item) => field.options.find((option) => option.value === item)?.label ?? item).join(", ")}</span>;
   }
   return <span className={field.type === "number" || field.type === "date" ? "font-mono text-[12px]" : ""}>{String(value)}</span>;
+}
+
+function PresentationValue({
+  field,
+  value,
+  users,
+}: {
+  field: TlozDocumentPresentationField;
+  value: TlozDocumentScalar;
+  users: Array<{ id: string; name: string }>;
+}) {
+  if (field.format === "status" && typeof value === "string") {
+    const option = field.options?.find((candidate) => candidate.value === value);
+    const tone = option?.color ?? statusTone(option?.role, value);
+    return (
+      <span
+        className="inline-block rounded-full px-[9px] py-[3px] text-[11px] font-bold"
+        style={{ background: `${tone}18`, color: tone }}
+      >
+        {option?.label ?? humanize(value)}
+      </span>
+    );
+  }
+  if (field.format === "person" && typeof value === "string") {
+    return <span>{users.find((user) => user.id === value)?.name ?? value}</span>;
+  }
+  if (field.format === "date" && typeof value === "string") {
+    return <span className="font-mono text-[11.5px] text-carbon/55">{formatDate(value)}</span>;
+  }
+  if (field.format === "id" || field.format === "number") {
+    return <span className="font-mono text-[11.5px] text-carbon/55">{displayValue(value, field)}</span>;
+  }
+  return <span className="text-xs text-carbon/65">{displayValue(value, field)}</span>;
 }
 
 function PropertyEditor({
@@ -200,6 +342,36 @@ function PropertyEditor({
       onSave={(next) => onChange(field.type === "number" ? (next ? Number(next) : null) : next || null)}
     />
   );
+}
+
+function displayValue(
+  value: TlozDocumentScalar,
+  field: TlozDocumentPresentationField,
+) {
+  if (value === null) return "";
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => field.options?.find((option) => option.value === item)?.label ?? item)
+      .join(", ");
+  }
+  if (typeof value === "boolean") return value ? "Sí" : "No";
+  if (typeof value === "string") {
+    return field.options?.find((option) => option.value === value)?.label ?? value;
+  }
+  return String(value);
+}
+
+function humanize(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function statusTone(role: string | undefined, value: string) {
+  if (role === "done" || value === "active" || value === "unlocked") return "#1E6B3C";
+  if (role === "blocked" || value === "blocked") return "#B91C22";
+  if (role === "ready" || value === "planned") return "#3A47B5";
+  return "#7A5A12";
 }
 
 function CreatePropertyEditor({

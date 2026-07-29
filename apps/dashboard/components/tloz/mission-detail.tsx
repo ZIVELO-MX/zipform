@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Check, ChevronDown, FileStack, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozAttachmentGroup, TlozFieldOption, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@tloz/types";
+import type { TlozAttachmentGroup, TlozDocument, TlozDocumentUpdate, TlozFieldOption, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@tloz/types";
 import {
   addMissionDependency,
   addMissionResource,
@@ -17,7 +17,7 @@ import {
   patchMissionStatus,
   updateMission,
 } from "../../app/tloz/actions";
-import { MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
+import { detailFieldOptions, MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 import { MissionAttachmentUploader } from "./mission-attachment-uploader";
 import { missionStatusLabel, missionStatusTone, missionTypeIcon, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
@@ -38,10 +38,16 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
 
 type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "descriptionDetail" | "icon">;
 
-export function MissionDetail({ mission, options, canUpdate = true, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
+export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onAddResource, onRemoveResource, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
   canUpdate?: boolean;
+  canMove?: boolean;
+  canUpdateDocument?: boolean;
+  documentMutation?: (input: TlozDocumentUpdate) => Promise<TlozMissionDetail>;
+  onBackingDocumentChange?: (document: TlozDocument) => void;
+  onAddResource?: (input: TlozResourceInput) => Promise<TlozResource[]>;
+  onRemoveResource?: (resourceId: string) => Promise<TlozResource[]>;
   onMissionChange?: (mission: TlozMissionDetail) => void;
   onNavigateMission?: (missionId: string) => void;
   onNavigateQuestItem?: (questItemId: string) => void;
@@ -65,9 +71,15 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
   const [isPending, startTransition] = useTransition();
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
-  const completionStatus = options.contract
-    ?.find((field) => field.key === "status")
-    ?.options.find((option) => option.role === "done")
+  const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
+  const completionStatus = (
+    options.presentationFields
+      ?.find((field) => field.key === "status")
+      ?.options
+    ?? options.contract
+      ?.find((field) => field.key === "status")
+      ?.options
+  )?.find((option) => option.role === "done")
     ?.value ?? "completed";
   const isCompleted = current.status === completionStatus;
   const checklistProgress = current.checklist.length ? Math.round((current.checklist.filter((item) => item.completed).length / current.checklist.length) * 100) : 0;
@@ -117,8 +129,17 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
   function restoreSnapshot(snapshot: EditableSnapshot, message: string) {
     startTransition(async () => {
       try {
-        await updateMission(current.id, { title: snapshot.title, description: snapshot.description, icon: snapshot.icon });
-        const restored = await saveMissionDocument(current.id, snapshot.descriptionDetail);
+        const restored = documentMutation
+          ? await documentMutation({
+              title: snapshot.title,
+              summary: snapshot.description,
+              body: snapshot.descriptionDetail,
+              properties: { icon: snapshot.icon },
+            })
+          : await (async () => {
+              await updateMission(current.id, { title: snapshot.title, description: snapshot.description, icon: snapshot.icon });
+              return saveMissionDocument(current.id, snapshot.descriptionDetail);
+            })();
         accept(restored);
         setTitleDraft(snapshot.title);
         toast.success(message, { toasterId });
@@ -131,7 +152,13 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
     remember();
     const toastId = toast.loading("Actualizando icono…", { toasterId });
     startTransition(async () => {
-      try { accept({ ...current, ...(await updateMission(current.id, { icon: value })) }); toast.success("Icono actualizado", { id: toastId, toasterId }); }
+      try {
+        const updated = documentMutation
+          ? await documentMutation({ properties: { icon: value } })
+          : { ...current, ...(await updateMission(current.id, { icon: value })) };
+        accept(updated);
+        toast.success("Icono actualizado", { id: toastId, toasterId });
+      }
       catch { toast.error("No se pudo actualizar el icono", { id: toastId, toasterId }); }
     });
   }
@@ -144,7 +171,13 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
     remember();
     const toastId = toast.loading("Actualizando título…", { toasterId });
     startTransition(async () => {
-      try { accept({ ...current, ...(await updateMission(current.id, { title })) }); toast.success("Título actualizado", { id: toastId, toasterId }); }
+      try {
+        const updated = documentMutation
+          ? await documentMutation({ title })
+          : { ...current, ...(await updateMission(current.id, { title })) };
+        accept(updated);
+        toast.success("Título actualizado", { id: toastId, toasterId });
+      }
       catch { setTitleDraft(current.title); toast.error("No se pudo actualizar el título", { id: toastId, toasterId }); }
     });
   }
@@ -153,13 +186,17 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
     if (nextMarkdown === current.descriptionDetail) return;
     remember();
     setDetailMarkdown(nextMarkdown);
-    mutate("Guardando documento…", () => saveMissionDocument(current.id, nextMarkdown));
+    mutate("Guardando documento…", () => documentMutation
+      ? documentMutation({ body: nextMarkdown })
+      : saveMissionDocument(current.id, nextMarkdown));
   }
 
   function saveDescription() {
     if (descriptionDraft.trim() === current.description) return;
     remember();
-    mutate("Guardando descripción…", async () => ({ ...current, ...(await updateMission(current.id, { description: descriptionDraft.trim() })) }));
+    mutate("Guardando descripción…", async () => documentMutation
+      ? documentMutation({ summary: descriptionDraft.trim() })
+      : { ...current, ...(await updateMission(current.id, { description: descriptionDraft.trim() })) });
   }
 
   function toggleChecklistItem(position: number, checked: boolean) {
@@ -174,6 +211,26 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
     accept({ ...current, resources: nextResources });
   }
 
+  function addResource(input: TlozResourceInput) {
+    mutate("Adjuntando recurso…", async () => {
+      if (onAddResource) {
+        const resources = await onAddResource(input);
+        return { ...current, resources };
+      }
+      return addMissionResource(current.id, input);
+    });
+  }
+
+  function removeResource(resource: TlozResource) {
+    mutate("Quitando recurso…", async () => {
+      if (onRemoveResource) {
+        const resources = await onRemoveResource(resource.id);
+        return { ...current, resources };
+      }
+      return removeMissionResource(current.id, resource.id);
+    });
+  }
+
   function renameChecklistItem(position: number) {
     const title = checklistTitleDraft.trim();
     setRenamingChecklist(null);
@@ -186,12 +243,10 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
     setDeletingChecklist(null);
   }
 
-  const categoryOption = options.contract
-    ?.find((field) => field.key === "category")
-    ?.options.find((option) => option.value === current.type);
-  const statusOption = options.contract
-    ?.find((field) => field.key === "status")
-    ?.options.find((option) => option.value === current.status);
+  const categoryOption = detailFieldOptions(options, "category", [])
+    .find((option) => option.value === current.type);
+  const statusOption = detailFieldOptions(options, "status", [])
+    .find((option) => option.value === current.status);
   const typeColor = categoryOption?.color ?? tone;
   const statusColor = statusOption?.color ?? missionStatusTone[current.status];
   const iconSurfaceClass = missionTypeSurfaceClass[current.type] ?? "bg-carbon/5 text-carbon";
@@ -218,8 +273,8 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
               <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.displayId}</span>
             </div>
             <div className="flex items-start gap-2.5">
-              <IconPicker icons={missionIcons} value={current.icon} color={tone} recentStorageKey="tloz-recent-icons" onValueChange={saveIcon} iconOnly className={`mt-0.5 size-8 shrink-0 justify-center rounded-lg border-0 p-0 shadow-none [&_svg]:size-[15px] ${iconSurfaceClass}`} />
-              {editingTitle ? <Input autoFocus className="h-auto border border-[#1D1D1B]/15 bg-white px-2 py-0 text-[30px] font-bold leading-[1.12] tracking-[-0.025em] shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : <button type="button" className="max-w-full rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="m-0 text-balance text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-[#1D1D1B]">{current.title}</h1></button>}
+              {canUpdateDocument ? <IconPicker icons={missionIcons} value={current.icon} color={tone} recentStorageKey="tloz-recent-icons" onValueChange={saveIcon} iconOnly className={`mt-0.5 size-8 shrink-0 justify-center rounded-lg border-0 p-0 shadow-none [&_svg]:size-[15px] ${iconSurfaceClass}`} /> : (() => { const CurrentIcon = resolveMissionIcon(current.icon); return <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-[15px] ${iconSurfaceClass}`}><CurrentIcon aria-hidden="true" /></span>; })()}
+              {editingTitle ? <Input autoFocus className="h-auto border border-[#1D1D1B]/15 bg-white px-2 py-0 text-[30px] font-bold leading-[1.12] tracking-[-0.025em] shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : canUpdateDocument ? <button type="button" className="max-w-full rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="m-0 text-balance text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-[#1D1D1B]">{current.title}</h1></button> : <h1 className="m-0 text-balance text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-[#1D1D1B]">{current.title}</h1>}
             </div>
           </header>
 
@@ -240,7 +295,7 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
                 placeholder="Resumen breve del resultado esperado."
               />
             ) : (
-              <button type="button" className="block max-w-[62ch] rounded-md text-left text-[15px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button>
+              canUpdateDocument ? <button type="button" className="block max-w-[62ch] rounded-md text-left text-[15px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button> : <p className="m-0 block max-w-[62ch] text-[15px] leading-[1.6] text-[#454543]">{current.description || "Sin descripción"}</p>
             )}
               </AccordionContent>
             </AccordionItem>
@@ -248,7 +303,7 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
             <AccordionItem value="detail" className="border-0">
               <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">Detalle</AccordionTrigger>
               <AccordionContent className="pt-1">
-                <MarkdownEditor value={detailMarkdown} onSave={saveDocument} onToggleTask={toggleChecklistItem} showHeader={false} />
+                <MarkdownEditor value={detailMarkdown} onSave={saveDocument} onToggleTask={isMissionDocument && canUpdateDocument ? toggleChecklistItem : undefined} showHeader={false} readOnly={!canUpdateDocument} />
               </AccordionContent>
             </AccordionItem>
 
@@ -268,7 +323,7 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
               {current.checklist.map((item, position) => ({ item, position })).filter(({ item }) => checklistFilter === "all" || !item.completed).map(({ item, position }) => (
                 <div key={item.id} className="group flex items-center gap-[11px] rounded-[10px] px-3 py-2 transition-colors hover:bg-[#D72228]/[0.04]">
                   <label className="relative grid size-[19px] shrink-0 cursor-pointer place-items-center">
-                    <input type="checkbox" className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} />
+                    <input type="checkbox" disabled={!canUpdateDocument} className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] disabled:cursor-default disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} />
                     <Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" />
                     <span className="sr-only">{item.title}</span>
                   </label>
@@ -281,14 +336,14 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
                   </DropdownMenu>
                 </div>
               ))}
-              <AddChecklistTask onAdd={(title) => saveDocument(appendTaskLine(detailMarkdown, title))} />
+              {canUpdateDocument ? <AddChecklistTask onAdd={(title) => saveDocument(appendTaskLine(detailMarkdown, title))} /> : null}
                 </div>
                 <AlertDialog open={deletingChecklist !== null} onOpenChange={(open) => !open && setDeletingChecklist(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Eliminar checkbox</AlertDialogTitle><AlertDialogDescription>Esta acción quitará “{deletingChecklist === null ? "" : current.checklist[deletingChecklist]?.title}” del documento de la misión.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletingChecklist !== null && deleteChecklistItem(deletingChecklist)}>Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
 
-          <div className="flex flex-col gap-7">
+          {isMissionDocument ? <><div className="flex flex-col gap-7">
             <RelationsSection title="Dependencias">
               <MissionReferences missions={current.dependencies} project={current.project} statusOptions={options.contract?.find((field) => field.key === "status")?.options} onRemove={(id) => mutate("Quitando dependencia…", () => removeMissionDependency(current.id, id))} onNavigate={onNavigateMission} />
               <div className="flex flex-col gap-[9px]">{current.questItems.map((item) => <QuestReference key={item.id} item={item} required={current.missionQuestItems.find((link) => link.questItemId === item.id)?.required ?? false} onNavigate={onNavigateQuestItem} onRequiredChange={(checked) => mutate("Actualizando requisito…", () => setMissionQuestItem(current.id, item.id, checked))} onRemove={() => mutate("Quitando item…", () => removeMissionQuestItem(current.id, item.id))} />)}</div>
@@ -309,7 +364,17 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
               {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
             </div>
             <AddResource onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} />
-          </RelationsSection>
+          </RelationsSection></> : null}
+
+          {!isMissionDocument ? (
+            <RelationsSection className="mt-7" title="Recursos">
+              <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
+                <MissionResourceReferences resources={current.resources} onRemove={removeResource} />
+                {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
+              </div>
+              {canUpdateDocument ? <AddResource onAdd={addResource} /> : null}
+            </RelationsSection>
+          ) : null}
         </main>
 
         <aside className="mission-detail-properties flex self-start flex-col gap-3.5" aria-label="Información de la misión">
@@ -319,9 +384,9 @@ export function MissionDetail({ mission, options, canUpdate = true, onMissionCha
               Abrir en página completa
             </Link>
           ) : null}
-          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} users={options.users} /></div></section>
+          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} onUpdate={documentMutation ? async (_missionId, input) => documentMutation(missionInputToDocumentUpdate(input, options.document?.kind ?? "mission")) : undefined} onStatusUpdate={documentMutation ? async (_missionId, status) => documentMutation({ properties: { status } }) : undefined} readOnly={!canUpdateDocument} responsibleReadOnly={!canMove} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdateDocument} moveReadOnly={!canMove} onDocumentChange={onBackingDocumentChange} /></div></section>
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]"><ActivityItem label={`Estado: ${missionStatusLabel[current.status]}`} date={current.updatedAt} tone={missionStatusTone[current.status]} /><ActivityItem label="Misión actualizada" date={current.updatedAt} tone={tone} /><ActivityItem label="Misión creada" date={current.createdAt} /></div></section>
-          <Button className="min-h-11 rounded-xl" disabled={isCompleted} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button>
+          {isMissionDocument && canUpdate ? <Button className="min-h-11 rounded-xl" disabled={isCompleted} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button> : null}
         </aside>
       </div>
     </article>
@@ -451,3 +516,24 @@ function ActivityItem({ label, date, tone = "#9a9a98" }: { label: string; date: 
 const missionTypeBackground: Record<string, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
 const missionTypeSurfaceClass: Record<TlozMissionRecord["type"], string> = { main_quest: "bg-[#FDECEC] hover:bg-[#F9DDDE]", side_quest: "bg-[#EEF2FF] hover:bg-[#E1E8FF]", farming_quest: "bg-[#E6F4EA] hover:bg-[#D9EEDF]", exploration_quest: "bg-[#F2EAFE] hover:bg-[#E8DBFA]" };
 function snapshotOf(mission: TlozMissionDetail): EditableSnapshot { return { title: mission.title, description: mission.description, descriptionDetail: mission.descriptionDetail, icon: mission.icon }; }
+
+function missionInputToDocumentUpdate(
+  input: import("@tloz/data").TlozMissionUpdateInput,
+  kind: TlozDocument["kind"],
+): TlozDocumentUpdate {
+  const properties: NonNullable<TlozDocumentUpdate["properties"]> = {};
+  if (input.status !== undefined) properties.status = input.status;
+  if (input.type !== undefined) properties.category = input.type;
+  if (input.ownerId !== undefined) {
+    properties[kind === "project" ? "owner" : "assignee"] = input.ownerId;
+  }
+  if (input.icon !== undefined) properties.icon = input.icon;
+  if (input.startDate !== undefined) properties.start = input.startDate || null;
+  if (input.dueDate !== undefined) properties.due = input.dueDate || null;
+  return {
+    ...(input.title === undefined ? {} : { title: input.title }),
+    ...(input.description === undefined ? {} : { summary: input.description }),
+    ...(input.descriptionDetail === undefined ? {} : { body: input.descriptionDetail }),
+    ...(Object.keys(properties).length ? { properties } : {}),
+  };
+}

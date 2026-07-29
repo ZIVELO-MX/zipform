@@ -23,6 +23,7 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
   const [loadedOptions, setLoadedOptions] = useState<MissionDetailOptions | null>(null);
   const [selectedQuestItem, setSelectedQuestItem] = useState<TlozQuestItem | null>(null);
   const [canUpdate, setCanUpdate] = useState(false);
+  const [canMove, setCanMove] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -30,10 +31,12 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
     setHistory([]);
     setSelectedQuestItem(null);
     setCanUpdate(false);
+    setCanMove(false);
     if (mission) Promise.all([getMissionDetail(mission.id), editorOptions ? Promise.resolve(null) : getMissionDetailOptions(), getMissionCapabilities(mission.id), getMissionDocumentOptions(mission.id)]).then(([result, options, capabilities, documentOptions]) => {
       if (active) {
         setDetail(result);
         setCanUpdate(capabilities.canUpdate);
+        setCanMove(capabilities.canMove);
         setLoadedOptions({
           projects: editorOptions?.projects ?? options?.projects ?? (mission.project ? [mission.project] : []),
           users: editorOptions?.users ?? options?.users ?? [mission.owner],
@@ -60,7 +63,9 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
     if (detail) setHistory((items) => [...items, detail]);
     setDetail(null);
     setDetail(await getMissionDetail(missionId));
-    setCanUpdate((await getMissionCapabilities(missionId)).canUpdate);
+    const capabilities = await getMissionCapabilities(missionId);
+    setCanUpdate(capabilities.canUpdate);
+    setCanMove(capabilities.canMove);
   }
 
   function navigateBack() {
@@ -76,7 +81,7 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
 
   return (
     <SlideOver open={Boolean(mission)} title={selectedQuestItem?.name ?? detail?.title ?? mission?.title ?? "Detalle de Mission"} onBack={selectedQuestItem || history.length ? navigateBack : undefined} onOpenChange={(open) => !open && onClose()}>
-      {selectedQuestItem ? <SystemDocumentDetail entityId={selectedQuestItem.id} users={options.users} panel /> : detail ? <div className="min-h-full bg-[#FAFAF9]"><DocumentDetail panel mission={detail} options={options} canUpdate={canUpdate} onNavigateMission={(id) => void navigateToMission(id)} onNavigateQuestItem={(id) => { const item = options.questItems.find((quest) => quest.id === id); if (item) setSelectedQuestItem(item); }} onMissionChange={onMissionChange} /></div> : <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando misión…</div>}
+      {selectedQuestItem ? <SystemDocumentDetail entityId={selectedQuestItem.id} users={options.users} panel /> : detail ? <div className="min-h-full bg-[#FAFAF9]"><DocumentDetail panel mission={detail} options={options} canUpdate={canUpdate} canMove={canMove} onNavigateMission={(id) => void navigateToMission(id)} onNavigateQuestItem={(id) => { const item = options.questItems.find((quest) => quest.id === id); if (item) setSelectedQuestItem(item); }} onMissionChange={onMissionChange} /></div> : <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando misión…</div>}
     </SlideOver>
   );
 }

@@ -1,4 +1,5 @@
 import type {
+  TlozChecklistItem,
   TlozDocument,
   TlozDocumentDefinition,
   TlozDocumentScalar,
@@ -22,11 +23,13 @@ import {
   validateProjectFields,
 } from "../document-contract";
 import { TlozDocumentError } from "../document-errors";
+import { parseMarkdownChecklist } from "../tloz-hydration";
 
 type MockDocumentData = {
   projects: TlozProject[];
   missions: TlozMission[];
   questItems: TlozQuestItem[];
+  checklistItems: TlozChecklistItem[];
 };
 
 type DocumentState = {
@@ -261,6 +264,22 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
         if (!mission) throw notFound(documentId);
         applyShared(mission, input, now);
         applyMissionProperties(mission, input.properties);
+        if (input.body !== undefined) {
+          const checklist = parseMarkdownChecklist(input.body);
+          mission.progress = checklist.length
+            ? Math.round((checklist.filter((item) => item.completed).length / checklist.length) * 100)
+            : 0;
+          data.checklistItems = data.checklistItems.filter((item) => item.missionId !== mission.id);
+          data.checklistItems.push(...checklist.map((item, position) => ({
+            id: crypto.randomUUID(),
+            missionId: mission.id,
+            title: item.title,
+            completed: item.completed,
+            position,
+            createdAt: now,
+            updatedAt: now,
+          })));
+        }
         if (typeof input.properties?.status === "string") {
           const option = parent?.contract?.fields
             .find((field) => field.key === "status")

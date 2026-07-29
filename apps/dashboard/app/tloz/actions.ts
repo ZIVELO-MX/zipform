@@ -11,7 +11,13 @@ import {
   type TlozQuestItemUpdateInput,
   type TlozResourceInput,
 } from "@tloz/data";
-import type { TlozDocumentScalar, TlozDocumentUpdate, TlozFieldDefinition, TlozMissionStatus } from "@tloz/types";
+import type {
+  TlozDocument,
+  TlozDocumentScalar,
+  TlozDocumentUpdate,
+  TlozFieldDefinition,
+  TlozMissionStatus,
+} from "@tloz/types";
 import { revalidatePath } from "next/cache";
 import { auth } from "../../auth";
 import {
@@ -59,6 +65,57 @@ async function authorizeQuestItem(itemId: string, operation: TlozOperation = "up
   return { actor, item };
 }
 
+function documentOwnerId(document: TlozDocument) {
+  const key = document.kind === "project" ? "owner" : "assignee";
+  const owner = document.properties[key];
+  return typeof owner === "string" ? owner : null;
+}
+
+function changesDocumentOwner(document: TlozDocument, input: TlozDocumentUpdate) {
+  const key = document.kind === "project" ? "owner" : "assignee";
+  return Object.prototype.hasOwnProperty.call(input.properties ?? {}, key);
+}
+
+function documentCapabilities(
+  actor: Awaited<ReturnType<typeof authenticatedActor>>,
+  document: TlozDocument,
+) {
+  const context = { ownerId: documentOwnerId(document) };
+  return {
+    canUpdate: authorizeTlozOperation(actor, "update", context).allowed,
+    canMove: authorizeTlozOperation(actor, "move", context).allowed,
+  };
+}
+
+async function mutateDocument(
+  documentId: string,
+  input: TlozDocumentUpdate,
+  expectedRevision?: number,
+) {
+  const actor = await authenticatedActor();
+  const document = await dataClient.documents.get(documentId);
+  if (!document) throw new Error("Documento no encontrado.");
+  const operation = document.source
+    ? changesDocumentOwner(document, input) ? "move" : "update"
+    : "structure";
+  assertTlozOperation(actor, operation, { ownerId: documentOwnerId(document) });
+  return dataClient.documents.update(
+    document.id,
+    input,
+    expectedRevision ?? document.revision,
+  );
+}
+
+export async function updateDocument(
+  documentId: string,
+  input: TlozDocumentUpdate,
+  revision: number,
+) {
+  const updated = await mutateDocument(documentId, input, revision);
+  revalidateTloz();
+  return updated;
+}
+
 export async function createMission(
   input: TlozMissionCreateInput,
   documentProperties: Record<string, TlozDocumentScalar> = {},
@@ -99,6 +156,20 @@ export async function createMission(
 }
 
 export async function updateMission(missionId: string, input: TlozMissionUpdateInput) {
+  const document = await dataClient.documents.get(missionId);
+  const legacyOnlyFields = ["displayId", "projectId", "seasonId", "episodeId", "completedAt"];
+  const requiresLegacyMutation = legacyOnlyFields.some((field) => (
+    Object.prototype.hasOwnProperty.call(input, field)
+  ));
+  if (document?.kind === "mission" && !requiresLegacyMutation) {
+    await mutateDocument(document.id, missionDocumentUpdate(input), document.revision);
+    const mission = (await dataClient.tloz.getMissions())
+      .find((candidate) => candidate.id === missionId);
+    if (!mission) throw new Error("Misión no encontrada.");
+    revalidateTloz();
+    return mission;
+  }
+
   const changesPlacement = ["ownerId", "projectId", "seasonId", "episodeId"]
     .some((field) => Object.prototype.hasOwnProperty.call(input, field));
   const { mission: current } = await authorizeMission(
@@ -117,11 +188,11 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
       const statusOption = statusField?.options.find((option) => option.value === requestedStatus);
       const categoryOption = categoryField?.options.find((option) => option.value === requestedCategory);
 
-      if (!statusOption) {
+      if (statusField && !statusOption) {
         if (input.projectId === undefined) throw new Error("El estado no pertenece al contrato del Project.");
         next.status = contractFieldDefault(statusField, "later") as TlozMissionStatus;
       }
-      if (!categoryOption) {
+      if (categoryField && !categoryOption) {
         if (input.projectId === undefined) throw new Error("La categoría no pertenece al contrato del Project.");
         next.type = contractFieldDefault(categoryField, "side_quest");
       }
@@ -150,7 +221,10 @@ export async function getMissionCapabilities(missionId: string) {
   const actor = await authenticatedActor();
   const mission = await dataClient.tloz.getMissionDetail(missionId);
   if (!mission) throw new Error("Misión no encontrada.");
-  return { canUpdate: authorizeTlozOperation(actor, "update", { ownerId: mission.ownerId }).allowed };
+  return {
+    canUpdate: authorizeTlozOperation(actor, "update", { ownerId: mission.ownerId }).allowed,
+    canMove: authorizeTlozOperation(actor, "move", { ownerId: mission.ownerId }).allowed,
+  };
 }
 
 export async function getMissionDetailOptions() {
@@ -178,15 +252,13 @@ export async function getMissionDocumentOptions(missionId: string) {
 }
 
 export async function getDocumentDetailOptions(documentId: string) {
+  const actor = await authenticatedActor();
   const document = await dataClient.documents.get(documentId, {
     includeChildren: true,
     childrenPagination: { limit: 1 },
   });
   if (!document) throw new Error("Documento no encontrado.");
-  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id, "read");
-  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id, "read");
-  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id, "read");
-  else await authenticatedActor();
+  assertTlozOperation(actor, "read", { ownerId: documentOwnerId(document) });
 
   const definitionKey = document.kind === "project"
     ? "projects"
@@ -195,25 +267,23 @@ export async function getDocumentDetailOptions(documentId: string) {
       : `project:${document.parentId}:children`;
   const definition = await dataClient.documents.getDefinition(definitionKey);
   if (!definition) throw new Error("Definición documental no encontrada.");
-  return { document, definition };
+  const parent = document.parentId
+    ? await dataClient.documents.get(document.parentId)
+    : null;
+  return {
+    document,
+    definition,
+    contract: document.kind === "project" ? [] : parent?.contract?.fields ?? [],
+    capabilities: documentCapabilities(actor, document),
+  };
 }
 
 export async function updateDocumentProperties(
   documentId: string,
   properties: Record<string, string | number | boolean | string[] | null>,
+  revision?: number,
 ) {
-  const document = await dataClient.documents.get(documentId);
-  if (!document) throw new Error("Documento no encontrado.");
-  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id);
-  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id);
-  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id);
-  else await authenticatedActor();
-
-  const updated = await dataClient.documents.update(
-    document.id,
-    { properties },
-    document.revision,
-  );
+  const updated = await mutateDocument(documentId, { properties }, revision);
   revalidateTloz();
   return updated;
 }
@@ -223,14 +293,7 @@ export async function updateDocumentContent(
   input: Pick<TlozDocumentUpdate, "title" | "summary">,
   revision: number,
 ) {
-  const document = await dataClient.documents.get(documentId);
-  if (!document) throw new Error("Documento no encontrado.");
-  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id);
-  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id);
-  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id);
-  else await authenticatedActor();
-
-  const updated = await dataClient.documents.update(document.id, input, revision);
+  const updated = await mutateDocument(documentId, input, revision);
   revalidateTloz();
   return updated;
 }
@@ -240,14 +303,7 @@ export async function updateDocumentBody(
   body: string,
   revision: number,
 ) {
-  const document = await dataClient.documents.get(documentId);
-  if (!document) throw new Error("Documento no encontrado.");
-  if (document.kind === "mission" && document.source) await authorizeMission(document.source.id);
-  else if (document.kind === "project" && document.source) await authorizeProject(document.source.id);
-  else if (document.kind === "inventory" && document.source) await authorizeQuestItem(document.source.id);
-  else await authenticatedActor();
-
-  const updated = await dataClient.documents.update(document.id, { body }, revision);
+  const updated = await mutateDocument(documentId, { body }, revision);
   revalidateTloz();
   return updated;
 }
@@ -285,15 +341,31 @@ export async function createQuestItem(input: TlozQuestItemCreateInput) {
 }
 
 export async function updateProject(projectId: string, input: TlozProjectUpdateInput) {
-  await authorizeProject(projectId, Object.prototype.hasOwnProperty.call(input, "ownerId") ? "move" : "update");
-  const value = await dataClient.tloz.updateProject(projectId, input);
+  const document = await dataClient.documents.get(projectId);
+  if (!document || document.kind !== "project") {
+    await authorizeProject(projectId, Object.prototype.hasOwnProperty.call(input, "ownerId") ? "move" : "update");
+    const value = await dataClient.tloz.updateProject(projectId, input);
+    revalidateTloz();
+    return value;
+  }
+  await mutateDocument(document.id, projectDocumentUpdate(input), document.revision);
+  const value = (await dataClient.tloz.getProjects()).find((project) => project.id === projectId);
+  if (!value) throw new Error("Proyecto no encontrado.");
   revalidateTloz();
   return value;
 }
 
 export async function updateQuestItem(itemId: string, input: TlozQuestItemUpdateInput) {
-  await authorizeQuestItem(itemId, Object.prototype.hasOwnProperty.call(input, "ownerId") ? "move" : "update");
-  const value = await dataClient.tloz.updateQuestItem(itemId, input);
+  const document = await dataClient.documents.get(itemId);
+  if (!document || document.kind !== "inventory") {
+    await authorizeQuestItem(itemId, Object.prototype.hasOwnProperty.call(input, "ownerId") ? "move" : "update");
+    const value = await dataClient.tloz.updateQuestItem(itemId, input);
+    revalidateTloz();
+    return value;
+  }
+  await mutateDocument(document.id, inventoryDocumentUpdate(input), document.revision);
+  const value = (await dataClient.tloz.getQuestItems()).find((item) => item.id === itemId);
+  if (!value) throw new Error("Quest item no encontrado.");
   revalidateTloz();
   return value;
 }
@@ -315,8 +387,16 @@ export async function replaceProjectContract(
 }
 
 export async function saveMissionDocument(missionId: string, markdown: string) {
-  await authorizeMission(missionId);
-  const mission = await dataClient.tloz.saveMissionDocument(missionId, markdown);
+  const document = await dataClient.documents.get(missionId);
+  if (!document || document.kind !== "mission") {
+    await authorizeMission(missionId);
+    const mission = await dataClient.tloz.saveMissionDocument(missionId, markdown);
+    revalidateTloz();
+    return mission;
+  }
+  await mutateDocument(document.id, { body: markdown }, document.revision);
+  const mission = await dataClient.tloz.getMissionDetail(missionId);
+  if (!mission) throw new Error("Misión no encontrada.");
   revalidateTloz();
   return mission;
 }
@@ -399,22 +479,7 @@ export async function removeQuestItemResource(itemId: string, resourceId: string
 }
 
 export async function patchMissionStatus(missionId: string, status: TlozMissionStatus) {
-  const { mission: current } = await authorizeMission(missionId);
-  const project = current.projectId ? await dataClient.documents.get(current.projectId) : null;
-  const statusOption = project?.contract?.fields
-    .find((field) => field.key === "status")
-    ?.options.find((option) => option.value === status);
-  if (project?.contract && !statusOption) {
-    throw new Error("El estado no pertenece al contrato del Project.");
-  }
-  const mission = await dataClient.tloz.updateMission(missionId, {
-    status,
-    completedAt: (statusOption?.role === "done" || (!statusOption && status === "completed"))
-      ? new Date().toISOString()
-      : undefined,
-  });
-  revalidateTloz();
-  return mission;
+  return updateMission(missionId, { status });
 }
 
 function contractFieldDefault(
@@ -424,6 +489,56 @@ function contractFieldDefault(
   return typeof field?.defaultValue === "string"
     ? field.defaultValue
     : field?.options[0]?.value ?? fallback;
+}
+
+function missionDocumentUpdate(input: TlozMissionUpdateInput): TlozDocumentUpdate {
+  const properties: Record<string, TlozDocumentScalar> = {};
+  if (input.status !== undefined) properties.status = input.status;
+  if (input.type !== undefined) properties.category = input.type;
+  if (input.ownerId !== undefined) properties.assignee = input.ownerId;
+  if (input.icon !== undefined) properties.icon = input.icon;
+  if (input.startDate !== undefined) properties.start = input.startDate || null;
+  if (input.dueDate !== undefined) properties.due = input.dueDate || null;
+  if (input.progress !== undefined) properties.progress = input.progress;
+  if (input.blockedReason !== undefined) properties.blocked_reason = input.blockedReason || null;
+  return {
+    ...(input.title === undefined ? {} : { title: input.title }),
+    ...(input.description === undefined ? {} : { summary: input.description }),
+    ...(input.descriptionDetail === undefined ? {} : { body: input.descriptionDetail }),
+    ...(Object.keys(properties).length ? { properties } : {}),
+  };
+}
+
+function projectDocumentUpdate(input: TlozProjectUpdateInput): TlozDocumentUpdate {
+  const properties: Record<string, TlozDocumentScalar> = {};
+  if (input.status !== undefined) properties.status = input.status;
+  if (input.type !== undefined) properties.category = input.type;
+  if (input.ownerId !== undefined) properties.owner = input.ownerId;
+  if (input.icon !== undefined) properties.icon = input.icon;
+  if (input.color !== undefined) properties.color = input.color;
+  if (input.startDate !== undefined) properties.start = input.startDate;
+  if (input.dueDate !== undefined) properties.due = input.dueDate || null;
+  return {
+    ...(input.name === undefined ? {} : { title: input.name }),
+    ...(input.description === undefined ? {} : { summary: input.description }),
+    ...(input.descriptionDetail === undefined ? {} : { body: input.descriptionDetail }),
+    ...(Object.keys(properties).length ? { properties } : {}),
+  };
+}
+
+function inventoryDocumentUpdate(input: TlozQuestItemUpdateInput): TlozDocumentUpdate {
+  const properties: Record<string, TlozDocumentScalar> = {};
+  if (input.status !== undefined) properties.status = input.status;
+  if (input.category !== undefined) properties.category = input.category;
+  if (input.ownerId !== undefined) properties.assignee = input.ownerId || null;
+  if (input.icon !== undefined) properties.icon = input.icon;
+  if (input.acquiredAt !== undefined) properties.acquired = input.acquiredAt || null;
+  return {
+    ...(input.name === undefined ? {} : { title: input.name }),
+    ...(input.description === undefined ? {} : { summary: input.description }),
+    ...(input.descriptionDetail === undefined ? {} : { body: input.descriptionDetail }),
+    ...(Object.keys(properties).length ? { properties } : {}),
+  };
 }
 
 export async function deleteMission(missionId: string) {
