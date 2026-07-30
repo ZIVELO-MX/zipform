@@ -42,6 +42,8 @@ export { TlozValidationError, nextMissionDisplayId, slugify, uniqueSlug, validat
 export { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "./tloz-attachment-errors";
 export { TlozDocumentError } from "./document-errors";
 export { createContainerContentDocumentRepository } from "./container-content-document";
+export { readCutoverState, setCutoverState, assertContainerContentReconciled } from "./cutover";
+export type { CutoverState, CutoverSource } from "./cutover";
 export {
   ContainerContentError,
   type ContainerContentErrorCode,

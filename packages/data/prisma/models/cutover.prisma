@@ -1,0 +1,11 @@
+model TlozDomainCutover {
+  key           String   @id @default("domain")
+  source        String   @default("legacy")
+  writesEnabled Boolean  @default(true)
+  reason        String   @default("")
+  updatedBy     String?
+  version       Int      @default(1)
+  updatedAt     DateTime @updatedAt
+
+  @@map("tloz_domain_cutover")
+}

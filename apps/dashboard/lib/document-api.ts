@@ -63,6 +63,8 @@ export function handleDocumentError(error: unknown) {
       ? 404
       : error.code === "DOCUMENT_REVISION_CONFLICT"
         ? 409
+        : error.code === "DOCUMENT_CUTOVER_READ_ONLY"
+          ? 423
         : 400;
     return errorResponse(error.code, error.message, status, error.fields);
   }
