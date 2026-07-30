@@ -18,6 +18,11 @@
     "db:prepare-release-1": "tsx prisma/prepare-release-1.ts",
     "db:backfill:container-content": "tsx prisma/backfill-container-content.ts",
     "db:reconcile:container-content": "tsx prisma/backfill-container-content.ts --reconcile",
+    "db:cutover:status": "tsx prisma/cutover-container-content.ts status",
+    "db:cutover:prepare": "tsx prisma/cutover-container-content.ts prepare",
+    "db:cutover:enable": "tsx prisma/cutover-container-content.ts enable",
+    "db:cutover:rollback": "tsx prisma/cutover-container-content.ts rollback",
+    "db:retire:legacy": "tsx prisma/retire-legacy-container-content.ts",
     "db:studio": "prisma studio --schema prisma",
     "check": "pnpm db:generate && pnpm typecheck && pnpm test"
   },
