@@ -6,6 +6,7 @@ import type { TlozView } from "../../lib/tloz-routes";
 import type { TlozDocument, UserProfile } from "@tloz/types";
 import { TlozViewStateProvider } from "./tloz-view-state";
 import { TlozCreateProvider, type TlozCreateKind } from "./tloz-create";
+import type { TlozControlKind } from "./tloz-control-capabilities";
 
 type TlozPageShellProps = {
   title: string;
@@ -22,6 +23,8 @@ type TlozPageShellProps = {
   defaultView?: TlozView;
   stateScope?: string;
   controlProjectId?: string;
+  controlKind?: TlozControlKind;
+  controlCreate?: React.ReactNode | false;
   createKind?: TlozCreateKind;
   documentNavigation?: {
     documents: TlozDocument[];
@@ -43,6 +46,8 @@ export async function TlozPageShell({
   defaultView = "dashboard",
   stateScope,
   controlProjectId,
+  controlKind,
+  controlCreate,
   createKind = "mission",
   documentNavigation,
   children
@@ -72,7 +77,7 @@ export async function TlozPageShell({
       defaultView={defaultView}
       projects={controlProjects}
       users={users}
-      controlKind={createKind}
+      controlKind={controlKind ?? createKind}
       fixedProject={Boolean(controlProjectId)}
       storageScope={stateScope}
     >
@@ -85,6 +90,7 @@ export async function TlozPageShell({
           showSearch={showSearch}
           showHeader={showHeader}
           showControls={showControls}
+          controlCreate={controlCreate}
           commandEntities={{
             missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type, href: mission.project ? missionHref(mission.project, mission.displayId) : "/" })),
             projects: documentNavigation

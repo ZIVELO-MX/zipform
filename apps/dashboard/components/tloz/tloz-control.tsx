@@ -30,7 +30,7 @@ const viewConfig: Record<TlozView, { label: string; icon: React.ElementType }> =
   detail: { label: "Detalle", icon: FileText },
 };
 
-export function TlozControl() {
+export function TlozControl({ createControl }: { createControl?: React.ReactNode | false }) {
   const {
     state,
     setState,
@@ -140,8 +140,12 @@ export function TlozControl() {
             ) : null}
           </>
         ) : null}
-        <Separator className="my-4" />
-        <CreateNewEntityButton variant="control" />
+        {createControl === false ? null : (
+          <>
+            <Separator className="my-4" />
+            {createControl ?? <CreateNewEntityButton variant="control" />}
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );
