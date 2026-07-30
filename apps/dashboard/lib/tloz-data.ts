@@ -1,4 +1,4 @@
-import { dataClient, type TlozDashboardSummary, type TlozMissionDetail, type TlozMissionRecord } from "@tloz/data";
+import { dataClient, type TlozDashboardSummary, type TlozMissionDetail, type TlozMissionRecord, type ContainerRecord, type ContentRecord } from "@tloz/data";
 import type { TlozAttachmentGroup, TlozDocumentKind } from "@tloz/types";
 import type { DocumentGetOptions } from "@tloz/data";
 import { cache } from "react";
@@ -50,3 +50,11 @@ export const getTlozDocument = cache((
 export const getTlozDocumentDefinition = cache((
   definitionKey: string,
 ) => dataClient.canonicalDocuments.getDefinition(definitionKey));
+
+export const getCanonicalContainer = cache(async (publicId: string) => (
+  await dataClient.containerContent.getContainer(publicId)
+    ?? (await dataClient.containerContent.listContainers()).find((container) => container.publicId === publicId)
+));
+
+export const getCanonicalContents = cache((containerId: string) => dataClient.containerContent.listContents({ containerId }));
+export type { ContainerRecord, ContentRecord };
