@@ -15,6 +15,8 @@
 - [ ] Rename the GitHub repository after this migration is merged.
 - [x] Keep `zipform.zivelo.dev` as the production domain while the TLOZ alias remains deferred.
 - [ ] Remove v1 compatibility after consumers migrate to documents v2.
+- [ ] Replace the physical document mirror with the canonical Container/Content
+      store defined by TLO-0075.
 
 ## Next
 

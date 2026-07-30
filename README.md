@@ -9,6 +9,10 @@ Prisma schema, migrations, and the TLOZ Data API.
 Every entity is a document with a stable public ID, Markdown body, typed
 properties, revision, and optional Project parent.
 
+The accepted persistence direction reduces the domain to two canonical
+primitives, Container and Content, on Supabase PostgreSQL. See the
+[Container/Content ADR](docs/architecture/container-content-adr.md).
+
 - **Project** describes a body of work and defines the field contract inherited
   by its Missions.
 - **Mission** belongs to one Project and uses that Project's status, category,
