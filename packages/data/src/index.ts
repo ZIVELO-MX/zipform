@@ -56,6 +56,15 @@ export {
   type MigrationReport,
 } from "./container-content-store";
 export {
+  ContainerContentError,
+  type ContainerContentErrorCode,
+  type ContainerContentSnapshot,
+  type ContainerContentStore,
+  type ContentFilters,
+  type ContentUpdate,
+  type MigrationReport,
+} from "./container-content-store";
+export {
   defaultInventoryFields,
   defaultMissionFields,
   validateDocumentProperties,
