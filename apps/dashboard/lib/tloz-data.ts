@@ -39,14 +39,14 @@ export const getTlozQuestItems = cache(() => dataClient.tloz.getQuestItems());
 export const getTlozResources = cache(() => dataClient.tloz.getResources());
 export const getTlozUsers = cache(() => dataClient.tloz.getUsers());
 export const getTlozDocuments = cache((kind?: TlozDocumentKind, parentId?: string) => (
-  dataClient.documents.find({ ...(kind ? { kind } : {}), ...(parentId ? { parentId } : {}) }, { limit: 100 })
+  dataClient.canonicalDocuments.find({ ...(kind ? { kind } : {}), ...(parentId ? { parentId } : {}) }, { limit: 100 })
 ));
 export const getTlozProjectDocuments = () => getTlozDocuments("project");
 export const getTlozInventoryDocuments = () => getTlozDocuments("inventory");
 export const getTlozDocument = cache((
   documentId: string,
   options?: DocumentGetOptions,
-) => dataClient.documents.get(documentId, options));
+) => dataClient.canonicalDocuments.get(documentId, options));
 export const getTlozDocumentDefinition = cache((
   definitionKey: string,
-) => dataClient.documents.getDefinition(definitionKey));
+) => dataClient.canonicalDocuments.getDefinition(definitionKey));

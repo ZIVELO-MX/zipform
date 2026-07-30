@@ -41,11 +41,16 @@ export { assertProjectScopedDependency } from "./dependency-rules";
 export { TlozValidationError, nextMissionDisplayId, slugify, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
 export { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "./tloz-attachment-errors";
 export { TlozDocumentError } from "./document-errors";
+export { createContainerContentDocumentRepository } from "./container-content-document";
 export {
   ContainerContentError,
   type ContainerContentErrorCode,
   type ContainerContentSnapshot,
   type ContainerContentStore,
+  type ContainerContentData,
+  type ContainerDefinition,
+  type ContainerRecord,
+  type ContentRecord,
   type ContentFilters,
   type ContentUpdate,
   type MigrationReport,

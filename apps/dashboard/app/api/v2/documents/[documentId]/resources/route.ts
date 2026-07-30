@@ -74,7 +74,7 @@ async function readResource(request: Request): Promise<TlozResourceInput> {
 }
 
 async function requiredSourceDocument(documentId: string) {
-  const document = await dataClient.documents.get(documentId);
+  const document = await dataClient.canonicalDocuments.get(documentId);
   if (!document) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
   if (!document.source) {
     throw new TlozDocumentError("DOCUMENT_INVALID", "El documento no admite recursos durante la compatibilidad v1.");

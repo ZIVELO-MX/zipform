@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   }
 
   try {
-    const definition = await dataClient.documents.getDefinition(definitionKey);
+    const definition = await dataClient.canonicalDocuments.getDefinition(definitionKey);
     if (!definition) {
       throw new TlozDocumentError(
         "DOCUMENT_NOT_FOUND",

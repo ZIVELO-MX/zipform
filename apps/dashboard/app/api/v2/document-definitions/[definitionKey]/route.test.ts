@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tloz/data", async (importOriginal) => ({
   ...await importOriginal<typeof import("@tloz/data")>(),
   dataClient: {
-    documents: { getDefinition: mocks.getDefinition },
+    canonicalDocuments: { getDefinition: mocks.getDefinition },
   },
 }));
 vi.mock("../../../../../lib/api-auth", () => ({

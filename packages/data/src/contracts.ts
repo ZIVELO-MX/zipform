@@ -251,6 +251,7 @@ export type TlozDataClient = {
     authenticateWithApiKey(key: string): Promise<UserProfile | null>;
   };
   documents: TlozDocumentRepository;
+  canonicalDocuments: TlozDocumentRepository;
   containerContent: ContainerContentStore;
   tloz: TlozRepository;
 };

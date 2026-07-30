@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const result = await dataClient.documents.find({
+    const result = await dataClient.canonicalDocuments.find({
       kind: kindValue as TlozDocumentKind | undefined,
       parentId: request.nextUrl.searchParams.get("parent") ?? undefined,
       query: request.nextUrl.searchParams.get("q") ?? undefined,
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       documentId = `project-${project.slug}`;
     } else if (input.kind === "mission") {
       const parent = input.parentPublicId
-        ? await dataClient.documents.get(input.parentPublicId)
+        ? await dataClient.canonicalDocuments.get(input.parentPublicId)
         : null;
       if (!parent || parent.kind !== "project" || parent.publicId === "project-inventory" || !parent.source) {
         throw new TlozDocumentError("DOCUMENT_INVALID", "parent debe identificar un Project de Missions.", {
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
           parent: "invalid",
         });
       }
-      const inventoryProject = await dataClient.documents.get("project-inventory");
+      const inventoryProject = await dataClient.canonicalDocuments.get("project-inventory");
       const status = stringProperty(input.properties, "status")
         ?? contractDefault(inventoryProject?.contract?.fields, "status")
         ?? "locked";
@@ -148,17 +148,17 @@ export async function POST(request: NextRequest) {
       documentId = item.id;
     }
 
-    let document = await dataClient.documents.get(documentId);
+    let document = await dataClient.canonicalDocuments.get(documentId);
     if (!document) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", "No se pudo resolver el documento creado.");
     if (input.kind === "project" && input.contract) {
-      document = await dataClient.documents.replaceProjectContract(
+      document = await dataClient.canonicalDocuments.replaceProjectContract(
         document.id,
         input.contract,
         document.revision,
       );
     }
     if (input.kind !== "project" && Object.keys(input.properties).length) {
-      document = await dataClient.documents.update(
+      document = await dataClient.canonicalDocuments.update(
         document.id,
         { properties: input.properties },
         document.revision,

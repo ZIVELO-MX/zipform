@@ -49,7 +49,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
     }
     return documentResponse(
       request,
-      await dataClient.documents.replaceProjectContract(project.id, body.fields, revision),
+      await dataClient.canonicalDocuments.replaceProjectContract(project.id, body.fields, revision),
     );
   } catch (error) {
     return handleDocumentError(error);
@@ -57,7 +57,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
 }
 
 async function requiredProject(documentId: string) {
-  const document = await dataClient.documents.get(documentId);
+  const document = await dataClient.canonicalDocuments.get(documentId);
   if (!document) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
   if (document.kind !== "project" || !document.contract) {
     throw new TlozDocumentError("DOCUMENT_INVALID", "El documento no es un Project.");
