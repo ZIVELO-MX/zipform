@@ -47,7 +47,7 @@ function fieldDefinitions(definition: ContainerDefinition): TlozFieldDefinition[
     visible: field.visible ?? true,
     position: index,
     defaultValue: scalar(field.defaultValue ?? null),
-    options: [],
+    options: field.options ?? [],
   }));
 }
 
@@ -63,6 +63,7 @@ function documentDefinition(id: string, key: string, kind: TlozDocumentKind, def
       format: field.format as "text" | "status" | "date" | "person" | "number" | "id",
       position,
       visible: field.visible ?? true,
+      options: field.options,
     })),
     views: definition.views.map((view) => ({ ...view, id: view.id as TlozDocumentDefinition["views"][number]["id"] })),
     defaultView: definition.defaultView as TlozDocumentDefinition["defaultView"],
@@ -184,7 +185,15 @@ export function createContainerContentDocumentRepository(store: ContainerContent
       const updated = await store.updateContainer(resolved.container.id, {
         definition: {
           ...definition,
-          fields: fields.map((field) => ({ key: field.key, label: field.label, format: field.type, required: field.required, visible: field.visible, defaultValue: field.defaultValue })),
+          fields: fields.map((field) => ({
+            key: field.key,
+            label: field.label,
+            format: field.type,
+            required: field.required,
+            visible: field.visible,
+            defaultValue: field.defaultValue,
+            options: field.options,
+          })),
         },
       }, expectedRevision);
       return containerDocument(updated);

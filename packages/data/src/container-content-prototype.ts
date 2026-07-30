@@ -31,6 +31,12 @@ export type ContainerDefinition = {
     required?: boolean;
     visible?: boolean;
     defaultValue?: ContainerContentData;
+    options?: Array<{
+      value: string;
+      label: string;
+      role?: "backlog" | "ready" | "active" | "blocked" | "done";
+      color?: string;
+    }>;
   }>;
   views: Array<{
     id: string;

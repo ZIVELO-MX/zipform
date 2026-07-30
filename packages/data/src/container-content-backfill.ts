@@ -26,39 +26,69 @@ export const SYSTEM_LIBRARY_ID = "system-library";
 
 const iso = (date: Date) => date.toISOString();
 
-const WORKSHOP_DEFINITION: ContainerDefinition = {
+export const WORKSHOP_DEFINITION: ContainerDefinition = {
   fields: [
-    { key: "status", label: "Estado", format: "status", visible: true },
+    {
+      key: "status",
+      label: "Estado",
+      format: "status",
+      visible: true,
+      defaultValue: "active",
+      options: [
+        { value: "planned", label: "Planeado", role: "backlog", color: "#3A47B5" },
+        { value: "active", label: "Activo", role: "active", color: "#1E6B3C" },
+        { value: "archived", label: "Archivado", role: "done", color: "#6B6B6B" },
+      ],
+    },
+    { key: "category", label: "Categoría", format: "text", visible: true, defaultValue: "normal" },
     { key: "ownerId", label: "Responsable", format: "person", visible: true },
-    { key: "checklist", label: "Checklist", format: "text", visible: true },
-    { key: "relations", label: "Relaciones", format: "text", visible: true },
-    { key: "resources", label: "Resources", format: "text", visible: true },
     { key: "startDate", label: "Inicio", format: "date", visible: true },
     { key: "dueDate", label: "Vence", format: "date", visible: true },
-    { key: "progress", label: "Progreso", format: "number", visible: true },
   ],
   views: [
-    { id: "list", fields: ["title", "status", "ownerId", "progress"] },
-    { id: "table", fields: ["title", "status", "ownerId", "dueDate", "progress"] },
-    { id: "detail", fields: ["title", "summary", "body", "status", "ownerId", "checklist", "relations", "resources", "startDate", "dueDate", "progress"] },
+    { id: "list", fields: ["title", "status"] },
+    { id: "table", fields: ["title", "status", "category", "ownerId", "dueDate"] },
+    { id: "detail", fields: ["publicId", "status", "category", "ownerId", "startDate", "dueDate"] },
   ],
-  defaultView: "list",
+  defaultView: "table",
 };
 
-const LIBRARY_DEFINITION: ContainerDefinition = {
+export const LIBRARY_DEFINITION: ContainerDefinition = {
   fields: [
-    { key: "category", label: "Categoría", format: "text", visible: true },
-    { key: "tags", label: "Tags", format: "text", visible: true },
+    {
+      key: "status",
+      label: "Estado",
+      format: "status",
+      visible: true,
+      defaultValue: "locked",
+      options: [
+        { value: "locked", label: "Bloqueado", role: "backlog", color: "#7A5A12" },
+        { value: "unlocked", label: "Desbloqueado", role: "done", color: "#1E6B3C" },
+      ],
+    },
+    {
+      key: "category",
+      label: "Categoría",
+      format: "text",
+      visible: true,
+      defaultValue: "other",
+      options: [
+        { value: "tool", label: "Herramienta" },
+        { value: "access", label: "Acceso" },
+        { value: "asset", label: "Activo" },
+        { value: "document", label: "Documento" },
+        { value: "other", label: "Otro" },
+      ],
+    },
     { key: "ownerId", label: "Responsable", format: "person", visible: true },
-    { key: "sourceUrl", label: "Fuente", format: "text", visible: true },
-    { key: "resources", label: "Resources", format: "text", visible: true },
+    { key: "acquiredAt", label: "Adquirido", format: "date", visible: true },
   ],
   views: [
-    { id: "list", fields: ["title", "category", "ownerId"] },
-    { id: "table", fields: ["title", "category", "tags", "ownerId"] },
-    { id: "detail", fields: ["title", "summary", "body", "category", "tags", "ownerId", "sourceUrl", "resources"] },
+    { id: "list", fields: ["title", "status"] },
+    { id: "table", fields: ["title", "status", "category", "ownerId", "acquiredAt"] },
+    { id: "detail", fields: ["publicId", "status", "category", "ownerId", "acquiredAt"] },
   ],
-  defaultView: "list",
+  defaultView: "table",
 };
 
 export function buildSystemContainer(id: string, title: string, presentation: string, definition: ContainerDefinition, createdAt: Date, updatedAt: Date): ContainerRecord {

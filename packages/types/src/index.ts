@@ -330,6 +330,7 @@ export type ContainerDefinition = {
     required?: boolean;
     visible?: boolean;
     defaultValue?: ContainerContentData;
+    options?: TlozFieldOption[];
   }>;
   views: Array<{
     id: string;

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildSystemContainer, SYSTEM_LIBRARY_ID, SYSTEM_WORKSHOP_ID } from "./container-content-backfill";
+import {
+  buildSystemContainer,
+  LIBRARY_DEFINITION,
+  SYSTEM_LIBRARY_ID,
+  SYSTEM_WORKSHOP_ID,
+  WORKSHOP_DEFINITION,
+} from "./container-content-backfill";
 
 const definition = { fields: [], views: [{ id: "list", fields: [] }], defaultView: "list" };
 
@@ -13,5 +19,40 @@ describe("Workshop and Library system containers", () => {
     expect(library).toMatchObject({ id: "system-library", publicId: "library", presentation: "library", data: {} });
     expect(workshop).not.toHaveProperty("kind");
     expect(library).not.toHaveProperty("kind");
+  });
+
+  it("configures Workshop like a basic Project without speculative fields", () => {
+    expect(WORKSHOP_DEFINITION.defaultView).toBe("table");
+    expect(WORKSHOP_DEFINITION.fields.map((field) => field.key)).toEqual([
+      "status",
+      "category",
+      "ownerId",
+      "startDate",
+      "dueDate",
+    ]);
+    expect(WORKSHOP_DEFINITION.views).toEqual([
+      { id: "list", fields: ["title", "status"] },
+      { id: "table", fields: ["title", "status", "category", "ownerId", "dueDate"] },
+      { id: "detail", fields: ["publicId", "status", "category", "ownerId", "startDate", "dueDate"] },
+    ]);
+    expect(WORKSHOP_DEFINITION.fields.find((field) => field.key === "status")?.options?.map((option) => option.value))
+      .toEqual(["planned", "active", "archived"]);
+  });
+
+  it("configures Library like a basic Inventory item", () => {
+    expect(LIBRARY_DEFINITION.defaultView).toBe("table");
+    expect(LIBRARY_DEFINITION.fields.map((field) => field.key)).toEqual([
+      "status",
+      "category",
+      "ownerId",
+      "acquiredAt",
+    ]);
+    expect(LIBRARY_DEFINITION.views).toEqual([
+      { id: "list", fields: ["title", "status"] },
+      { id: "table", fields: ["title", "status", "category", "ownerId", "acquiredAt"] },
+      { id: "detail", fields: ["publicId", "status", "category", "ownerId", "acquiredAt"] },
+    ]);
+    expect(LIBRARY_DEFINITION.fields.find((field) => field.key === "status")?.options?.map((option) => option.value))
+      .toEqual(["locked", "unlocked"]);
   });
 });
