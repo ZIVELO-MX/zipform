@@ -57,4 +57,8 @@ export const getCanonicalContainer = cache(async (publicId: string) => (
 ));
 
 export const getCanonicalContents = cache((containerId: string) => dataClient.containerContent.listContents({ containerId }));
+export const getCanonicalContent = cache(async (reference: string) => (
+  await dataClient.containerContent.getContent(reference)
+    ?? (await dataClient.containerContent.listContents()).find((content) => content.publicId === reference)
+));
 export type { ContainerRecord, ContentRecord };
