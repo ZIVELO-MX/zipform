@@ -18,6 +18,7 @@ import type {
   TlozSeason,
   UserProfile
 } from "@tloz/types";
+import type { ContainerContentStore } from "./container-content-store";
 
 export type DataDriver = "mock" | "prisma";
 
@@ -250,5 +251,6 @@ export type TlozDataClient = {
     authenticateWithApiKey(key: string): Promise<UserProfile | null>;
   };
   documents: TlozDocumentRepository;
+  containerContent: ContainerContentStore;
   tloz: TlozRepository;
 };

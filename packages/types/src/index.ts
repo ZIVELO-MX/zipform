@@ -315,3 +315,56 @@ export type TlozDocumentUpdate = {
   body?: string;
   properties?: Record<string, TlozDocumentScalar>;
 };
+export type ContainerContentScalar = string | number | boolean | null;
+
+export type ContainerContentData =
+  | ContainerContentScalar
+  | ContainerContentData[]
+  | { [key: string]: ContainerContentData };
+
+export type ContainerDefinition = {
+  fields: Array<{
+    key: string;
+    label: string;
+    format: string;
+    required?: boolean;
+    visible?: boolean;
+    defaultValue?: ContainerContentData;
+  }>;
+  views: Array<{
+    id: string;
+    fields: string[];
+    groupBy?: string;
+    dateField?: string;
+  }>;
+  defaultView: string;
+};
+
+export type ContainerRecord = {
+  id: string;
+  publicId: string;
+  slug?: string;
+  presentation: string;
+  title: string;
+  summary: string;
+  body: string;
+  definition: ContainerDefinition;
+  data: Record<string, ContainerContentData>;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ContentRecord = {
+  id: string;
+  publicId: string;
+  containerId: string;
+  presentation: string;
+  title: string;
+  summary: string;
+  body: string;
+  data: Record<string, ContainerContentData>;
+  revision: number;
+  createdAt: string;
+  updatedAt: string;
+};

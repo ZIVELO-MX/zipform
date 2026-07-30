@@ -42,6 +42,15 @@ export { TlozValidationError, nextMissionDisplayId, slugify, uniqueSlug, validat
 export { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "./tloz-attachment-errors";
 export { TlozDocumentError } from "./document-errors";
 export {
+  ContainerContentError,
+  type ContainerContentErrorCode,
+  type ContainerContentSnapshot,
+  type ContainerContentStore,
+  type ContentFilters,
+  type ContentUpdate,
+  type MigrationReport,
+} from "./container-content-store";
+export {
   defaultInventoryFields,
   defaultMissionFields,
   validateDocumentProperties,

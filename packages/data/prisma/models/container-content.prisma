@@ -1,0 +1,36 @@
+model Container {
+  id           String    @id
+  publicId     String    @unique
+  slug         String?   @unique
+  presentation String
+  title        String
+  summary      String    @default("")
+  body         String    @default("")
+  definition   Json      @default("{}")
+  data         Json      @default("{}")
+  revision     Int       @default(1)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  contents     Content[]
+
+  @@index([presentation, updatedAt, id])
+  @@map("containers")
+}
+
+model Content {
+  id           String    @id
+  publicId     String    @unique
+  containerId  String
+  container    Container @relation(fields: [containerId], references: [id], onDelete: Restrict)
+  presentation String
+  title        String
+  summary      String    @default("")
+  body         String    @default("")
+  data         Json      @default("{}")
+  revision     Int       @default(1)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([containerId, presentation, updatedAt, id])
+  @@map("contents")
+}

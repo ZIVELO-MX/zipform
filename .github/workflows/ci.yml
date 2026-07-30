@@ -16,12 +16,27 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: tloz
+          POSTGRES_PASSWORD: tloz
+          POSTGRES_DB: tloz_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tloz -d tloz_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       TLOZ_DATA_DRIVER: mock
       # Prisma validates both datasource URLs while loading prisma.config.ts,
       # even though client generation and mock-driver tests do not connect.
       DATABASE_URL: "postgresql://tloz:tloz@localhost:5432/tloz_ci"
       DIRECT_URL: "postgresql://tloz:tloz@localhost:5432/tloz_ci"
+      TEST_DATABASE_URL: "postgresql://tloz:tloz@localhost:5432/tloz_ci"
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -40,6 +55,9 @@ jobs:
 
       - name: Check workspace
         run: pnpm check
+
+      - name: Test PostgreSQL integration
+        run: pnpm --filter @tloz/data test:integration
 
       - name: Verify deployed OpenAPI and TLO-0004 (performance informational)
         if: github.ref == 'refs/heads/main'
