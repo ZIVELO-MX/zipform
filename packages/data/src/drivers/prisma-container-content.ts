@@ -235,7 +235,14 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
             unchanged,
             checksum: checksumContainerContentSnapshot(await exportFrom(tx)),
           };
-        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        }, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          // Backfill processes the legacy snapshot row-by-row. Prisma's default
+          // five-second interactive transaction timeout is too short for the
+          // production dataset (currently 161 records).
+          maxWait: 30_000,
+          timeout: 120_000,
+        });
       } catch (error) {
         return translatePrismaError(error);
       }
