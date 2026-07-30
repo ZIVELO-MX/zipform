@@ -45,6 +45,8 @@ const commandGroups = [
     items: [
       { label: "Abrir Inventory", href: "/inventory", icon: PackageOpen, keywords: "inventory inventario items" },
       { label: "Abrir Projects", href: "/projects", icon: FolderKanban, keywords: "proyectos projects" },
+      { label: "Abrir Workshop", href: "/workshop", icon: Sword, keywords: "workshop ideas" },
+      { label: "Abrir Library", href: "/library", icon: FolderKanban, keywords: "library biblioteca documentos" },
     ],
   },
   {

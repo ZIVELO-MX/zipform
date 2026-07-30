@@ -240,13 +240,13 @@ describe("prisma integration", () => {
 
     itIf(hasDb)("backfills in dry-run/apply modes and reconciles legacy data", async () => {
       const dryRun = await backfillContainerContent(prisma, false);
-      expect(dryRun).toMatchObject({ mode: "dry-run", containers: 4, contents: 1 });
+      expect(dryRun).toMatchObject({ mode: "dry-run", containers: 6, contents: 1 });
       expect(await prisma.container.count()).toBe(0);
 
       const first = await backfillContainerContent(prisma, true);
-      expect(first).toMatchObject({ mode: "apply", inserted: 5 });
+      expect(first).toMatchObject({ mode: "apply", inserted: 7 });
       const second = await backfillContainerContent(prisma, true);
-      expect(second).toMatchObject({ mode: "apply", unchanged: 5 });
+      expect(second).toMatchObject({ mode: "apply", unchanged: 7 });
       await expect(reconcileContainerContent(prisma)).resolves.toMatchObject({ matches: true });
     });
 

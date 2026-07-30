@@ -43,4 +43,13 @@ describe("/api/v2/containers", () => {
     expect(response.status).toBe(201);
     expect(mocks.createContainer).toHaveBeenCalledWith(expect.objectContaining({ presentation: "project", title: "Core" }));
   });
+
+  it("accepts a new presentation without introducing a document kind", async () => {
+    const response = await POST(new NextRequest("https://tloz.test/api/v2/containers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId: "workshop", presentation: "workshop", title: "Workshop", data: {} }),
+    }));
+    expect(response.status).toBe(201);
+    expect(mocks.createContainer).toHaveBeenCalledWith(expect.objectContaining({ presentation: "workshop", publicId: "workshop" }));
+  });
 });

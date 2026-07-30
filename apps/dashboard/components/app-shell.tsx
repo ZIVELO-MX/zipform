@@ -1,10 +1,5 @@
 "use client";
 
-import {
-  FolderKanban,
-  LayoutDashboard,
-  PackageOpen,
-} from "lucide-react";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import type { TlozProject, UserProfile } from "@tloz/types";
@@ -12,14 +7,11 @@ import {
   DesktopSidebar,
   MobileMenuPanel,
   TooltipProvider,
-  type NavItem,
-  type NavSection,
 } from "@tloz/ui";
 import { Suspense, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
-import { resolveMissionIcon } from "./tloz/tloz-utils";
-import { projectHref } from "../lib/tloz-routes";
 import { SettingsDialog } from "./settings-dialog";
-import { sortProjectsByActivity } from "./project-navigation";
+import { buildTlozSections } from "./tloz-sidebar";
+export { buildTlozSections } from "./tloz-sidebar";
 
 type AppShellProps = {
   children: ReactNode;
@@ -31,46 +23,6 @@ type AppShellProps = {
 
 const SIDEBAR_STATE_KEY = "tloz-sidebar-state";
 const SIDEBAR_WIDTH_KEY = "tloz-sidebar-width";
-
-export function buildTlozSections(projects: TlozProject[], projectActiveCounts: Map<string, number>, projectActivity: Map<string, string>): NavSection[] {
-  const projectItems: NavItem[] = sortProjectsByActivity(projects, projectActivity).map((project) => {
-    const Icon = resolveMissionIcon(project.icon);
-    return {
-      label: project.name,
-      href: projectHref(project),
-      icon: Icon,
-      badge: projectActiveCounts.get(project.id) ?? 0,
-    };
-  });
-
-  return [
-    {
-      items: [
-        { label: "Lobby", href: "/", icon: LayoutDashboard, exact: true },
-      ],
-    },
-    {
-      label: "Sistema",
-      collapsible: true,
-      defaultCollapsed: false,
-      items: [
-        { label: "Inventory", href: "/inventory", icon: PackageOpen },
-        { label: "Projects", href: "/projects", icon: FolderKanban },
-      ],
-    },
-    ...(projectItems.length > 0
-      ? [
-        {
-          label: "Proyectos",
-          collapsible: true,
-          defaultCollapsed: false,
-          visibleItemLimit: 4,
-          items: projectItems,
-        } satisfies NavSection,
-      ]
-      : []),
-  ];
-}
 
 export function AppShell({ children, user, tlozProjects = [], projectActiveCounts = new Map(), projectActivity = new Map() }: AppShellProps) {
   const pathname = usePathname();

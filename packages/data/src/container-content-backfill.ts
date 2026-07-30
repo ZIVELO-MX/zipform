@@ -21,8 +21,62 @@ const EMPTY_DEFINITION: ContainerDefinition = {
 
 const SYSTEM_INVENTORY_ID = "system-inventory";
 const SYSTEM_PLANNING_ID = "system-planning";
+export const SYSTEM_WORKSHOP_ID = "system-workshop";
+export const SYSTEM_LIBRARY_ID = "system-library";
 
 const iso = (date: Date) => date.toISOString();
+
+const WORKSHOP_DEFINITION: ContainerDefinition = {
+  fields: [
+    { key: "status", label: "Estado", format: "status", visible: true },
+    { key: "ownerId", label: "Responsable", format: "person", visible: true },
+    { key: "checklist", label: "Checklist", format: "text", visible: true },
+    { key: "relations", label: "Relaciones", format: "text", visible: true },
+    { key: "resources", label: "Resources", format: "text", visible: true },
+    { key: "startDate", label: "Inicio", format: "date", visible: true },
+    { key: "dueDate", label: "Vence", format: "date", visible: true },
+    { key: "progress", label: "Progreso", format: "number", visible: true },
+  ],
+  views: [
+    { id: "list", fields: ["title", "status", "ownerId", "progress"] },
+    { id: "table", fields: ["title", "status", "ownerId", "dueDate", "progress"] },
+    { id: "detail", fields: ["title", "summary", "body", "status", "ownerId", "checklist", "relations", "resources", "startDate", "dueDate", "progress"] },
+  ],
+  defaultView: "list",
+};
+
+const LIBRARY_DEFINITION: ContainerDefinition = {
+  fields: [
+    { key: "category", label: "Categoría", format: "text", visible: true },
+    { key: "tags", label: "Tags", format: "text", visible: true },
+    { key: "ownerId", label: "Responsable", format: "person", visible: true },
+    { key: "sourceUrl", label: "Fuente", format: "text", visible: true },
+    { key: "resources", label: "Resources", format: "text", visible: true },
+  ],
+  views: [
+    { id: "list", fields: ["title", "category", "ownerId"] },
+    { id: "table", fields: ["title", "category", "tags", "ownerId"] },
+    { id: "detail", fields: ["title", "summary", "body", "category", "tags", "ownerId", "sourceUrl", "resources"] },
+  ],
+  defaultView: "list",
+};
+
+export function buildSystemContainer(id: string, title: string, presentation: string, definition: ContainerDefinition, createdAt: Date, updatedAt: Date): ContainerRecord {
+  return {
+    id,
+    publicId: presentation,
+    slug: presentation,
+    presentation,
+    title,
+    summary: "",
+    body: "",
+    definition,
+    data: {},
+    revision: 1,
+    createdAt: iso(createdAt),
+    updatedAt: iso(updatedAt),
+  };
+}
 
 function values(value: unknown): ContainerContentData {
   return JSON.parse(JSON.stringify(value)) as ContainerContentData;
@@ -168,6 +222,8 @@ export async function buildLegacyContainerContentSnapshot(
       createdAt: iso(createdAt),
       updatedAt: iso(updatedAt),
     },
+    buildSystemContainer(SYSTEM_WORKSHOP_ID, "Workshop", "workshop", WORKSHOP_DEFINITION, createdAt, updatedAt),
+    buildSystemContainer(SYSTEM_LIBRARY_ID, "Library", "library", LIBRARY_DEFINITION, createdAt, updatedAt),
   ];
 
   const contents: ContentRecord[] = [
