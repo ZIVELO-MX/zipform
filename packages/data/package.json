@@ -16,6 +16,8 @@
     "db:migrate:deploy": "prisma migrate deploy --schema prisma",
     "db:seed": "prisma db seed --schema prisma",
     "db:prepare-release-1": "tsx prisma/prepare-release-1.ts",
+    "db:backfill:container-content": "tsx prisma/backfill-container-content.ts",
+    "db:reconcile:container-content": "tsx prisma/backfill-container-content.ts --reconcile",
     "db:studio": "prisma studio --schema prisma",
     "check": "pnpm db:generate && pnpm typecheck && pnpm test"
   },

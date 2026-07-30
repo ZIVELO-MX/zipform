@@ -2984,6 +2984,76 @@ components:
         nextCursor:
           type: [string, "null"]
 
+    # ── Container/Content v2 contract (routes land in TLO-0077) ─────
+    ContainerDefinition:
+      type: object
+      additionalProperties: false
+      required: [fields, views, defaultView]
+      properties:
+        fields:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        views:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        defaultView:
+          type: string
+    Container:
+      type: object
+      additionalProperties: false
+      required: [id, publicId, presentation, title, summary, body, definition, data, revision, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        publicId: { type: string, minLength: 1 }
+        slug: { type: string }
+        presentation: { type: string, minLength: 1 }
+        title: { type: string, minLength: 1 }
+        summary: { type: string }
+        body: { type: string }
+        definition:
+          $ref: "#/components/schemas/ContainerDefinition"
+        data:
+          type: object
+          additionalProperties: true
+        revision: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Content:
+      type: object
+      additionalProperties: false
+      required: [id, publicId, containerId, presentation, title, summary, body, data, revision, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        publicId: { type: string, minLength: 1 }
+        containerId: { type: string }
+        presentation: { type: string, minLength: 1 }
+        title: { type: string, minLength: 1 }
+        summary: { type: string }
+        body: { type: string }
+        data:
+          type: object
+          additionalProperties: true
+        revision: { type: integer, minimum: 1 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ContainerContentError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum: [STORE_INVALID, STORE_NOT_FOUND, STORE_REVISION_CONFLICT, STORE_REFERENCE_INVALID, STORE_UNAVAILABLE]
+        message: { type: string }
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+
     # ── API Keys ─────────────────────────────────────────────────────
     ApiKey:
       type: object

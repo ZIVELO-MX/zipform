@@ -29,6 +29,7 @@ import {
 import { assertAcyclicDependency, assertProjectScopedDependency } from "../dependency-rules";
 import { RESERVED_TLOZ_SLUGS, slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 import { createPrismaDocumentRepository } from "./prisma-documents";
+import { createPrismaContainerContentStore } from "./prisma-container-content";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   tlozPrisma?: PrismaClient;
@@ -480,6 +481,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
   };
 
   return {
+    containerContent: createPrismaContainerContentStore(prisma),
     user: {
       async getCurrent() {
         return getCurrentUser(prisma);

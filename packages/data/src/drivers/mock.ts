@@ -22,6 +22,7 @@ import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions, par
 import { assertAcyclicDependency, assertProjectScopedDependency } from "../dependency-rules";
 import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 import { createMockDocumentRepository } from "./mock-documents";
+import { createJsonbPrototypeStore } from "../container-content-prototype";
 
 export function createMockDataClient(): TlozDataClient {
   const tlozData = {
@@ -117,6 +118,7 @@ export function createMockDataClient(): TlozDataClient {
   })();
 
   return {
+    containerContent: createJsonbPrototypeStore(),
     user: {
       async getCurrent() {
         return currentUser;

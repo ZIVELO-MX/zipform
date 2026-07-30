@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 export type ContainerContentErrorCode =
   | "STORE_INVALID"
   | "STORE_NOT_FOUND"
@@ -330,7 +328,12 @@ export function createMongoPrototypeStore(): ContainerContentStore {
 
 export function checksumSnapshot(snapshot: ContainerContentSnapshot): string {
   const canonical = JSON.stringify(sortValue(normalizeSnapshot(snapshot)));
-  return createHash("sha256").update(canonical).digest("hex");
+  let hash = 0xcbf29ce484222325n;
+  for (const character of canonical) {
+    hash ^= BigInt(character.codePointAt(0) ?? 0);
+    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
+  }
+  return hash.toString(16).padStart(16, "0");
 }
 
 function validateSnapshot(snapshot: ContainerContentSnapshot) {

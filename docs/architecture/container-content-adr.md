@@ -5,6 +5,28 @@
 - Mission: TLO-0075
 - Decisión: conservar Supabase/PostgreSQL y reducir el dominio a `Container` y `Content`
 
+## Estado de implementación
+
+TLO-0076 introduce de forma aditiva las tablas `containers` y `contents`, el
+repositorio común y las herramientas de backfill/reconciliación. Los
+consumidores continúan usando `documents` y las tablas legadas hasta TLO-0077;
+esta entrega no cambia rutas, UI ni fuente de lectura.
+
+El backfill es seguro por defecto:
+
+```bash
+# Sólo calcula el plan y checksum.
+pnpm --filter @tloz/data db:backfill:container-content
+
+# Escribe mediante upsert transaccional e idempotente.
+pnpm --filter @tloz/data db:backfill:container-content -- --apply
+
+# Compara origen legado contra destino y falla si difieren.
+pnpm --filter @tloz/data db:reconcile:container-content
+```
+
+Ningún comando de escritura se ejecuta automáticamente durante deploy.
+
 ## Contexto
 
 TLOZ ya expone un contrato documental compartido, pero la persistencia conserva
