@@ -8,5 +8,5 @@ export default async function WorkshopContentPage({ params }: { params: Promise<
   if (!content || content.presentation !== "workshop") notFound();
   const [container, users] = await Promise.all([getCanonicalContainer(content.containerId), getTlozUsers()]);
   if (!container || container.presentation !== "workshop") notFound();
-  return <TlozPageShell title={content.title} breadcrumb={[{ label: "Workshop", href: "/workshop" }, content.title]} supportedViews={[]} showControls={false} documentNavigation={{ documents: [], users }}><ContainerContentDetail container={container} content={content} users={users} /></TlozPageShell>;
+  return <TlozPageShell title={content.title} breadcrumb={[{ label: "Workshop", href: "/workshop" }, content.title]} supportedViews={[]} showControls documentNavigation={{ documents: [], users }}><ContainerContentDetail container={container} content={content} users={users} variant="full" /></TlozPageShell>;
 }

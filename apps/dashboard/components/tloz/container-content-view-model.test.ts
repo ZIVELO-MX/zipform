@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ContainerRecord, ContentRecord } from "@tloz/types";
 import {
   apiErrorMessage,
+  canonicalCollectionFields,
   canonicalCollectionViews,
   canonicalControlKind,
   createContentPayload,
@@ -86,6 +87,8 @@ const state = {
 describe("canonical Container/Content view model", () => {
   it("keeps detail as an item view and maps control capabilities by presentation", () => {
     expect(canonicalCollectionViews(definition)).toEqual(["list", "table"]);
+    expect(canonicalCollectionFields("workshop")).toEqual(["icon", "publicId", "title", "project", "ownerId", "dueDate"]);
+    expect(canonicalCollectionFields("library")).toEqual(["icon", "publicId", "title", "project", "ownerId", "acquiredAt"]);
     expect(canonicalControlKind("workshop")).toBe("project");
     expect(canonicalControlKind("library")).toBe("inventory");
   });

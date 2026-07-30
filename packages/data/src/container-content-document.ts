@@ -80,7 +80,24 @@ function parentData(container: ContainerRecord) {
 }
 
 function contentDocument(content: ContentRecord, container?: ContainerRecord): TlozDocument {
-  const kind: TlozDocumentKind = content.presentation === "mission" ? "mission" : "inventory";
+  const kind: TlozDocumentKind = content.presentation === "mission"
+    ? "mission"
+    : content.presentation === "workshop" ? "project" : "inventory";
+  const rawProperties = properties(content.data);
+  const canonicalProperties = kind === "project"
+    ? {
+        ...rawProperties,
+        owner: rawProperties.owner ?? rawProperties.ownerId,
+        start: rawProperties.start ?? rawProperties.startDate,
+        due: rawProperties.due ?? rawProperties.dueDate,
+      }
+    : kind === "inventory"
+      ? {
+          ...rawProperties,
+          assignee: rawProperties.assignee ?? rawProperties.ownerId,
+          acquired: rawProperties.acquired ?? rawProperties.acquiredAt,
+        }
+      : rawProperties;
   return {
     id: content.id,
     publicId: content.publicId,
@@ -92,7 +109,7 @@ function contentDocument(content: ContentRecord, container?: ContainerRecord): T
     summary: content.summary,
     body: content.body,
     revision: content.revision,
-    properties: properties(content.data),
+    properties: canonicalProperties,
     createdAt: content.createdAt,
     updatedAt: content.updatedAt,
     source: { type: kind, id: content.id },

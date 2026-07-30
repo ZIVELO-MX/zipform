@@ -46,8 +46,8 @@ export const WORKSHOP_DEFINITION: ContainerDefinition = {
     { key: "dueDate", label: "Vence", format: "date", visible: true },
   ],
   views: [
-    { id: "list", fields: ["title", "status"] },
-    { id: "table", fields: ["title", "status", "category", "ownerId", "dueDate"] },
+    { id: "list", fields: ["icon", "publicId", "title", "project", "ownerId", "dueDate"] },
+    { id: "table", fields: ["icon", "publicId", "title", "project", "ownerId", "dueDate"] },
     { id: "detail", fields: ["publicId", "status", "category", "ownerId", "startDate", "dueDate"] },
   ],
   defaultView: "table",
@@ -84,8 +84,8 @@ export const LIBRARY_DEFINITION: ContainerDefinition = {
     { key: "acquiredAt", label: "Adquirido", format: "date", visible: true },
   ],
   views: [
-    { id: "list", fields: ["title", "status"] },
-    { id: "table", fields: ["title", "status", "category", "ownerId", "acquiredAt"] },
+    { id: "list", fields: ["icon", "publicId", "title", "project", "ownerId", "acquiredAt"] },
+    { id: "table", fields: ["icon", "publicId", "title", "project", "ownerId", "acquiredAt"] },
     { id: "detail", fields: ["publicId", "status", "category", "ownerId", "acquiredAt"] },
   ],
   defaultView: "table",

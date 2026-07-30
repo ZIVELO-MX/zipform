@@ -56,6 +56,11 @@ export function canonicalCollectionViews(definition: ContainerDefinition): TlozV
     .filter((view): view is TlozView => view === "list" || view === "table");
 }
 
+export function canonicalCollectionFields(presentation: string) {
+  const dateField = presentation === "library" ? "acquiredAt" : "dueDate";
+  return ["icon", "publicId", "title", "project", "ownerId", dateField];
+}
+
 export function createContentPayload(
   container: ContainerRecord,
   title: string,

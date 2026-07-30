@@ -31,8 +31,8 @@ describe("Workshop and Library system containers", () => {
       "dueDate",
     ]);
     expect(WORKSHOP_DEFINITION.views).toEqual([
-      { id: "list", fields: ["title", "status"] },
-      { id: "table", fields: ["title", "status", "category", "ownerId", "dueDate"] },
+      { id: "list", fields: ["icon", "publicId", "title", "project", "ownerId", "dueDate"] },
+      { id: "table", fields: ["icon", "publicId", "title", "project", "ownerId", "dueDate"] },
       { id: "detail", fields: ["publicId", "status", "category", "ownerId", "startDate", "dueDate"] },
     ]);
     expect(WORKSHOP_DEFINITION.fields.find((field) => field.key === "status")?.options?.map((option) => option.value))
@@ -48,8 +48,8 @@ describe("Workshop and Library system containers", () => {
       "acquiredAt",
     ]);
     expect(LIBRARY_DEFINITION.views).toEqual([
-      { id: "list", fields: ["title", "status"] },
-      { id: "table", fields: ["title", "status", "category", "ownerId", "acquiredAt"] },
+      { id: "list", fields: ["icon", "publicId", "title", "project", "ownerId", "acquiredAt"] },
+      { id: "table", fields: ["icon", "publicId", "title", "project", "ownerId", "acquiredAt"] },
       { id: "detail", fields: ["publicId", "status", "category", "ownerId", "acquiredAt"] },
     ]);
     expect(LIBRARY_DEFINITION.fields.find((field) => field.key === "status")?.options?.map((option) => option.value))
