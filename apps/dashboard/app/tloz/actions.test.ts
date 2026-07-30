@@ -44,7 +44,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../../auth", () => ({ auth: mocks.auth }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 vi.mock("@tloz/data", () => ({
-  dataClient: { tloz: mocks.tloz, documents: mocks.documents },
+  dataClient: { tloz: mocks.tloz, canonicalDocuments: mocks.documents },
   validateDocumentProperties: vi.fn(),
 }));
 vi.mock("../../lib/tloz-data", () => ({

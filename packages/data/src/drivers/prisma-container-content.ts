@@ -9,6 +9,8 @@ import {
   canonicalContainerContentJson,
   type ContainerContentSnapshot,
   type ContainerContentStore,
+  type ContainerCreateInput,
+  type ContentCreateInput,
   type ContentFilters,
   type ContentUpdate,
   type MigrationReport,
@@ -126,6 +128,39 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
   }
 
   return {
+    async createContainer(input: ContainerCreateInput) {
+      const now = new Date();
+      const record = { ...input, id: input.id ?? crypto.randomUUID(), revision: 1, createdAt: now.toISOString(), updatedAt: now.toISOString() } as ContainerRecord;
+      validateContainerRecord(record);
+      try {
+        return mapContainer(await prisma.container.create({ data: {
+          id: record.id, publicId: record.publicId.trim(), slug: record.slug,
+          presentation: record.presentation.trim(), title: record.title.trim(),
+          summary: record.summary, body: record.body, definition: toJson(record.definition),
+          data: toJson(record.data), revision: 1, createdAt: now, updatedAt: now,
+        } }));
+      } catch (error) { return translatePrismaError(error); }
+    },
+
+    async createContent(input: ContentCreateInput) {
+      const now = new Date();
+      const record = { ...input, id: input.id ?? crypto.randomUUID(), revision: 1, createdAt: now.toISOString(), updatedAt: now.toISOString() } as ContentRecord;
+      validateContentRecord(record);
+      try {
+        const references = getContentReferenceIds(record);
+        if (references.length) {
+          const unique = new Set(references);
+          const count = await prisma.content.count({ where: { id: { in: [...unique] } } });
+          if (count !== unique.size) throw new ContainerContentError("STORE_REFERENCE_INVALID", "Una relación referencia Content inexistente.", { relations: "not_found" });
+        }
+        return mapContent(await prisma.content.create({ data: {
+          id: record.id, publicId: record.publicId.trim(), containerId: record.containerId,
+          presentation: record.presentation.trim(), title: record.title.trim(), summary: record.summary,
+          body: record.body, data: toJson(record.data), revision: 1, createdAt: now, updatedAt: now,
+        } }));
+      } catch (error) { return translatePrismaError(error); }
+    },
+
     async migrate(snapshot): Promise<MigrationReport> {
       for (const container of snapshot.containers) validateContainerRecord(container);
       const containerIds = new Set(snapshot.containers.map(({ id }) => id));
@@ -224,6 +259,13 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
       }
     },
 
+    async listContainers(filters = {}) {
+      try {
+        const rows = await prisma.container.findMany({ where: { presentation: filters.presentation }, orderBy: [{ updatedAt: "desc" }, { id: "asc" }] });
+        return rows.map(mapContainer);
+      } catch (error) { return translatePrismaError(error); }
+    },
+
     async listContents(filters: ContentFilters = {}) {
       try {
         const rows = await prisma.content.findMany({
@@ -304,6 +346,56 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
       } catch (error) {
         return translatePrismaError(error);
       }
+    },
+
+    async updateContainer(id, update, expectedRevision) {
+      if (update.title !== undefined && !update.title.trim()) {
+        throw new ContainerContentError("STORE_INVALID", "El título no puede estar vacío.", { title: "required" });
+      }
+      try {
+        const current = await prisma.container.findUnique({ where: { id } });
+        if (!current) throw new ContainerContentError("STORE_NOT_FOUND", `Container ${id} no existe.`, { id: "not_found" });
+        if (current.revision !== expectedRevision) throw new ContainerContentError("STORE_REVISION_CONFLICT", "La revisión ya no está vigente.", { revision: "conflict" });
+        const mergedData = update.data ? { ...(current.data as ContainerRecord["data"]), ...update.data } : undefined;
+        const result = await prisma.container.updateMany({
+          where: { id, revision: expectedRevision },
+          data: {
+            slug: update.slug,
+            presentation: update.presentation?.trim(),
+            title: update.title?.trim(),
+            summary: update.summary,
+            body: update.body,
+            definition: update.definition ? toJson(update.definition) : undefined,
+            data: mergedData ? toJson(mergedData) : undefined,
+            revision: { increment: 1 },
+          },
+        });
+        if (result.count === 0) {
+          const exists = await prisma.container.findUnique({ where: { id }, select: { id: true } });
+          throw new ContainerContentError(exists ? "STORE_REVISION_CONFLICT" : "STORE_NOT_FOUND", exists ? "La revisión ya no está vigente." : `Container ${id} no existe.`, exists ? { revision: "conflict" } : { id: "not_found" });
+        }
+        return mapContainer(await prisma.container.findUniqueOrThrow({ where: { id } }));
+      } catch (error) { return translatePrismaError(error); }
+    },
+
+    async deleteContent(id, expectedRevision) {
+      try {
+        const result = await prisma.content.deleteMany({ where: { id, revision: expectedRevision } });
+        if (result.count === 0) {
+          const exists = await prisma.content.findUnique({ where: { id }, select: { id: true } });
+          throw new ContainerContentError(exists ? "STORE_REVISION_CONFLICT" : "STORE_NOT_FOUND", exists ? "La revisión ya no está vigente." : `Content ${id} no existe.`, exists ? { revision: "conflict" } : { id: "not_found" });
+        }
+      } catch (error) { return translatePrismaError(error); }
+    },
+
+    async deleteContainer(id, expectedRevision) {
+      try {
+        const result = await prisma.container.deleteMany({ where: { id, revision: expectedRevision } });
+        if (result.count === 0) {
+          const exists = await prisma.container.findUnique({ where: { id }, select: { id: true } });
+          throw new ContainerContentError(exists ? "STORE_REVISION_CONFLICT" : "STORE_NOT_FOUND", exists ? "La revisión ya no está vigente." : `Container ${id} no existe.`, exists ? { revision: "conflict" } : { id: "not_found" });
+        }
+      } catch (error) { return translatePrismaError(error); }
     },
 
     async exportSnapshot() {

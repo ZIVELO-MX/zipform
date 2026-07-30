@@ -211,6 +211,33 @@ describe("prisma integration", () => {
   });
 
   describe("Container/Content store", () => {
+    itIf(hasDb)("creates, filters and deletes canonical records with revisions", async () => {
+      const createdContainer = await client.containerContent.createContainer({
+        id: "container-crud-integration",
+        publicId: "container-crud-integration",
+        presentation: "workshop",
+        title: "CRUD container",
+        summary: "",
+        body: "",
+        definition: { fields: [], views: [{ id: "default", fields: [] }], defaultView: "default" },
+        data: { ownerId: "00000000-0000-4000-8000-000000000001" },
+      });
+      const createdContent = await client.containerContent.createContent({
+        id: "content-crud-integration",
+        publicId: "content-crud-integration",
+        containerId: createdContainer.id,
+        presentation: "idea",
+        title: "CRUD content",
+        summary: "",
+        body: "",
+        data: { status: "open", ownerId: "00000000-0000-4000-8000-000000000001" },
+      });
+      await expect(client.containerContent.listContents({ presentation: "idea", data: { status: "open" } })).resolves.toEqual([expect.objectContaining({ id: createdContent.id })]);
+      await client.containerContent.deleteContent(createdContent.id, 1);
+      await client.containerContent.deleteContainer(createdContainer.id, 1);
+      await expect(client.containerContent.getContainer(createdContainer.id)).resolves.toBeNull();
+    });
+
     itIf(hasDb)("backfills in dry-run/apply modes and reconciles legacy data", async () => {
       const dryRun = await backfillContainerContent(prisma, false);
       expect(dryRun).toMatchObject({ mode: "dry-run", containers: 4, contents: 1 });

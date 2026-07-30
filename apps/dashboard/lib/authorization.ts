@@ -136,6 +136,8 @@ export function authorizeApiOperation(actor: Actor, operation: TlozOperation, co
 }
 
 const TLOZ_API_PREFIXES = [
+  "/api/v2/containers",
+  "/api/v2/contents",
   "/api/v2/documents",
   "/api/v1/missions",
   "/api/v1/projects",

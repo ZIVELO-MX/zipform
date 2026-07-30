@@ -20,7 +20,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   if (auth instanceof Response) return auth;
   const { documentId } = await params;
   try {
-    const document = await dataClient.documents.get(documentId);
+    const document = await dataClient.canonicalDocuments.get(documentId);
     if (!document) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
     const markdownRequest = new Request(request.url, {
       headers: new Headers({ ...Object.fromEntries(request.headers), Accept: "text/markdown" }),
@@ -39,7 +39,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
   if (revision instanceof Response) return revision;
 
   try {
-    const current = await dataClient.documents.get(documentId);
+    const current = await dataClient.canonicalDocuments.get(documentId);
     if (!current) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
     const forbidden = authorizeDocumentOperation(auth.user, current);
     if (forbidden) return forbidden;
@@ -60,17 +60,17 @@ export async function PUT(request: Request, { params }: RouteContext) {
     validateDocumentProperties(
       current.kind === "project"
         ? []
-        : (await dataClient.documents.get(current.parentId ?? ""))?.contract?.fields ?? [],
+        : (await dataClient.canonicalDocuments.get(current.parentId ?? ""))?.contract?.fields ?? [],
       parsed.properties,
       current.kind,
     );
     if (parsed.contract) validateProjectFields(parsed.contract.fields);
     let nextRevision = revision;
     if (parsed.contract) {
-      await dataClient.documents.replaceProjectContract(current.id, parsed.contract.fields, nextRevision);
+      await dataClient.canonicalDocuments.replaceProjectContract(current.id, parsed.contract.fields, nextRevision);
       nextRevision += 1;
     }
-    const updated = await dataClient.documents.update(current.id, {
+    const updated = await dataClient.canonicalDocuments.update(current.id, {
       title: parsed.title,
       body: parsed.body,
       properties: parsed.properties,

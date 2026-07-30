@@ -93,13 +93,13 @@ async function mutateDocument(
   expectedRevision?: number,
 ) {
   const actor = await authenticatedActor();
-  const document = await dataClient.documents.get(documentId);
+  const document = await dataClient.canonicalDocuments.get(documentId);
   if (!document) throw new Error("Documento no encontrado.");
   const operation = document.source
     ? changesDocumentOwner(document, input) ? "move" : "update"
     : "structure";
   assertTlozOperation(actor, operation, { ownerId: documentOwnerId(document) });
-  return dataClient.documents.update(
+  return dataClient.canonicalDocuments.update(
     document.id,
     input,
     expectedRevision ?? document.revision,
@@ -122,7 +122,7 @@ export async function createMission(
 ) {
   const actor = await authenticatedActor();
   assertTlozOperation(actor, "create", { requestedOwnerId: input.ownerId });
-  const projectDocument = await dataClient.documents.get(input.projectId);
+  const projectDocument = await dataClient.canonicalDocuments.get(input.projectId);
   const statusField = projectDocument?.contract?.fields.find((field) => field.key === "status");
   const categoryField = projectDocument?.contract?.fields.find((field) => field.key === "category");
   const status = input.status ?? contractFieldDefault(statusField, "next");
@@ -143,9 +143,9 @@ export async function createMission(
   }
   const mission = await dataClient.tloz.createMission({ ...input, status });
   if (Object.keys(documentProperties).length) {
-    const document = await dataClient.documents.get(mission.id);
+    const document = await dataClient.canonicalDocuments.get(mission.id);
     if (!document) throw new Error("No se pudo resolver el documento de la Mission creada.");
-    await dataClient.documents.update(
+    await dataClient.canonicalDocuments.update(
       document.id,
       { properties: documentProperties },
       document.revision,
@@ -156,7 +156,7 @@ export async function createMission(
 }
 
 export async function updateMission(missionId: string, input: TlozMissionUpdateInput) {
-  const document = await dataClient.documents.get(missionId);
+  const document = await dataClient.canonicalDocuments.get(missionId);
   const legacyOnlyFields = ["displayId", "projectId", "seasonId", "episodeId", "completedAt"];
   const requiresLegacyMutation = legacyOnlyFields.some((field) => (
     Object.prototype.hasOwnProperty.call(input, field)
@@ -179,7 +179,7 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
   const next = { ...input };
   if (input.projectId !== undefined || input.status !== undefined || input.type !== undefined) {
     const projectId = input.projectId ?? current.projectId;
-    const project = projectId ? await dataClient.documents.get(projectId) : null;
+    const project = projectId ? await dataClient.canonicalDocuments.get(projectId) : null;
     if (project?.contract) {
       const statusField = project.contract.fields.find((field) => field.key === "status");
       const categoryField = project.contract.fields.find((field) => field.key === "category");
@@ -242,9 +242,9 @@ export async function getMissionDetailOptions() {
 
 export async function getMissionDocumentOptions(missionId: string) {
   await authorizeMission(missionId, "read");
-  const document = await dataClient.documents.get(missionId);
+  const document = await dataClient.canonicalDocuments.get(missionId);
   if (!document || document.kind !== "mission") return { document: null, contract: [] };
-  const project = document.parentId ? await dataClient.documents.get(document.parentId) : null;
+  const project = document.parentId ? await dataClient.canonicalDocuments.get(document.parentId) : null;
   return {
     document,
     contract: project?.contract?.fields ?? [],
@@ -253,7 +253,7 @@ export async function getMissionDocumentOptions(missionId: string) {
 
 export async function getDocumentDetailOptions(documentId: string) {
   const actor = await authenticatedActor();
-  const document = await dataClient.documents.get(documentId, {
+  const document = await dataClient.canonicalDocuments.get(documentId, {
     includeChildren: true,
     childrenPagination: { limit: 1 },
   });
@@ -265,10 +265,10 @@ export async function getDocumentDetailOptions(documentId: string) {
     : document.kind === "inventory"
       ? "inventory"
       : `project:${document.parentId}:children`;
-  const definition = await dataClient.documents.getDefinition(definitionKey);
+  const definition = await dataClient.canonicalDocuments.getDefinition(definitionKey);
   if (!definition) throw new Error("Definición documental no encontrada.");
   const parent = document.parentId
-    ? await dataClient.documents.get(document.parentId)
+    ? await dataClient.canonicalDocuments.get(document.parentId)
     : null;
   return {
     document,
@@ -341,7 +341,7 @@ export async function createQuestItem(input: TlozQuestItemCreateInput) {
 }
 
 export async function updateProject(projectId: string, input: TlozProjectUpdateInput) {
-  const document = await dataClient.documents.get(projectId);
+  const document = await dataClient.canonicalDocuments.get(projectId);
   if (!document || document.kind !== "project") {
     await authorizeProject(projectId, Object.prototype.hasOwnProperty.call(input, "ownerId") ? "move" : "update");
     const value = await dataClient.tloz.updateProject(projectId, input);
@@ -356,7 +356,7 @@ export async function updateProject(projectId: string, input: TlozProjectUpdateI
 }
 
 export async function updateQuestItem(itemId: string, input: TlozQuestItemUpdateInput) {
-  const document = await dataClient.documents.get(itemId);
+  const document = await dataClient.canonicalDocuments.get(itemId);
   if (!document || document.kind !== "inventory") {
     await authorizeQuestItem(itemId, Object.prototype.hasOwnProperty.call(input, "ownerId") ? "move" : "update");
     const value = await dataClient.tloz.updateQuestItem(itemId, input);
@@ -376,18 +376,18 @@ export async function replaceProjectContract(
   revision: number,
 ) {
   const actor = await authenticatedActor();
-  const document = await dataClient.documents.get(documentId);
+  const document = await dataClient.canonicalDocuments.get(documentId);
   if (!document || document.kind !== "project") throw new Error("Project document not found.");
   assertTlozOperation(actor, "structure", {
     ownerId: typeof document.properties.owner === "string" ? document.properties.owner : null,
   });
-  const value = await dataClient.documents.replaceProjectContract(document.id, fields, revision);
+  const value = await dataClient.canonicalDocuments.replaceProjectContract(document.id, fields, revision);
   revalidateTloz();
   return value;
 }
 
 export async function saveMissionDocument(missionId: string, markdown: string) {
-  const document = await dataClient.documents.get(missionId);
+  const document = await dataClient.canonicalDocuments.get(missionId);
   if (!document || document.kind !== "mission") {
     await authorizeMission(missionId);
     const mission = await dataClient.tloz.saveMissionDocument(missionId, markdown);

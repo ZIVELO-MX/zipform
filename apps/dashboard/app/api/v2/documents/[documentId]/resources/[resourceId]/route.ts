@@ -12,7 +12,7 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   if (auth instanceof Response) return auth;
   const { documentId, resourceId } = await params;
   try {
-    const document = await dataClient.documents.get(documentId);
+    const document = await dataClient.canonicalDocuments.get(documentId);
     if (!document) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
     if (!document.source) {
       throw new TlozDocumentError("DOCUMENT_INVALID", "El documento no admite recursos durante la compatibilidad v1.");

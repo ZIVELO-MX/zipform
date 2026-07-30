@@ -35,6 +35,18 @@ export type ContentFilters = {
   data?: Record<string, string | number | boolean | null>;
 };
 
+export type ContainerFilters = {
+  presentation?: string;
+};
+
+export type ContainerCreateInput = Omit<ContainerRecord, "id" | "revision" | "createdAt" | "updatedAt"> & {
+  id?: string;
+};
+
+export type ContentCreateInput = Omit<ContentRecord, "id" | "revision" | "createdAt" | "updatedAt"> & {
+  id?: string;
+};
+
 export type ContentUpdate = Partial<
   Pick<ContentRecord, "title" | "summary" | "body" | "presentation">
 > & {
@@ -50,14 +62,20 @@ export type MigrationReport = {
 
 export interface ContainerContentStore {
   migrate(snapshot: ContainerContentSnapshot): Promise<MigrationReport>;
+  createContainer(input: ContainerCreateInput): Promise<ContainerRecord>;
+  createContent(input: ContentCreateInput): Promise<ContentRecord>;
   getContainer(id: string): Promise<ContainerRecord | null>;
   getContent(id: string): Promise<ContentRecord | null>;
+  listContainers(filters?: ContainerFilters): Promise<ContainerRecord[]>;
   listContents(filters?: ContentFilters): Promise<ContentRecord[]>;
+  updateContainer(id: string, update: Partial<Pick<ContainerRecord, "slug" | "presentation" | "title" | "summary" | "body" | "definition" | "data">>, expectedRevision: number): Promise<ContainerRecord>;
   updateContent(
     id: string,
     update: ContentUpdate,
     expectedRevision: number,
   ): Promise<ContentRecord>;
+  deleteContainer(id: string, expectedRevision: number): Promise<void>;
+  deleteContent(id: string, expectedRevision: number): Promise<void>;
   exportSnapshot(): Promise<ContainerContentSnapshot>;
 }
 

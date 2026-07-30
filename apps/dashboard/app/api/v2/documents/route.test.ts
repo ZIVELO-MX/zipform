@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@tloz/data", async (importOriginal) => ({
   ...await importOriginal<typeof import("@tloz/data")>(),
   dataClient: {
-    documents: mocks.documents,
+    canonicalDocuments: mocks.documents,
     tloz: mocks.tloz,
   },
 }));

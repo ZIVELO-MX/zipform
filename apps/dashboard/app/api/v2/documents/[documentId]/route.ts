@@ -27,7 +27,7 @@ export async function GET(request: Request, { params }: RouteContext) {
   }
 
   try {
-    const document = await dataClient.documents.get(documentId, {
+    const document = await dataClient.canonicalDocuments.get(documentId, {
       includeChildren: include === "children",
       childrenPagination: {
         limit: childLimit,
@@ -50,12 +50,12 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   if (revision instanceof Response) return revision;
 
   try {
-    const current = await dataClient.documents.get(documentId);
+    const current = await dataClient.canonicalDocuments.get(documentId);
     if (!current) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
     const forbidden = authorizeDocumentOperation(auth.user, current);
     if (forbidden) return forbidden;
     const input = await readUpdate(request);
-    return documentResponse(request, await dataClient.documents.update(current.id, input, revision));
+    return documentResponse(request, await dataClient.canonicalDocuments.update(current.id, input, revision));
   } catch (error) {
     return handleDocumentError(error);
   }
@@ -70,7 +70,7 @@ export async function DELETE(request: Request, { params }: RouteContext) {
   if (revision instanceof Response) return revision;
 
   try {
-    const current = await dataClient.documents.get(documentId);
+    const current = await dataClient.canonicalDocuments.get(documentId);
     if (!current) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
     const forbidden = authorizeDocumentOperation(
       auth.user,
@@ -78,7 +78,7 @@ export async function DELETE(request: Request, { params }: RouteContext) {
       current.kind === "mission" ? "delete-mission" : "structure",
     );
     if (forbidden) return forbidden;
-    await dataClient.documents.delete(current.id, revision);
+    await dataClient.canonicalDocuments.delete(current.id, revision);
     return new Response(null, { status: 204 });
   } catch (error) {
     return handleDocumentError(error);

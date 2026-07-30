@@ -30,6 +30,7 @@ import { assertAcyclicDependency, assertProjectScopedDependency } from "../depen
 import { RESERVED_TLOZ_SLUGS, slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 import { createPrismaDocumentRepository } from "./prisma-documents";
 import { createPrismaContainerContentStore } from "./prisma-container-content";
+import { createContainerContentDocumentRepository } from "../container-content-document";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   tlozPrisma?: PrismaClient;
@@ -474,6 +475,7 @@ async function loadTlozDataSet(prisma = getPrismaClient()): Promise<TlozDataSet>
 }
 
 export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient()): TlozDataClient {
+  const containerContentStore = createPrismaContainerContentStore(prisma);
   const getHydratedMission = async (missionId: string) => {
     const mission = hydrateMissions(await loadTlozDataSet(prisma)).find((item) => item.id === missionId);
     if (!mission) throw new Error(`TLOZ mission ${missionId} was not found`);
@@ -481,7 +483,8 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
   };
 
   return {
-    containerContent: createPrismaContainerContentStore(prisma),
+    containerContent: containerContentStore,
+    canonicalDocuments: createContainerContentDocumentRepository(containerContentStore),
     user: {
       async getCurrent() {
         return getCurrentUser(prisma);

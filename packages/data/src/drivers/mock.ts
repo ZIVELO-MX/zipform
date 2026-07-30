@@ -23,6 +23,7 @@ import { assertAcyclicDependency, assertProjectScopedDependency } from "../depen
 import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 import { createMockDocumentRepository } from "./mock-documents";
 import { createJsonbPrototypeStore } from "../container-content-prototype";
+import { createContainerContentDocumentRepository } from "../container-content-document";
 
 export function createMockDataClient(): TlozDataClient {
   const tlozData = {
@@ -39,6 +40,7 @@ export function createMockDataClient(): TlozDataClient {
     userMissionStates: [...userMissionStates]
   };
   const attachmentBatches: TlozAttachmentBatch[] = [];
+  const containerContentStore = createJsonbPrototypeStore();
 
   const paginate = <T extends { id: string }>(
     data: T[],
@@ -118,7 +120,8 @@ export function createMockDataClient(): TlozDataClient {
   })();
 
   return {
-    containerContent: createJsonbPrototypeStore(),
+    containerContent: containerContentStore,
+    canonicalDocuments: createContainerContentDocumentRepository(containerContentStore),
     user: {
       async getCurrent() {
         return currentUser;

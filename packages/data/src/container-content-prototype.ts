@@ -96,10 +96,16 @@ export type MigrationReport = {
 
 export interface ContainerContentStore {
   migrate(snapshot: ContainerContentSnapshot): Promise<MigrationReport>;
+  createContainer(input: Omit<ContainerRecord, "id" | "revision" | "createdAt" | "updatedAt"> & { id?: string }): Promise<ContainerRecord>;
+  createContent(input: Omit<ContentRecord, "id" | "revision" | "createdAt" | "updatedAt"> & { id?: string }): Promise<ContentRecord>;
   getContainer(id: string): Promise<ContainerRecord | null>;
   getContent(id: string): Promise<ContentRecord | null>;
+  listContainers(filters?: { presentation?: string }): Promise<ContainerRecord[]>;
   listContents(filters?: ContentFilters): Promise<ContentRecord[]>;
+  updateContainer(id: string, update: Partial<Pick<ContainerRecord, "slug" | "presentation" | "title" | "summary" | "body" | "definition" | "data">>, expectedRevision: number): Promise<ContainerRecord>;
   updateContent(id: string, update: ContentUpdate, expectedRevision: number): Promise<ContentRecord>;
+  deleteContainer(id: string, expectedRevision: number): Promise<void>;
+  deleteContent(id: string, expectedRevision: number): Promise<void>;
   exportSnapshot(): Promise<ContainerContentSnapshot>;
   restoreSnapshot(snapshot: ContainerContentSnapshot): Promise<void>;
   setAvailable(available: boolean): void;
@@ -136,6 +142,46 @@ implements ContainerContentStore {
   private available = true;
 
   constructor(private readonly shape: PhysicalShape<ContainerRow, ContentRow>) {}
+
+  async createContainer(input: Omit<ContainerRecord, "id" | "revision" | "createdAt" | "updatedAt"> & { id?: string }) {
+    this.assertAvailable();
+    const now = new Date().toISOString();
+    const record: ContainerRecord = {
+      ...clone(input),
+      id: input.id ?? crypto.randomUUID(),
+      revision: 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+    validateSnapshot({ containers: [record], contents: [] });
+    if ([...this.containers.values()].some((row) => this.shape.decodeContainer(row).publicId === record.publicId)) {
+      throw new ContainerContentError("STORE_INVALID", "La identidad pública ya está en uso.", { publicId: "duplicate" });
+    }
+    this.containers.set(record.id, this.shape.encodeContainer(record));
+    return clone(record);
+  }
+
+  async createContent(input: Omit<ContentRecord, "id" | "revision" | "createdAt" | "updatedAt"> & { id?: string }) {
+    this.assertAvailable();
+    const now = new Date().toISOString();
+    const record: ContentRecord = {
+      ...clone(input),
+      id: input.id ?? crypto.randomUUID(),
+      revision: 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+    validateContentRecord(record);
+    if (!this.containers.has(record.containerId)) {
+      throw new ContainerContentError("STORE_REFERENCE_INVALID", "El Container no existe.", { containerId: "not_found" });
+    }
+    validateContentReferences(record, new Set(this.contents.keys()));
+    if ([...this.contents.values()].some((row) => this.shape.decodeContent(row).publicId === record.publicId)) {
+      throw new ContainerContentError("STORE_INVALID", "La identidad pública ya está en uso.", { publicId: "duplicate" });
+    }
+    this.contents.set(record.id, this.shape.encodeContent(record));
+    return clone(record);
+  }
 
   async migrate(snapshot: ContainerContentSnapshot): Promise<MigrationReport> {
     this.assertAvailable();
@@ -189,6 +235,15 @@ implements ContainerContentStore {
     this.assertAvailable();
     const row = this.containers.get(id);
     return row ? clone(this.shape.decodeContainer(row)) : null;
+  }
+
+  async listContainers(filters: { presentation?: string } = {}): Promise<ContainerRecord[]> {
+    this.assertAvailable();
+    return [...this.containers.values()]
+      .map((row) => this.shape.decodeContainer(row))
+      .filter((container) => !filters.presentation || container.presentation === filters.presentation)
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id))
+      .map(clone);
   }
 
   async getContent(id: string): Promise<ContentRecord | null> {
@@ -256,6 +311,49 @@ implements ContainerContentStore {
     validateContentReferences(updated, new Set(this.contents.keys()));
     this.contents.set(id, this.shape.encodeContent(updated));
     return clone(updated);
+  }
+
+  async updateContainer(
+    id: string,
+    update: Partial<Pick<ContainerRecord, "slug" | "presentation" | "title" | "summary" | "body" | "definition" | "data">>,
+    expectedRevision: number,
+  ) {
+    this.assertAvailable();
+    const row = this.containers.get(id);
+    if (!row) throw new ContainerContentError("STORE_NOT_FOUND", `Container ${id} no existe.`, { id: "not_found" });
+    const current = this.shape.decodeContainer(row);
+    if (current.revision !== expectedRevision) throw new ContainerContentError("STORE_REVISION_CONFLICT", "La revisión ya no está vigente.", { revision: "conflict" });
+    const updated: ContainerRecord = {
+      ...current,
+      ...withoutUndefined(update),
+      title: update.title?.trim() ?? current.title,
+      presentation: update.presentation?.trim() ?? current.presentation,
+      data: update.data ? { ...current.data, ...clone(update.data) } : current.data,
+      revision: current.revision + 1,
+      updatedAt: new Date(Date.parse(current.updatedAt) + 1_000).toISOString(),
+    };
+    validateContainerRecord(updated);
+    this.containers.set(id, this.shape.encodeContainer(updated));
+    return clone(updated);
+  }
+
+  async deleteContent(id: string, expectedRevision: number): Promise<void> {
+    this.assertAvailable();
+    const row = this.contents.get(id);
+    if (!row) throw new ContainerContentError("STORE_NOT_FOUND", `Content ${id} no existe.`, { id: "not_found" });
+    if (this.shape.decodeContent(row).revision !== expectedRevision) throw new ContainerContentError("STORE_REVISION_CONFLICT", "La revisión ya no está vigente.", { revision: "conflict" });
+    this.contents.delete(id);
+  }
+
+  async deleteContainer(id: string, expectedRevision: number): Promise<void> {
+    this.assertAvailable();
+    const row = this.containers.get(id);
+    if (!row) throw new ContainerContentError("STORE_NOT_FOUND", `Container ${id} no existe.`, { id: "not_found" });
+    if (this.shape.decodeContainer(row).revision !== expectedRevision) throw new ContainerContentError("STORE_REVISION_CONFLICT", "La revisión ya no está vigente.", { revision: "conflict" });
+    if ([...this.contents.values()].some((content) => this.shape.decodeContent(content).containerId === id)) {
+      throw new ContainerContentError("STORE_REFERENCE_INVALID", "No se puede borrar un Container con Content.", { containerId: "in_use" });
+    }
+    this.containers.delete(id);
   }
 
   async exportSnapshot(): Promise<ContainerContentSnapshot> {
@@ -371,6 +469,20 @@ function uniqueIds(
     publicIds.add(record.publicId);
   }
   return ids;
+}
+
+function validateContainerRecord(record: ContainerRecord) {
+  validateCommonRecord(record, "container");
+  if (!record.definition || Array.isArray(record.definition) || typeof record.definition !== "object") {
+    throw new ContainerContentError("STORE_INVALID", "Container definition debe ser un objeto.", { container: "invalid" });
+  }
+}
+
+function validateContentRecord(record: ContentRecord) {
+  validateCommonRecord(record, "content");
+  if (!record.containerId.trim() || !record.data || Array.isArray(record.data) || typeof record.data !== "object") {
+    throw new ContainerContentError("STORE_INVALID", "Content no cumple el contrato nuclear.", { content: "invalid" });
+  }
 }
 
 function validateCommonRecord(

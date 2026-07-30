@@ -16,6 +16,9 @@ export function documentResponse(request: Request, document: TlozDocument) {
     ETag: revisionEtag(document.revision),
     "Cache-Control": "private, no-store",
     Vary: "Accept",
+    Deprecation: "true",
+    Sunset: "2026-10-31T00:00:00Z",
+    Link: "</api/v2/containers>; rel=\"successor-version\", </api/v2/contents>; rel=\"successor-version\"",
   };
   if (wantsMarkdown) {
     return new Response(serializeTlozDocumentMarkdown(document), {

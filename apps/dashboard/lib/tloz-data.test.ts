@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("react", () => ({ cache: <T extends (...args: never[]) => unknown>(callback: T) => callback }));
-vi.mock("@tloz/data", () => ({ dataClient: { tloz: mocks } }));
+vi.mock("@tloz/data", () => ({ dataClient: { tloz: mocks, canonicalDocuments: {} } }));
 vi.mock("./tloz-attachment-storage", () => ({ getTlozAttachmentStorage: () => ({ createSignedRead: mocks.createSignedRead }) }));
 
 import { getTlozMissionDetailWithAttachments, hydrateTlozMissionResources } from "./tloz-data";
