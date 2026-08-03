@@ -4,14 +4,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   getCurrent: vi.fn(),
-  getUsers: vi.fn()
+  getUsers: vi.fn(),
+  getUserByEmail: vi.fn()
 }));
 
 vi.mock("react", () => ({ cache: <T extends (...args: never[]) => unknown>(callback: T) => callback }));
 vi.mock("../auth", () => ({ auth: mocks.auth }));
 vi.mock("@tloz/data", () => ({
   dataClient: {
-    tloz: { getUsers: mocks.getUsers },
+    tloz: { getUsers: mocks.getUsers, getUserByEmail: mocks.getUserByEmail },
     user: { getCurrent: mocks.getCurrent }
   }
 }));
@@ -44,6 +45,7 @@ describe("getCurrentUser", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getUsers.mockResolvedValue([authenticatedUser]);
+    mocks.getUserByEmail.mockResolvedValue(authenticatedUser);
     mocks.getCurrent.mockResolvedValue(fallbackUser);
   });
 
@@ -52,6 +54,7 @@ describe("getCurrentUser", () => {
 
     await expect(getCurrentUser()).resolves.toEqual(authenticatedUser);
     expect(mocks.getCurrent).not.toHaveBeenCalled();
+    expect(mocks.getUserByEmail).toHaveBeenCalledWith("user@example.com");
   });
 
   it.each([null, {}, { user: undefined }])(
@@ -60,7 +63,7 @@ describe("getCurrentUser", () => {
       mocks.auth.mockResolvedValue(session);
 
       await expect(getCurrentUser()).resolves.toEqual(fallbackUser);
-      expect(mocks.getUsers).not.toHaveBeenCalled();
+    expect(mocks.getUserByEmail).not.toHaveBeenCalled();
     }
   );
 
@@ -68,6 +71,6 @@ describe("getCurrentUser", () => {
     mocks.auth.mockResolvedValue({ user: { email: "missing@example.com" } });
 
     await expect(getCurrentUser()).resolves.toEqual(fallbackUser);
-    expect(mocks.getUsers).toHaveBeenCalledOnce();
+    expect(mocks.getUserByEmail).toHaveBeenCalledWith("missing@example.com");
   });
 });

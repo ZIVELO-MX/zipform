@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   authenticateRequest: vi.fn(),
-  listContainers: vi.fn(),
+  findContainers: vi.fn(),
   createContainer: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ describe("/api/v2/containers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.authenticateRequest.mockResolvedValue({ user: { id: "agent-1", type: "agent", role: "agent:operative" } });
-    mocks.listContainers.mockResolvedValue([container]);
+    mocks.findContainers.mockResolvedValue({ data: [container], nextCursor: null });
     mocks.createContainer.mockResolvedValue(container);
   });
 
