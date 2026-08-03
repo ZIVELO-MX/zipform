@@ -532,6 +532,7 @@ function inventoryDocumentUpdate(input: TlozQuestItemUpdateInput): TlozDocumentU
   if (input.category !== undefined) properties.category = input.category;
   if (input.ownerId !== undefined) properties.assignee = input.ownerId || null;
   if (input.icon !== undefined) properties.icon = input.icon;
+  if (input.color !== undefined) properties.color = input.color;
   if (input.acquiredAt !== undefined) properties.acquired = input.acquiredAt || null;
   return {
     ...(input.name === undefined ? {} : { title: input.name }),

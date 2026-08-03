@@ -7,7 +7,7 @@ import { authorizeApiOperation, isFullStackDeveloper } from "../../../../lib/aut
 const validStatuses: TlozInventoryStatus[] = ["locked", "unlocked"];
 const validCategories: TlozInventoryCategory[] = ["tool", "access", "asset", "document", "other"];
 const VALID_CREATE_FIELDS = new Set([
-  "name", "description", "descriptionDetail", "icon", "status",
+  "name", "description", "descriptionDetail", "icon", "color", "status",
   "category", "ownerId", "acquiredAt"
 ]);
 

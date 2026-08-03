@@ -2,9 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { CreateForm, type TlozCreateKind } from "../../../components/tloz/tloz-create";
-import type { TlozFieldDefinition, TlozProject, UserProfile } from "@tloz/types";
+import type { ContainerRecord, TlozFieldDefinition, TlozProject, UserProfile } from "@tloz/types";
 
-export function CreateFormWrapper({ kind, projects, users, projectContracts = {} }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; projectContracts?: Record<string, TlozFieldDefinition[]> }) {
+export function CreateFormWrapper({ kind, projects, users, projectContracts = {}, canonicalContainer }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; projectContracts?: Record<string, TlozFieldDefinition[]>; canonicalContainer?: ContainerRecord }) {
   const router = useRouter();
   return (
     <CreateForm
@@ -12,7 +12,8 @@ export function CreateFormWrapper({ kind, projects, users, projectContracts = {}
       projects={projects}
       users={users}
       projectContracts={projectContracts}
-      onDone={() => router.push("/")}
+      canonicalContainer={canonicalContainer}
+      onDone={() => router.push(kind === "workshop" || kind === "library" ? `/${kind}` : "/")}
     />
   );
 }

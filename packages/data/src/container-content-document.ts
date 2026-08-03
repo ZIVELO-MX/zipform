@@ -47,7 +47,7 @@ function fieldDefinitions(definition: ContainerDefinition): TlozFieldDefinition[
     visible: field.visible ?? true,
     position: index,
     defaultValue: scalar(field.defaultValue ?? null),
-    options: [],
+    options: field.options ?? [],
   }));
 }
 
@@ -63,6 +63,7 @@ function documentDefinition(id: string, key: string, kind: TlozDocumentKind, def
       format: field.format as "text" | "status" | "date" | "person" | "number" | "id",
       position,
       visible: field.visible ?? true,
+      options: field.options,
     })),
     views: definition.views.map((view) => ({ ...view, id: view.id as TlozDocumentDefinition["views"][number]["id"] })),
     defaultView: definition.defaultView as TlozDocumentDefinition["defaultView"],
@@ -79,7 +80,24 @@ function parentData(container: ContainerRecord) {
 }
 
 function contentDocument(content: ContentRecord, container?: ContainerRecord): TlozDocument {
-  const kind: TlozDocumentKind = content.presentation === "mission" ? "mission" : "inventory";
+  const kind: TlozDocumentKind = content.presentation === "mission"
+    ? "mission"
+    : content.presentation === "workshop" ? "project" : "inventory";
+  const rawProperties = properties(content.data);
+  const canonicalProperties = kind === "project"
+    ? {
+        ...rawProperties,
+        owner: rawProperties.owner ?? rawProperties.ownerId,
+        start: rawProperties.start ?? rawProperties.startDate,
+        due: rawProperties.due ?? rawProperties.dueDate,
+      }
+    : kind === "inventory"
+      ? {
+          ...rawProperties,
+          assignee: rawProperties.assignee ?? rawProperties.ownerId,
+          acquired: rawProperties.acquired ?? rawProperties.acquiredAt,
+        }
+      : rawProperties;
   return {
     id: content.id,
     publicId: content.publicId,
@@ -91,7 +109,7 @@ function contentDocument(content: ContentRecord, container?: ContainerRecord): T
     summary: content.summary,
     body: content.body,
     revision: content.revision,
-    properties: properties(content.data),
+    properties: canonicalProperties,
     createdAt: content.createdAt,
     updatedAt: content.updatedAt,
     source: { type: kind, id: content.id },
@@ -184,7 +202,15 @@ export function createContainerContentDocumentRepository(store: ContainerContent
       const updated = await store.updateContainer(resolved.container.id, {
         definition: {
           ...definition,
-          fields: fields.map((field) => ({ key: field.key, label: field.label, format: field.type, required: field.required, visible: field.visible, defaultValue: field.defaultValue })),
+          fields: fields.map((field) => ({
+            key: field.key,
+            label: field.label,
+            format: field.type,
+            required: field.required,
+            visible: field.visible,
+            defaultValue: field.defaultValue,
+            options: field.options,
+          })),
         },
       }, expectedRevision);
       return containerDocument(updated);

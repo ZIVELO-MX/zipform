@@ -7,7 +7,7 @@ import type {
 } from "@tloz/types";
 import type { TlozResourceInput } from "@tloz/data";
 
-export function buildCreateInput(kind: "mission" | "project" | "inventory", draft: Record<string, string>, resources: TlozResourceInput[] = []) {
+export function buildCreateInput(kind: "mission" | "project" | "inventory" | "workshop" | "library", draft: Record<string, string>, resources: TlozResourceInput[] = []) {
   if (kind === "mission") return {
     title: draft.name,
     description: draft.description,
@@ -25,7 +25,7 @@ export function buildCreateInput(kind: "mission" | "project" | "inventory", draf
     resources,
   };
   if (kind === "project") return { name: draft.name, description: draft.description, icon: draft.icon, color: draft.color, status: "active" as const, type: "normal" as const, ownerId: draft.ownerId, startDate: draft.startDate, dueDate: draft.dueDate || undefined };
-  return { name: draft.name, description: draft.description, icon: draft.icon, status: "locked" as const, category: draft.category as TlozInventoryCategory, ownerId: draft.ownerId || undefined };
+  return { name: draft.name, description: draft.description, icon: draft.icon, color: draft.color, status: "locked" as const, category: draft.category as TlozInventoryCategory, ownerId: draft.ownerId || undefined };
 }
 
 export function splitCreateIds(value?: string) {

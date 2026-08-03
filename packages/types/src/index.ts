@@ -132,6 +132,7 @@ export type TlozQuestItem = {
   description: string;
   descriptionDetail: string;
   icon: string;
+  color: string;
   status: TlozInventoryStatus;
   category: TlozInventoryCategory;
   ownerId?: string;
@@ -330,6 +331,7 @@ export type ContainerDefinition = {
     required?: boolean;
     visible?: boolean;
     defaultValue?: ContainerContentData;
+    options?: TlozFieldOption[];
   }>;
   views: Array<{
     id: string;

@@ -140,6 +140,7 @@ export async function POST(request: NextRequest) {
         description: input.summary,
         descriptionDetail: input.body,
         icon: stringProperty(input.properties, "icon") ?? "PackageOpen",
+        color: stringProperty(input.properties, "color") ?? "#2D6CDF",
         status: status as Parameters<typeof dataClient.tloz.createQuestItem>[0]["status"],
         category: category as Parameters<typeof dataClient.tloz.createQuestItem>[0]["category"],
         ownerId: requestedOwnerId,

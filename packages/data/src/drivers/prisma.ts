@@ -267,6 +267,7 @@ function mapQuestItem(item: {
   description: string;
   descriptionDetail: string;
   icon: string;
+  color: string;
   status: string;
   category: string;
   ownerId: string | null;

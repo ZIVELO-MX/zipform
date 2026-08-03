@@ -101,7 +101,7 @@ export type TlozMissionUpdateInput = Partial<
 };
 
 export type TlozProjectUpdateInput = Partial<Pick<TlozProject, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "type" | "ownerId" | "startDate" | "dueDate">>;
-export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "status" | "category" | "ownerId" | "acquiredAt">>;
+export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "category" | "ownerId" | "acquiredAt">>;
 
 export type PaginatedResult<T> = {
   data: T[];

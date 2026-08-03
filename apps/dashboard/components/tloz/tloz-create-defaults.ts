@@ -5,7 +5,7 @@ export function initialDraft(kind: TlozCreateKind, ownerId: string, projectId: s
     name: "",
     description: "",
     descriptionDetail: "",
-    icon: kind === "project" ? "FolderKanban" : kind === "inventory" ? "PackageOpen" : "Sword",
+    icon: kind === "project" ? "FolderKanban" : kind === "inventory" ? "PackageOpen" : kind === "library" ? "BookOpen" : kind === "workshop" ? "Lightbulb" : "Sword",
     ownerId,
     projectId,
     type: "side_quest",

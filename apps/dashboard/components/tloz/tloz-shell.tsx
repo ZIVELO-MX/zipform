@@ -3,9 +3,10 @@ import { getTlozMissions, getTlozProjectDocuments, getTlozProjects, getTlozQuest
 import { TlozHeader } from "./tloz-header";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import type { TlozView } from "../../lib/tloz-routes";
-import type { TlozDocument, UserProfile } from "@tloz/types";
+import type { ContainerRecord, TlozDocument, UserProfile } from "@tloz/types";
 import { TlozViewStateProvider } from "./tloz-view-state";
 import { TlozCreateProvider, type TlozCreateKind } from "./tloz-create";
+import type { TlozControlKind } from "./tloz-control-capabilities";
 
 type TlozPageShellProps = {
   title: string;
@@ -22,7 +23,10 @@ type TlozPageShellProps = {
   defaultView?: TlozView;
   stateScope?: string;
   controlProjectId?: string;
+  controlKind?: TlozControlKind;
+  controlCreate?: React.ReactNode | false;
   createKind?: TlozCreateKind;
+  canonicalContainer?: ContainerRecord;
   documentNavigation?: {
     documents: TlozDocument[];
     users: UserProfile[];
@@ -43,7 +47,10 @@ export async function TlozPageShell({
   defaultView = "dashboard",
   stateScope,
   controlProjectId,
+  controlKind,
+  controlCreate,
   createKind = "mission",
+  canonicalContainer,
   documentNavigation,
   children
 }: TlozPageShellProps) {
@@ -66,13 +73,13 @@ export async function TlozPageShell({
   );
 
   return (
-    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={createKind === "mission" ? controlProjectId : undefined}>
+    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={createKind === "mission" ? controlProjectId : undefined} canonicalContainer={canonicalContainer}>
     <TlozViewStateProvider
       supportedViews={supportedViews}
       defaultView={defaultView}
       projects={controlProjects}
       users={users}
-      controlKind={createKind}
+      controlKind={controlKind ?? (createKind === "workshop" ? "project" : createKind === "library" ? "inventory" : createKind)}
       fixedProject={Boolean(controlProjectId)}
       storageScope={stateScope}
     >
@@ -85,6 +92,7 @@ export async function TlozPageShell({
           showSearch={showSearch}
           showHeader={showHeader}
           showControls={showControls}
+          controlCreate={controlCreate}
           commandEntities={{
             missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type, href: mission.project ? missionHref(mission.project, mission.displayId) : "/" })),
             projects: documentNavigation
