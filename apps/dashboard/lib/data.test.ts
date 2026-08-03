@@ -45,12 +45,13 @@ describe("getCurrentUser", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.getUsers.mockResolvedValue([authenticatedUser]);
-    mocks.getUserByEmail.mockResolvedValue(authenticatedUser);
+    mocks.getUserByEmail.mockResolvedValue(null);
     mocks.getCurrent.mockResolvedValue(fallbackUser);
   });
 
   it("returns the user matching the normalized session email", async () => {
     mocks.auth.mockResolvedValue({ user: { email: " USER@EXAMPLE.COM " } });
+    mocks.getUserByEmail.mockResolvedValue(authenticatedUser);
 
     await expect(getCurrentUser()).resolves.toEqual(authenticatedUser);
     expect(mocks.getCurrent).not.toHaveBeenCalled();
