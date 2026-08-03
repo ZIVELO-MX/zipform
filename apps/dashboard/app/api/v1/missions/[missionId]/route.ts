@@ -3,6 +3,7 @@ import { dataClient } from "@tloz/data";
 import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation, isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
+import { observedJson } from "../../../../../lib/read-telemetry";
 
 const VALID_MISSION_FIELDS = new Set([
   "title", "description", "descriptionDetail", "icon", "type", "status",
@@ -13,6 +14,7 @@ const VALID_MISSION_FIELDS = new Set([
 const VALID_STATUSES: TlozMissionStatus[] = ["now", "next", "later", "completed", "blocked"];
 
 export async function GET(_request: Request, { params }: { params: Promise<{ missionId: string }> }) {
+  const startedAt = performance.now();
   const auth = await authenticateRequest(_request as Parameters<typeof authenticateRequest>[0]);
   if (auth instanceof Response) return auth;
 
@@ -33,7 +35,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ mis
         { status: 404 }
       );
     }
-    return NextResponse.json({ data: isReadOnlyAgent(auth.user) ? toPublicMissionOwner(detail) : detail });
+    return observedJson({
+      request: _request,
+      actorId: auth.user.id,
+      operation: "missions.detail",
+      payload: { data: isReadOnlyAgent(auth.user) ? toPublicMissionOwner(detail) : detail },
+      startedAt,
+    });
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },

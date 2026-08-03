@@ -3,21 +3,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../lib/authorization";
 import { errorResponse, handleContainerContentError, readData, resolveContainer } from "../../../../lib/container-content-api";
-
-function page<T extends { id: string }>(records: T[], cursor: string | null, limit: number) {
-  const start = cursor ? Math.max(records.findIndex((item) => item.id === cursor) + 1, 0) : 0;
-  const data = records.slice(start, start + limit);
-  return { data, nextCursor: start + data.length < records.length ? data.at(-1)?.id ?? null : null };
-}
+import { observedJson } from "../../../../lib/read-telemetry";
 
 export async function GET(request: NextRequest) {
+  const startedAt = performance.now();
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
   const limit = Number(request.nextUrl.searchParams.get("limit") ?? "25");
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) return errorResponse("INVALID_REQUEST", "limit debe ser un entero entre 1 y 100.", 400);
   try {
-    const records = await dataClient.containerContent.listContainers({ presentation: request.nextUrl.searchParams.get("presentation") ?? undefined });
-    return NextResponse.json(page(records, request.nextUrl.searchParams.get("cursor"), limit));
+    const result = await dataClient.containerContent.findContainers(
+      { presentation: request.nextUrl.searchParams.get("presentation") ?? undefined },
+      { limit, cursor: request.nextUrl.searchParams.get("cursor") ?? undefined },
+    );
+    return observedJson({ request, actorId: auth.user.id, operation: "containers.list", payload: result, startedAt });
   } catch (error) { return handleContainerContentError(error); }
 }
 

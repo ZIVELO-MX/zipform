@@ -20,14 +20,14 @@ export async function authorizeMissionOperation(actor: Actor, missionId: string,
 }
 
 export async function authorizeProjectOperation(actor: Actor, projectId: string, operation: TlozOperation = "update"): Promise<EntityAuthorization<TlozProject>> {
-  const project = (await dataClient.tloz.getProjects()).find((candidate) => candidate.id === projectId);
+  const project = await dataClient.tloz.getProject(projectId);
   if (!project) return { allowed: false, response: notFoundResponse("Proyecto no encontrado.") };
   const response = authorizeApiOperation(actor, operation, { ownerId: project.ownerId });
   return response ? { allowed: false, response } : { allowed: true, entity: project };
 }
 
 export async function authorizeQuestItemOperation(actor: Actor, questItemId: string, operation: TlozOperation = "update"): Promise<EntityAuthorization<TlozQuestItem>> {
-  const questItem = (await dataClient.tloz.getQuestItems()).find((candidate) => candidate.id === questItemId);
+  const questItem = await dataClient.tloz.getQuestItem(questItemId);
   if (!questItem) return { allowed: false, response: notFoundResponse("Quest item no encontrado.") };
   const response = authorizeApiOperation(actor, operation, { ownerId: questItem.ownerId });
   return response ? { allowed: false, response } : { allowed: true, entity: questItem };

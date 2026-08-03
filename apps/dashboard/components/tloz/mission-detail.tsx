@@ -9,6 +9,7 @@ import type { TlozAttachmentGroup, TlozDocument, TlozDocumentUpdate, TlozFieldOp
 import {
   addMissionDependency,
   addMissionResource,
+  getMissionResourcePreviewUrl,
   removeMissionDependency,
   removeMissionQuestItem,
   removeMissionResource,
@@ -534,14 +535,35 @@ function MissionAttachmentGroupReference({ groupKey, resources, onRemove }: { gr
 
 function ResourceReference({ resource, previewSlides, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; onRemove: () => void }) {
   const [open, setOpen] = useState(false);
+  const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const isGithub = isGithubUrl(resource.url);
-  const previewUrl = resolveResourceImageUrl(resource);
-  const isPreviewable = Boolean(previewUrl);
+  const previewUrl = resolvedPreviewUrl ?? resolveResourceImageUrl(resource);
+  const isPreviewable = Boolean(previewUrl) || Boolean(resource.missionId && resource.groupKey && resource.type === "image");
+  const slides = previewUrl
+    ? [{ id: resource.id, src: previewUrl, alt: resource.title, title: resource.title }]
+    : previewSlides;
   const ResourceIcon = resolveResourceIcon(resource);
   const content = <><span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-3"><ResourceIcon aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-sm font-semibold">{resource.title}</p><p className="m-0 truncate text-xs text-carbon/45">{resourceTypeLabel[resource.type]}{resource.fileId && !previewUrl ? ` · ${resource.fileId}` : ""}</p></div></>;
-  const primary = isPreviewable ? <button ref={triggerRef} type="button" className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" onClick={() => setOpen(true)} aria-label={`Previsualizar ${resource.title}`}>{content}</button> : resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>;
-  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{primary}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}<IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} />{isPreviewable ? <ResourcePreview slides={previewSlides} open={open} onClose={() => setOpen(false)} index={Math.max(previewSlides.findIndex((slide) => slide.id === resource.id), 0)} triggerRef={triggerRef} /> : null}</div>;
+  async function openPreview() {
+    if (previewUrl) {
+      setOpen(true);
+      return;
+    }
+    if (!resource.missionId) return;
+    setLoadingPreview(true);
+    try {
+      setResolvedPreviewUrl(await getMissionResourcePreviewUrl(resource.missionId, resource.id));
+      setOpen(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo abrir la captura.");
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+  const primary = isPreviewable ? <button ref={triggerRef} type="button" disabled={loadingPreview} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" onClick={() => void openPreview()} aria-label={`Previsualizar ${resource.title}`}>{content}</button> : resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>;
+  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{primary}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}<IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} />{isPreviewable ? <ResourcePreview slides={slides} open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} /> : null}</div>;
 }
 
 function OpenReferenceButton({ label, href, onOpen, className }: { label: string; href: string; onOpen?: () => void; className?: string }) {

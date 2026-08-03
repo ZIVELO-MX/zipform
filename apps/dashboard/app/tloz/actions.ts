@@ -30,7 +30,7 @@ import {
   toPublicMissionOwner,
   toPublicUserProfile,
 } from "../../lib/authorization";
-import { getTlozMissionDetailWithAttachments } from "../../lib/tloz-data";
+import { getTlozAttachmentStorage } from "../../lib/tloz-attachment-storage";
 
 const revalidateTloz = () => revalidatePath("/", "layout");
 
@@ -51,7 +51,7 @@ async function authorizeMission(missionId: string, operation: TlozOperation = "u
 
 async function authorizeProject(projectId: string, operation: TlozOperation = "update") {
   const actor = await authenticatedActor();
-  const project = (await dataClient.tloz.getProjects()).find((candidate) => candidate.id === projectId);
+  const project = await dataClient.tloz.getProject(projectId);
   if (!project) throw new Error("Proyecto no encontrado.");
   assertTlozOperation(actor, operation, { ownerId: project.ownerId });
   return { actor, project };
@@ -59,7 +59,7 @@ async function authorizeProject(projectId: string, operation: TlozOperation = "u
 
 async function authorizeQuestItem(itemId: string, operation: TlozOperation = "update") {
   const actor = await authenticatedActor();
-  const item = (await dataClient.tloz.getQuestItems()).find((candidate) => candidate.id === itemId);
+  const item = await dataClient.tloz.getQuestItem(itemId);
   if (!item) throw new Error("Quest item no encontrado.");
   assertTlozOperation(actor, operation, { ownerId: item.ownerId });
   return { actor, item };
@@ -213,7 +213,7 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
 
 export async function getMissionDetail(missionId: string) {
   const actor = await authenticatedActor();
-  const mission = await getTlozMissionDetailWithAttachments(missionId);
+  const mission = await dataClient.tloz.getMissionDetail(missionId);
   return mission && isReadOnlyAgent(actor) ? toPublicMissionOwner(mission) : mission;
 }
 
@@ -249,6 +249,56 @@ export async function getMissionDocumentOptions(missionId: string) {
     document,
     contract: project?.contract?.fields ?? [],
   };
+}
+
+export async function getMissionPanelData(missionId: string, includeOptions = true) {
+  const [actor, mission, document] = await Promise.all([
+    authenticatedActor(),
+    dataClient.tloz.getMissionDetail(missionId),
+    dataClient.canonicalDocuments.get(missionId),
+  ]);
+  if (!mission) throw new Error("Misión no encontrada.");
+
+  const [projectDocument, options] = await Promise.all([
+    document?.parentId ? dataClient.canonicalDocuments.get(document.parentId) : Promise.resolve(null),
+    includeOptions
+      ? Promise.all([
+          dataClient.tloz.getMissions({ projectId: mission.projectId }),
+          dataClient.tloz.getProjects(),
+          dataClient.tloz.getQuestItems(),
+          dataClient.tloz.getUsers(),
+        ])
+      : Promise.resolve(null),
+  ]);
+  const publicMission = isReadOnlyAgent(actor) ? toPublicMissionOwner(mission) : mission;
+  return {
+    mission: publicMission,
+    capabilities: {
+      canUpdate: authorizeTlozOperation(actor, "update", { ownerId: mission.ownerId }).allowed,
+      canMove: authorizeTlozOperation(actor, "move", { ownerId: mission.ownerId }).allowed,
+    },
+    document: document?.kind === "mission" ? document : null,
+    contract: projectDocument?.contract?.fields ?? [],
+    options: options
+      ? {
+          missions: isReadOnlyAgent(actor) ? options[0].map(toPublicMissionOwner) : options[0],
+          projects: options[1],
+          questItems: options[2],
+          users: isReadOnlyAgent(actor) ? options[3].map(toPublicUserProfile) : options[3],
+        }
+      : null,
+  };
+}
+
+export async function getMissionResourcePreviewUrl(missionId: string, resourceId: string) {
+  const { mission } = await authorizeMission(missionId, "read");
+  const resource = mission.resources.find((candidate) => candidate.id === resourceId);
+  if (!resource) throw new Error("Recurso no encontrado.");
+  if (resource.url) return resource.url;
+  const groups = await dataClient.tloz.getAttachmentGroups(mission.id);
+  const attachment = groups.flatMap((group) => group.attachments).find((candidate) => candidate.id === resourceId);
+  if (!attachment?.storagePath) throw new Error("La captura no está disponible.");
+  return getTlozAttachmentStorage().createSignedRead(attachment.storagePath, 3600);
 }
 
 export async function getDocumentDetailOptions(documentId: string) {
@@ -310,8 +360,10 @@ export async function updateDocumentBody(
 
 export async function getEntityResources(kind: "project" | "inventory", entityId: string) {
   await authenticatedActor();
-  const resources = await dataClient.tloz.getResources();
-  return resources.filter((resource) => kind === "project" ? resource.projectId === entityId : resource.questItemId === entityId);
+  return (await dataClient.tloz.findResources(
+    kind === "project" ? { projectId: entityId } : { questItemId: entityId },
+    { limit: 100 },
+  )).data;
 }
 
 export async function getTlozDetailUsers() {
@@ -349,7 +401,7 @@ export async function updateProject(projectId: string, input: TlozProjectUpdateI
     return value;
   }
   await mutateDocument(document.id, projectDocumentUpdate(input), document.revision);
-  const value = (await dataClient.tloz.getProjects()).find((project) => project.id === projectId);
+  const value = await dataClient.tloz.getProject(projectId);
   if (!value) throw new Error("Proyecto no encontrado.");
   revalidateTloz();
   return value;
@@ -364,7 +416,7 @@ export async function updateQuestItem(itemId: string, input: TlozQuestItemUpdate
     return value;
   }
   await mutateDocument(document.id, inventoryDocumentUpdate(input), document.revision);
-  const value = (await dataClient.tloz.getQuestItems()).find((item) => item.id === itemId);
+  const value = await dataClient.tloz.getQuestItem(itemId);
   if (!value) throw new Error("Quest item no encontrado.");
   revalidateTloz();
   return value;
@@ -453,8 +505,8 @@ export async function addProjectResource(projectId: string, input: TlozResourceI
 
 export async function removeProjectResource(projectId: string, resourceId: string) {
   await authorizeProject(projectId);
-  const belongsToProject = (await dataClient.tloz.getResources())
-    .some((resource) => resource.id === resourceId && resource.projectId === projectId);
+  const resource = await dataClient.tloz.getResource(resourceId);
+  const belongsToProject = resource?.projectId === projectId;
   if (!belongsToProject) throw new Error("Recurso no encontrado.");
   const value = await dataClient.tloz.removeProjectResource(projectId, resourceId);
   revalidateTloz();
@@ -470,8 +522,8 @@ export async function addQuestItemResource(itemId: string, input: TlozResourceIn
 
 export async function removeQuestItemResource(itemId: string, resourceId: string) {
   await authorizeQuestItem(itemId);
-  const belongsToItem = (await dataClient.tloz.getResources())
-    .some((resource) => resource.id === resourceId && resource.questItemId === itemId);
+  const resource = await dataClient.tloz.getResource(resourceId);
+  const belongsToItem = resource?.questItemId === itemId;
   if (!belongsToItem) throw new Error("Recurso no encontrado.");
   const value = await dataClient.tloz.removeQuestItemResource(itemId, resourceId);
   revalidateTloz();

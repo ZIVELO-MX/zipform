@@ -45,7 +45,8 @@ The installer places it in `${HOME}/.local/bin/tloz-api`. If that directory is n
 3. Call `GET /api/v1/users/me` and resolve the authenticated user before discovering work.
 4. If the user supplied a mission `displayId`, resolve that exact mission. Ownership priority must never replace an explicit identifier.
 5. If the user asked to choose or suggest work without a mission identifier:
-   - Query `GET /api/v1/missions?ownerId={authenticatedUserId}&limit=100` first; include `projectId` when the user constrained the project.
+   - Query `GET /api/v1/missions?ownerId={authenticatedUserId}&limit=25` first; include `projectId` when the user constrained the project and follow `nextCursor` only when more results are required.
+   - When several known mission IDs are needed, prefer `POST /api/v1/missions/batch` (maximum 8) over repeated detail requests.
    - Consider assigned missions in status order `now`, `next`, then `later`. Exclude `completed` and `blocked` unless the user explicitly requests them.
    - Prefer a mission with clear pending outcomes and no unresolved dependencies. Read its complete detail before selecting it.
    - Only search other owners as a fallback. Do not implement another owner's primary deliverable until reassignment is explicitly authorized and verified.

@@ -37,8 +37,20 @@ const globalForPrisma = globalThis as typeof globalThis & {
   tlozPrisma?: PrismaClient;
 };
 
+export function databaseUrlWithApplicationName(databaseUrl: string, environment = process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "local") {
+  const url = new URL(databaseUrl);
+  if (!url.searchParams.has("application_name")) {
+    const revision = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7);
+    url.searchParams.set("application_name", ["zipform", environment, revision].filter(Boolean).join(":"));
+  }
+  return url.toString();
+}
+
 export function getPrismaClient() {
-  globalForPrisma.tlozPrisma ??= new PrismaClient();
+  const databaseUrl = process.env.DATABASE_URL;
+  globalForPrisma.tlozPrisma ??= databaseUrl
+    ? new PrismaClient({ datasources: { db: { url: databaseUrlWithApplicationName(databaseUrl) } } })
+    : new PrismaClient();
   return globalForPrisma.tlozPrisma;
 }
 
@@ -434,46 +446,93 @@ async function getCurrentUser(prisma = getPrismaClient()): Promise<UserProfile> 
   return mapUser(fallbackUser);
 }
 
-async function loadTlozDataSet(prisma = getPrismaClient()): Promise<TlozDataSet> {
-  const [
-    users,
-    seasons,
-    episodes,
-    projects,
-    missions,
-    missionDependencies,
-    questItems,
-    missionQuestItems,
-    checklistItems,
-    resources,
-    userMissionStates
-  ] = await Promise.all([
-    prisma.user.findMany({ orderBy: { id: "asc" } }),
-    prisma.tlozSeason.findMany({ orderBy: { startDate: "asc" } }),
-    prisma.tlozEpisode.findMany({ orderBy: { startDate: "asc" } }),
-    prisma.tlozProject.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.tlozMission.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.tlozMissionDependency.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.tlozQuestItem.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.tlozMissionQuestItem.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.tlozChecklistItem.findMany({ orderBy: [{ missionId: "asc" }, { position: "asc" }] }),
-    prisma.tlozResource.findMany({ orderBy: { createdAt: "asc" } }),
-    prisma.tlozUserMissionState.findMany({ orderBy: { createdAt: "asc" } })
+type MissionRow = Parameters<typeof mapMission>[0];
+
+async function loadScopedMissionDataSet(
+  prisma: PrismaClient,
+  baseMissions: MissionRow[],
+  includeDetail = false,
+): Promise<TlozDataSet> {
+  const baseIds = baseMissions.map((mission) => mission.id);
+  if (baseIds.length === 0) {
+    return {
+      users: [], seasons: [], episodes: [], projects: [], missions: [],
+      missionDependencies: [], questItems: [], missionQuestItems: [],
+      checklistItems: [], resources: [], userMissionStates: [],
+    };
+  }
+
+  const [dependencyRows, missionQuestItemRows, checklistRows, resourceRows] = await Promise.all([
+    prisma.tlozMissionDependency.findMany({
+      where: { OR: [{ missionId: { in: baseIds } }, { dependsOnMissionId: { in: baseIds } }] },
+      orderBy: { createdAt: "asc" },
+    }),
+    prisma.tlozMissionQuestItem.findMany({
+      where: { missionId: { in: baseIds } },
+      orderBy: { createdAt: "asc" },
+    }),
+    includeDetail
+      ? prisma.tlozChecklistItem.findMany({
+          where: { missionId: { in: baseIds } },
+          orderBy: [{ missionId: "asc" }, { position: "asc" }],
+        })
+      : Promise.resolve([]),
+    includeDetail
+      ? prisma.tlozResource.findMany({
+          where: { missionId: { in: baseIds } },
+          orderBy: { createdAt: "asc" },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const relatedMissionIds = [...new Set(dependencyRows.flatMap((dependency) => [
+    dependency.missionId,
+    dependency.dependsOnMissionId,
+  ]).filter((id) => !baseIds.includes(id)))];
+  const relatedMissions = relatedMissionIds.length
+    ? await prisma.tlozMission.findMany({ where: { id: { in: relatedMissionIds } }, orderBy: { createdAt: "asc" } })
+    : [];
+  const allMissions = [...baseMissions, ...relatedMissions];
+  const ownerIds = [...new Set(allMissions.map((mission) => mission.ownerId))];
+  const projectIds = [...new Set(allMissions.flatMap((mission) => mission.projectId ? [mission.projectId] : []))];
+  const seasonIds = [...new Set(allMissions.flatMap((mission) => mission.seasonId ? [mission.seasonId] : []))];
+  const episodeIds = [...new Set(allMissions.flatMap((mission) => mission.episodeId ? [mission.episodeId] : []))];
+  const questItemIds = [...new Set(missionQuestItemRows.map((item) => item.questItemId))];
+
+  const [userRows, projectRows, seasonRows, episodeRows, questItemRows] = await Promise.all([
+    prisma.user.findMany({ where: { id: { in: ownerIds } }, orderBy: { id: "asc" } }),
+    prisma.tlozProject.findMany({ where: { id: { in: projectIds } }, orderBy: { createdAt: "asc" } }),
+    prisma.tlozSeason.findMany({ where: { id: { in: seasonIds } }, orderBy: { startDate: "asc" } }),
+    prisma.tlozEpisode.findMany({ where: { id: { in: episodeIds } }, orderBy: { startDate: "asc" } }),
+    prisma.tlozQuestItem.findMany({ where: { id: { in: questItemIds } }, orderBy: { createdAt: "asc" } }),
   ]);
 
   return {
-    users: users.map(mapUser),
-    seasons: seasons.map(mapSeason),
-    episodes: episodes.map(mapEpisode),
-    projects: projects.map(mapProject),
-    missions: missions.map(mapMission),
-    missionDependencies: missionDependencies.map(mapDependency),
-    questItems: questItems.map(mapQuestItem),
-    missionQuestItems: missionQuestItems.map(mapMissionQuestItem),
-    checklistItems: checklistItems.map(mapChecklistItem),
-    resources: resources.map(mapResource),
-    userMissionStates: userMissionStates.map(mapUserMissionState)
+    users: userRows.map(mapUser),
+    seasons: seasonRows.map(mapSeason),
+    episodes: episodeRows.map(mapEpisode),
+    projects: projectRows.map(mapProject),
+    missions: allMissions.map(mapMission),
+    missionDependencies: dependencyRows.map(mapDependency),
+    questItems: questItemRows.map(mapQuestItem),
+    missionQuestItems: missionQuestItemRows.map(mapMissionQuestItem),
+    checklistItems: checklistRows.map(mapChecklistItem),
+    resources: resourceRows.map(mapResource),
+    userMissionStates: [],
   };
+}
+
+async function getScopedMissionDetail(prisma: PrismaClient, reference: string) {
+  const mission = await prisma.tlozMission.findFirst({
+    where: {
+      OR: [
+        { id: reference },
+        { displayId: { equals: reference, mode: "insensitive" } },
+      ],
+    },
+  });
+  if (!mission) return null;
+  return buildTlozMissionDetail(await loadScopedMissionDataSet(prisma, [mission], true), mission.id);
 }
 
 export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient()): TlozDataClient {
@@ -481,7 +540,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
   const legacyDocuments = createPrismaDocumentRepository(prisma);
   const canonicalDocuments = createContainerContentDocumentRepository(containerContentStore);
   const getHydratedMission = async (missionId: string) => {
-    const mission = hydrateMissions(await loadTlozDataSet(prisma)).find((item) => item.id === missionId);
+    const mission = await getScopedMissionDetail(prisma, missionId);
     if (!mission) throw new Error(`TLOZ mission ${missionId} was not found`);
     return mission;
   };
@@ -559,7 +618,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         await prisma.apiKey.delete({ where: { id: keyId } });
       },
       async authenticateWithApiKey(key: string) {
-        const rows = await prisma.apiKey.findMany();
+        const rows = await prisma.apiKey.findMany({ where: { keyPrefix: key.slice(0, 12) } });
         for (const row of rows) {
           if (verifyApiKey(key, row.keyHash)) {
             await prisma.apiKey.update({
@@ -575,19 +634,46 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
     },
     tloz: {
       async getDashboardSummary() {
-        const [currentUser, tlozData] = await Promise.all([getCurrentUser(prisma), loadTlozDataSet(prisma)]);
+        const [currentUser, missionRows, projectRows, questItemRows, stateRows] = await Promise.all([
+          getCurrentUser(prisma),
+          prisma.tlozMission.findMany({ orderBy: { createdAt: "asc" } }),
+          prisma.tlozProject.findMany({ orderBy: { createdAt: "asc" } }),
+          prisma.tlozQuestItem.findMany({ orderBy: { createdAt: "asc" } }),
+          prisma.tlozUserMissionState.findMany({ orderBy: { createdAt: "asc" } }),
+        ]);
+        const tlozData = await loadScopedMissionDataSet(prisma, missionRows);
+        tlozData.projects = projectRows.map(mapProject);
+        tlozData.questItems = questItemRows.map(mapQuestItem);
+        tlozData.userMissionStates = stateRows.map(mapUserMissionState);
         return buildTlozDashboardSummary(tlozData, currentUser.id);
       },
       async getMissions(filters = {}) {
-        return hydrateMissions(await loadTlozDataSet(prisma)).filter((mission) =>
-          (!filters.projectId || mission.projectId === filters.projectId) &&
-          (!filters.seasonId || mission.seasonId === filters.seasonId) &&
-          (!filters.episodeId || mission.episodeId === filters.episodeId) &&
-          (!filters.ownerId || mission.ownerId === filters.ownerId)
-        );
+        const rows = await prisma.tlozMission.findMany({
+          where: {
+            projectId: filters.projectId,
+            seasonId: filters.seasonId,
+            episodeId: filters.episodeId,
+            ownerId: filters.ownerId,
+            status: filters.status,
+            ...(filters.title ? { title: { contains: filters.title, mode: "insensitive" } } : {}),
+          },
+          orderBy: { createdAt: "asc" },
+        });
+        return hydrateMissions(await loadScopedMissionDataSet(prisma, rows))
+          .filter((mission) => rows.some((row) => row.id === mission.id));
       },
       async getMissionDetail(missionId) {
-        return buildTlozMissionDetail(await loadTlozDataSet(prisma), missionId);
+        return getScopedMissionDetail(prisma, missionId);
+      },
+      async getMissionDetails(missionIds) {
+        if (missionIds.length === 0) return [];
+        const displayIds = missionIds.map((id) => id.toUpperCase());
+        const rows = await prisma.tlozMission.findMany({
+          where: { OR: [{ id: { in: missionIds } }, { displayId: { in: displayIds } }] },
+          orderBy: { createdAt: "asc" },
+        });
+        const data = await loadScopedMissionDataSet(prisma, rows, true);
+        return missionIds.map((reference) => buildTlozMissionDetail(data, reference));
       },
       async findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>> {
         const limit = Math.min(pagination?.limit ?? 25, 100);
@@ -621,23 +707,26 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       },
       async findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>> {
         const limit = Math.min(pagination?.limit ?? 25, 100);
-        const hydrated = hydrateMissions(await loadTlozDataSet(prisma));
-        const filtered = hydrated.filter((mission) =>
-          (!filters?.projectId || mission.projectId === filters.projectId) &&
-          (!filters?.seasonId || mission.seasonId === filters.seasonId) &&
-          (!filters?.episodeId || mission.episodeId === filters.episodeId) &&
-          (!filters?.ownerId || mission.ownerId === filters.ownerId) &&
-          (!filters?.status || mission.status === filters.status) &&
-          (!filters?.title || mission.title.toLowerCase().includes(filters.title.toLowerCase()))
-        );
-        const cursorIndex = pagination?.cursor
-          ? filtered.findIndex((mission) => mission.id === pagination.cursor)
-          : -1;
-        const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
-        const data = filtered.slice(start, start + limit);
+        const rows = await prisma.tlozMission.findMany({
+          where: {
+            projectId: filters?.projectId,
+            seasonId: filters?.seasonId,
+            episodeId: filters?.episodeId,
+            ownerId: filters?.ownerId,
+            status: filters?.status,
+            ...(filters?.title ? { title: { contains: filters.title, mode: "insensitive" } } : {}),
+          },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
+        const pageRows = rows.slice(0, limit);
+        const pageIds = new Set(pageRows.map((row) => row.id));
+        const data = hydrateMissions(await loadScopedMissionDataSet(prisma, pageRows))
+          .filter((mission) => pageIds.has(mission.id));
         return {
           data,
-          nextCursor: start + data.length < filtered.length ? data.at(-1)?.id ?? null : null,
+          nextCursor: rows.length > limit ? pageRows.at(-1)?.id ?? null : null,
         };
       },
       async findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>> {
@@ -677,6 +766,10 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const rows = await prisma.tlozProject.findMany({ orderBy: { createdAt: "asc" } });
         return rows.map(mapProject);
       },
+      async getProject(projectId) {
+        const row = await prisma.tlozProject.findUnique({ where: { id: projectId } });
+        return row ? mapProject(row) : null;
+      },
       async getSeasons() {
         const rows = await prisma.tlozSeason.findMany({ orderBy: { startDate: "asc" } });
         return rows.map(mapSeason);
@@ -689,13 +782,25 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const rows = await prisma.tlozQuestItem.findMany({ orderBy: { createdAt: "asc" } });
         return rows.map(mapQuestItem);
       },
+      async getQuestItem(questItemId) {
+        const row = await prisma.tlozQuestItem.findUnique({ where: { id: questItemId } });
+        return row ? mapQuestItem(row) : null;
+      },
       async getResources() {
         const rows = await prisma.tlozResource.findMany({ orderBy: { createdAt: "asc" } });
         return rows.map(mapResource);
       },
+      async getResource(resourceId) {
+        const row = await prisma.tlozResource.findUnique({ where: { id: resourceId } });
+        return row ? mapResource(row) : null;
+      },
       async getUsers() {
         const rows = await prisma.user.findMany({ orderBy: { name: "asc" } });
         return rows.map(mapUser);
+      },
+      async getUserByEmail(email) {
+        const row = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+        return row ? mapUser(row) : null;
       },
       async updateUserRole(userId: string, role: UserRole) {
         const row = await prisma.user.update({ where: { id: userId }, data: { role, updatedAt: new Date() } });
