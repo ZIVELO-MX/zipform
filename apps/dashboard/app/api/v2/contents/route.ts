@@ -3,14 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../lib/authorization";
 import { errorResponse, handleContainerContentError, readData, resolveContainer } from "../../../../lib/container-content-api";
-
-function page<T extends { id: string }>(records: T[], cursor: string | null, limit: number) {
-  const start = cursor ? Math.max(records.findIndex((item) => item.id === cursor) + 1, 0) : 0;
-  const data = records.slice(start, start + limit);
-  return { data, nextCursor: start + data.length < records.length ? data.at(-1)?.id ?? null : null };
-}
+import { observedJson } from "../../../../lib/read-telemetry";
 
 export async function GET(request: NextRequest) {
+  const startedAt = performance.now();
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
   const limit = Number(request.nextUrl.searchParams.get("limit") ?? "25");
@@ -22,12 +18,12 @@ export async function GET(request: NextRequest) {
       try { dataFilters = readData(JSON.parse(rawData)); }
       catch (error) { if (error instanceof ContainerContentError) throw error; throw new ContainerContentError("STORE_INVALID", "data no contiene JSON válido.", { data: "invalid" }); }
     }
-    const records = await dataClient.containerContent.listContents({
+    const result = await dataClient.containerContent.findContents({
       containerId: request.nextUrl.searchParams.get("containerId") ?? undefined,
       presentation: request.nextUrl.searchParams.get("presentation") ?? undefined,
       data: dataFilters as never,
-    });
-    return NextResponse.json(page(records, request.nextUrl.searchParams.get("cursor"), limit));
+    }, { limit, cursor: request.nextUrl.searchParams.get("cursor") ?? undefined });
+    return observedJson({ request, actorId: auth.user.id, operation: "contents.list", payload: result, startedAt });
   } catch (error) { return handleContainerContentError(error); }
 }
 

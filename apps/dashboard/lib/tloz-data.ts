@@ -52,13 +52,11 @@ export const getTlozDocumentDefinition = cache((
 ) => dataClient.canonicalDocuments.getDefinition(definitionKey));
 
 export const getCanonicalContainer = cache(async (publicId: string) => (
-  await dataClient.containerContent.getContainer(publicId)
-    ?? (await dataClient.containerContent.listContainers()).find((container) => container.publicId === publicId)
+  await dataClient.containerContent.getContainer(publicId) ?? undefined
 ));
 
 export const getCanonicalContents = cache((containerId: string) => dataClient.containerContent.listContents({ containerId }));
 export const getCanonicalContent = cache(async (reference: string) => (
-  await dataClient.containerContent.getContent(reference)
-    ?? (await dataClient.containerContent.listContents()).find((content) => content.publicId === reference)
+  dataClient.containerContent.getContent(reference)
 ));
 export type { ContainerRecord, ContentRecord };

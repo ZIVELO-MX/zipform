@@ -3,6 +3,7 @@ import { performance } from "node:perf_hooks";
 const DEFAULT_BASE_URL = "http://127.0.0.1:3100";
 const DEFAULT_SAMPLES = 30;
 const DEFAULT_CONCURRENCY = 8;
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
 export class ApiLoadError extends Error {
   constructor(message, { cause, url, status } = {}) {
@@ -17,6 +18,18 @@ export function percentile(values, rank = 0.95) {
   if (!values.length) throw new ApiLoadError("No se recopilaron muestras de latencia");
   const sorted = [...values].sort((a, b) => a - b);
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * rank) - 1)];
+}
+
+export function assertLoopbackUrl(baseUrl) {
+  let url;
+  try {
+    url = new URL(baseUrl);
+  } catch (cause) {
+    throw new ApiLoadError(`URL inválida para benchmark: ${baseUrl}`, { cause, url: baseUrl });
+  }
+  if (!LOOPBACK_HOSTS.has(url.hostname)) {
+    throw new ApiLoadError(`El benchmark solo puede ejecutarse contra loopback; se rechazó ${url.origin}`, { url: url.toString() });
+  }
 }
 
 function headers(token) {
@@ -109,6 +122,7 @@ export async function benchmarkApi({
   concurrency = DEFAULT_CONCURRENCY,
   fetchImpl = fetch,
 } = {}) {
+  assertLoopbackUrl(baseUrl);
   const endpoints = await discoverWorkload(baseUrl, token, fetchImpl);
   const results = [];
   for (const endpoint of endpoints) {

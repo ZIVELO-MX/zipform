@@ -155,6 +155,9 @@ export function createMockDataClient(): TlozDataClient {
       async getMissionDetail(missionId) {
         return buildTlozMissionDetail(tlozData, missionId);
       },
+      async getMissionDetails(missionIds) {
+        return missionIds.map((missionId) => buildTlozMissionDetail(tlozData, missionId));
+      },
       async findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>> {
         let data = [...tlozData.users];
         if (filters?.email) data = data.filter((u) => u.email.toLowerCase() === filters.email!.toLowerCase());
@@ -195,6 +198,9 @@ export function createMockDataClient(): TlozDataClient {
       async getProjects() {
         return tlozData.projects;
       },
+      async getProject(projectId) {
+        return tlozData.projects.find((project) => project.id === projectId) ?? null;
+      },
       async getSeasons() {
         return seasons;
       },
@@ -204,11 +210,20 @@ export function createMockDataClient(): TlozDataClient {
       async getQuestItems() {
         return tlozData.questItems;
       },
+      async getQuestItem(questItemId) {
+        return tlozData.questItems.find((item) => item.id === questItemId) ?? null;
+      },
       async getResources() {
         return tlozData.resources;
       },
+      async getResource(resourceId) {
+        return tlozData.resources.find((resource) => resource.id === resourceId) ?? null;
+      },
       async getUsers() {
         return tlozData.users;
+      },
+      async getUserByEmail(email) {
+        return tlozData.users.find((user) => user.email.toLowerCase() === email.trim().toLowerCase()) ?? null;
       },
       async updateUserRole(userId: string, role: UserRole) {
         const user = tlozData.users.find((candidate) => candidate.id === userId);

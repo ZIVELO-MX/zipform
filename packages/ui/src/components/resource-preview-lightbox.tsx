@@ -58,7 +58,7 @@ export function ResourcePreviewLightbox({
       zoom={{ maxZoomPixelRatio: 3, scrollToZoom: true }}
       carousel={{
         finite: slides.length <= 1,
-        preload: 2,
+        preload: 1,
         imageFit: "contain",
       }}
       controller={{ aria: true }}

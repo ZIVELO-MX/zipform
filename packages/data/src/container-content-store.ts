@@ -39,6 +39,9 @@ export type ContainerFilters = {
   presentation?: string;
 };
 
+export type StorePagination = { limit?: number; cursor?: string };
+export type StorePage<T> = { data: T[]; nextCursor: string | null };
+
 export type ContainerCreateInput = Omit<ContainerRecord, "id" | "revision" | "createdAt" | "updatedAt"> & {
   id?: string;
 };
@@ -68,6 +71,8 @@ export interface ContainerContentStore {
   getContent(id: string): Promise<ContentRecord | null>;
   listContainers(filters?: ContainerFilters): Promise<ContainerRecord[]>;
   listContents(filters?: ContentFilters): Promise<ContentRecord[]>;
+  findContainers(filters?: ContainerFilters, pagination?: StorePagination): Promise<StorePage<ContainerRecord>>;
+  findContents(filters?: ContentFilters, pagination?: StorePagination): Promise<StorePage<ContentRecord>>;
   updateContainer(id: string, update: Partial<Pick<ContainerRecord, "slug" | "presentation" | "title" | "summary" | "body" | "definition" | "data">>, expectedRevision: number): Promise<ContainerRecord>;
   updateContent(
     id: string,

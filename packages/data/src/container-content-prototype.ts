@@ -108,6 +108,8 @@ export interface ContainerContentStore {
   getContent(id: string): Promise<ContentRecord | null>;
   listContainers(filters?: { presentation?: string }): Promise<ContainerRecord[]>;
   listContents(filters?: ContentFilters): Promise<ContentRecord[]>;
+  findContainers(filters?: { presentation?: string }, pagination?: { limit?: number; cursor?: string }): Promise<{ data: ContainerRecord[]; nextCursor: string | null }>;
+  findContents(filters?: ContentFilters, pagination?: { limit?: number; cursor?: string }): Promise<{ data: ContentRecord[]; nextCursor: string | null }>;
   updateContainer(id: string, update: Partial<Pick<ContainerRecord, "slug" | "presentation" | "title" | "summary" | "body" | "definition" | "data">>, expectedRevision: number): Promise<ContainerRecord>;
   updateContent(id: string, update: ContentUpdate, expectedRevision: number): Promise<ContentRecord>;
   deleteContainer(id: string, expectedRevision: number): Promise<void>;
@@ -239,7 +241,8 @@ implements ContainerContentStore {
 
   async getContainer(id: string): Promise<ContainerRecord | null> {
     this.assertAvailable();
-    const row = this.containers.get(id);
+    const row = this.containers.get(id) ?? [...this.containers.values()]
+      .find((candidate) => this.shape.decodeContainer(candidate).publicId === id);
     return row ? clone(this.shape.decodeContainer(row)) : null;
   }
 
@@ -252,9 +255,15 @@ implements ContainerContentStore {
       .map(clone);
   }
 
+  async findContainers(filters: { presentation?: string } = {}, pagination: { limit?: number; cursor?: string } = {}) {
+    const records = await this.listContainers(filters);
+    return page(records, pagination);
+  }
+
   async getContent(id: string): Promise<ContentRecord | null> {
     this.assertAvailable();
-    const row = this.contents.get(id);
+    const row = this.contents.get(id) ?? [...this.contents.values()]
+      .find((candidate) => this.shape.decodeContent(candidate).publicId === id);
     return row ? clone(this.shape.decodeContent(row)) : null;
   }
 
@@ -272,6 +281,11 @@ implements ContainerContentStore {
         || left.id.localeCompare(right.id)
       ))
       .map(clone);
+  }
+
+  async findContents(filters: ContentFilters = {}, pagination: { limit?: number; cursor?: string } = {}) {
+    const records = await this.listContents(filters);
+    return page(records, pagination);
   }
 
   async updateContent(
@@ -564,6 +578,14 @@ function sortValue(value: unknown): unknown {
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, child]) => [key, sortValue(child)]),
   );
+}
+
+function page<T extends { id: string }>(records: T[], pagination: { limit?: number; cursor?: string }) {
+  const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
+  const cursorIndex = pagination.cursor ? records.findIndex((record) => record.id === pagination.cursor) : -1;
+  const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+  const data = records.slice(start, start + limit);
+  return { data, nextCursor: start + data.length < records.length ? data.at(-1)?.id ?? null : null };
 }
 
 function clone<T>(value: T): T {

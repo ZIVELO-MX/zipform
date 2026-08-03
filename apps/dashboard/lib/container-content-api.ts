@@ -41,15 +41,11 @@ export function handleContainerContentError(error: unknown) {
 }
 
 export async function resolveContainer(store: ContainerContentStore, reference: string) {
-  const direct = await store.getContainer(reference);
-  if (direct) return direct;
-  return (await store.listContainers()).find((item) => item.publicId === reference) ?? null;
+  return store.getContainer(reference);
 }
 
 export async function resolveContent(store: ContainerContentStore, reference: string) {
-  const direct = await store.getContent(reference);
-  if (direct) return direct;
-  return (await store.listContents()).find((item) => item.publicId === reference) ?? null;
+  return store.getContent(reference);
 }
 
 export function readData(value: unknown): Record<string, ContainerContentData> {

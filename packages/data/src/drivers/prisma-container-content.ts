@@ -250,7 +250,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
 
     async getContainer(id) {
       try {
-        const row = await prisma.container.findUnique({ where: { id } });
+        const row = await prisma.container.findFirst({ where: { OR: [{ id }, { publicId: id }] } });
         return row ? mapContainer(row) : null;
       } catch (error) {
         return translatePrismaError(error);
@@ -259,7 +259,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
 
     async getContent(id) {
       try {
-        const row = await prisma.content.findUnique({ where: { id } });
+        const row = await prisma.content.findFirst({ where: { OR: [{ id }, { publicId: id }] } });
         return row ? mapContent(row) : null;
       } catch (error) {
         return translatePrismaError(error);
@@ -288,6 +288,46 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
           orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
         });
         return rows.map(mapContent);
+      } catch (error) {
+        return translatePrismaError(error);
+      }
+    },
+
+    async findContainers(filters = {}, pagination = {}) {
+      try {
+        const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
+        const rows = await prisma.container.findMany({
+          where: { presentation: filters.presentation },
+          orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
+        const data = rows.slice(0, limit).map(mapContainer);
+        return { data, nextCursor: rows.length > limit ? data.at(-1)?.id ?? null : null };
+      } catch (error) {
+        return translatePrismaError(error);
+      }
+    },
+
+    async findContents(filters: ContentFilters = {}, pagination = {}) {
+      try {
+        const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
+        const rows = await prisma.content.findMany({
+          where: {
+            containerId: filters.containerId,
+            presentation: filters.presentation,
+            ...(filters.data ? {
+              AND: Object.entries(filters.data).map(([key, value]) => ({
+                data: { path: [key], equals: toJson(value) },
+              })),
+            } : {}),
+          },
+          orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
+        const data = rows.slice(0, limit).map(mapContent);
+        return { data, nextCursor: rows.length > limit ? data.at(-1)?.id ?? null : null };
       } catch (error) {
         return translatePrismaError(error);
       }
