@@ -1,12 +1,12 @@
 "use client";
 
-import type { TlozResource, TlozDocument, TlozDocumentScalar, TlozDocumentUpdate, TlozFieldDefinition, TlozDocumentPresentationField, ContainerRecord, ContentRecord, UserProfile } from "@tloz/types";
+import type { TlozResource, TlozDocumentScalar, TlozDocumentUpdate, TlozFieldDefinition, TlozDocumentPresentationField, ContainerRecord, ContentRecord, UserProfile } from "@tloz/types";
 import type { TlozResourceInput } from "@tloz/data";
 import { useMemo, useState } from "react";
 import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 import { documentToDetailMission } from "./document-view-renderer";
 import { resolveDocumentDetailPropertyProjection } from "./document-view-model";
-import { apiErrorMessage, canonicalCompletionDate, canonicalContentIcon, canonicalContentHref } from "./container-content-view-model";
+import { apiErrorMessage, canonicalCompletionDate, canonicalContentDocument, canonicalContentHref } from "./container-content-view-model";
 
 /** Canonical content detail deliberately delegates to the same MissionDetail used by Project and Inventory. */
 export function ContainerContentDetail({
@@ -23,7 +23,7 @@ export function ContainerContentDetail({
   variant?: "panel" | "full";
 }) {
   const [content, setContent] = useState(initialContent);
-  const document = useMemo(() => toDocument(content, container), [content, container]);
+  const document = useMemo(() => canonicalContentDocument(content, container), [content, container]);
   const definition = useMemo(() => toDefinition(container), [container]);
   const mission = useMemo(() => documentToDetailMission(document, users, resourcesFrom(content)), [document, users, content]);
   const options = useMemo<MissionDetailOptions>(() => ({
@@ -55,7 +55,7 @@ export function ContainerContentDetail({
     const updated = (payload as { data: ContentRecord }).data;
     setContent(updated);
     onChange?.(updated);
-    return documentToDetailMission(toDocument(updated, container), users, resourcesFrom(updated));
+    return documentToDetailMission(canonicalContentDocument(updated, container), users, resourcesFrom(updated));
   }
 
   async function updateResources(update: (resources: TlozResource[]) => TlozResource[]) {
@@ -78,33 +78,6 @@ export function ContainerContentDetail({
       variant={variant}
     />
   );
-}
-
-function toDocument(content: ContentRecord, container: ContainerRecord): TlozDocument {
-  const kind = content.presentation === "workshop" ? "project" : content.presentation === "library" ? "inventory" : "mission";
-  const raw = scalarProperties(content.data);
-  const properties = kind === "project"
-    ? { ...raw, owner: raw.owner ?? raw.ownerId, start: raw.start ?? raw.startDate, due: raw.due ?? raw.dueDate }
-    : kind === "inventory"
-      ? { ...raw, assignee: raw.assignee ?? raw.ownerId, acquired: raw.acquired ?? raw.acquiredAt }
-      : raw;
-  properties.icon ??= canonicalContentIcon(content.presentation, content.data);
-  return {
-    id: content.id,
-    publicId: content.publicId,
-    kind,
-    parentId: container.id,
-    parentPublicId: container.publicId,
-    projectSlug: container.slug,
-    title: content.title,
-    summary: content.summary,
-    body: content.body,
-    revision: content.revision,
-    properties,
-    source: { type: kind, id: content.id },
-    createdAt: content.createdAt,
-    updatedAt: content.updatedAt,
-  };
 }
 
 function toDefinition(container: ContainerRecord) {
@@ -135,12 +108,6 @@ function toContractField(field: TlozDocumentPresentationField): TlozFieldDefinit
   const type = field.format === "status" ? "select" : field.format === "person" ? "person" : field.format === "date" ? "date" : field.format === "number" ? "number" : "text";
   return { id: field.key, key: field.key, label: field.label, type, required: false, visible: field.visible, position: field.position, options: field.options ?? [] };
 }
-
-function scalarProperties(data: ContentRecord["data"]): Record<string, TlozDocumentScalar> {
-  return Object.fromEntries(Object.entries(data).flatMap(([key, value]) => isScalar(value) ? [[key, value]] : []));
-}
-
-function isScalar(value: unknown): value is TlozDocumentScalar { return value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean" || (Array.isArray(value) && value.every((item) => typeof item === "string")); }
 
 function dataForUpdate(content: ContentRecord, input: TlozDocumentUpdate) {
   const data = { ...content.data };

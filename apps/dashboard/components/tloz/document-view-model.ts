@@ -157,7 +157,11 @@ export function documentToMissionView(
   const owner = users.find((candidate) => candidate.id === ownerId) ?? { ...unassignedUser, id: ownerId };
   const tone = stringProperty(document, "color") ?? (document.kind === "project" ? "#D72228" : "#7A5A12");
   const icon = stringProperty(document, "icon") ?? (document.kind === "project" ? "FolderKanban" : "PackageOpen");
-  const containerName = document.kind === "project" ? "Projects" : "Inventory";
+  const containerName = document.projectSlug === "workshop"
+    ? "Workshop"
+    : document.projectSlug === "library"
+      ? "Library"
+      : document.kind === "project" ? "Projects" : "Inventory";
   const containerId = document.parentId ?? `${document.kind}-container`;
 
   return {

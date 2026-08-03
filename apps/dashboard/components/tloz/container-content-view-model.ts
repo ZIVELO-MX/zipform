@@ -1,4 +1,4 @@
-import type { ContainerContentData, ContainerDefinition, ContainerRecord, ContentRecord } from "@tloz/types";
+import type { ContainerContentData, ContainerDefinition, ContainerRecord, ContentRecord, TlozDocument, TlozDocumentKind, TlozDocumentScalar } from "@tloz/types";
 import type { TlozView } from "../../lib/tloz-routes";
 import type { TlozControlKind } from "./tloz-control-capabilities";
 import type { TlozUiState } from "./tloz-view-state";
@@ -74,6 +74,37 @@ export function canonicalContentHref(presentation: string, publicId: string) {
 export function canonicalCompletionDate(presentation: string, status: string, today = new Date().toISOString().slice(0, 10)) {
   if (presentation !== "library") return undefined;
   return status === "unlocked" ? today : null;
+}
+
+export function canonicalContentDocument(content: ContentRecord, container: ContainerRecord): TlozDocument {
+  const kind: TlozDocumentKind = content.presentation === "workshop" ? "project" : content.presentation === "library" ? "inventory" : "mission";
+  const raw = Object.fromEntries(Object.entries(content.data).flatMap(([key, value]) => (
+    value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean" || (Array.isArray(value) && value.every((item) => typeof item === "string"))
+      ? [[key, value as TlozDocumentScalar]]
+      : []
+  )));
+  const properties = kind === "project"
+    ? { ...raw, owner: raw.owner ?? raw.ownerId, start: raw.start ?? raw.startDate, due: raw.due ?? raw.dueDate }
+    : kind === "inventory"
+      ? { ...raw, assignee: raw.assignee ?? raw.ownerId, acquired: raw.acquired ?? raw.acquiredAt }
+      : raw;
+  properties.icon ??= canonicalContentIcon(content.presentation, content.data);
+  return {
+    id: content.id,
+    publicId: content.publicId,
+    kind,
+    parentId: container.id,
+    parentPublicId: container.publicId,
+    projectSlug: container.slug,
+    title: content.title,
+    summary: content.summary,
+    body: content.body,
+    revision: content.revision,
+    properties,
+    source: { type: kind, id: content.id },
+    createdAt: content.createdAt,
+    updatedAt: content.updatedAt,
+  };
 }
 
 export function createContentPayload(

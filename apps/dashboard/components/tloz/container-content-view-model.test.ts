@@ -3,6 +3,7 @@ import type { ContainerRecord, ContentRecord } from "@tloz/types";
 import {
   apiErrorMessage,
   canonicalCollectionFields,
+  canonicalContentDocument,
   canonicalContentHref,
   canonicalContentIcon,
   canonicalCompletionDate,
@@ -11,6 +12,7 @@ import {
   createContentPayload,
   filterAndSortContents,
 } from "./container-content-view-model";
+import { documentToMissionView } from "./document-view-model";
 
 const definition = {
   fields: [
@@ -121,5 +123,14 @@ describe("canonical Container/Content view model", () => {
     });
     expect(apiErrorMessage({ error: { message: "No autorizado." } }, "Fallback")).toBe("No autorizado.");
     expect(apiErrorMessage(null, "Fallback")).toBe("Fallback");
+  });
+
+  it("adapts canonical records for the shared Project/Inventory table renderer", () => {
+    const document = canonicalContentDocument(contents[0], container);
+    const record = documentToMissionView(document, [{ id: "user-2", name: "Ada", username: "ada", email: "", role: "", type: "human", avatarUrl: "", theme: "system" }]);
+    expect(document.kind).toBe("project");
+    expect(record.project?.name).toBe("Workshop");
+    expect(record.presentation?.typeLabel).toBe("Project");
+    expect(record.icon).toBe("Lightbulb");
   });
 });
