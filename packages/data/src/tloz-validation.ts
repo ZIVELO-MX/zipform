@@ -49,10 +49,11 @@ export function validateProjectCreate(input: TlozProjectCreateInput) {
 
 export function validateQuestItemCreate(input: TlozQuestItemCreateInput) {
   const fields: Record<string, string> = {};
-  required(input.name, "name", "El nombre", fields, 2); required(input.icon, "icon", "El icono", fields);
+  required(input.name, "name", "El nombre", fields, 2); required(input.icon, "icon", "El icono", fields); required(input.color, "color", "El color", fields);
+  if (input.color && !/^#[0-9A-F]{6}$/i.test(input.color)) fields.color = "El color debe ser un HEX válido.";
   if (input.description.length > 5000) fields.description = "La descripción no puede superar 5000 caracteres.";
   if (input.status === "unlocked" && !input.acquiredAt) fields.acquiredAt = "Un item desbloqueado necesita fecha de adquisición.";
-  finish(fields); return { ...input, name: input.name.trim(), description: input.description.trim() };
+  finish(fields); return { ...input, name: input.name.trim(), description: input.description.trim(), color: input.color.toUpperCase() };
 }
 
 export const RESERVED_TLOZ_SLUGS = ["api", "inventory", "login", "new", "projects"] as const;

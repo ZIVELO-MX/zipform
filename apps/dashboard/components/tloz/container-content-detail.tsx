@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 import { documentToDetailMission } from "./document-view-renderer";
 import { resolveDocumentDetailPropertyProjection } from "./document-view-model";
-import { apiErrorMessage } from "./container-content-view-model";
+import { apiErrorMessage, canonicalCompletionDate, canonicalContentIcon, canonicalContentHref } from "./container-content-view-model";
 
 /** Canonical content detail deliberately delegates to the same MissionDetail used by Project and Inventory. */
 export function ContainerContentDetail({
@@ -74,6 +74,7 @@ export function ContainerContentDetail({
       documentMutation={mutate}
       onAddResource={async (input: TlozResourceInput) => updateResources((resources) => [...resources, createResource(input, content)])}
       onRemoveResource={async (resourceId: string) => updateResources((resources) => resources.filter((resource) => resource.id !== resourceId))}
+      fullDetailHref={canonicalContentHref(content.presentation, content.publicId)}
       variant={variant}
     />
   );
@@ -87,6 +88,7 @@ function toDocument(content: ContentRecord, container: ContainerRecord): TlozDoc
     : kind === "inventory"
       ? { ...raw, assignee: raw.assignee ?? raw.ownerId, acquired: raw.acquired ?? raw.acquiredAt }
       : raw;
+  properties.icon ??= canonicalContentIcon(content.presentation, content.data);
   return {
     id: content.id,
     publicId: content.publicId,
@@ -146,6 +148,9 @@ function dataForUpdate(content: ContentRecord, input: TlozDocumentUpdate) {
   for (const [key, value] of Object.entries(input.properties)) {
     const canonical = key === "owner" || key === "assignee" ? "ownerId" : key === "start" ? "startDate" : key === "due" ? "dueDate" : key === "acquired" ? "acquiredAt" : key;
     data[canonical] = value as ContentRecord["data"][string];
+    if (content.presentation === "library" && canonical === "status") {
+      data.acquiredAt = canonicalCompletionDate(content.presentation, String(value)) ?? null;
+    }
   }
   return data;
 }

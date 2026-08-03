@@ -3,7 +3,7 @@ import { getTlozMissions, getTlozProjectDocuments, getTlozProjects, getTlozQuest
 import { TlozHeader } from "./tloz-header";
 import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import type { TlozView } from "../../lib/tloz-routes";
-import type { TlozDocument, UserProfile } from "@tloz/types";
+import type { ContainerRecord, TlozDocument, UserProfile } from "@tloz/types";
 import { TlozViewStateProvider } from "./tloz-view-state";
 import { TlozCreateProvider, type TlozCreateKind } from "./tloz-create";
 import type { TlozControlKind } from "./tloz-control-capabilities";
@@ -26,6 +26,7 @@ type TlozPageShellProps = {
   controlKind?: TlozControlKind;
   controlCreate?: React.ReactNode | false;
   createKind?: TlozCreateKind;
+  canonicalContainer?: ContainerRecord;
   documentNavigation?: {
     documents: TlozDocument[];
     users: UserProfile[];
@@ -49,6 +50,7 @@ export async function TlozPageShell({
   controlKind,
   controlCreate,
   createKind = "mission",
+  canonicalContainer,
   documentNavigation,
   children
 }: TlozPageShellProps) {
@@ -71,13 +73,13 @@ export async function TlozPageShell({
   );
 
   return (
-    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={createKind === "mission" ? controlProjectId : undefined}>
+    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={createKind === "mission" ? controlProjectId : undefined} canonicalContainer={canonicalContainer}>
     <TlozViewStateProvider
       supportedViews={supportedViews}
       defaultView={defaultView}
       projects={controlProjects}
       users={users}
-      controlKind={controlKind ?? createKind}
+      controlKind={controlKind ?? (createKind === "workshop" ? "project" : createKind === "library" ? "inventory" : createKind)}
       fixedProject={Boolean(controlProjectId)}
       storageScope={stateScope}
     >

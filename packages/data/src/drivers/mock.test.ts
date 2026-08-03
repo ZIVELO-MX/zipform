@@ -247,7 +247,7 @@ describe("mock data driver", () => {
     expect(updatedProject.name).toBe("Updated Project");
 
     const qi = await client.tloz.createQuestItem({
-      name: "New Item", description: "", icon: "Key", status: "locked", category: "tool"
+      name: "New Item", description: "", icon: "Key", color: "#2D6CDF", status: "locked", category: "tool"
     });
     expect(qi.name).toBe("New Item");
 

@@ -27,6 +27,7 @@ describe("Workshop and Library system containers", () => {
       "status",
       "category",
       "ownerId",
+      "color",
       "startDate",
       "dueDate",
     ]);
@@ -45,6 +46,7 @@ describe("Workshop and Library system containers", () => {
       "status",
       "category",
       "ownerId",
+      "color",
       "acquiredAt",
     ]);
     expect(LIBRARY_DEFINITION.views).toEqual([

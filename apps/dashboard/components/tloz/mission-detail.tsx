@@ -43,7 +43,7 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
 
 type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "descriptionDetail" | "icon">;
 
-export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onAddResource, onRemoveResource, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
+export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onAddResource, onRemoveResource, onMissionChange, onNavigateMission, onNavigateQuestItem, fullDetailHref: detailHrefOverride, variant = "full" }: {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
   canUpdate?: boolean;
@@ -56,6 +56,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   onMissionChange?: (mission: TlozMissionDetail) => void;
   onNavigateMission?: (missionId: string) => void;
   onNavigateQuestItem?: (questItemId: string) => void;
+  fullDetailHref?: string;
   variant?: "panel" | "full";
 }) {
   const [current, setCurrent] = useState(mission);
@@ -76,7 +77,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
-  const fullDetailHref = resolveFullDetailHref(current, options.document);
+  const fullDetailHref = detailHrefOverride ?? resolveFullDetailHref(current, options.document);
   const projectMissionsHref = options.document?.kind === "project" && current.project
     ? projectHref(current.project)
     : null;

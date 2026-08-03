@@ -132,6 +132,7 @@ export type TlozQuestItem = {
   description: string;
   descriptionDetail: string;
   icon: string;
+  color: string;
   status: TlozInventoryStatus;
   category: TlozInventoryCategory;
   ownerId?: string;

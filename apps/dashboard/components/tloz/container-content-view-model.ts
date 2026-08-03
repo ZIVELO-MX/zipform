@@ -61,6 +61,21 @@ export function canonicalCollectionFields(presentation: string) {
   return ["icon", "publicId", "title", "project", "ownerId", dateField];
 }
 
+export function canonicalContentIcon(presentation: string, data: Record<string, ContainerContentData>) {
+  return typeof data.icon === "string" && data.icon
+    ? data.icon
+    : presentation === "library" ? "BookOpen" : "Lightbulb";
+}
+
+export function canonicalContentHref(presentation: string, publicId: string) {
+  return `/${presentation}/${encodeURIComponent(publicId)}`;
+}
+
+export function canonicalCompletionDate(presentation: string, status: string, today = new Date().toISOString().slice(0, 10)) {
+  if (presentation !== "library") return undefined;
+  return status === "unlocked" ? today : null;
+}
+
 export function createContentPayload(
   container: ContainerRecord,
   title: string,

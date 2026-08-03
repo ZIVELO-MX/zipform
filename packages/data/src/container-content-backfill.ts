@@ -42,6 +42,7 @@ export const WORKSHOP_DEFINITION: ContainerDefinition = {
     },
     { key: "category", label: "Categoría", format: "text", visible: true, defaultValue: "normal" },
     { key: "ownerId", label: "Responsable", format: "person", visible: true },
+    { key: "color", label: "Color", format: "text", visible: true, defaultValue: "#2D6CDF" },
     { key: "startDate", label: "Inicio", format: "date", visible: true },
     { key: "dueDate", label: "Vence", format: "date", visible: true },
   ],
@@ -81,7 +82,8 @@ export const LIBRARY_DEFINITION: ContainerDefinition = {
       ],
     },
     { key: "ownerId", label: "Responsable", format: "person", visible: true },
-    { key: "acquiredAt", label: "Adquirido", format: "date", visible: true },
+    { key: "color", label: "Color", format: "text", visible: true, defaultValue: "#2D6CDF" },
+    { key: "acquiredAt", label: "Completado", format: "date", visible: true },
   ],
   views: [
     { id: "list", fields: ["icon", "publicId", "title", "project", "ownerId", "acquiredAt"] },

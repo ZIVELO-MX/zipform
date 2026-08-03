@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, Lightbulb } from "lucide-react";
 import { EmptyState, SlideOver, StatusPill, UserAvatarLabel } from "@tloz/ui";
 import type { ContainerDefinition, ContainerRecord, ContentRecord, UserProfile } from "@tloz/types";
 import { useIsMobile } from "../../hooks/use-is-mobile";
@@ -10,9 +9,10 @@ import { EntityList, EntityTable, type EntityColumn } from "./entity-views";
 import { TlozViewHeader } from "./tloz-shell";
 import { useTlozViewState } from "./tloz-view-state";
 import { ContainerContentDetail } from "./container-content-detail";
-import { canonicalCollectionFields, contentValue, filterAndSortContents } from "./container-content-view-model";
+import { canonicalCollectionFields, canonicalContentHref, canonicalContentIcon, contentValue, filterAndSortContents } from "./container-content-view-model";
 import { scalarText } from "./container-content-field";
 import { formatDate } from "./tloz-utils";
+import { resolveMissionIcon } from "./tloz-utils";
 
 export function ContainerContentCollection({
   container,
@@ -41,7 +41,7 @@ export function ContainerContentCollection({
 
   function open(content: ContentRecord) {
     if (isMobile) {
-      router.push(`/${container.presentation}/${encodeURIComponent(content.publicId)}`);
+      router.push(canonicalContentHref(container.presentation, content.publicId));
       return;
     }
     setSelectedId(content.id);
@@ -155,7 +155,7 @@ function columnsFor(container: ContainerRecord, fieldKeys: string[], users: User
   const { definition } = container;
   return fieldKeys.map((key) => ({
     id: key,
-    label: key === "icon" ? "" : key === "title" ? "Nombre" : key === "publicId" ? "ID" : key === "project" ? "Project" : key === "ownerId" ? "Responsable" : "Fecha",
+    label: key === "icon" ? "" : key === "title" ? "Nombre" : key === "publicId" ? "ID" : key === "project" ? "Project" : key === "ownerId" ? "Responsable" : key === "acquiredAt" ? "Completado" : "Fecha",
     render: (content) => <ContentFieldValue content={content} fieldKey={key} definition={definition} users={users} container={container} />,
   }));
 }
@@ -177,7 +177,7 @@ function ContentFieldValue({
   const value = contentValue(content, fieldKey);
   const text = scalarText(value);
   if (fieldKey === "icon") {
-    const Icon = container.presentation === "library" ? BookOpen : Lightbulb;
+    const Icon = resolveMissionIcon(canonicalContentIcon(container.presentation, content.data));
     return <span className="grid size-7 place-items-center rounded-[7px] bg-carbon/5 text-carbon/70 [&_svg]:size-3.5"><Icon aria-hidden="true" /></span>;
   }
   if (fieldKey === "title") return <span className="font-semibold text-carbon">{content.title}</span>;

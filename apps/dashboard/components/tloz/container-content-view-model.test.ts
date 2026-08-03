@@ -3,6 +3,9 @@ import type { ContainerRecord, ContentRecord } from "@tloz/types";
 import {
   apiErrorMessage,
   canonicalCollectionFields,
+  canonicalContentHref,
+  canonicalContentIcon,
+  canonicalCompletionDate,
   canonicalCollectionViews,
   canonicalControlKind,
   createContentPayload,
@@ -91,6 +94,11 @@ describe("canonical Container/Content view model", () => {
     expect(canonicalCollectionFields("library")).toEqual(["icon", "publicId", "title", "project", "ownerId", "acquiredAt"]);
     expect(canonicalControlKind("workshop")).toBe("project");
     expect(canonicalControlKind("library")).toBe("inventory");
+    expect(canonicalContentIcon("workshop", {})).toBe("Lightbulb");
+    expect(canonicalContentIcon("library", { icon: "BookOpen" })).toBe("BookOpen");
+    expect(canonicalContentHref("library", "L-1")).toBe("/library/L-1");
+    expect(canonicalCompletionDate("library", "unlocked", "2026-08-02")).toBe("2026-08-02");
+    expect(canonicalCompletionDate("library", "locked", "2026-08-02")).toBeNull();
   });
 
   it("filters completed and owner values and sorts without mutating the source", () => {

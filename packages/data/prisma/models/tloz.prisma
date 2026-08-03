@@ -114,6 +114,7 @@ model TlozQuestItem {
   description       String
   descriptionDetail String                 @default("")
   icon              String
+  color             String                 @default("#2D6CDF")
   status            String
   category          String                 @default("other")
   ownerId           String?   @db.Uuid
