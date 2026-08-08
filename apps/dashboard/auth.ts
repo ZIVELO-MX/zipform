@@ -1,4 +1,4 @@
-import { getPrismaClient } from "@zipform/data";
+import { getPrismaClient } from "@tloz/data";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { authConfig } from "./auth.config";

@@ -9,14 +9,14 @@ This monorepo enforces a strict separation:
 | Layer | Location | Purpose |
 |-------|----------|---------|
 | **Generic UI primitives** | `packages/ui/src/components/` | shadcn components (button, dialog, tooltip, etc.) and reusable compound components (`app-sidebar.tsx`, `page-layout.tsx`). Framework-agnostic (no app-specific data fetches, no route knowledge). Imported by convention, never by relative path. |
-| **App orchestration** | `apps/*/components/` | Thin wrappers that import from `@zipform/ui` and add app-specific state, data binding, and layout logic (e.g., `app-shell.tsx`). One file per concern. |
+| **App orchestration** | `apps/*/components/` | Thin wrappers that import from `@tloz/ui` and add app-specific state, data binding, and layout logic (e.g., `app-shell.tsx`). One file per concern. |
 | **App pages** | `apps/*/app/` | Route components that compose orchestration and shared UI components. Should not contain significant presentational markup. |
 
 **Rule of thumb**: If a component could be useful in a different project (same visual but different data), it belongs in `packages/ui/`. If it wires a generic component to a specific API, route, or store, it belongs in `apps/*/components/`.
 
 Example — the sidebar flow:
 1. `packages/ui/src/components/app-sidebar.tsx` — defines `DesktopSidebar`, `SidebarLink`, `ProfileDropdown`, `MobileBottomNav`, `MobileMenuPanel` as generic, data-agnostic components.
-2. `apps/dashboard/components/app-shell.tsx` — imports them from `@zipform/ui`, manages `collapsed`/`sidebarWidth` state in `localStorage`, calls `getEnabledApps()` to resolve navigation items, and passes actual `navItems` and `user` data.
+2. `apps/dashboard/components/app-shell.tsx` — imports them from `@tloz/ui`, manages `collapsed`/`sidebarWidth` state in `localStorage`, calls `getEnabledApps()` to resolve navigation items, and passes actual `navItems` and `user` data.
 3. `apps/dashboard/app/layout.tsx` — renders `<AppShell>`.
 
 ## 1. Design tokens
@@ -59,11 +59,11 @@ pnpm dlx shadcn@latest add <component-name> -c packages/ui
 
 ## 5. Consuming UI components in a consumer application
 
-- **Always import from `@zipform/ui`**, never from relative paths into `packages/ui/`.
+- **Always import from `@tloz/ui`**, never from relative paths into `packages/ui/`.
 - Keep orchestration logic (state, effects, localStorage, data fetching) in `apps/*/components/`, not in `packages/ui/`.
-- **localStorage key naming**: Use platform-level keys with the `zipform-` prefix (e.g., `zipform-sidebar-state`, `zipform-sidebar-width`) rather than app-specific prefixes. This ensures persistence survives app renames and is shared across applications.
-- Pages in `apps/*/app/` import from `apps/*/components/` (or directly from `@zipform/ui` for simple cases) and should primarily compose components rather than contain significant presentational markup. Simple pages may remain concise without introducing unnecessary wrappers.
-- If an orchestration wrapper would be trivial, prefer importing directly from `@zipform/ui` in the page.
+- **localStorage key naming**: Use product-level keys with the `tloz-` prefix (e.g., `tloz-sidebar-state`, `tloz-sidebar-width`) so persisted preferences remain explicit and collision-free.
+- Pages in `apps/*/app/` import from `apps/*/components/` (or directly from `@tloz/ui` for simple cases) and should primarily compose components rather than contain significant presentational markup. Simple pages may remain concise without introducing unnecessary wrappers.
+- If an orchestration wrapper would be trivial, prefer importing directly from `@tloz/ui` in the page.
 
 ### Mobile top bar
 
@@ -94,76 +94,24 @@ Motion is considered a first-class design system concern, not an app-specific em
 
 ## 7. TypeScript / exports
 
-- Define component props inline or as exported types. Avoid importing types from `@zipform/types` in the UI package (prefer inline definitions like `NavItem`, `SidebarUser` to keep the package decoupled).
+- Define component props inline or as exported types. Avoid importing types from `@tloz/types` in the UI package (prefer inline definitions like `NavItem`, `SidebarUser` to keep the package decoupled).
 - Re-export all public types from `packages/ui/src/index.ts`.
 - Peer dependencies needed by the UI package (e.g., `next`, `react`, `react-dom`) must be listed in `packages/ui/package.json` under `peerDependencies`.
 
-## 8. Application registration
+## 8. Document navigation
 
-Future applications (e.g., `apps/quotes`, `apps/tloz`, `apps/finance`) should expose metadata for platform-wide discovery and navigation.
+TLOZ is a single document product. The shell exposes the global lobby,
+Projects, Inventory, system views, and Project workspaces; it does not register
+or launch independent applications.
 
-### Convention
-
-Each application exports a registration object from `apps/<name>/app/register.ts`:
-
-```ts
-import type { AppRegistration } from "@zipform/ui";
-
-export const register: AppRegistration = {
-  id: "my-app",
-  name: "My App",
-  icon: "file-text",
-  route: "/my-app",
-};
-```
-
-Where `AppRegistration` is defined in `packages/ui/src/index.ts`:
-
-```ts
-export type AppRegistration = {
-  id: string;
-  name: string;
-  icon: string;
-  route: string;
-};
-```
-
-### Assembly
-
-The platform shell (`apps/shell/components/app-shell.tsx` or equivalent) resolves navigation from registrations:
-
-```ts
-import type { AppRegistration } from "@zipform/ui";
-import { register as quotes } from "@zipform/quotes/app/register";
-
-function getEnabledApps(): NavItem[] {
-  // In the future, this could read dynamically from a registry:
-  // return [quotes, tloz, finance].map(toNavItem);
-  return [
-    { label: "Panel", href: "/", icon: Home },
-    { label: "Cotizaciones", href: "/quotes", icon: FileText },
-  ];
-}
-```
-
-The shell passes the result down to sidebar components:
-
-```tsx
-const navItems = getEnabledApps();
-
-<DesktopSidebar collapsed={collapsed} items={navItems} ... />
-<MobileBottomNav items={navItems} ... />
-<MobileMenuPanel items={navItems} pathname={pathname} ... />
-```
-
-This enables future dashboard navigation, discovery, and module management without hardcoded application definitions.
+Navigation should use the canonical route helpers from
+`apps/dashboard/lib/tloz-routes.ts` so Project and Mission links remain aligned
+with the root route model.
 
 ---
 
 ## 9. Verification
 
-After any UI change:
-
-1. TypeScript: `pnpm --filter <app-name> exec npx tsc --noEmit` — must pass with zero errors.
-2. Build: `pnpm --filter <app-name> build` — must complete successfully.
-3. Check for regressions in collapsed/expanded sidebar states, mobile menu, and dropdown/tooltip animations.
+After any UI change, rely on the pull request pipeline for workspace type
+checking, automated tests, and the production build. Check the relevant
+desktop/mobile document navigation and interaction states in the Preview.

@@ -1,4 +1,4 @@
-import { dataClient } from "@zipform/data";
+import { dataClient } from "@tloz/data";
 import { cache } from "react";
 import { auth } from "../auth";
 
@@ -9,8 +9,7 @@ export const getCurrentUser = cache(async () => {
   const email = session?.user?.email?.trim().toLowerCase();
 
   if (email) {
-    const users = await dataClient.tloz.getUsers();
-    const user = users.find((candidate) => candidate.email.trim().toLowerCase() === email);
+    const user = await dataClient.tloz.getUserByEmail(email);
     if (user) return user;
   }
 

@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   authenticateWithApiKey: vi.fn(),
 }));
 
-vi.mock("@zipform/data", () => ({ dataClient: { tloz: { getUsers: mocks.getUsers, updateUserRole: mocks.updateUserRole }, agent: { authenticateWithApiKey: mocks.authenticateWithApiKey } } }));
+vi.mock("@tloz/data", () => ({ dataClient: { tloz: { getUsers: mocks.getUsers, updateUserRole: mocks.updateUserRole }, agent: { authenticateWithApiKey: mocks.authenticateWithApiKey } } }));
 vi.mock("../../../../../../auth", () => ({ auth: vi.fn().mockResolvedValue(null) }));
 
 import { PATCH } from "./route";

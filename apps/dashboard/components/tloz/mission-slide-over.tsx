@@ -2,13 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { SlideOver } from "@zipform/ui";
+import { SlideOver } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozQuestItem } from "@zipform/types";
-import { getMissionCapabilities, getMissionDetail, getMissionDetailOptions } from "../../app/tloz/actions";
-import { inventoryItemHref } from "../../lib/tloz-routes";
-import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
-import { SystemEntityDetail } from "./system-project-detail";
+import type { TlozQuestItem } from "@tloz/types";
+import { getMissionPanelData } from "../../app/tloz/actions";
+import type { MissionDetailOptions } from "./mission-detail";
+import { DocumentDetail } from "./document-view-renderer";
+import { SystemDocumentDetail } from "./system-project-detail";
 
 type MissionSlideOverProps = {
   mission: TlozMissionRecord | null;
@@ -23,6 +23,7 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
   const [loadedOptions, setLoadedOptions] = useState<MissionDetailOptions | null>(null);
   const [selectedQuestItem, setSelectedQuestItem] = useState<TlozQuestItem | null>(null);
   const [canUpdate, setCanUpdate] = useState(false);
+  const [canMove, setCanMove] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -30,26 +31,41 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
     setHistory([]);
     setSelectedQuestItem(null);
     setCanUpdate(false);
-    if (mission) Promise.all([getMissionDetail(mission.id), editorOptions ? Promise.resolve(null) : getMissionDetailOptions(), getMissionCapabilities(mission.id)]).then(([result, options, capabilities]) => {
-      if (active) { setDetail(result); setCanUpdate(capabilities.canUpdate); if (options) setLoadedOptions(options); }
+    setCanMove(false);
+    if (mission) getMissionPanelData(mission.id, !editorOptions).then((result) => {
+      if (active) {
+        setDetail(result.mission);
+        setCanUpdate(result.capabilities.canUpdate);
+        setCanMove(result.capabilities.canMove);
+        setLoadedOptions({
+          projects: editorOptions?.projects ?? result.options?.projects ?? (mission.project ? [mission.project] : []),
+          users: editorOptions?.users ?? result.options?.users ?? [mission.owner],
+          missions: editorOptions?.missions ?? result.options?.missions ?? [mission],
+          questItems: editorOptions?.questItems ?? result.options?.questItems ?? mission.questItems,
+          document: result.document ?? undefined,
+          contract: result.contract,
+        });
+      }
     });
     return () => { active = false; };
-  }, [mission]);
+  }, [mission?.id, Boolean(editorOptions)]);
 
   const options: MissionDetailOptions = {
     projects: editorOptions?.projects ?? loadedOptions?.projects ?? (mission?.project ? [mission.project] : []),
-    seasons: editorOptions?.seasons ?? loadedOptions?.seasons ?? (mission?.season ? [mission.season] : []),
-    episodes: editorOptions?.episodes ?? loadedOptions?.episodes ?? (mission?.episode ? [mission.episode] : []),
     users: editorOptions?.users ?? loadedOptions?.users ?? (mission ? [mission.owner] : []),
     missions: editorOptions?.missions ?? loadedOptions?.missions ?? (mission ? [mission] : []),
     questItems: editorOptions?.questItems ?? loadedOptions?.questItems ?? mission?.questItems ?? [],
+    document: loadedOptions?.document ?? editorOptions?.document,
+    contract: loadedOptions?.contract ?? editorOptions?.contract ?? [],
   };
 
   async function navigateToMission(missionId: string) {
     if (detail) setHistory((items) => [...items, detail]);
     setDetail(null);
-    setDetail(await getMissionDetail(missionId));
-    setCanUpdate((await getMissionCapabilities(missionId)).canUpdate);
+    const result = await getMissionPanelData(missionId, false);
+    setDetail(result.mission);
+    setCanUpdate(result.capabilities.canUpdate);
+    setCanMove(result.capabilities.canMove);
   }
 
   function navigateBack() {
@@ -65,7 +81,7 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
 
   return (
     <SlideOver open={Boolean(mission)} title={selectedQuestItem?.name ?? detail?.title ?? mission?.title ?? "Detalle de Mission"} onBack={selectedQuestItem || history.length ? navigateBack : undefined} onOpenChange={(open) => !open && onClose()}>
-      {selectedQuestItem ? <SystemEntityDetail variant="inventory" entity={selectedQuestItem} missions={options.missions} users={options.users} resources={[]} panel onChange={(entity) => setSelectedQuestItem(entity as TlozQuestItem)} onNavigateMission={(item) => void navigateToMission(item.id)} onOpenFullPage={() => { onClose(); router.push(inventoryItemHref(selectedQuestItem.id)); }} /> : detail ? <div className="min-h-full bg-[#FAFAF9]"><MissionDetail variant="panel" mission={detail} options={options} canUpdate={canUpdate} onNavigateMission={(id) => void navigateToMission(id)} onNavigateQuestItem={(id) => { const item = options.questItems.find((quest) => quest.id === id); if (item) setSelectedQuestItem(item); }} onMissionChange={onMissionChange} /></div> : <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando misión…</div>}
+      {selectedQuestItem ? <SystemDocumentDetail entityId={selectedQuestItem.id} users={options.users} panel /> : detail ? <div className="min-h-full bg-[#FAFAF9]"><DocumentDetail panel mission={detail} options={options} canUpdate={canUpdate} canMove={canMove} onNavigateMission={(id) => void navigateToMission(id)} onNavigateQuestItem={(id) => { const item = options.questItems.find((quest) => quest.id === id); if (item) setSelectedQuestItem(item); }} onMissionChange={onMissionChange} /></div> : <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />Cargando misión…</div>}
     </SlideOver>
   );
 }

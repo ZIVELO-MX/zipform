@@ -1,5 +1,5 @@
 {
-  "name": "@zipform/data",
+  "name": "@tloz/data",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -10,17 +10,26 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "poc:container-content": "node poc/container-content-engine.mjs",
     "db:generate": "prisma generate --schema prisma",
     "db:migrate": "prisma migrate dev --schema prisma",
     "db:migrate:deploy": "prisma migrate deploy --schema prisma",
     "db:seed": "prisma db seed --schema prisma",
     "db:prepare-release-1": "tsx prisma/prepare-release-1.ts",
+    "db:backfill:container-content": "tsx prisma/backfill-container-content.ts",
+    "db:reconcile:container-content": "tsx prisma/backfill-container-content.ts --reconcile",
+    "db:cutover:status": "tsx prisma/cutover-container-content.ts status",
+    "db:cutover:prepare": "tsx prisma/cutover-container-content.ts prepare",
+    "db:cutover:enable": "tsx prisma/cutover-container-content.ts enable",
+    "db:cutover:rollback": "tsx prisma/cutover-container-content.ts rollback",
+    "db:retire:legacy": "tsx prisma/retire-legacy-container-content.ts",
     "db:studio": "prisma studio --schema prisma",
     "check": "pnpm db:generate && pnpm typecheck && pnpm test"
   },
   "dependencies": {
     "@prisma/client": "^6.19.0",
-    "@zipform/types": "workspace:*"
+    "@tloz/types": "workspace:*",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

@@ -1,4 +1,4 @@
-import { Skeleton } from "@zipform/ui";
+import { Skeleton } from "@tloz/ui";
 
 export function TlozLoading() {
   return (

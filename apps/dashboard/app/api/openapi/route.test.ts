@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GET } from "./route";
 
-const url = "https://zipform.test/api/openapi";
+const url = "https://tloz.test/api/openapi";
 
 describe("GET /api/openapi", () => {
   it("returns YAML by default with cache and timing headers", async () => {

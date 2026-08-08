@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dataClient } from "@zipform/data";
-import type { TlozResourceType } from "@zipform/types";
+import { dataClient } from "@tloz/data";
+import type { TlozResourceType } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 
 const VALID_TYPES: TlozResourceType[] = ["link", "document", "image", "file", "note"];

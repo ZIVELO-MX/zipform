@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dataClient } from "@zipform/data";
+import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { isReadOnlyAgent, toPublicUserProfile } from "../../../../../lib/authorization";
 

@@ -140,13 +140,13 @@ export function DesktopSidebar({
         <Link
           href="/"
           className="grid size-10 shrink-0 place-items-center rounded-[12px] bg-zivelo text-lg font-black text-white shadow-[0_12px_24px_rgba(215,34,40,0.25)]"
-          aria-label="Zipform inicio"
+          aria-label="TLOZ inicio"
         >
           Z
         </Link>
         <div className={cn("min-w-0 flex-1 transition-opacity duration-200", collapsed && "pointer-events-none opacity-0")}>
-          <p className="m-0 truncate text-sm font-semibold">Zipform</p>
-          <p className="m-0 truncate text-xs font-normal text-carbon/55">Plataforma Zivelo</p>
+          <p className="m-0 truncate text-sm font-semibold">TLOZ</p>
+          <p className="m-0 truncate text-xs font-normal text-carbon/55">Workspace Zivelo</p>
         </div>
         <Button
           variant="ghost"
@@ -363,7 +363,7 @@ export function MobileMenuPanel({
           <div className="flex items-center gap-3">
             <span className="grid size-10 place-items-center rounded-[12px] bg-zivelo text-lg font-black text-white">Z</span>
             <div>
-              <p className="m-0 text-sm font-semibold">Zipform</p>
+              <p className="m-0 text-sm font-semibold">TLOZ</p>
               <p className="m-0 text-xs font-normal text-carbon/55">Plataforma Zivelo</p>
             </div>
           </div>
@@ -484,7 +484,7 @@ export function ProfileDropdown({ collapsed, user, mobile = false, onSignOut, on
         <AlertDialogHeader>
           <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
           <AlertDialogDescription>
-            Tendrás que volver a identificarte para acceder a Zipform.
+            Tendrás que volver a identificarte para acceder a TLOZ.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

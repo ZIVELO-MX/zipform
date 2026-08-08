@@ -1,4 +1,4 @@
-import type { TlozAttachmentFile } from "@zipform/types";
+import type { TlozAttachmentFile } from "@tloz/types";
 
 export const TLOZ_ATTACHMENTS_BUCKET = process.env.TLOZ_ATTACHMENTS_BUCKET ?? "tloz-attachments";
 export const MAX_ATTACHMENT_BYTES = 6 * 1024 * 1024;

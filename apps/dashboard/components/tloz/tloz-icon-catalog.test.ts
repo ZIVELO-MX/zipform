@@ -3,8 +3,8 @@ import { inferResourceIconId, isGithubUrl, resolveResourceImageUrl, resourceUses
 
 describe("resource icon inference", () => {
   it("recognizes only GitHub hostnames and gives GitHub automatic priority", () => {
-    expect(isGithubUrl("https://github.com/ZIVELO-MX/zipform")).toBe(true);
-    expect(isGithubUrl("https://www.github.com/ZIVELO-MX/zipform")).toBe(true);
+    expect(isGithubUrl("https://github.com/ZIVELO-MX/tloz")).toBe(true);
+    expect(isGithubUrl("https://www.github.com/ZIVELO-MX/tloz")).toBe(true);
     expect(isGithubUrl("https://github.com.evil.test/repo")).toBe(false);
     expect(inferResourceIconId({ type: "document", url: "https://github.com/org/repo" })).toBe("Github");
   });

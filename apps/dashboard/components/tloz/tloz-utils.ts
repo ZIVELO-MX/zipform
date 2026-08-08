@@ -1,45 +1,57 @@
 import { CircleDot, Compass, Flag, Star, type LucideIcon } from "lucide-react";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozMissionStatus, TlozMissionType } from "@zipform/types";
+import type { TlozMissionStatus, TlozMissionType } from "@tloz/types";
 
 export { resolveTlozIcon as resolveMissionIcon } from "./tloz-icon-catalog";
 
-export const missionTypeLabel: Record<TlozMissionType, string> = {
+export const missionTypeLabel = withFallback<Record<TlozMissionType, string>>({
   main_quest: "Main Quest",
   side_quest: "Side Quest",
   farming_quest: "Farming Quest",
   exploration_quest: "Explore"
-};
+}, (key) => key.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()));
 
-export const missionStatusLabel: Record<TlozMissionStatus, string> = {
+export const missionStatusLabel = withFallback<Record<TlozMissionStatus, string>>({
   now: "Now",
   next: "Next",
   later: "Later",
   completed: "Completada",
   blocked: "Bloqueada"
-};
+}, (key) => key.replace(/[_-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()));
 
-export const missionStatusTone: Record<TlozMissionStatus, string> = {
+export const missionStatusTone = withFallback<Record<TlozMissionStatus, string>>({
   now: "#1E8E5A",
   next: "#2D6CDF",
   later: "#7A4ED9",
   blocked: "#B91C22",
   completed: "#D72228"
-};
+}, () => "#6B6B6B");
 
-export const missionTypeTone: Record<TlozMissionType, string> = {
+export const missionTypeTone = withFallback<Record<TlozMissionType, string>>({
   main_quest: "#d72228",
   side_quest: "#2d6cdf",
   farming_quest: "#1e8e5a",
   exploration_quest: "#7a4ed9"
-};
+}, () => "#6B6B6B");
 
-export const missionTypeIcon: Record<TlozMissionType, LucideIcon> = {
+export const missionTypeIcon = withFallback<Record<TlozMissionType, LucideIcon>>({
   main_quest: Star,
   side_quest: Flag,
   farming_quest: CircleDot,
   exploration_quest: Compass,
-};
+}, () => CircleDot);
+
+function withFallback<T extends object>(
+  values: T,
+  fallback: (key: string) => unknown,
+): T {
+  return new Proxy(values, {
+    get(target, property, receiver) {
+      if (typeof property !== "string") return Reflect.get(target, property, receiver);
+      return Reflect.has(target, property) ? Reflect.get(target, property, receiver) : fallback(property);
+    },
+  });
+}
 
 export function resolveIconLabel(icon: string): string {
   if (!icon) return "Unknown";
@@ -69,7 +81,7 @@ export function dependencyLabel(mission: TlozMissionRecord) {
 }
 
 export function pendingDependencyCount(mission: Pick<TlozMissionRecord, "dependencies" | "requiredQuestItems">) {
-  return mission.dependencies.filter((dependency) => dependency.status !== "completed").length
+  return mission.dependencies.filter((dependency) => !dependency.completedAt && dependency.status !== "completed").length
     + mission.requiredQuestItems.filter((item) => item.status !== "unlocked").length;
 }
 

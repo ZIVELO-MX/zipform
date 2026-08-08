@@ -1,22 +1,19 @@
-import type { ApiKey, TlozAttachmentGroup, TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@zipform/types";
+import type { ApiKey, TlozAttachmentGroup, TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@tloz/types";
 import type { TlozAttachmentBatch, TlozAttachmentFileInput, TlozMissionRecord } from "../contracts";
 import { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "../tloz-attachment-errors";
-import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, UserRole, ZipformDataClient } from "../contracts";
+import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, UserRole, TlozDataClient } from "../contracts";
 import type { AgentCreateInput, ApiKeyCreateResult } from "../contracts";
 import {
-  apps,
   avatars,
   checklistItems,
   currentUser,
   episodes,
-  metrics,
   missionDependencies,
   missionQuestItems,
   missions,
   projects,
   questItems,
   resources,
-  roadmap,
   seasons,
   userMissionStates,
   users
@@ -24,8 +21,11 @@ import {
 import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions, parseMarkdownChecklist } from "../tloz-hydration";
 import { assertAcyclicDependency, assertProjectScopedDependency } from "../dependency-rules";
 import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
+import { createMockDocumentRepository } from "./mock-documents";
+import { createJsonbPrototypeStore } from "../container-content-prototype";
+import { createContainerContentDocumentRepository } from "../container-content-document";
 
-export function createMockDataClient(): ZipformDataClient {
+export function createMockDataClient(): TlozDataClient {
   const tlozData = {
     users: [...users],
     seasons: [...seasons],
@@ -40,6 +40,23 @@ export function createMockDataClient(): ZipformDataClient {
     userMissionStates: [...userMissionStates]
   };
   const attachmentBatches: TlozAttachmentBatch[] = [];
+  const containerContentStore = createJsonbPrototypeStore();
+
+  const paginate = <T extends { id: string }>(
+    data: T[],
+    pagination: PaginationInput = {},
+  ): PaginatedResult<T> => {
+    const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
+    const cursorIndex = pagination.cursor
+      ? data.findIndex((item) => item.id === pagination.cursor)
+      : -1;
+    const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+    const page = data.slice(start, start + limit);
+    return {
+      data: page,
+      nextCursor: start + page.length < data.length ? page.at(-1)?.id ?? null : null,
+    };
+  };
 
   const getHydratedMission = (missionId: string) => {
     const mission = hydrateMissions(tlozData).find((item) => item.id === missionId);
@@ -75,7 +92,7 @@ export function createMockDataClient(): ZipformDataClient {
         return apiKeysStore.filter((k) => k.userId === userId);
       },
       async createApiKey(userId: string, name: string, createdByUserId: string) {
-        const rawKey = `zaf_${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
+        const rawKey = `tloz_${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "")}`;
         const keyPrefix = rawKey.slice(0, 12);
         const now = new Date().toISOString();
         const apiKey: ApiKey = {
@@ -103,19 +120,8 @@ export function createMockDataClient(): ZipformDataClient {
   })();
 
   return {
-    apps: {
-      async list() {
-        return apps;
-      },
-      async getById(id) {
-        return apps.find((app) => app.id === id) ?? null;
-      }
-    },
-    roadmap: {
-      async getSnapshot() {
-        return roadmap;
-      }
-    },
+    containerContent: containerContentStore,
+    canonicalDocuments: createContainerContentDocumentRepository(containerContentStore),
     user: {
       async getCurrent() {
         return currentUser;
@@ -128,13 +134,11 @@ export function createMockDataClient(): ZipformDataClient {
       }
     },
     platform: {
-      async getMetrics() {
-        return metrics;
-      },
       async listAvatars() {
         return avatars;
       }
     },
+    documents: createMockDocumentRepository(tlozData),
     agent: agentMethods,
     tloz: {
       async getDashboardSummary() {
@@ -151,21 +155,20 @@ export function createMockDataClient(): ZipformDataClient {
       async getMissionDetail(missionId) {
         return buildTlozMissionDetail(tlozData, missionId);
       },
+      async getMissionDetails(missionIds) {
+        return missionIds.map((missionId) => buildTlozMissionDetail(tlozData, missionId));
+      },
       async findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>> {
         let data = [...tlozData.users];
         if (filters?.email) data = data.filter((u) => u.email.toLowerCase() === filters.email!.toLowerCase());
         if (filters?.username) data = data.filter((u) => u.username === filters.username);
-        const limit = Math.min(pagination?.limit ?? 25, 100);
-        const sliced = data.slice(0, limit);
-        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+        return paginate(data, pagination);
       },
       async findProjects(filters?: ProjectFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozProject>> {
         let data = [...tlozData.projects];
         if (filters?.ownerId) data = data.filter((p) => p.ownerId === filters.ownerId);
         if (filters?.status) data = data.filter((p) => p.status === filters.status);
-        const limit = Math.min(pagination?.limit ?? 25, 100);
-        const sliced = data.slice(0, limit);
-        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+        return paginate(data, pagination);
       },
       async findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>> {
         let data = hydrateMissions(tlozData);
@@ -175,18 +178,14 @@ export function createMockDataClient(): ZipformDataClient {
         if (filters?.ownerId) data = data.filter((m) => m.ownerId === filters.ownerId);
         if (filters?.status) data = data.filter((m) => m.status === filters.status);
         if (filters?.title) data = data.filter((m) => m.title.toLowerCase().includes(filters.title!.toLowerCase()));
-        const limit = Math.min(pagination?.limit ?? 25, 100);
-        const sliced = data.slice(0, limit);
-        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+        return paginate(data, pagination);
       },
       async findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>> {
         let data = [...tlozData.questItems];
         if (filters?.ownerId) data = data.filter((q) => q.ownerId === filters.ownerId);
         if (filters?.status) data = data.filter((q) => q.status === filters.status);
         if (filters?.category) data = data.filter((q) => q.category === filters.category);
-        const limit = Math.min(pagination?.limit ?? 25, 100);
-        const sliced = data.slice(0, limit);
-        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+        return paginate(data, pagination);
       },
       async findResources(filters?: ResourceFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozResource>> {
         let data = [...tlozData.resources];
@@ -194,12 +193,13 @@ export function createMockDataClient(): ZipformDataClient {
         if (filters?.projectId) data = data.filter((r) => r.projectId === filters.projectId);
         if (filters?.questItemId) data = data.filter((r) => r.questItemId === filters.questItemId);
         if (filters?.type) data = data.filter((r) => r.type === filters.type);
-        const limit = Math.min(pagination?.limit ?? 25, 100);
-        const sliced = data.slice(0, limit);
-        return { data: sliced, nextCursor: data.length > limit ? sliced[sliced.length - 1]?.id ?? null : null };
+        return paginate(data, pagination);
       },
       async getProjects() {
         return tlozData.projects;
+      },
+      async getProject(projectId) {
+        return tlozData.projects.find((project) => project.id === projectId) ?? null;
       },
       async getSeasons() {
         return seasons;
@@ -210,11 +210,20 @@ export function createMockDataClient(): ZipformDataClient {
       async getQuestItems() {
         return tlozData.questItems;
       },
+      async getQuestItem(questItemId) {
+        return tlozData.questItems.find((item) => item.id === questItemId) ?? null;
+      },
       async getResources() {
         return tlozData.resources;
       },
+      async getResource(resourceId) {
+        return tlozData.resources.find((resource) => resource.id === resourceId) ?? null;
+      },
       async getUsers() {
         return tlozData.users;
+      },
+      async getUserByEmail(email) {
+        return tlozData.users.find((user) => user.email.toLowerCase() === email.trim().toLowerCase()) ?? null;
       },
       async updateUserRole(userId: string, role: UserRole) {
         const user = tlozData.users.find((candidate) => candidate.id === userId);

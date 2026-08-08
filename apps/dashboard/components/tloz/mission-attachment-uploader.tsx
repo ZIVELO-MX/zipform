@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { FileImage, RefreshCw, Upload } from "lucide-react";
-import { Button, ResourcePreview, type ResourcePreviewSlide } from "@zipform/ui";
-import type { TlozAttachmentGroup, TlozResource } from "@zipform/types";
+import { Button, ResourcePreview, type ResourcePreviewSlide } from "@tloz/ui";
+import type { TlozAttachmentGroup, TlozResource } from "@tloz/types";
 import {
   AttachmentClientError,
   createAttachmentGroupKey,

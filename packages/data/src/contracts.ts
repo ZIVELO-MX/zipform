@@ -1,11 +1,13 @@
 import type {
   ApiKey,
-  AppModule,
   Avatar,
-  PlatformMetric,
-  RoadmapSnapshot,
   TlozChecklistItem,
+  TlozDocument,
+  TlozDocumentDefinition,
+  TlozDocumentKind,
+  TlozDocumentUpdate,
   TlozEpisode,
+  TlozFieldDefinition,
   TlozMission,
   TlozMissionQuestItem,
   TlozProject,
@@ -15,7 +17,8 @@ import type {
   TlozAttachmentGroup,
   TlozSeason,
   UserProfile
-} from "@zipform/types";
+} from "@tloz/types";
+import type { ContainerContentStore } from "./container-content-store";
 
 export type DataDriver = "mock" | "prisma";
 
@@ -98,7 +101,7 @@ export type TlozMissionUpdateInput = Partial<
 };
 
 export type TlozProjectUpdateInput = Partial<Pick<TlozProject, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "type" | "ownerId" | "startDate" | "dueDate">>;
-export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "status" | "category" | "ownerId" | "acquiredAt">>;
+export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "category" | "ownerId" | "acquiredAt">>;
 
 export type PaginatedResult<T> = {
   data: T[];
@@ -142,6 +145,28 @@ export type ResourceFilters = {
   type?: TlozResource["type"];
 };
 
+export type DocumentFilters = {
+  kind?: TlozDocumentKind;
+  projectId?: string;
+  parentId?: string;
+  query?: string;
+  includeSystem?: boolean;
+};
+
+export type DocumentGetOptions = {
+  includeChildren?: boolean;
+  childrenPagination?: PaginationInput;
+};
+
+export type TlozDocumentRepository = {
+  find(filters?: DocumentFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozDocument>>;
+  get(documentId: string, options?: DocumentGetOptions): Promise<TlozDocument | null>;
+  getDefinition(definitionKey: string): Promise<TlozDocumentDefinition | null>;
+  update(documentId: string, input: TlozDocumentUpdate, expectedRevision: number): Promise<TlozDocument>;
+  replaceProjectContract(projectId: string, fields: TlozFieldDefinition[], expectedRevision: number): Promise<TlozDocument>;
+  delete(documentId: string, expectedRevision: number): Promise<void>;
+};
+
 export type TlozDashboardSummary = {
   activeQuest: TlozMissionRecord | null;
   activeSupportQuest: TlozMissionRecord | null;
@@ -158,17 +183,22 @@ export type TlozRepository = {
   getDashboardSummary(): Promise<TlozDashboardSummary>;
   getMissions(filters?: TlozMissionFilters): Promise<TlozMissionRecord[]>;
   getMissionDetail(missionId: string): Promise<TlozMissionDetail | null>;
+  getMissionDetails(missionIds: string[]): Promise<Array<TlozMissionDetail | null>>;
   findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>>;
   findProjects(filters?: ProjectFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozProject>>;
   findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>>;
   findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>>;
   findResources(filters?: ResourceFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozResource>>;
   getProjects(): Promise<TlozProject[]>;
+  getProject(projectId: string): Promise<TlozProject | null>;
   getSeasons(): Promise<TlozSeason[]>;
   getEpisodes(): Promise<TlozEpisode[]>;
   getQuestItems(): Promise<TlozQuestItem[]>;
+  getQuestItem(questItemId: string): Promise<TlozQuestItem | null>;
   getResources(): Promise<TlozResource[]>;
+  getResource(resourceId: string): Promise<TlozResource | null>;
   getUsers(): Promise<UserProfile[]>;
+  getUserByEmail(email: string): Promise<UserProfile | null>;
   updateUserRole(userId: string, role: UserRole): Promise<UserProfile>;
   createProject(input: TlozProjectCreateInput): Promise<TlozProject>;
   createQuestItem(input: TlozQuestItemCreateInput): Promise<TlozQuestItem>;
@@ -209,20 +239,12 @@ export type ApiKeyCreateResult = {
   apiKey: ApiKey;
 };
 
-export type ZipformDataClient = {
-  apps: {
-    list(): Promise<AppModule[]>;
-    getById(id: string): Promise<AppModule | null>;
-  };
-  roadmap: {
-    getSnapshot(): Promise<RoadmapSnapshot>;
-  };
+export type TlozDataClient = {
   user: {
     getCurrent(): Promise<UserProfile>;
     update(userId: string, input: UserUpdateInput): Promise<UserProfile>;
   };
   platform: {
-    getMetrics(): Promise<PlatformMetric[]>;
     listAvatars(): Promise<Avatar[]>;
   };
   agent: {
@@ -233,5 +255,8 @@ export type ZipformDataClient = {
     revokeApiKey(keyId: string): Promise<void>;
     authenticateWithApiKey(key: string): Promise<UserProfile | null>;
   };
+  documents: TlozDocumentRepository;
+  canonicalDocuments: TlozDocumentRepository;
+  containerContent: ContainerContentStore;
   tloz: TlozRepository;
 };

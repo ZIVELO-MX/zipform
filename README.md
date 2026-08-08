@@ -1,97 +1,77 @@
-# Zipform
+# TLOZ
 
-Zipform is an internal software platform used by Zivelo.
+TLOZ is Zivelo's document-based workspace for Projects, Missions, and Inventory.
+The repository contains the product dashboard, shared UI, data repositories,
+Prisma schema, migrations, and the TLOZ Data API.
 
-The platform is composed of independent applications that share a common
-ecosystem: authentication, navigation, design system, and infrastructure.
+## Document model
 
+Every entity is a document with a stable public ID, Markdown body, typed
+properties, revision, and optional Project parent.
+
+The accepted persistence direction reduces the domain to two canonical
+primitives, Container and Content, on Supabase PostgreSQL. See the
+[Container/Content ADR](docs/architecture/container-content-adr.md).
+
+- **Project** describes a body of work and defines the field contract inherited
+  by its Missions.
+- **Mission** belongs to one Project and uses that Project's status, category,
+  and custom field definitions.
+- **Inventory** is stored under the system Project `project-inventory` and keeps
+  only the properties required by its document.
+
+The database is canonical. Markdown with YAML frontmatter is the portable
+import/export and API representation; the product UI remains visual.
+
+```md
+---
+id: TLO-0023
+type: mission
+parent: project-tloz
+status: in-progress
+priority: high
+assignee: execution-agent
+branch: mission-023
+pr: null
 ---
 
-## Applications
+# Mejorar el pipeline de previews
 
-### Quotes
+## Alcance
 
-Generates and manages client quotes. Currently exists as a functional product
-and is being refactored toward stability and long-term maintainability.
+Crear un único preview actualizado para la rama principal.
+```
 
-Target: daily usable by v1.1.
+## Routes
 
-### TLOZ (The Legend of Zivelo)
+- `/` — global lobby
+- `/:projectSlug` — Mission workspace for a Project
+- `/:projectSlug/:missionId` — Mission document
+- `/projects` and `/projects/:projectSlug` — Project collection and contract
+- `/inventory` and `/inventory/:inventoryId` — Inventory collection and document
+- `/api/v2/documents` — JSON/Markdown document API
 
-The strategic foundation of Zipform. Manages projects, tasks, missions,
-and version planning. Currently under active development.
+The previous `/tloz` prefix is no longer an application mount. `/tloz` now
+means the Project whose slug is `tloz`.
 
-The MVP cannot be released without a functional TLOZ.
+## Development
 
----
-
-## Architecture
-
-- Next.js monorepo with shared packages
-- Shared authentication across all applications
-- Shared design system (components, tokens, motion patterns)
-- Shared navigation and dashboard as a unified entry point
-- Applications are independent but ecosystem-aware
-- Future applications can be added with minimal architectural changes
-
-Current workspace:
-
-- `apps/dashboard` - functional Zipform dashboard
-- `packages/data` - async mock data repositories, shaped so a real database
-  driver can replace the mock source later
-- `packages/types` - shared platform types
-
----
-
-## Brand
-
-| Name       | Hex     | Purpose                         |
-| ---------- | ------- | ------------------------------- |
-| Zivelo Red | #D72228 | Primary accent                  |
-| Carbon     | #1D1D1B | Text, headings, dark surfaces   |
-| Off-White  | #FAFAF9 | Primary background              |
-| Warm Stone | #C8B99A | Secondary accents               |
-| Tint Red   | #F5E0E1 | Soft backgrounds and highlights |
-
----
-
-## Current Roadmap Status
-
-See ROADMAP.md for the full NOW / NEXT / LATER breakdown.
-
-|                     |                           |
-| ------------------- | ------------------------- |
-| **Current version** | 1.0.0                     |
-| **Target version**  | 1.1.0                     |
-
----
-
-## Getting Started
-
-Install dependencies and run the dashboard:
-
-```sh
+```bash
 pnpm install
-cp apps/dashboard/.env.example apps/dashboard/.env.local
-# Replace AUTH_SECRET in apps/dashboard/.env.local with the output of:
-openssl rand -base64 32
 pnpm dev
 ```
 
-The dashboard is the Next.js project root, so its local authentication variables
-must be stored in `apps/dashboard/.env.local`. Never commit this file or reuse a
-development `AUTH_SECRET` in production.
+Use `TLOZ_DATA_DRIVER=mock` for the in-memory driver or configure PostgreSQL
+and use `TLOZ_DATA_DRIVER=prisma`. `ZIPFORM_*` environment variables and
+existing `zaf_` API keys are accepted for one compatibility release; new keys
+use the `tloz_` prefix.
 
-Build the dashboard:
+## Verification
 
-```sh
-pnpm build
+```bash
+pnpm check
 ```
 
----
-
-## Contributing
-
-This repository is an internal Zivelo tool. All architectural decisions are
-governed by the Zipform platform roadmap. See IDEA.md for the agent prompt
-policy and planning rules.
+Pull requests run Prisma generation, type checking, tests (including the
+OpenAPI contract), and the production build. Database migrations are additive
+and must never be deleted or rewritten.

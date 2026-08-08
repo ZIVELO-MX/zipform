@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Zipform are documented in this file.
+All notable changes to TLOZ are documented in this file.
 
 ## [1.0.0] - 2026-07-04
 
@@ -14,6 +14,3 @@ All notable changes to Zipform are documented in this file.
 ### Changed
 
 - Established a clean TLOZ baseline with Koda, Fidelity, TLOZ, and Web Corporativa projects.
-- Moved the Quotes integration target to version 1.1.0.
-
-[1.0.0]: https://github.com/ZIVELO-MX/zipform/releases/tag/v1.0.0

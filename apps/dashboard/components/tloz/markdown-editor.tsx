@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@zipform/ui";
+import { Button, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, toast } from "@tloz/ui";
 import { MermaidDiagram } from "./mermaid-diagram";
 import { isMermaidCodeBlock } from "./mermaid-utils";
 
@@ -14,9 +14,10 @@ type MarkdownEditorProps = {
   onToggleTask?: (position: number, completed: boolean) => void;
   placeholder?: string;
   showHeader?: boolean;
+  readOnly?: boolean;
 };
 
-export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true, readOnly = false }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -55,7 +56,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
               <ClipboardCopy className="size-3.5" />
               Copiar
             </DropdownMenuItem>
-            {!editing ? (
+            {!editing && !readOnly ? (
               <DropdownMenuItem onSelect={() => setEditing(true)}>
                 <Edit3 className="size-3.5" />
                 Editar
@@ -92,7 +93,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   );
 }
 
-function MarkdownContent({ children, onToggleTask }: { children: string; onToggleTask?: (position: number, completed: boolean) => void }) {
+export function MarkdownContent({ children, onToggleTask }: { children: string; onToggleTask?: (position: number, completed: boolean) => void }) {
   let taskPosition = 0;
   return (
     <ReactMarkdown

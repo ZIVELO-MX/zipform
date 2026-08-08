@@ -50,7 +50,7 @@ rights over Missions or Quest Items owned by someone else.
 | Change status, including complete or block | Global | Own | Global | Deny |
 | Add or remove dependencies | Global | Own | Global | Deny |
 | Link or unlink Quest Items | Global | Own | Global | Deny |
-| Move to another Project, Season, or Episode | Global | Deny | Global | Deny |
+| Move to another Project | Global | Deny | Global | Deny |
 | Assign or reassign owner | Global | Deny | Global | Deny |
 | Delete Mission | Global | Deny | Global | Deny |
 
@@ -78,9 +78,7 @@ and follows the owning Mission's mutation rule.
 | Edit Quest Item | Global | Own | Global | Deny |
 | Assign Quest Item owner | Global | Deny | Global | Deny |
 | Delete Quest Item, if introduced | Global | Deny | Deny | Deny |
-| Read Seasons and Episodes | Global | Global | Global | Global |
-| Create or edit Seasons and Episodes, if exposed | Global | Deny | Global | Deny |
-| Delete Seasons and Episodes, if introduced | Global | Deny | Deny | Deny |
+| Read legacy Seasons and Episodes through API v1 | Global | Global | Global | Global |
 
 An unowned Quest Item can only be mutated by the Platform Owner or an operative
 agent. Archive operations are reversible edits; hard deletion remains a

@@ -1,8 +1,6 @@
 import type {
-  AppModule,
   Avatar,
   PlatformMetric,
-  RoadmapSnapshot,
   TlozChecklistItem,
   TlozEpisode,
   TlozMission,
@@ -14,142 +12,15 @@ import type {
   TlozSeason,
   TlozUserMissionState,
   UserProfile
-} from "@zipform/types";
+} from "@tloz/types";
 
 export const now = "2026-06-24T16:00:00.000Z";
-
-export const apps: AppModule[] = [
-  {
-    id: "quotes",
-    name: "Quotes",
-    shortName: "Quotes",
-    description:
-      "Quote workflow entry point. The product exists, but this section is a platform placeholder until integration work starts.",
-    href: "/quotes",
-    status: "external",
-    versionTarget: "1.1",
-    owner: "quotes"
-  },
-  {
-    id: "tloz",
-    name: "TLOZ",
-    shortName: "TLOZ",
-    description:
-      "The Legend of Zivelo module for Missions, Inventory, board, list, table, calendar, and Mission detail workflows.",
-    href: "/tloz",
-    status: "enabled",
-    versionTarget: "1.0",
-    owner: "tloz"
-  },
-  {
-    id: "finance",
-    name: "Finance",
-    shortName: "Finance",
-    description: "Future internal finance workflows for the Zipform ecosystem.",
-    href: "/roadmap",
-    status: "planned",
-    owner: "platform"
-  },
-  {
-    id: "security",
-    name: "Security",
-    shortName: "Security",
-    description: "Future internal controls, permissions, and security review surface.",
-    href: "/roadmap",
-    status: "planned",
-    owner: "platform"
-  }
-];
-
-export const roadmap: RoadmapSnapshot = {
-  currentVersion: "1.0",
-  targetVersion: "1.1",
-  now: [
-    {
-      id: "platform-dashboard-shell",
-      lane: "NOW",
-      app: "PLATFORM",
-      label: "Build functional dashboard shell with responsive sidebar"
-    },
-    {
-      id: "platform-mock-data",
-      lane: "NOW",
-      app: "PLATFORM",
-      label: "Create mock data modules that can be replaced by a real DB driver"
-    },
-    {
-      id: "documentation-roadmap",
-      lane: "NOW",
-      app: "DOCUMENTATION",
-      label: "Create ROADMAP.md and keep README synchronized"
-    }
-  ],
-  next: [
-    {
-      id: "auth-foundation",
-      lane: "NEXT",
-      category: "Authentication",
-      app: "AUTH",
-      label: "Enable shared internal authentication"
-    },
-    {
-      id: "quotes-integration",
-      lane: "NEXT",
-      category: "Quotes",
-      app: "QUOTES",
-      label: "Prepare Quotes integration path for daily-use readiness",
-      dependsOn: ["auth-foundation"]
-    },
-    {
-      id: "tloz-platform-support",
-      lane: "NEXT",
-      category: "TLOZ",
-      app: "TLOZ",
-      label: "Replace TLOZ mock repositories with persistence, permissions, and global search",
-      dependsOn: ["auth-foundation"]
-    },
-    {
-      id: "design-system",
-      lane: "NEXT",
-      category: "UI",
-      app: "UI",
-      label: "Extract reusable dashboard components into shared UI primitives"
-    },
-    {
-      id: "deployment-baseline",
-      lane: "NEXT",
-      category: "Infrastructure",
-      app: "PLATFORM",
-      label: "Prepare the dashboard deployment baseline"
-    }
-  ],
-  later: [
-    {
-      id: "finance-app",
-      lane: "LATER",
-      app: "PLATFORM",
-      label: "Add Finance as an internal platform application"
-    },
-    {
-      id: "security-app",
-      lane: "LATER",
-      app: "PLATFORM",
-      label: "Add Security as an internal platform application"
-    },
-    {
-      id: "ui-preview",
-      lane: "LATER",
-      app: "UI",
-      label: "Add UI Preview for shared component validation"
-    }
-  ]
-};
 
 export const currentUser: UserProfile = {
   id: "owner",
   name: "Owner",
   username: "owner",
-  email: "owner@zipform.dev",
+  email: "owner@tloz.dev",
   role: "Platform Owner",
   type: "human",
   avatarUrl: "",
@@ -160,7 +31,7 @@ export const raulUser: UserProfile = {
   id: "developer",
   name: "Developer",
   username: "developer",
-  email: "developer@zipform.dev",
+  email: "developer@tloz.dev",
   role: "Developer",
   type: "human",
   avatarUrl: "",
@@ -171,7 +42,7 @@ export const zibotUser: UserProfile = {
   id: "zibot",
   name: "Zibot",
   username: "zibot",
-  email: "zibot@zipform.dev",
+  email: "zibot@tloz.dev",
   role: "agent:operative",
   type: "agent",
   avatarUrl: "https://pujkknhxrqmeckyiqxte.supabase.co/storage/v1/object/public/PFP/Zibot.jpeg",
@@ -203,8 +74,8 @@ export const agentApiKeys: AgentApiKeySeed[] = [
     userId: "zibot",
     createdByUserId: "owner",
     name: "Zibot default key",
-    keyPrefix: "zaf_zibot_def",
-    rawKey: "zaf_zibot_default_development_key_do_not_use_in_production_0000",
+    keyPrefix: "tloz_zibot_def",
+    rawKey: "tloz_zibot_default_development_key_do_not_use_in_production_0000",
     createdAt: now,
     updatedAt: now
   }
@@ -313,6 +184,7 @@ export const questItems: TlozQuestItem[] = [
     description: "Proveedor de persistencia elegido para reemplazar el driver mock.",
     descriptionDetail: "",
     icon: "Database",
+    color: "#2D6CDF",
     status: "locked",
     category: "tool",
     ownerId: "owner",
@@ -325,6 +197,7 @@ export const questItems: TlozQuestItem[] = [
     description: "Identidad compartida lista para ownership real.",
     descriptionDetail: "",
     icon: "KeyRound",
+    color: "#2D6CDF",
     status: "locked",
     category: "access",
     createdAt: now,
@@ -336,6 +209,7 @@ export const questItems: TlozQuestItem[] = [
     description: "Lenguaje de producto revisado para el equipo.",
     descriptionDetail: "",
     icon: "FileCheck",
+    color: "#2D6CDF",
     status: "unlocked",
     category: "document",
     ownerId: "owner",

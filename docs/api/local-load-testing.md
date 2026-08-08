@@ -10,7 +10,7 @@ pnpm api:local
 pnpm api:local --production 3100
 ```
 
-La API queda en `http://127.0.0.1:3100` y muestra una API key de desarrollo. Esa key solo funciona con `ZIPFORM_DATA_DRIVER=mock` fuera de producción.
+La API queda en `http://127.0.0.1:3100` y muestra una API key de desarrollo. Esa key solo funciona con `TLOZ_DATA_DRIVER=mock` fuera de producción.
 
 ## Benchmark
 
@@ -34,4 +34,4 @@ pnpm tloz:api /api/v1/projects GET
 pnpm tloz:api /api/v1/missions/<id>/status PATCH --data-file /tmp/status.json
 ```
 
-El wrapper fija `https://zipform.zivelo.dev`, toma `ZIPFORM_TOKEN` del entorno y no lo imprime. Úsalo para datos actuales y verificaciones de misiones; el servidor local no es evidencia de producción.
+El wrapper fija `https://zipform.zivelo.dev`, toma `TLOZ_TOKEN` del entorno y no lo imprime. `ZIPFORM_TOKEN` se acepta durante una versión de compatibilidad. Úsalo para datos actuales y verificaciones de misiones; el servidor local no es evidencia de producción.

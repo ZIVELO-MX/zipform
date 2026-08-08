@@ -42,8 +42,8 @@ import {
   UserPicker,
   cn,
   toast,
-} from "@zipform/ui";
-import type { ApiKey, Avatar as AvatarType, UserProfile } from "@zipform/types";
+} from "@tloz/ui";
+import type { ApiKey, Avatar as AvatarType, UserProfile } from "@tloz/types";
 import { createAgentApiKey, listAgentApiKeys, listAgents, listAvatars, revokeAgentApiKey } from "../lib/settings-actions";
 import type { CreateApiKeyResult } from "../lib/settings-actions";
 import { updateProfile } from "../lib/settings-actions";

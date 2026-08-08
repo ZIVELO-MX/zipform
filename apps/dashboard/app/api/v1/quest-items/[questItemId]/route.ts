@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dataClient } from "@zipform/data";
+import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeQuestItemOperation } from "../../../../../lib/tloz-api-authorization";
 
@@ -22,8 +22,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ que
   }
 
   try {
-    const items = await dataClient.tloz.getQuestItems();
-    const item = items.find((q) => q.id === questItemId);
+    const item = await dataClient.tloz.getQuestItem(questItemId);
     if (!item) {
       return NextResponse.json(
         { error: { code: "NOT_FOUND", message: "Quest item no encontrado.", requestId: crypto.randomUUID() } },

@@ -1,5 +1,5 @@
 import type { AttachmentUploadItem } from "../../lib/tloz-attachments-client";
-import type { TlozAttachmentGroup } from "@zipform/types";
+import type { TlozAttachmentGroup } from "@tloz/types";
 
 export type AttachmentFileStatus = "pending" | "uploading" | "uploaded" | "error";
 export type AttachmentBatchStatus = "idle" | "ready" | "preparing" | "uploading" | "finalizing" | "completed" | "error";

@@ -4,7 +4,11 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createPrismaDataClient } from "./prisma";
-import type { ZipformDataClient } from "../contracts";
+import type { TlozDataClient } from "../contracts";
+import {
+  backfillContainerContent,
+  reconcileContainerContent,
+} from "../container-content-backfill";
 
 const SCHEMA_DIR = resolve(import.meta.dirname ?? __dirname, "../../prisma");
 
@@ -27,34 +31,18 @@ function skipIfNoDb() {
 }
 
 function runMigrations(url: string) {
-  try {
-    execSync(
-      `prisma migrate deploy --schema "${SCHEMA_DIR}/schema.prisma"`,
-      {
-        env: {
-          ...process.env,
-          DATABASE_URL: url,
-          DIRECT_URL: url,
-        },
-        stdio: "pipe",
-        cwd: resolve(SCHEMA_DIR, ".."),
-      }
-    );
-  } catch {
-    // migrations may already be applied; try db push as fallback
-    execSync(
-      `prisma db push --schema "${SCHEMA_DIR}/schema.prisma" --accept-data-loss`,
-      {
-        env: {
-          ...process.env,
-          DATABASE_URL: url,
-          DIRECT_URL: url,
-        },
-        stdio: "pipe",
-        cwd: resolve(SCHEMA_DIR, ".."),
-      }
-    );
-  }
+  execSync(
+    `prisma migrate deploy --schema "${SCHEMA_DIR}/schema.prisma"`,
+    {
+      env: {
+        ...process.env,
+        DATABASE_URL: url,
+        DIRECT_URL: url,
+      },
+      stdio: "pipe",
+      cwd: resolve(SCHEMA_DIR, ".."),
+    }
+  );
 }
 
 async function seedReferenceData(prisma: PrismaClient) {
@@ -64,20 +52,20 @@ async function seedReferenceData(prisma: PrismaClient) {
   await prisma.user.createMany({
     data: [
       {
-        id: "int-user-benji",
+        id: "00000000-0000-4000-8000-000000000001",
         name: "Benji",
         username: "benji",
-        email: "benji@zipform.local",
+        email: "benji@tloz.local",
         role: "admin",
         avatarUrl: "/avatars/benji.png",
         createdAt: now,
         updatedAt: now,
       },
       {
-        id: "int-user-raul",
+        id: "00000000-0000-4000-8000-000000000002",
         name: "Raul",
         username: "raul",
-        email: "raul@zipform.local",
+        email: "raul@tloz.local",
         role: "member",
         avatarUrl: "/avatars/raul.png",
         createdAt: now,
@@ -88,8 +76,8 @@ async function seedReferenceData(prisma: PrismaClient) {
 
   await prisma.session.create({
     data: {
-      id: "int-session",
-      userId: "int-user-benji",
+      id: "00000000-0000-4000-8000-000000000010",
+      userId: "00000000-0000-4000-8000-000000000001",
       createdAt: now,
       updatedAt: now,
     },
@@ -110,7 +98,7 @@ async function seedReferenceData(prisma: PrismaClient) {
 
   await prisma.tlozProject.create({
     data: {
-      id: "int-project-core",
+      id: "00000000-0000-4000-8000-000000000101",
       slug: "int-core",
       name: "Core",
       description: "Integration test project",
@@ -119,7 +107,7 @@ async function seedReferenceData(prisma: PrismaClient) {
       icon: "Sword",
       status: "active",
       type: "normal",
-      ownerId: "int-user-benji",
+      ownerId: "00000000-0000-4000-8000-000000000001",
       startDate: today,
       createdAt: now,
       updatedAt: now,
@@ -128,7 +116,7 @@ async function seedReferenceData(prisma: PrismaClient) {
 
   await prisma.tlozProject.create({
     data: {
-      id: "int-project-growth",
+      id: "00000000-0000-4000-8000-000000000102",
       slug: "int-growth",
       name: "Growth",
       description: "Growth project",
@@ -137,7 +125,7 @@ async function seedReferenceData(prisma: PrismaClient) {
       icon: "TrendingUp",
       status: "active",
       type: "normal",
-      ownerId: "int-user-benji",
+      ownerId: "00000000-0000-4000-8000-000000000001",
       startDate: today,
       createdAt: now,
       updatedAt: now,
@@ -146,6 +134,8 @@ async function seedReferenceData(prisma: PrismaClient) {
 }
 
 async function cleanDatabase(prisma: PrismaClient) {
+  await prisma.content.deleteMany();
+  await prisma.container.deleteMany();
   await prisma.tlozUserMissionState.deleteMany();
   await prisma.tlozResource.deleteMany();
   await prisma.tlozChecklistItem.deleteMany();
@@ -175,7 +165,7 @@ const hasDb = !!testDbUrl;
 const itIf = (condition: boolean) => (condition ? it : it.skip);
 
 describe("prisma integration", () => {
-  let client: ZipformDataClient;
+  let client: TlozDataClient;
   let prisma: PrismaClient;
 
   beforeAll(async () => {
@@ -198,7 +188,7 @@ describe("prisma integration", () => {
     itIf(hasDb)("retrieves users", async () => {
       const users = await client.tloz.getUsers();
       expect(users).toHaveLength(2);
-      expect(users.map((u) => u.email)).toContain("benji@zipform.local");
+      expect(users.map((u) => u.email)).toContain("benji@tloz.local");
     });
 
     itIf(hasDb)("retrieves projects", async () => {
@@ -220,6 +210,95 @@ describe("prisma integration", () => {
     });
   });
 
+  describe("Container/Content store", () => {
+    itIf(hasDb)("creates, filters and deletes canonical records with revisions", async () => {
+      const createdContainer = await client.containerContent.createContainer({
+        id: "container-crud-integration",
+        publicId: "container-crud-integration",
+        presentation: "workshop",
+        title: "CRUD container",
+        summary: "",
+        body: "",
+        definition: { fields: [], views: [{ id: "default", fields: [] }], defaultView: "default" },
+        data: { ownerId: "00000000-0000-4000-8000-000000000001" },
+      });
+      const createdContent = await client.containerContent.createContent({
+        id: "content-crud-integration",
+        publicId: "content-crud-integration",
+        containerId: createdContainer.id,
+        presentation: "idea",
+        title: "CRUD content",
+        summary: "",
+        body: "",
+        data: { status: "open", ownerId: "00000000-0000-4000-8000-000000000001" },
+      });
+      await expect(client.containerContent.listContents({ presentation: "idea", data: { status: "open" } })).resolves.toEqual([expect.objectContaining({ id: createdContent.id })]);
+      await client.containerContent.deleteContent(createdContent.id, 1);
+      await client.containerContent.deleteContainer(createdContainer.id, 1);
+      await expect(client.containerContent.getContainer(createdContainer.id)).resolves.toBeNull();
+    });
+
+    itIf(hasDb)("backfills in dry-run/apply modes and reconciles legacy data", async () => {
+      const dryRun = await backfillContainerContent(prisma, false);
+      expect(dryRun).toMatchObject({ mode: "dry-run", containers: 6, contents: 1 });
+      expect(await prisma.container.count()).toBe(0);
+
+      const first = await backfillContainerContent(prisma, true);
+      expect(first).toMatchObject({ mode: "apply", inserted: 7 });
+      const second = await backfillContainerContent(prisma, true);
+      expect(second).toMatchObject({ mode: "apply", unchanged: 7 });
+      await expect(reconcileContainerContent(prisma)).resolves.toMatchObject({ matches: true });
+    });
+
+    itIf(hasDb)("migrates idempotently and enforces optimistic revisions", async () => {
+      const now = new Date().toISOString();
+      const snapshot = {
+        containers: [{
+          id: "container-integration",
+          publicId: "container-integration",
+          slug: "container-integration",
+          presentation: "project",
+          title: "Integration container",
+          summary: "",
+          body: "",
+          definition: { fields: [], views: [{ id: "default", fields: [] }], defaultView: "default" },
+          data: {},
+          revision: 1,
+          createdAt: now,
+          updatedAt: now,
+        }],
+        contents: [{
+          id: "content-integration",
+          publicId: "TLO-TEST",
+          containerId: "container-integration",
+          presentation: "mission",
+          title: "Integration content",
+          summary: "",
+          body: "",
+          data: { status: "next" },
+          revision: 1,
+          createdAt: now,
+          updatedAt: now,
+        }],
+      };
+
+      const first = await client.containerContent.migrate(snapshot);
+      expect(first.inserted).toBe(2);
+      const second = await client.containerContent.migrate(snapshot);
+      expect(second.unchanged).toBe(2);
+
+      const updated = await client.containerContent.updateContent(
+        "content-integration",
+        { title: "Updated content" },
+        1,
+      );
+      expect(updated.revision).toBe(2);
+      await expect(
+        client.containerContent.updateContent("content-integration", { title: "Stale" }, 1),
+      ).rejects.toMatchObject({ code: "STORE_REVISION_CONFLICT" });
+    });
+  });
+
   describe("CRUD operations", () => {
     itIf(hasDb)("creates a mission with automatic display ID", async () => {
       const mission = await client.tloz.createMission({
@@ -228,8 +307,8 @@ describe("prisma integration", () => {
         icon: "TestTube",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       expect(mission.title).toBe("Integration Test Mission");
@@ -244,8 +323,8 @@ describe("prisma integration", () => {
         icon: "One",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       const second = await client.tloz.createMission({
@@ -254,8 +333,8 @@ describe("prisma integration", () => {
         icon: "Two",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       expect(first.displayId).toMatch(/^COR-\d{4}$/);
@@ -274,7 +353,7 @@ describe("prisma integration", () => {
         color: "#FF0000",
         status: "active",
         type: "normal",
-        ownerId: "int-user-benji",
+        ownerId: "00000000-0000-4000-8000-000000000001",
         startDate: "2026-07-01",
       });
       expect(project.slug).toBeTruthy();
@@ -286,7 +365,7 @@ describe("prisma integration", () => {
         color: "#00FF00",
         status: "active",
         type: "normal",
-        ownerId: "int-user-benji",
+        ownerId: "00000000-0000-4000-8000-000000000001",
         startDate: "2026-07-01",
       });
       expect(withSameName.slug).not.toBe(project.slug);
@@ -300,8 +379,8 @@ describe("prisma integration", () => {
         icon: "Edit",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       const updated = await client.tloz.updateMission(mission.id, {
@@ -319,14 +398,14 @@ describe("prisma integration", () => {
         icon: "Move",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       expect(mission.displayId).toMatch(/^COR/);
 
       const reassigned = await client.tloz.updateMission(mission.id, {
-        projectId: "int-project-growth",
+        projectId: "00000000-0000-4000-8000-000000000102",
       });
       expect(reassigned.displayId).toMatch(/^GRO/);
       expect(reassigned.project?.name).toBe("Growth");
@@ -339,8 +418,8 @@ describe("prisma integration", () => {
         icon: "Check",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       const completed = await client.tloz.patchMissionStatus(
@@ -358,8 +437,8 @@ describe("prisma integration", () => {
         icon: "FileText",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       const markdown = [
@@ -387,8 +466,8 @@ describe("prisma integration", () => {
         icon: "Trash",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       const missionId = mission.id;
@@ -402,8 +481,8 @@ describe("prisma integration", () => {
           icon: "Link",
           type: "side_quest",
           status: "next",
-          ownerId: "int-user-benji",
-          projectId: "int-project-core",
+          ownerId: "00000000-0000-4000-8000-000000000001",
+          projectId: "00000000-0000-4000-8000-000000000101",
           progress: 0,
         })).id
       );
@@ -422,8 +501,8 @@ describe("prisma integration", () => {
         icon: "A",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       const b = await client.tloz.createMission({
@@ -432,8 +511,8 @@ describe("prisma integration", () => {
         icon: "B",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
 
@@ -455,8 +534,8 @@ describe("prisma integration", () => {
         icon: "C",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
       const growthMission = await client.tloz.createMission({
@@ -465,8 +544,8 @@ describe("prisma integration", () => {
         icon: "G",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-growth",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000102",
         progress: 0,
       });
 
@@ -484,8 +563,8 @@ describe("prisma integration", () => {
         icon: "Atom",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 0,
       });
 
@@ -510,8 +589,8 @@ describe("prisma integration", () => {
         icon: "Atom",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 100,
       });
 
@@ -537,8 +616,8 @@ describe("prisma integration", () => {
         icon: "Shield",
         type: "side_quest",
         status: "next",
-        ownerId: "int-user-benji",
-        projectId: "int-project-core",
+        ownerId: "00000000-0000-4000-8000-000000000001",
+        projectId: "00000000-0000-4000-8000-000000000101",
         progress: 100,
       });
 
@@ -565,7 +644,7 @@ describe("prisma integration", () => {
           color: "#FF0000",
           status: "active",
           type: "normal",
-          ownerId: "int-user-benji",
+          ownerId: "00000000-0000-4000-8000-000000000001",
           startDate: "2026-07-01",
         }),
         client.tloz.createProject({
@@ -575,7 +654,7 @@ describe("prisma integration", () => {
           color: "#00FF00",
           status: "active",
           type: "normal",
-          ownerId: "int-user-benji",
+          ownerId: "00000000-0000-4000-8000-000000000001",
           startDate: "2026-07-01",
         }),
         client.tloz.createProject({
@@ -585,7 +664,7 @@ describe("prisma integration", () => {
           color: "#0000FF",
           status: "active",
           type: "normal",
-          ownerId: "int-user-benji",
+          ownerId: "00000000-0000-4000-8000-000000000001",
           startDate: "2026-07-01",
         }),
       ]);
@@ -601,8 +680,8 @@ describe("prisma integration", () => {
           icon: "One",
           type: "side_quest",
           status: "next",
-          ownerId: "int-user-benji",
-          projectId: "int-project-core",
+          ownerId: "00000000-0000-4000-8000-000000000001",
+          projectId: "00000000-0000-4000-8000-000000000101",
           progress: 0,
         }),
         client.tloz.createMission({
@@ -611,8 +690,8 @@ describe("prisma integration", () => {
           icon: "Two",
           type: "side_quest",
           status: "next",
-          ownerId: "int-user-benji",
-          projectId: "int-project-core",
+          ownerId: "00000000-0000-4000-8000-000000000001",
+          projectId: "00000000-0000-4000-8000-000000000101",
           progress: 0,
         }),
         client.tloz.createMission({
@@ -621,8 +700,8 @@ describe("prisma integration", () => {
           icon: "Three",
           type: "side_quest",
           status: "next",
-          ownerId: "int-user-benji",
-          projectId: "int-project-core",
+          ownerId: "00000000-0000-4000-8000-000000000001",
+          projectId: "00000000-0000-4000-8000-000000000101",
           progress: 0,
         }),
       ]);

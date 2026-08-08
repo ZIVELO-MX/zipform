@@ -6,7 +6,7 @@ describe("mission status selector", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
 
     expect(source).toMatch(
-      /<SelectTrigger aria-label="Estado"><SelectValue><StatusValue status=\{status\} \/><\/SelectValue><\/SelectTrigger><SelectContent position="item-aligned">/,
+      /<SelectTrigger aria-label="Estado"><SelectValue><OptionValue value=\{status\} options=\{statusOptions\} status \/><\/SelectValue><\/SelectTrigger><SelectContent position="item-aligned">/,
     );
   });
 
@@ -19,9 +19,26 @@ describe("mission status selector", () => {
 
   it("shows category color and project icon with color in triggers and options", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
-    expect(source).toContain("<SelectValue><TypeValue type={values.type} /></SelectValue>");
-    expect(source).toContain("<TypeValue type={value} />");
+    expect(source).toContain("<SelectValue><OptionValue value={values.type} options={categoryOptions} /></SelectValue>");
+    expect(source).toContain("<OptionValue value={option.value} options={categoryOptions} />");
+    expect(source).toContain("style={{ background: `${color}18`, color }}");
     expect(source).toContain("iconComponent: resolveMissionIcon(project.icon)");
     expect(source).toContain("<ProjectValue project={values.project ?? selectedProject} />");
+  });
+
+  it("uses the shared projection and presentation metadata in detail rows", () => {
+    const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
+    expect(source).toContain("options?.detailProperties?.core");
+    expect(source).toContain('visibleProperties.has("project")');
+    expect(source).toContain("options?.presentationFields");
+    expect(source).toContain("readOnly={readOnly}");
+  });
+
+  it("separates reassignment permission from ordinary property updates", () => {
+    const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
+    expect(source).toContain("responsibleReadOnly = readOnly");
+    expect(source).toContain("readOnly={responsibleReadOnly}");
+    expect(source).toContain("onUpdate(current.id, input)");
+    expect(source).toContain("onStatusUpdate(current.id, value)");
   });
 });

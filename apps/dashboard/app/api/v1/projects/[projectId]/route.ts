@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { dataClient } from "@zipform/data";
+import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeProjectOperation } from "../../../../../lib/tloz-api-authorization";
 
@@ -22,8 +22,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pro
   }
 
   try {
-    const projects = await dataClient.tloz.getProjects();
-    const project = projects.find((p) => p.id === projectId);
+    const project = await dataClient.tloz.getProject(projectId);
     if (!project) {
       return NextResponse.json(
         { error: { code: "NOT_FOUND", message: "Proyecto no encontrado.", requestId: crypto.randomUUID() } },

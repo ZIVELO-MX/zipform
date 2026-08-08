@@ -4,8 +4,8 @@ import {
   PackageOpen, Search, Shield, Sparkles, Star, StickyNote, Sword, Target, Utensils,
   Wrench, type LucideIcon,
 } from "lucide-react";
-import type { TlozResource, TlozResourceType } from "@zipform/types";
-import type { IconPickerOption } from "@zipform/ui";
+import type { TlozResource, TlozResourceType } from "@tloz/types";
+import type { IconPickerOption } from "@tloz/ui";
 
 export const TLOZ_ICON_CATALOG = [
   ["Sword", "Misión", Sword], ["Star", "Main Quest", Star], ["Flag", "Side Quest", Flag],

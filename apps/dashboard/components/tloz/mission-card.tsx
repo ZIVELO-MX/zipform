@@ -8,9 +8,9 @@ import {
   LucideIcon,
   Plus
 } from "lucide-react";
-import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, displayUsername, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@zipform/ui";
+import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, displayUsername, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@tloz/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
-import type { UserProfile } from "@zipform/types";
+import type { UserProfile } from "@tloz/types";
 import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLabel, missionTypeIcon, missionTypeLabel, missionTypeTone, pendingDependencyCount, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
 
 const MAX_VISIBLE_QUEST_ITEMS = 3;
@@ -38,7 +38,7 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
             </div>
             <CardTitle className="mt-2">
               <a
-                href={mission.project ? missionHref(mission.project, mission.displayId) : "/tloz"}
+                href={mission.project ? missionHref(mission.project, mission.displayId) : "/"}
                 onClick={(e) => {
                   if (onSelect) {
                     e.preventDefault();
@@ -119,7 +119,7 @@ export function ActiveMissionPanel({ label, mission }: { label: string; mission:
           <div className="tloz-active-actions">
           <OwnerAvatar user={mission.owner} />
             <Button asChild size="sm">
-              <Link href={mission.project ? missionHref(mission.project, mission.displayId) : "/tloz"}>Abrir detalle</Link>
+              <Link href={mission.project ? missionHref(mission.project, mission.displayId) : "/"}>Abrir detalle</Link>
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>

@@ -1,9 +1,9 @@
-# Zipform Testing Strategy
+# TLOZ Testing Strategy
 
 ## Current State
 
 - **Unit tests** via Vitest: mock driver (`mock.test.ts`, 6 tests) and stubbed Prisma driver (`prisma.test.ts`, 2 tests)
-- **CI** (`ci.yml`): runs `pnpm check` with `ZIPFORM_DATA_DRIVER=mock`; Prisma receives non-secret placeholder PostgreSQL URLs but no database is contacted
+- **CI** (`ci.yml`): runs `pnpm check` with `TLOZ_DATA_DRIVER=mock`; Prisma receives non-secret placeholder PostgreSQL URLs but no database is contacted
 - **Coverage**: 70% minimum thresholds (lines, functions, statements, branches)
 - **No integration tests** against a real PostgreSQL database exist today
 
@@ -31,7 +31,7 @@
 - **Stubbed Prisma tests** (`prisma.test.ts`): stubbed PrismaClient via `vi.fn()`. Proves the driver translates Prisma calls correctly without a real DB.
 - **Validation/hydration tests**: edge cases for `tloz-validation.ts`, `tloz-hydration.ts`, `dependency-rules.ts`.
 
-All unit tests run in CI with `ZIPFORM_DATA_DRIVER=mock` — no external dependencies.
+All unit tests run in CI with `TLOZ_DATA_DRIVER=mock` — no external dependencies.
 
 The required pull-request gate is the root `pnpm check` command. It runs, in order:
 
@@ -95,14 +95,14 @@ jobs:
       matrix:
         type: [unit, integration]
     env:
-      ZIPFORM_DATA_DRIVER: ${{ matrix.type == 'unit' && 'mock' || 'prisma' }}
+      TLOZ_DATA_DRIVER: ${{ matrix.type == 'unit' && 'mock' || 'prisma' }}
     services:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_USER: zipform
-          POSTGRES_PASSWORD: zipform
-          POSTGRES_DB: zipform_test
+          POSTGRES_USER: tloz
+          POSTGRES_PASSWORD: tloz
+          POSTGRES_DB: tloz_test
         ports:
           - 5432:5432
 ```
@@ -128,11 +128,11 @@ Integration tests connect to the service container instead of spinning their own
 ```ts
 describe("prisma integration", () => {
   let container: PostgreSqlContainer;
-  let client: ZipformDataClient;
+  let client: TlozDataClient;
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer("postgres:17-alpine")
-      .withDatabase("zipform_test")
+      .withDatabase("tloz_test")
       .start();
     process.env.DATABASE_URL = container.getConnectionUri();
     process.env.DIRECT_URL = container.getConnectionUri();

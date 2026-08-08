@@ -1,5 +1,5 @@
-import { dataClient, TlozAttachmentError } from "@zipform/data";
-import type { TlozAttachmentGroup } from "@zipform/types";
+import { dataClient, TlozAttachmentError } from "@tloz/data";
+import type { TlozAttachmentGroup } from "@tloz/types";
 import { NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";

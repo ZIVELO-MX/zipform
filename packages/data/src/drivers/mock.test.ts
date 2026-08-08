@@ -5,7 +5,6 @@ import { createMockDataClient } from "./mock";
 describe("mock data driver", () => {
   it("serves the read repositories", async () => {
     const client = createMockDataClient();
-    expect(await client.apps.list()).not.toHaveLength(0);
     expect(await client.user.getCurrent()).toEqual(currentUser);
     expect(await client.tloz.getUsers()).toEqual(expect.arrayContaining([currentUser]));
     expect((await client.tloz.getDashboardSummary()).projects).not.toHaveLength(0);
@@ -61,6 +60,33 @@ describe("mock data driver", () => {
       status: "next",
       progress: 0,
     });
+  });
+
+  it("advances existing v1 cursor pagination", async () => {
+    const client = createMockDataClient();
+    const first = await client.tloz.findMissions({}, { limit: 2 });
+    const second = await client.tloz.findMissions({}, { limit: 2, cursor: first.nextCursor! });
+
+    expect(first.data).toHaveLength(2);
+    expect(second.data).toHaveLength(2);
+    expect(second.data.map((mission) => mission.id)).not.toEqual(
+      expect.arrayContaining(first.data.map((mission) => mission.id)),
+    );
+  });
+
+  it("avoids project slugs reserved by root routes", async () => {
+    const client = createMockDataClient();
+    const project = await client.tloz.createProject({
+      name: "Inventory",
+      description: "",
+      icon: "FolderKanban",
+      color: "#6B6B6B",
+      status: "active",
+      type: "normal",
+      ownerId: currentUser.id,
+      startDate: "2026-07-27",
+    });
+    expect(project.slug).toBe("inventory-2");
   });
 
   it("materializes Markdown checkboxes during mission creation", async () => {
@@ -221,7 +247,7 @@ describe("mock data driver", () => {
     expect(updatedProject.name).toBe("Updated Project");
 
     const qi = await client.tloz.createQuestItem({
-      name: "New Item", description: "", icon: "Key", status: "locked", category: "tool"
+      name: "New Item", description: "", icon: "Key", color: "#2D6CDF", status: "locked", category: "tool"
     });
     expect(qi.name).toBe("New Item");
 

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dataClient, TlozValidationError } from "@zipform/data";
-import type { TlozMissionStatus } from "@zipform/types";
+import { dataClient, TlozValidationError } from "@tloz/data";
+import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation, isFullStackDeveloper, isReadOnlyAgent, toPublicMissionOwner } from "../../../../lib/authorization";
+import { observedJson } from "../../../../lib/read-telemetry";
 
 const VALID_CREATE_FIELDS = new Set([
   "id", "title", "description", "descriptionDetail", "icon", "type", "status",
@@ -11,6 +12,7 @@ const VALID_CREATE_FIELDS = new Set([
 ]);
 
 export async function GET(request: NextRequest) {
+  const startedAt = performance.now();
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
@@ -45,9 +47,10 @@ export async function GET(request: NextRequest) {
       { projectId: projectId ?? undefined, ownerId: ownerId ?? undefined, status: status ?? undefined, seasonId: seasonId ?? undefined, episodeId: episodeId ?? undefined, title: title ?? undefined },
       { limit, cursor: cursor ?? undefined }
     );
-    return NextResponse.json(isReadOnlyAgent(auth.user)
+    const payload = isReadOnlyAgent(auth.user)
       ? { ...result, data: result.data.map(toPublicMissionOwner) }
-      : result);
+      : result;
+    return observedJson({ request, actorId: auth.user.id, operation: "missions.list", payload, startedAt });
   } catch {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },

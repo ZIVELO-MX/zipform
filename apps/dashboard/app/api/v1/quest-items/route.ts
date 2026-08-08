@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dataClient } from "@zipform/data";
-import type { TlozInventoryCategory, TlozInventoryStatus } from "@zipform/types";
+import { dataClient } from "@tloz/data";
+import type { TlozInventoryCategory, TlozInventoryStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation, isFullStackDeveloper } from "../../../../lib/authorization";
 
 const validStatuses: TlozInventoryStatus[] = ["locked", "unlocked"];
 const validCategories: TlozInventoryCategory[] = ["tool", "access", "asset", "document", "other"];
 const VALID_CREATE_FIELDS = new Set([
-  "name", "description", "descriptionDetail", "icon", "status",
+  "name", "description", "descriptionDetail", "icon", "color", "status",
   "category", "ownerId", "acquiredAt"
 ]);
 
