@@ -1,4 +1,4 @@
-import { collectPaginated, dataClient, type TlozDashboardSummary, type TlozMissionDetail, type TlozMissionRecord, type ContainerRecord, type ContentRecord } from "@tloz/data";
+import { dataClient, type TlozDashboardSummary, type TlozMissionDetail, type TlozMissionRecord, type ContainerRecord, type ContentRecord } from "@tloz/data";
 import type { TlozAttachmentGroup, TlozDocumentKind } from "@tloz/types";
 import type { DocumentGetOptions } from "@tloz/data";
 import { cache } from "react";
@@ -38,15 +38,14 @@ export const getTlozProjects = cache(() => dataClient.tloz.getProjects());
 export const getTlozQuestItems = cache(() => dataClient.tloz.getQuestItems());
 export const getTlozResources = cache(() => dataClient.tloz.getResources());
 export const getTlozUsers = cache(() => dataClient.tloz.getUsers());
-export const getTlozDocuments = cache(async (kind?: TlozDocumentKind, parentId?: string) => ({
-  data: await collectPaginated((cursor) => dataClient.canonicalDocuments.find(
+export const getTlozDocuments = cache((kind?: TlozDocumentKind, parentId?: string, cursor?: string) => (
+  dataClient.canonicalDocuments.find(
     { ...(kind ? { kind } : {}), ...(parentId ? { parentId } : {}) },
     { limit: 25, cursor },
-  )),
-  nextCursor: null,
-}));
-export const getTlozProjectDocuments = () => getTlozDocuments("project");
-export const getTlozInventoryDocuments = () => getTlozDocuments("inventory");
+  )
+));
+export const getTlozProjectDocuments = (cursor?: string) => getTlozDocuments("project", undefined, cursor);
+export const getTlozInventoryDocuments = (cursor?: string) => getTlozDocuments("inventory", undefined, cursor);
 export const getTlozDocument = cache((
   documentId: string,
   options?: DocumentGetOptions,
@@ -59,9 +58,9 @@ export const getCanonicalContainer = cache(async (publicId: string) => (
   await dataClient.containerContent.getContainer(publicId) ?? undefined
 ));
 
-export const getCanonicalContents = cache((containerId: string) => collectPaginated((cursor) => (
+export const getCanonicalContents = cache((containerId: string, cursor?: string) => (
   dataClient.containerContent.findContents({ containerId }, { limit: 25, cursor })
-)));
+));
 export const getCanonicalContent = cache(async (reference: string) => (
   dataClient.containerContent.getContent(reference)
 ));

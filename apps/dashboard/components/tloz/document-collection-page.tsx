@@ -9,20 +9,25 @@ import type { TlozView } from "../../lib/tloz-routes";
 import { DocumentViewRenderer } from "./document-view-renderer";
 import { CreateNewEntityButton, type TlozCreateKind } from "./tloz-create";
 import { TlozPageShell } from "./tloz-shell";
+import { CollectionPagination } from "./collection-pagination";
 
 export async function DocumentCollectionPage({
   definitionKey,
   kind,
   title,
   createKind,
+  cursor,
+  basePath,
 }: {
   definitionKey: string;
   kind: TlozDocumentKind;
   title: string;
   createKind: TlozCreateKind;
+  cursor?: string;
+  basePath: string;
 }) {
   const [documents, definition, users] = await Promise.all([
-    getTlozDocuments(kind),
+    getTlozDocuments(kind, undefined, cursor),
     getTlozDocumentDefinition(definitionKey),
     getTlozUsers(),
   ]);
@@ -52,6 +57,7 @@ export async function DocumentCollectionPage({
           definition={definition}
           users={users}
         />
+        <CollectionPagination basePath={basePath} currentCursor={cursor} nextCursor={documents.nextCursor} />
         <div className="px-[26px] pb-[26px]">
           <CreateNewEntityButton />
         </div>

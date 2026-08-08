@@ -12,6 +12,10 @@ CREATE INDEX "tloz_missions_createdAt_id_idx"
   ON "tloz_missions"("createdAt", "id");
 CREATE INDEX "tloz_missions_projectId_createdAt_id_idx"
   ON "tloz_missions"("projectId", "createdAt", "id");
+CREATE INDEX "tloz_missions_seasonId_createdAt_id_idx"
+  ON "tloz_missions"("seasonId", "createdAt", "id");
+CREATE INDEX "tloz_missions_episodeId_createdAt_id_idx"
+  ON "tloz_missions"("episodeId", "createdAt", "id");
 CREATE INDEX "tloz_missions_ownerId_createdAt_id_idx"
   ON "tloz_missions"("ownerId", "createdAt", "id");
 CREATE INDEX "tloz_missions_status_createdAt_id_idx"
@@ -34,3 +38,5 @@ CREATE INDEX "tloz_resources_projectId_createdAt_id_idx"
   ON "tloz_resources"("projectId", "createdAt", "id");
 CREATE INDEX "tloz_resources_questItemId_createdAt_id_idx"
   ON "tloz_resources"("questItemId", "createdAt", "id");
+CREATE INDEX "tloz_resources_type_createdAt_id_idx"
+  ON "tloz_resources"("type", "createdAt", "id");

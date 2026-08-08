@@ -97,6 +97,8 @@ model TlozMission {
   @@index([episodeId])
   @@index([createdAt, id])
   @@index([projectId, createdAt, id])
+  @@index([seasonId, createdAt, id])
+  @@index([episodeId, createdAt, id])
   @@index([ownerId, createdAt, id])
   @@index([status, createdAt, id])
   @@map("tloz_missions")
@@ -203,6 +205,7 @@ model TlozResource {
   @@index([missionId, createdAt, id])
   @@index([projectId, createdAt, id])
   @@index([questItemId, createdAt, id])
+  @@index([type, createdAt, id])
   @@unique([missionId, groupKey, externalKey])
   @@map("tloz_resources")
 }

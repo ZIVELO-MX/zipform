@@ -12,15 +12,22 @@ import { ContainerContentDetail } from "./container-content-detail";
 import { canonicalContentDocument, canonicalContentHref } from "./container-content-view-model";
 import { documentToMissionView } from "./document-view-model";
 import { filterAndSortTlozRecords } from "./tloz-view-query";
+import { CollectionPagination } from "./collection-pagination";
 
 export function ContainerContentCollection({
   container,
   initialContents,
   users,
+  currentCursor,
+  nextCursor,
+  basePath,
 }: {
   container: ContainerRecord;
   initialContents: ContentRecord[];
   users: UserProfile[];
+  currentCursor?: string;
+  nextCursor: string | null;
+  basePath: string;
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
@@ -66,6 +73,7 @@ export function ContainerContentCollection({
             <MissionList missions={visible} grouping={state.grouping} statusOptions={statusOptions} onSelect={open} />
           )}
         </div>
+        <CollectionPagination basePath={basePath} currentCursor={currentCursor} nextCursor={nextCursor} />
       </div>
       <SlideOver open={Boolean(selected)} title={selected?.title ?? "Detalle"} onOpenChange={(open) => !open && setSelectedId(null)}>
         {selected ? (
