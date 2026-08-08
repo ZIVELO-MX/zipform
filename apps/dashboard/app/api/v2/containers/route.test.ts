@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PaginationCursorError } from "@tloz/data";
 
 const mocks = vi.hoisted(() => ({
   authenticateRequest: vi.fn(),
@@ -33,6 +34,17 @@ describe("/api/v2/containers", () => {
     const response = await GET(new NextRequest("https://tloz.test/api/v2/containers?limit=25"));
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ data: [container], nextCursor: null });
+  });
+
+  it("returns 400 for a cursor outside the container collection", async () => {
+    mocks.findContainers.mockRejectedValue(new PaginationCursorError("missing"));
+
+    const response = await GET(new NextRequest("https://tloz.test/api/v2/containers?cursor=missing"));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "INVALID_REQUEST", fields: { cursor: "invalid" } },
+    });
   });
 
   it("creates a container without calling a legacy repository", async () => {

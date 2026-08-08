@@ -52,6 +52,9 @@ model TlozProject {
   resources   TlozResource[]
 
   @@index([ownerId])
+  @@index([createdAt, id])
+  @@index([ownerId, createdAt, id])
+  @@index([status, createdAt, id])
 
   @@map("tloz_projects")
 }
@@ -92,6 +95,10 @@ model TlozMission {
   @@index([projectId])
   @@index([seasonId])
   @@index([episodeId])
+  @@index([createdAt, id])
+  @@index([projectId, createdAt, id])
+  @@index([ownerId, createdAt, id])
+  @@index([status, createdAt, id])
   @@map("tloz_missions")
 }
 
@@ -126,6 +133,10 @@ model TlozQuestItem {
   resources         TlozResource[]
 
   @@index([ownerId])
+  @@index([createdAt, id])
+  @@index([ownerId, createdAt, id])
+  @@index([status, createdAt, id])
+  @@index([category, createdAt, id])
 
   @@map("tloz_quest_items")
 }
@@ -188,6 +199,10 @@ model TlozResource {
   @@index([missionId])
   @@index([projectId])
   @@index([questItemId])
+  @@index([createdAt, id])
+  @@index([missionId, createdAt, id])
+  @@index([projectId, createdAt, id])
+  @@index([questItemId, createdAt, id])
   @@unique([missionId, groupKey, externalKey])
   @@map("tloz_resources")
 }

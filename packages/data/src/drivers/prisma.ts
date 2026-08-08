@@ -32,10 +32,28 @@ import { createPrismaDocumentRepository } from "./prisma-documents";
 import { createPrismaContainerContentStore } from "./prisma-container-content";
 import { createContainerContentDocumentRepository } from "../container-content-document";
 import { createCutoverDocumentRepository } from "../cutover-document-repository";
+import { PaginationCursorError } from "../pagination";
 
 const globalForPrisma = globalThis as typeof globalThis & {
   tlozPrisma?: PrismaClient;
 };
+
+async function readPage<T>(cursor: string | undefined, query: () => Promise<T>): Promise<T> {
+  try {
+    return await query();
+  } catch (error) {
+    // Prisma reports a missing cursor as P2025. Translate it at the repository
+    // boundary so API routes can distinguish bad client state from an outage.
+    if (
+      cursor
+      && error instanceof Prisma.PrismaClientKnownRequestError
+      && error.code === "P2025"
+    ) {
+      throw new PaginationCursorError(cursor, { cause: error });
+    }
+    throw error;
+  }
+}
 
 export function databaseUrlWithApplicationName(databaseUrl: string, environment = process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "local") {
   const url = new URL(databaseUrl);
@@ -680,12 +698,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const where: Record<string, unknown> = {};
         if (filters?.email) where.email = filters.email.toLowerCase();
         if (filters?.username) where.username = filters.username;
-        const rows = await prisma.user.findMany({
+        const rows = await readPage(pagination?.cursor, () => prisma.user.findMany({
           where,
           orderBy: [{ name: "asc" }, { id: "asc" }],
           take: limit + 1,
           ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
-        });
+        }));
         const data = rows.slice(0, limit).map(mapUser);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };
@@ -695,19 +713,19 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         const where: Record<string, unknown> = {};
         if (filters?.ownerId) where.ownerId = filters.ownerId;
         if (filters?.status) where.status = filters.status;
-        const rows = await prisma.tlozProject.findMany({
+        const rows = await readPage(pagination?.cursor, () => prisma.tlozProject.findMany({
           where,
           orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           take: limit + 1,
           ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
-        });
+        }));
         const data = rows.slice(0, limit).map(mapProject);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };
       },
       async findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>> {
         const limit = Math.min(pagination?.limit ?? 25, 100);
-        const rows = await prisma.tlozMission.findMany({
+        const rows = await readPage(pagination?.cursor, () => prisma.tlozMission.findMany({
           where: {
             projectId: filters?.projectId,
             seasonId: filters?.seasonId,
@@ -719,7 +737,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           take: limit + 1,
           ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
-        });
+        }));
         const pageRows = rows.slice(0, limit);
         const pageIds = new Set(pageRows.map((row) => row.id));
         const data = hydrateMissions(await loadScopedMissionDataSet(prisma, pageRows))
@@ -735,12 +753,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         if (filters?.ownerId) where.ownerId = filters.ownerId;
         if (filters?.status) where.status = filters.status;
         if (filters?.category) where.category = filters.category;
-        const rows = await prisma.tlozQuestItem.findMany({
+        const rows = await readPage(pagination?.cursor, () => prisma.tlozQuestItem.findMany({
           where,
           orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           take: limit + 1,
           ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
-        });
+        }));
         const data = rows.slice(0, limit).map(mapQuestItem);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };
@@ -752,12 +770,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         if (filters?.projectId) where.projectId = filters.projectId;
         if (filters?.questItemId) where.questItemId = filters.questItemId;
         if (filters?.type) where.type = filters.type;
-        const rows = await prisma.tlozResource.findMany({
+        const rows = await readPage(pagination?.cursor, () => prisma.tlozResource.findMany({
           where,
           orderBy: [{ createdAt: "asc" }, { id: "asc" }],
           take: limit + 1,
           ...(pagination?.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
-        });
+        }));
         const data = rows.slice(0, limit).map(mapResource);
         const nextCursor = rows.length > limit ? String(rows[limit - 1]?.id ?? "") : null;
         return { data, nextCursor };

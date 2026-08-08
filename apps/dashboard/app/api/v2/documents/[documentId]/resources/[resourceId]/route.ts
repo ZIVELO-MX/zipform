@@ -1,4 +1,4 @@
-import { dataClient, TlozDocumentError } from "@tloz/data";
+import { collectPaginated, dataClient, TlozDocumentError } from "@tloz/data";
 import { authenticateRequest } from "../../../../../../../lib/api-auth";
 import {
   authorizeDocumentOperation,
@@ -19,15 +19,15 @@ export async function DELETE(request: Request, { params }: RouteContext) {
     }
     const forbidden = authorizeDocumentOperation(auth.user, document);
     if (forbidden) return forbidden;
-    const resources = await dataClient.tloz.findResources(
-      document.kind === "mission"
+    const filters = document.kind === "mission"
         ? { missionId: document.source.id }
         : document.kind === "project"
           ? { projectId: document.source.id }
-          : { questItemId: document.source.id },
-      { limit: 100 },
-    );
-    if (!resources.data.some((resource) => resource.id === resourceId)) {
+          : { questItemId: document.source.id };
+    const resources = await collectPaginated((cursor) => (
+      dataClient.tloz.findResources(filters, { limit: 25, cursor })
+    ));
+    if (!resources.some((resource) => resource.id === resourceId)) {
       throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El recurso ${resourceId} no existe.`);
     }
     if (document.kind === "mission") {

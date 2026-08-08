@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation, isReadOnlyAgent, toPublicUserProfile } from "../../../../../lib/authorization";
+import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
 
 export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -10,7 +11,9 @@ export async function POST(request: NextRequest) {
   let body: { email?: string; username?: string; limit?: number; cursor?: string };
   try {
     body = await request.json();
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
       { status: 400 }
@@ -28,7 +31,8 @@ export async function POST(request: NextRequest) {
     if (forbidden) return forbidden;
   }
 
-  const limit = body.limit ? Math.max(1, Math.min(100, Number(body.limit))) : 25;
+  const limit = parsePaginationLimit(body.limit);
+  if (limit instanceof Response) return limit;
 
   try {
     const result = await dataClient.tloz.findUsers(

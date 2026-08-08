@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { dataClient, TlozValidationError } from "@tloz/data";
+import { dataClient, PaginationCursorError, TlozValidationError } from "@tloz/data";
 import { authenticateRequest } from "../../../../lib/api-auth";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 vi.mock("@tloz/data", () => {
   class ValidationError extends Error {
@@ -11,8 +11,15 @@ vi.mock("@tloz/data", () => {
     }
   }
 
+  class CursorError extends Error {
+    constructor(public readonly cursor: string) {
+      super("El cursor no pertenece a la colección solicitada.");
+    }
+  }
+
   return {
     dataClient: { tloz: { createMission: vi.fn(), findMissions: vi.fn(), getUsers: vi.fn(), getProjects: vi.fn(), getMissionDetail: vi.fn() } },
+    PaginationCursorError: CursorError,
     TlozValidationError: ValidationError,
   };
 });
@@ -23,6 +30,7 @@ vi.mock("../../../../lib/api-auth", () => ({
 
 const mockedAuthenticateRequest = vi.mocked(authenticateRequest);
 const mockedCreateMission = vi.mocked(dataClient.tloz.createMission);
+const mockedFindMissions = vi.mocked(dataClient.tloz.findMissions);
 const mockedGetUsers = vi.mocked(dataClient.tloz.getUsers);
 const mockedGetProjects = vi.mocked(dataClient.tloz.getProjects);
 const mockedGetMissionDetail = vi.mocked(dataClient.tloz.getMissionDetail);
@@ -31,6 +39,8 @@ describe("POST /api/v1/missions", () => {
   beforeEach(() => {
     mockedAuthenticateRequest.mockReset();
     mockedCreateMission.mockReset();
+    mockedFindMissions.mockReset();
+    mockedFindMissions.mockResolvedValue({ data: [], nextCursor: null });
     mockedGetUsers.mockResolvedValue([{ id: "agent-1", username: "zibot" } as never]);
     mockedGetProjects.mockResolvedValue([{ id: "project-zivelo", slug: "zivelo" } as never]);
     mockedGetMissionDetail.mockResolvedValue({ id: "mission-1", checklistCount: 0, completed: 0 } as never);
@@ -45,6 +55,37 @@ describe("POST /api/v1/missions", () => {
         avatarUrl: "",
         theme: "system",
       },
+    });
+  });
+
+  it("returns an empty cursor envelope without degrading the request", async () => {
+    const response = await GET(new NextRequest("https://tloz.test/api/v1/missions?limit=25"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({ data: [], nextCursor: null });
+  });
+
+  it("returns 400 when the repository rejects an invalid cursor", async () => {
+    mockedFindMissions.mockRejectedValue(new PaginationCursorError("missing"));
+
+    const response = await GET(new NextRequest("https://tloz.test/api/v1/missions?cursor=missing"));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "INVALID_REQUEST",
+        fields: { cursor: "invalid" },
+      },
+    });
+  });
+
+  it.each(["0", "101", "1.5", "invalid"])("rejects an invalid limit (%s)", async (limit) => {
+    const response = await GET(new NextRequest(`https://tloz.test/api/v1/missions?limit=${limit}`));
+
+    expect(response.status).toBe(400);
+    expect(mockedFindMissions).not.toHaveBeenCalled();
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "INVALID_REQUEST", fields: { limit: "invalid" } },
     });
   });
 

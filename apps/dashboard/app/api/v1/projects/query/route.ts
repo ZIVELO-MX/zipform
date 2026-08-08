@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
 import type { TlozProjectStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
+import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
 
 const VALID_STATUSES: TlozProjectStatus[] = ["planned", "active", "archived"];
 
@@ -12,7 +13,9 @@ export async function POST(request: NextRequest) {
   let body: { ownerId?: string; status?: string; limit?: number; cursor?: string };
   try {
     body = await request.json();
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
       { status: 400 }
@@ -26,7 +29,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const limit = body.limit ? Math.max(1, Math.min(100, Number(body.limit))) : 25;
+  const limit = parsePaginationLimit(body.limit);
+  if (limit instanceof Response) return limit;
 
   try {
     const result = await dataClient.tloz.findProjects(
