@@ -2,7 +2,7 @@ import type { TlozDocumentKind } from "@tloz/types";
 import { notFound } from "next/navigation";
 import {
   getTlozDocumentDefinition,
-  getTlozDocuments,
+  getTlozDocumentPage,
   getTlozUsers,
 } from "../../lib/tloz-data";
 import type { TlozView } from "../../lib/tloz-routes";
@@ -27,7 +27,7 @@ export async function DocumentCollectionPage({
   basePath: string;
 }) {
   const [documents, definition, users] = await Promise.all([
-    getTlozDocuments(kind, undefined, cursor),
+    getTlozDocumentPage(kind, undefined, cursor),
     getTlozDocumentDefinition(definitionKey),
     getTlozUsers(),
   ]);
