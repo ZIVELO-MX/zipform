@@ -1,4 +1,4 @@
-import { dataClient, TlozDocumentError } from "@tloz/data";
+import { collectPaginated, dataClient, TlozDocumentError } from "@tloz/data";
 import type { TlozResourceInput } from "@tloz/data";
 import type { TlozResourceType } from "@tloz/types";
 import { NextResponse } from "next/server";
@@ -88,5 +88,5 @@ async function resourcesFor(document: Awaited<ReturnType<typeof requiredSourceDo
     : document.kind === "project"
       ? { projectId: document.source!.id }
       : { questItemId: document.source!.id };
-  return (await dataClient.tloz.findResources(filters, { limit: 100 })).data;
+  return collectPaginated((cursor) => dataClient.tloz.findResources(filters, { limit: 25, cursor }));
 }

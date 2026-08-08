@@ -154,6 +154,15 @@ describe.each(factories)("%s Container/Content prototype", (_, createStore) => {
     ]);
   });
 
+  it("rejects a cursor that is not part of the requested collection", async () => {
+    const store = await migrated(createStore());
+
+    await expect(store.findContainers({}, { cursor: "missing" }))
+      .rejects.toMatchObject({ name: "PaginationCursorError", cursor: "missing" });
+    await expect(store.findContents({}, { cursor: "missing" }))
+      .rejects.toMatchObject({ name: "PaginationCursorError", cursor: "missing" });
+  });
+
   it("updates with revisions while preserving hidden, null, and custom fields", async () => {
     const store = await migrated(createStore());
     const updated = await store.updateContent(

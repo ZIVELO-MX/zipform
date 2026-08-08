@@ -24,6 +24,7 @@ import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjec
 import { createMockDocumentRepository } from "./mock-documents";
 import { createJsonbPrototypeStore } from "../container-content-prototype";
 import { createContainerContentDocumentRepository } from "../container-content-document";
+import { paginationStartIndex } from "../pagination";
 
 export function createMockDataClient(): TlozDataClient {
   const tlozData = {
@@ -47,10 +48,7 @@ export function createMockDataClient(): TlozDataClient {
     pagination: PaginationInput = {},
   ): PaginatedResult<T> => {
     const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
-    const cursorIndex = pagination.cursor
-      ? data.findIndex((item) => item.id === pagination.cursor)
-      : -1;
-    const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+    const start = paginationStartIndex(data, pagination.cursor);
     const page = data.slice(start, start + limit);
     return {
       data: page,

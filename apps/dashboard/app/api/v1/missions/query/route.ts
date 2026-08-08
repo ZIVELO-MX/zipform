@@ -3,6 +3,7 @@ import { dataClient } from "@tloz/data";
 import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
+import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
 
 const VALID_STATUSES: TlozMissionStatus[] = ["now", "next", "later", "completed", "blocked"];
 
@@ -31,7 +32,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const limit = body.limit ? Math.max(1, Math.min(100, Number(body.limit))) : 25;
+  const limit = parsePaginationLimit(body.limit);
+  if (limit instanceof Response) return limit;
 
   try {
     const result = await dataClient.tloz.findMissions(
@@ -48,7 +50,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(isReadOnlyAgent(auth.user)
       ? { ...result, data: result.data.map(toPublicMissionOwner) }
       : result);
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }

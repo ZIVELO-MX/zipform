@@ -1,3 +1,5 @@
+import { paginationStartIndex } from "./pagination";
+
 export type ContainerContentErrorCode =
   | "STORE_INVALID"
   | "STORE_NOT_FOUND"
@@ -582,8 +584,7 @@ function sortValue(value: unknown): unknown {
 
 function page<T extends { id: string }>(records: T[], pagination: { limit?: number; cursor?: string }) {
   const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
-  const cursorIndex = pagination.cursor ? records.findIndex((record) => record.id === pagination.cursor) : -1;
-  const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+  const start = paginationStartIndex(records, pagination.cursor);
   const data = records.slice(start, start + limit);
   return { data, nextCursor: start + data.length < records.length ? data.at(-1)?.id ?? null : null };
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  collectPaginated,
   dataClient,
   validateDocumentProperties,
   type TlozMissionCreateInput,
@@ -360,10 +361,8 @@ export async function updateDocumentBody(
 
 export async function getEntityResources(kind: "project" | "inventory", entityId: string) {
   await authenticatedActor();
-  return (await dataClient.tloz.findResources(
-    kind === "project" ? { projectId: entityId } : { questItemId: entityId },
-    { limit: 100 },
-  )).data;
+  const filters = kind === "project" ? { projectId: entityId } : { questItemId: entityId };
+  return collectPaginated((cursor) => dataClient.tloz.findResources(filters, { limit: 25, cursor }));
 }
 
 export async function getTlozDetailUsers() {

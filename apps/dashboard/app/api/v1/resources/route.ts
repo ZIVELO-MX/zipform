@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
 import type { TlozResourceType } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
+import { paginationErrorResponse, parsePaginationLimit } from "../../../../lib/api-pagination";
 
 const validTypes: TlozResourceType[] = ["link", "document", "image", "file", "note"];
 
@@ -24,13 +25,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = limitParam ? Math.max(1, Math.min(100, Number(limitParam))) : 25;
-  if (isNaN(limit)) {
-    return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "limit debe ser un número entre 1 y 100.", requestId: crypto.randomUUID() } },
-      { status: 400 }
-    );
-  }
+  const limit = parsePaginationLimit(limitParam);
+  if (limit instanceof Response) return limit;
 
   try {
     const result = await dataClient.tloz.findResources(
@@ -38,7 +34,9 @@ export async function GET(request: NextRequest) {
       { limit, cursor: cursor ?? undefined }
     );
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }

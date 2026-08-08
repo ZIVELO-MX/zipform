@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import {
   checklistItems, currentUser, episodes, missionDependencies, missionQuestItems, missions,
@@ -49,7 +49,13 @@ function createPrismaStub() {
     let result = rows.filter((row) => matchesWhere(row, args.where));
     if (args.cursor) {
       const cursorIndex = result.findIndex((row) => row.id === args.cursor?.id);
-      if (cursorIndex >= 0) result = result.slice(cursorIndex + (args.skip ?? 0));
+      if (cursorIndex < 0) {
+        throw new Prisma.PrismaClientKnownRequestError("Cursor not found", {
+          code: "P2025",
+          clientVersion: "test",
+        });
+      }
+      result = result.slice(cursorIndex + (args.skip ?? 0));
     }
     return args.take === undefined ? result : result.slice(0, args.take);
   });
@@ -185,6 +191,24 @@ describe("prisma data driver", () => {
       ownerId: source.ownerId
     })).toEqual(expect.arrayContaining([expect.objectContaining({ id: source.id })]));
     expect(await client.tloz.getMissions({ ownerId: "missing" })).toEqual([]);
+  });
+
+  it("classifies missing cursors consistently across v1 repositories", async () => {
+    const client = createPrismaDataClient(createPrismaStub());
+    const reads = [
+      client.tloz.findUsers({}, { cursor: "missing" }),
+      client.tloz.findProjects({}, { cursor: "missing" }),
+      client.tloz.findMissions({}, { cursor: "missing" }),
+      client.tloz.findQuestItems({}, { cursor: "missing" }),
+      client.tloz.findResources({}, { cursor: "missing" }),
+    ];
+
+    for (const read of reads) {
+      await expect(read).rejects.toMatchObject({
+        name: "PaginationCursorError",
+        cursor: "missing",
+      });
+    }
   });
 
   it("creates, updates, completes and deletes missions", async () => {

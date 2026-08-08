@@ -2400,6 +2400,7 @@ components:
     Cursor:
       name: cursor
       in: query
+      description: Cursor opaco devuelto como `nextCursor` por la página anterior. Un cursor vacío o inexistente responde 400 `INVALID_REQUEST`.
       schema:
         type: string
         minLength: 1

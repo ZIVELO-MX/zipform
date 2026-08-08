@@ -24,7 +24,11 @@ Para comparar dos servidores con el mismo dataset:
 pnpm perf:api --compare http://127.0.0.1:3101 http://127.0.0.1:3102
 ```
 
-El informe incluye p50, p95, p99, throughput, bytes y errores para OpenAPI, usuario actual, proyectos, misiones, misiones filtradas y detalle de misión. El resultado es `improvement`, `regression` o `inconclusive`; es informativo y no bloquea CI porque el tiempo de un runner puede variar.
+El informe incluye p50, p95, p99, throughput, bytes y errores para OpenAPI,
+usuario actual, Projects, Missions, Inventory, Resources, Container/Content,
+Documents, páginas posteriores cuando existen, Missions filtradas, detail y batch.
+El resultado es `improvement`, `regression` o `inconclusive`; es informativo y
+no bloquea CI porque el tiempo de un runner puede variar.
 
 ## Consultas de producción
 

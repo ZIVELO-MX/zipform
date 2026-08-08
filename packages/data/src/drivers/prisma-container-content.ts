@@ -19,6 +19,7 @@ import {
   validateContentRecord,
 } from "../container-content-store";
 import { checksumContainerContentSnapshot } from "../container-content-checksum";
+import { PaginationCursorError } from "../pagination";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
@@ -84,10 +85,11 @@ function commonData(record: ContainerRecord | ContentRecord) {
   };
 }
 
-function translatePrismaError(error: unknown): never {
+function translatePrismaError(error: unknown, cursor?: string): never {
   if (error instanceof ContainerContentError) throw error;
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2025") {
+      if (cursor) throw new PaginationCursorError(cursor, { cause: error });
       throw new ContainerContentError("STORE_NOT_FOUND", "El registro no existe.", {}, { cause: error });
     }
     if (error.code === "P2003") {
@@ -305,7 +307,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
         const data = rows.slice(0, limit).map(mapContainer);
         return { data, nextCursor: rows.length > limit ? data.at(-1)?.id ?? null : null };
       } catch (error) {
-        return translatePrismaError(error);
+        return translatePrismaError(error, pagination.cursor);
       }
     },
 
@@ -329,7 +331,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
         const data = rows.slice(0, limit).map(mapContent);
         return { data, nextCursor: rows.length > limit ? data.at(-1)?.id ?? null : null };
       } catch (error) {
-        return translatePrismaError(error);
+        return translatePrismaError(error, pagination.cursor);
       }
     },
 
