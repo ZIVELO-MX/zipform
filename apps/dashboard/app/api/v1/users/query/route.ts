@@ -11,9 +11,7 @@ export async function POST(request: NextRequest) {
   let body: { email?: string; username?: string; limit?: number; cursor?: string };
   try {
     body = await request.json();
-  } catch (error) {
-    const paginationResponse = paginationErrorResponse(error);
-    if (paginationResponse) return paginationResponse;
+  } catch {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
       { status: 400 }
@@ -42,7 +40,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(isReadOnlyAgent(auth.user)
       ? { ...result, data: result.data.map(toPublicUserProfile) }
       : result);
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }

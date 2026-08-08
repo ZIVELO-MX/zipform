@@ -14,9 +14,7 @@ export async function POST(request: NextRequest) {
   let body: { ownerId?: string; status?: string; category?: string; limit?: number; cursor?: string };
   try {
     body = await request.json();
-  } catch (error) {
-    const paginationResponse = paginationErrorResponse(error);
-    if (paginationResponse) return paginationResponse;
+  } catch {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
       { status: 400 }
@@ -46,7 +44,9 @@ export async function POST(request: NextRequest) {
       { limit, cursor: body.cursor }
     );
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
