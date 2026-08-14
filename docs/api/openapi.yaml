@@ -1499,6 +1499,11 @@ paths:
           in: query
           schema:
             $ref: "#/components/schemas/ResourceType"
+        - name: q
+          in: query
+          description: Case-insensitive title or URL search.
+          schema:
+            type: string
       responses:
         "200":
           description: Matching resources.
@@ -1506,6 +1511,44 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ResourceListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  # ── Global document search ─────────────────────────────────────────
+  /search:
+    get:
+      operationId: searchDocuments
+      summary: Search documents and owned resources
+      description: Server-side global search across projects, missions, Inventory, Workshop, Library and resources. Results include a canonical destination and stable cursor pagination.
+      tags: [Documents]
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search text, at least two characters.
+          schema:
+            type: string
+            minLength: 2
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+        - name: types
+          in: query
+          description: Comma-separated subset of project, mission, inventory and resource.
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching navigable results.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GlobalSearchResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -1535,6 +1578,9 @@ paths:
                   type: string
                 type:
                   $ref: "#/components/schemas/ResourceType"
+                q:
+                  type: string
+                  description: Case-insensitive title or URL search.
                 limit:
                   type: integer
                   minimum: 1
@@ -2684,6 +2730,35 @@ components:
           oneOf:
             - type: string
             - type: "null"
+    GlobalSearchResult:
+      type: object
+      additionalProperties: false
+      required: [id, type, title, context, destination]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [project, mission, inventory, resource]
+        title:
+          type: string
+        context:
+          type: string
+        destination:
+          type: string
+        publicId:
+          type: string
+    GlobalSearchResponse:
+      type: object
+      additionalProperties: false
+      required: [data, nextCursor]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/GlobalSearchResult"
+        nextCursor:
+          type: [string, "null"]
     DocumentCreate:
       type: object
       additionalProperties: false

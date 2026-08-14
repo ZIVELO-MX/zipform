@@ -143,6 +143,7 @@ export type ResourceFilters = {
   projectId?: string;
   questItemId?: string;
   type?: TlozResource["type"];
+  query?: string;
 };
 
 export type DocumentFilters = {
