@@ -11,11 +11,14 @@ import {
 import { Suspense, type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { SettingsDialog } from "./settings-dialog";
 import { buildTlozSections } from "./tloz-sidebar";
+import { TlozCapabilitiesProvider } from "./tloz/tloz-capabilities";
+import type { TlozUiCapabilities } from "../lib/authorization";
 export { buildTlozSections } from "./tloz-sidebar";
 
 type AppShellProps = {
   children: ReactNode;
   user: UserProfile;
+  capabilities: TlozUiCapabilities;
   tlozProjects?: TlozProject[];
   projectActiveCounts?: Map<string, number>;
   projectActivity?: Map<string, string>;
@@ -24,14 +27,14 @@ type AppShellProps = {
 const SIDEBAR_STATE_KEY = "tloz-sidebar-state";
 const SIDEBAR_WIDTH_KEY = "tloz-sidebar-width";
 
-export function AppShell({ children, user, tlozProjects = [], projectActiveCounts = new Map(), projectActivity = new Map() }: AppShellProps) {
+export function AppShell({ children, user, capabilities, tlozProjects = [], projectActiveCounts = new Map(), projectActivity = new Map() }: AppShellProps) {
   const pathname = usePathname();
   if (pathname === "/login") return children;
 
   return (
     <TooltipProvider delayDuration={180}>
       <Suspense fallback={null}>
-        <DashboardLayoutClient user={user} tlozProjects={tlozProjects} projectActiveCounts={projectActiveCounts} projectActivity={projectActivity}>
+        <DashboardLayoutClient user={user} capabilities={capabilities} tlozProjects={tlozProjects} projectActiveCounts={projectActiveCounts} projectActivity={projectActivity}>
           {children}
         </DashboardLayoutClient>
       </Suspense>
@@ -39,7 +42,7 @@ export function AppShell({ children, user, tlozProjects = [], projectActiveCount
   );
 }
 
-function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCounts, projectActivity }: AppShellProps) {
+function DashboardLayoutClient({ children, user, capabilities, tlozProjects, projectActiveCounts, projectActivity }: AppShellProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -110,7 +113,7 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
   }, [mobileMenuOpen]);
 
   return (
-    <div
+    <TlozCapabilitiesProvider capabilities={capabilities}><div
       className="shell shell-tloz min-h-dvh bg-ivory text-carbon"
       data-sidebar={collapsed ? "collapsed" : "expanded"}
     >
@@ -141,6 +144,6 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
       />
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} />
-    </div>
+    </div></TlozCapabilitiesProvider>
   );
 }

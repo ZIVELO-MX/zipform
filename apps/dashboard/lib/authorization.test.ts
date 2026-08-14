@@ -3,6 +3,7 @@ import {
   assertTlozOperation,
   authorizeApiRequest,
   authorizeTlozOperation,
+  tlozUiCapabilities,
   isReadOnlyAgent,
   TlozAuthorizationError,
   toPublicMissionOwner,
@@ -23,6 +24,11 @@ function allowed(actor: (typeof actors)[keyof typeof actors], operation: TlozOpe
 }
 
 describe("TLOZ authorization policy", () => {
+  it("serializes server-derived UI capabilities without role logic in the client", () => {
+    expect(tlozUiCapabilities(actors.owner)).toMatchObject({ canCreate: true, canUpdate: true, canMove: true, canDelete: true, canManageAgents: true });
+    expect(tlozUiCapabilities(actors.operative)).toMatchObject({ canCreate: true, canUpdate: true, canMove: true, canDelete: true, canManageRoles: true, canManageAgents: false });
+    expect(tlozUiCapabilities(actors.reader)).toEqual({ canCreate: false, canUpdate: false, canMove: false, canDelete: false, canManageRoles: false, canManageAgents: false });
+  });
   it("implements the role matrix with deny-by-default behavior", () => {
     const cases: Array<[keyof typeof actors, TlozOperation, Record<string, string | boolean>, boolean]> = [
       ["owner", "read", {}, true],

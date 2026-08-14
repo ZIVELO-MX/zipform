@@ -47,6 +47,8 @@ import type { ApiKey, Avatar as AvatarType, UserProfile } from "@tloz/types";
 import { createAgentApiKey, listAgentApiKeys, listAgents, listAvatars, revokeAgentApiKey } from "../lib/settings-actions";
 import type { CreateApiKeyResult } from "../lib/settings-actions";
 import { updateProfile } from "../lib/settings-actions";
+import { useTlozCapabilities } from "./tloz/tloz-capabilities";
+import { tlozErrorMessage } from "../lib/tloz-error";
 
 type SettingsSection = "profile" | "security";
 type ThemeValue = "system" | "light" | "dark";
@@ -73,6 +75,7 @@ export function SettingsDialog({
   onOpenChange: (open: boolean) => void;
   user: UserProfile;
 }) {
+  const capabilities = useTlozCapabilities();
   const [section, setSection] = useState<SettingsSection>("profile");
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
@@ -83,7 +86,7 @@ export function SettingsDialog({
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    listAvatars().then(setAvatars).catch(() => toast.error("Error al cargar avatares"));
+    listAvatars().then(setAvatars).catch((error) => toast.error(tlozErrorMessage(error, "Error al cargar avatares")));
   }, []);
 
   const currentAvatar = avatars.find((a) => a.imageUrl && a.imageUrl === avatarUrl) ?? null;
@@ -99,8 +102,8 @@ export function SettingsDialog({
         await updateProfile({ name, username, theme, avatarUrl: avatarUrl || undefined });
         toast.success("Perfil actualizado");
         onOpenChange(false);
-      } catch {
-        toast.error("Error al guardar los cambios");
+      } catch (error) {
+        toast.error(tlozErrorMessage(error, "Error al guardar los cambios"));
       }
     });
   }, [name, username, theme, avatarUrl, onOpenChange]);
@@ -131,7 +134,7 @@ export function SettingsDialog({
         <div className="grid h-full min-h-0 grid-cols-1 bg-[#FCFCFB] md:grid-cols-[142px_minmax(0,1fr)]">
           <aside className="border-b border-carbon/[0.08] bg-[#FAFAF9] p-2.5 md:border-b-0 md:border-r md:pt-5">
             <nav className="flex gap-2 md:flex-col" aria-label="Secciones de configuración">
-              {sections.map((item) => {
+              {sections.filter((item) => item.id !== "security" || capabilities.canManageAgents).map((item) => {
                 const Icon = item.icon;
                 const selected = item.id === section;
                 return (
@@ -443,12 +446,12 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    listAgents().then(setAgents).catch(() => toast.error("Error al cargar agents"));
+    listAgents().then(setAgents).catch((error) => toast.error(tlozErrorMessage(error, "No tienes permiso para administrar agentes")));
   }, []);
 
   useEffect(() => {
     if (!agent) return;
-    listAgentApiKeys(agent).then(setApiKeys).catch(() => toast.error("Error al cargar API keys"));
+    listAgentApiKeys(agent).then(setApiKeys).catch((error) => toast.error(tlozErrorMessage(error, "No tienes permiso para administrar API keys")));
   }, [agent]);
 
   const agentOptions = agents.map((a) => ({ id: a.id, name: a.name, username: a.username, avatarUrl: a.avatarUrl }));
@@ -512,8 +515,8 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
                             setKeyPopoverOpen(false);
                           }
                           toast.success("API key eliminada");
-                        } catch {
-                          toast.error("Error al eliminar API key");
+                        } catch (error) {
+                          toast.error(tlozErrorMessage(error, "Error al eliminar API key"));
                         }
                       }}
                     >
@@ -548,8 +551,8 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
                   setCreatedKey(result);
                   setKeyPopoverOpen(true);
                   toast.success("API key creada");
-                } catch {
-                  toast.error("Error al crear API key");
+                } catch (error) {
+                  toast.error(tlozErrorMessage(error, "Error al crear API key"));
                 } finally {
                   setPending(false);
                 }
