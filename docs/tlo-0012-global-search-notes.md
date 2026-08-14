@@ -19,7 +19,7 @@
 
 ## Pendiente de cliente / despliegue
 
-- Ejecutar la prueba visual Playwright en preview o producción con una cuenta autorizada y datos documentales reales. El conector de navegador integrado no estuvo disponible en esta sesión y el driver mock no contiene resultados canónicos visibles.
+- Ejecutar la prueba visual Playwright en preview o producción con una cuenta autorizada y datos documentales reales. El conector de navegador integrado y el ejecutable Chromium local no estuvieron disponibles en esta sesión; el driver mock tampoco contiene resultados canónicos visibles.
 - Confirmar con el cliente si los recursos sin documento propietario deben ocultarse (comportamiento actual) o enviarse a una vista de recursos dedicada.
 - Confirmar si el orden preferido debe mezclar documentos y recursos por relevancia o conservar documentos antes que recursos (comportamiento actual).
 
