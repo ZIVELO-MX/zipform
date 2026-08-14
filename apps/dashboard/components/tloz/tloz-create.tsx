@@ -16,6 +16,8 @@ import { initialDraft } from "./tloz-create-defaults";
 import { AddDependency, AddResource } from "./mission-detail";
 import { MissionPropertyFields, type MissionPropertyValues } from "./mission-inline-editor";
 import { CreateDocumentPropertyInputs } from "./document-property-fields";
+import { useTlozCapabilities } from "./tloz-capabilities";
+import { tlozErrorMessage } from "../../lib/tloz-error";
 
 export type TlozCreateKind = "mission" | "project" | "inventory" | "workshop" | "library";
 type CreateContextValue = { kind: TlozCreateKind; label: string; openCreate: () => void };
@@ -48,7 +50,9 @@ export function useTlozCreate() {
 }
 
 export function CreateNewEntityButton({ variant = "row" }: { variant?: "row" | "control" }) {
+  const capabilities = useTlozCapabilities();
   const { label, openCreate } = useTlozCreate();
+  if (!capabilities.canCreate) return null;
   return variant === "control"
     ? <Button type="button" className="w-full justify-center bg-zivelo text-white hover:bg-zivelo/90" onClick={openCreate}><Plus />Crear nuevo {label}</Button>
     : <button type="button" className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-carbon/15 bg-white/60 text-[13px] font-semibold text-carbon/55 transition-colors hover:border-zivelo/30 hover:text-zivelo" onClick={openCreate}><Plus className="size-3.5" />Crear nuevo {label}</button>;
@@ -125,7 +129,7 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
           else if (kind === "inventory") await createQuestItem(input as never);
           else await createCanonicalContent(canonicalContainer!, draft);
           toast.success(`${kindLabel[kind]} creado`, { id: toastId, toasterId }); reset(); onDone?.(); router.refresh();
-        } catch { toast.error("No se pudo crear. Revisa los datos e intenta de nuevo.", { id: toastId, toasterId }); }
+        } catch (error) { toast.error(tlozErrorMessage(error, "No se pudo crear. Revisa los datos e intenta de nuevo."), { id: toastId, toasterId }); }
       });
     } catch (error) { if (error instanceof TlozValidationError) setErrors(error.fields); else throw error; }
   }
