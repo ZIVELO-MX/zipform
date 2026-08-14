@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import {
-  getTlozMissionDetail,
+  getTlozMissionDetailWithAttachmentMetadata,
   getTlozMissions,
   getTlozDocument,
   getTlozProjects,
@@ -22,7 +22,7 @@ export async function MissionDocumentPage({
   missionId: string;
 }) {
   const [mission, missions, projects, questItems, allUsers, document] = await Promise.all([
-    getTlozMissionDetail(missionId),
+    getTlozMissionDetailWithAttachmentMetadata(missionId),
     getTlozMissions(),
     getTlozProjects(),
     getTlozQuestItems(),

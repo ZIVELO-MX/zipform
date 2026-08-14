@@ -10,7 +10,7 @@ vi.mock("react", () => ({ cache: <T extends (...args: never[]) => unknown>(callb
 vi.mock("@tloz/data", () => ({ dataClient: { tloz: mocks, canonicalDocuments: {} } }));
 vi.mock("./tloz-attachment-storage", () => ({ getTlozAttachmentStorage: () => ({ createSignedRead: mocks.createSignedRead }) }));
 
-import { getTlozMissionDetailWithAttachments, hydrateTlozMissionResources } from "./tloz-data";
+import { getTlozMissionDetailWithAttachmentMetadata, getTlozMissionDetailWithAttachments, hydrateTlozMissionResources } from "./tloz-data";
 
 describe("hydrateTlozMissionResources", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -24,7 +24,7 @@ describe("hydrateTlozMissionResources", () => {
       ],
     });
     mocks.getAttachmentGroups.mockResolvedValue([
-      { attachments: [
+      { groupName: "Checkout responsive", attachments: [
         { id: "resource-1", storagePath: "missions/mission-uuid/capture/desktop.png" },
         { id: "resource-2", storagePath: "missions/mission-uuid/capture/mobile.png" },
       ] },
@@ -33,8 +33,8 @@ describe("hydrateTlozMissionResources", () => {
 
     await expect(getTlozMissionDetailWithAttachments("TLO-0029")).resolves.toMatchObject({
       resources: [
-        { id: "resource-1", url: "https://signed.test/missions/mission-uuid/capture/desktop.png" },
-        { id: "resource-2", url: "https://signed.test/missions/mission-uuid/capture/mobile.png" },
+        { id: "resource-1", groupName: "Checkout responsive", url: "https://signed.test/missions/mission-uuid/capture/desktop.png" },
+        { id: "resource-2", groupName: "Checkout responsive", url: "https://signed.test/missions/mission-uuid/capture/mobile.png" },
       ],
     });
     expect(mocks.getMissionDetail).toHaveBeenCalledWith("TLO-0029");
@@ -50,12 +50,22 @@ describe("hydrateTlozMissionResources", () => {
     });
   });
 
+  it("hydrates group names without preloading signed URLs", async () => {
+    mocks.getMissionDetail.mockResolvedValue({ id: "mission-uuid", resources: [{ id: "resource-1", type: "image", title: "Desktop" }] });
+    mocks.getAttachmentGroups.mockResolvedValue([{ groupName: "Checkout responsive", attachments: [{ id: "resource-1", storagePath: "missions/1/desktop.png" }] }]);
+
+    await expect(getTlozMissionDetailWithAttachmentMetadata("mission-uuid")).resolves.toMatchObject({
+      resources: [{ id: "resource-1", groupName: "Checkout responsive" }],
+    });
+    expect(mocks.createSignedRead).not.toHaveBeenCalled();
+  });
+
   it("keeps the resource usable when storage signing is temporarily unavailable", async () => {
     const mission = { resources: [{ id: "resource-1", type: "image", title: "Capture" }] } as never;
-    const groups = [{ attachments: [{ id: "resource-1", storagePath: "missions/1/capture/file.png" }] }] as never;
+    const groups = [{ groupName: "Fallback preview", attachments: [{ id: "resource-1", storagePath: "missions/1/capture/file.png" }] }] as never;
 
     await expect(hydrateTlozMissionResources(mission, groups, async () => { throw new Error("storage unavailable"); })).resolves.toMatchObject({
-      resources: [{ id: "resource-1" }],
+      resources: [{ id: "resource-1", groupName: "Fallback preview" }],
     });
   });
 });

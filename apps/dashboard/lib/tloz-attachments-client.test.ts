@@ -4,6 +4,7 @@ import {
   buildAttachmentManifest,
   createAttachmentKey,
   createAttachmentRevision,
+  normalizeAttachmentGroupName,
   prepareAttachmentBatch,
   uploadAttachmentFile,
   validateAttachmentCount,
@@ -29,10 +30,17 @@ describe("TLOZ attachment client", () => {
     expect(() => validateAttachmentCount([])).toThrow(/entre 1 y 20/);
   });
 
-  it("builds a manifest without sending File objects", () => {
-    const manifest = buildAttachmentManifest("manual-group", "a".repeat(40), [item()]);
-    expect(manifest).toMatchObject({ groupKey: "manual-group", sourceRevision: "a".repeat(40), files: [{ key: "home", sizeBytes: 9 }] });
+  it("builds a named manifest without sending File objects", () => {
+    const manifest = buildAttachmentManifest("manual-group", "a".repeat(40), [item()], "  Checkout responsive  ");
+    expect(manifest).toMatchObject({ groupKey: "manual-group", groupName: "Checkout responsive", sourceRevision: "a".repeat(40), files: [{ key: "home", sizeBytes: 9 }] });
     expect(manifest.files[0]).not.toHaveProperty("file");
+  });
+
+  it("validates group names before preparing the API request", () => {
+    expect(normalizeAttachmentGroupName("  Checkout responsive  ")).toBe("Checkout responsive");
+    expect(normalizeAttachmentGroupName("   ")).toBeUndefined();
+    expect(() => normalizeAttachmentGroupName("Checkout\nresponsive")).toThrow(/nombre del grupo/);
+    expect(() => normalizeAttachmentGroupName("x".repeat(81))).toThrow(/80/);
   });
 
   it("uses the session API for preparation and exact MIME for direct upload", async () => {

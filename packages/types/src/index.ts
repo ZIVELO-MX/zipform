@@ -170,6 +170,7 @@ export type TlozResource = {
   url?: string;
   fileId?: string;
   groupKey?: string;
+  groupName?: string;
   externalKey?: string;
   storagePath?: string;
   contentType?: string;
@@ -193,6 +194,7 @@ export type TlozAttachmentFile = {
 
 export type TlozAttachmentGroup = {
   groupKey: string;
+  groupName?: string;
   sourceRevision: string;
   generation: number;
   attachments: Array<Omit<TlozResource, "url"> & { url: string }>;

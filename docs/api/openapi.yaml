@@ -3086,6 +3086,12 @@ components:
         groupKey:
           type: string
           pattern: "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          description: Stable machine key for the screenshot group.
+        groupName:
+          type: string
+          minLength: 1
+          maxLength: 80
+          description: Optional client-defined display name. Existing groups without it fall back to a humanized groupKey.
         sourceRevision:
           type: string
           pattern: "^[0-9a-fA-F]{40}$"
@@ -3116,6 +3122,8 @@ components:
           type: integer
           minimum: 1
         groupKey:
+          type: string
+        groupName:
           type: string
         sourceRevision:
           type: string
@@ -3155,6 +3163,9 @@ components:
       properties:
         groupKey:
           type: string
+        groupName:
+          type: string
+          description: Client-defined display name when supplied by the active batch.
         sourceRevision:
           type: string
         generation:
@@ -3220,6 +3231,9 @@ components:
           type: string
         groupKey:
           type: string
+        groupName:
+          type: string
+          description: Resolved attachment group name when the resource is hydrated for Mission Detail.
         externalKey:
           type: string
         contentType:
