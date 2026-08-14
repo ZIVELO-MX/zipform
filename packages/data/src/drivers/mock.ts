@@ -191,6 +191,10 @@ export function createMockDataClient(): TlozDataClient {
         if (filters?.projectId) data = data.filter((r) => r.projectId === filters.projectId);
         if (filters?.questItemId) data = data.filter((r) => r.questItemId === filters.questItemId);
         if (filters?.type) data = data.filter((r) => r.type === filters.type);
+        if (filters?.query) {
+          const query = filters.query.trim().toLocaleLowerCase();
+          data = data.filter((r) => `${r.title} ${r.url ?? ""}`.toLocaleLowerCase().includes(query));
+        }
         return paginate(data, pagination);
       },
       async getProjects() {

@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   const projectId = searchParams.get("projectId");
   const questItemId = searchParams.get("questItemId");
   const type = searchParams.get("type") as TlozResourceType | null;
+  const query = searchParams.get("q")?.trim();
   const limitParam = searchParams.get("limit");
   const cursor = searchParams.get("cursor");
 
@@ -30,7 +31,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const result = await dataClient.tloz.findResources(
-      { missionId: missionId ?? undefined, projectId: projectId ?? undefined, questItemId: questItemId ?? undefined, type: type ?? undefined },
+      { missionId: missionId ?? undefined, projectId: projectId ?? undefined, questItemId: questItemId ?? undefined, type: type ?? undefined, query: query || undefined },
       { limit, cursor: cursor ?? undefined }
     );
     return NextResponse.json(result);

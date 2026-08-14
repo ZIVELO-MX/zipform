@@ -770,6 +770,12 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         if (filters?.projectId) where.projectId = filters.projectId;
         if (filters?.questItemId) where.questItemId = filters.questItemId;
         if (filters?.type) where.type = filters.type;
+        if (filters?.query) {
+          where.OR = [
+            { title: { contains: filters.query.trim(), mode: "insensitive" } },
+            { url: { contains: filters.query.trim(), mode: "insensitive" } },
+          ];
+        }
         const rows = await readPage(pagination?.cursor, () => prisma.tlozResource.findMany({
           where,
           orderBy: [{ createdAt: "asc" }, { id: "asc" }],

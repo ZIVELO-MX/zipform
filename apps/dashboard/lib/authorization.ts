@@ -143,6 +143,7 @@ const TLOZ_API_PREFIXES = [
   "/api/v1/projects",
   "/api/v1/quest-items",
   "/api/v1/resources",
+  "/api/v1/search",
   "/api/v1/seasons",
   "/api/v1/episodes",
   "/api/v1/users",

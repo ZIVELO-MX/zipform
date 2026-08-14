@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
-  let body: { missionId?: string; projectId?: string; questItemId?: string; type?: string; limit?: number; cursor?: string };
+  let body: { missionId?: string; projectId?: string; questItemId?: string; type?: string; query?: string; limit?: number; cursor?: string };
   try {
     body = await request.json();
   } catch {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await dataClient.tloz.findResources(
-      { missionId: body.missionId, projectId: body.projectId, questItemId: body.questItemId, type: body.type as TlozResourceType | undefined },
+      { missionId: body.missionId, projectId: body.projectId, questItemId: body.questItemId, type: body.type as TlozResourceType | undefined, query: body.query?.trim() || undefined },
       { limit, cursor: body.cursor }
     );
     return NextResponse.json(result);
