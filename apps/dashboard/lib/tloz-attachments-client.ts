@@ -22,6 +22,7 @@ export type AttachmentBatch = {
   uploadBatchId: string;
   generation: number;
   groupKey: string;
+  groupName?: string;
   sourceRevision: string;
   status: string;
   uploads: AttachmentUpload[];
@@ -128,6 +129,15 @@ export function validateAttachmentCount(items: readonly AttachmentUploadItem[]) 
   return items;
 }
 
+export function normalizeAttachmentGroupName(groupName?: string) {
+  const normalized = groupName?.trim();
+  if (!normalized) return undefined;
+  if (normalized.length > 80 || /[\u0000-\u001F\u007F]/.test(normalized)) {
+    throw new AttachmentClientError("El nombre del grupo debe tener entre 1 y 80 caracteres legibles.", "INVALID_ATTACHMENT_MANIFEST", 400, "validate");
+  }
+  return normalized;
+}
+
 function errorFromResponse(response: Response, body: ApiError | null, stage: AttachmentClientError["stage"]) {
   const code = typeof body?.error?.code === "string" ? body.error.code : `HTTP_${response.status}`;
   const requestId = typeof body?.error?.requestId === "string" ? body.error.requestId : undefined;
@@ -148,10 +158,12 @@ async function requestJson<T>(path: string, init: RequestInit, stage: Attachment
   return body as T;
 }
 
-export function buildAttachmentManifest(groupKey: string, sourceRevision: string, items: readonly AttachmentUploadItem[]) {
+export function buildAttachmentManifest(groupKey: string, sourceRevision: string, items: readonly AttachmentUploadItem[], groupName?: string) {
   validateAttachmentCount(items);
+  const normalizedGroupName = normalizeAttachmentGroupName(groupName);
   return {
     groupKey,
+    ...(normalizedGroupName ? { groupName: normalizedGroupName } : {}),
     sourceRevision,
     files: items.map(({ file: _file, ...file }) => file),
   };

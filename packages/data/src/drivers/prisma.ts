@@ -388,9 +388,16 @@ function mapResource(resource: {
   };
 }
 
-function attachmentFilesFromManifest(manifest: Prisma.JsonValue): TlozAttachmentFileInput[] {
-  if (!Array.isArray(manifest)) throw new TlozAttachmentError("ATTACHMENT_CONFLICT", "El manifiesto de capturas persistido es inválido.");
-  return manifest as unknown as TlozAttachmentFileInput[];
+export function deserializeAttachmentManifest(manifest: Prisma.JsonValue): Pick<TlozAttachmentBatch, "files" | "groupName"> {
+  if (Array.isArray(manifest)) return { files: manifest as unknown as TlozAttachmentFileInput[] };
+  if (!manifest || typeof manifest !== "object" || !("files" in manifest) || !Array.isArray(manifest.files)) {
+    throw new TlozAttachmentError("ATTACHMENT_CONFLICT", "El manifiesto de capturas persistido es inválido.");
+  }
+  const groupName = "groupName" in manifest && typeof manifest.groupName === "string" ? manifest.groupName : undefined;
+  return {
+    files: manifest.files as unknown as TlozAttachmentFileInput[],
+    ...(groupName ? { groupName } : {}),
+  };
 }
 
 function mapAttachmentBatch(row: {
@@ -402,6 +409,7 @@ function mapAttachmentBatch(row: {
   status: string;
   manifest: Prisma.JsonValue;
 }): TlozAttachmentBatch {
+  const manifest = deserializeAttachmentManifest(row.manifest);
   return {
     uploadBatchId: row.id,
     missionId: row.missionId,
@@ -409,18 +417,20 @@ function mapAttachmentBatch(row: {
     sourceRevision: row.sourceRevision,
     generation: row.generation,
     status: row.status as TlozAttachmentBatch["status"],
-    files: attachmentFilesFromManifest(row.manifest),
+    ...manifest,
   };
 }
 
 function mapAttachmentGroup(
   groupKey: string,
+  groupName: string | undefined,
   sourceRevision: string,
   generation: number,
   resources: Array<Parameters<typeof mapResource>[0]>,
 ): TlozAttachmentGroup {
   return {
     groupKey,
+    ...(groupName ? { groupName } : {}),
     sourceRevision,
     generation,
     attachments: resources.map((resource) => {
@@ -1087,7 +1097,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         await prisma.tlozResource.deleteMany({ where: { id: resourceId, questItemId } });
         return (await prisma.tlozResource.findMany({ where: { questItemId }, orderBy: { createdAt: "asc" } })).map(mapResource);
       },
-      async prepareAttachmentBatch(missionId, groupKey, sourceRevision, files) {
+      async prepareAttachmentBatch(missionId, groupKey, sourceRevision, files, groupName) {
         const existing = await prisma.tlozAttachmentBatch.findUnique({
           where: { missionId_groupKey_sourceRevision: { missionId, groupKey, sourceRevision } },
         });
@@ -1108,7 +1118,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
             sourceRevision,
             generation: (latest?.generation ?? 0) + 1,
             status: "prepared",
-            manifest: files as unknown as Prisma.InputJsonValue,
+            manifest: { ...(groupName ? { groupName } : {}), files } as unknown as Prisma.InputJsonValue,
           },
         });
         return mapAttachmentBatch(row);
@@ -1178,7 +1188,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
           return {
             batch: mapAttachmentBatch(finalized.updatedBatch),
-            group: mapAttachmentGroup(batch.groupKey, batch.sourceRevision, batch.generation, finalized.updated),
+            group: mapAttachmentGroup(batch.groupKey, mappedBatch.groupName, batch.sourceRevision, batch.generation, finalized.updated),
             previousStoragePaths: [...new Set(finalized.previousStoragePaths)],
           } satisfies TlozAttachmentFinalizeResult;
         }
@@ -1189,7 +1199,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         });
         return {
           batch: mappedBatch,
-          group: mapAttachmentGroup(batch.groupKey, batch.sourceRevision, batch.generation, resources),
+          group: mapAttachmentGroup(batch.groupKey, mappedBatch.groupName, batch.sourceRevision, batch.generation, resources),
           previousStoragePaths: [],
         } satisfies TlozAttachmentFinalizeResult;
       },
@@ -1209,7 +1219,9 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         }
         return [...resourcesByGroup.entries()].flatMap(([groupKey, groupResources]) => {
           const batch = latestByGroup.get(groupKey);
-          return batch ? [mapAttachmentGroup(groupKey, batch.sourceRevision, batch.generation, groupResources)] : [];
+          if (!batch) return [];
+          const mappedBatch = mapAttachmentBatch(batch);
+          return [mapAttachmentGroup(groupKey, mappedBatch.groupName, batch.sourceRevision, batch.generation, groupResources)];
         });
       },
       async patchMissionStatus(missionId, status) {

@@ -11,7 +11,8 @@ describe("mission attachment state", () => {
   it("keeps stable keys through replacement and retries only failures", () => {
     const first = item("desktop");
     const second = item("mobile");
-    let state = attachmentStateReducer(emptyAttachmentState, { type: "select", groupKey: "manual-group", sourceRevision: createAttachmentRevision(), items: [first, second] });
+    let state = attachmentStateReducer(emptyAttachmentState, { type: "select", groupKey: "manual-group", groupName: "Checkout responsive", sourceRevision: createAttachmentRevision(), items: [first, second] });
+    expect(state.groupName).toBe("Checkout responsive");
     state = attachmentStateReducer(state, { type: "prepared", uploadBatchId: "batch-1" });
     state = attachmentStateReducer(state, { type: "uploaded", key: "desktop" });
     state = attachmentStateReducer(state, { type: "file-error", key: "mobile", message: "falló" });

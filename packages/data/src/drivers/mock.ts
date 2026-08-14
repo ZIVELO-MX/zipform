@@ -406,12 +406,12 @@ export function createMockDataClient(): TlozDataClient {
         tlozData.resources = tlozData.resources.filter((item) => item.id !== resourceId || item.questItemId !== questItemId);
         return tlozData.resources.filter((item) => item.questItemId === questItemId);
       },
-      async prepareAttachmentBatch(missionId, groupKey, sourceRevision, files: TlozAttachmentFileInput[]) {
+      async prepareAttachmentBatch(missionId, groupKey, sourceRevision, files: TlozAttachmentFileInput[], groupName?: string) {
         const existing = attachmentBatches.find((batch) => batch.missionId === missionId && batch.groupKey === groupKey && batch.sourceRevision === sourceRevision);
         if (existing) return { ...existing, files: existing.files.map((file) => ({ ...file })) };
         if (!tlozData.missions.some((mission) => mission.id === missionId)) throw new TlozAttachmentError("ATTACHMENT_MISSION_NOT_FOUND", "Mission not found");
         const generation = Math.max(0, ...attachmentBatches.filter((batch) => batch.missionId === missionId && batch.groupKey === groupKey).map((batch) => batch.generation)) + 1;
-        const batch: TlozAttachmentBatch = { uploadBatchId: crypto.randomUUID(), missionId, groupKey, sourceRevision, generation, status: "prepared", files: files.map((file) => ({ ...file })) };
+        const batch: TlozAttachmentBatch = { uploadBatchId: crypto.randomUUID(), missionId, groupKey, ...(groupName ? { groupName } : {}), sourceRevision, generation, status: "prepared", files: files.map((file) => ({ ...file })) };
         attachmentBatches.push(batch);
         return { ...batch, files: batch.files.map((file) => ({ ...file })) };
       },
@@ -464,6 +464,7 @@ export function createMockDataClient(): TlozDataClient {
 function mockAttachmentGroup(batch: TlozAttachmentBatch, resources: TlozResource[]): TlozAttachmentGroup {
   return {
     groupKey: batch.groupKey,
+    ...(batch.groupName ? { groupName: batch.groupName } : {}),
     sourceRevision: batch.sourceRevision,
     generation: batch.generation,
     attachments: resources.map((resource) => ({ ...resource, url: "" })),

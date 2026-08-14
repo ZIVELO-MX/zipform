@@ -14,6 +14,7 @@ export class TlozAttachmentRequestError extends Error {
 
 export type AttachmentManifest = {
   groupKey: string;
+  groupName?: string;
   sourceRevision: string;
   files: TlozAttachmentFile[];
 };
@@ -26,6 +27,7 @@ export type AttachmentStorage = {
 };
 
 const GROUP_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+const GROUP_NAME = /^[^\u0000-\u001F\u007F]{1,80}$/;
 const EXTERNAL_KEY = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const REVISION = /^[0-9a-f]{40}$/i;
 const FILE_NAME = /^[^/\\\0]{1,200}$/;
@@ -38,9 +40,11 @@ export function validateAttachmentManifest(value: unknown): AttachmentManifest {
   if (!value || typeof value !== "object") invalid("El manifiesto debe ser un objeto.");
   const body = value as Record<string, unknown>;
   const groupKey = body.groupKey;
+  const groupName = body.groupName;
   const sourceRevision = body.sourceRevision;
   const files = body.files;
   if (typeof groupKey !== "string" || !GROUP_KEY.test(groupKey)) invalid("groupKey debe usar entre 1 y 64 caracteres seguros.");
+  if (groupName !== undefined && (typeof groupName !== "string" || !GROUP_NAME.test(groupName.trim()))) invalid("groupName debe usar entre 1 y 80 caracteres legibles.");
   if (typeof sourceRevision !== "string" || !REVISION.test(sourceRevision)) invalid("sourceRevision debe ser un SHA completo de 40 caracteres.");
   if (!Array.isArray(files) || files.length < 1 || files.length > MAX_ATTACHMENT_COUNT) invalid(`files debe contener entre 1 y ${MAX_ATTACHMENT_COUNT} elementos.`);
 
@@ -65,7 +69,7 @@ export function validateAttachmentManifest(value: unknown): AttachmentManifest {
     keys.add(key);
     return { key, title: title.trim(), fileName, contentType: contentType as TlozAttachmentFile["contentType"], sizeBytes: sizeBytes as number, width: width as number, height: height as number };
   });
-  return { groupKey, sourceRevision, files: normalized };
+  return { groupKey, ...(typeof groupName === "string" ? { groupName: groupName.trim() } : {}), sourceRevision, files: normalized };
 }
 
 export function attachmentStoragePath(missionId: string, groupKey: string, key: string, contentType: TlozAttachmentFile["contentType"]): string {

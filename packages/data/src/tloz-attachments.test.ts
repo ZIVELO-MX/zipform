@@ -17,10 +17,11 @@ describe("TLOZ attachment snapshots", () => {
   it("keeps keys idempotent, replaces the complete group, and rejects an older generation", async () => {
     const client = createMockDataClient();
     const missionId = "mission-resources";
-    const first = await client.tloz.prepareAttachmentBatch(missionId, "pr-57", "0123456789abcdef0123456789abcdef01234567", [file("home-desktop", "v1-home")]);
+    const first = await client.tloz.prepareAttachmentBatch(missionId, "pr-57", "0123456789abcdef0123456789abcdef01234567", [file("home-desktop", "v1-home")], "Checkout responsive");
     const repeated = await client.tloz.prepareAttachmentBatch(missionId, "pr-57", first.sourceRevision, [file("home-desktop", "ignored-new-path")]);
     expect(repeated.uploadBatchId).toBe(first.uploadBatchId);
     const firstResult = await client.tloz.finalizeAttachmentBatch(first.uploadBatchId);
+    expect(firstResult.group.groupName).toBe("Checkout responsive");
     const homeId = firstResult.group.attachments[0]?.id;
     expect(homeId).toBeTruthy();
 

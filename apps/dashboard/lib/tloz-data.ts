@@ -9,6 +9,13 @@ export type { TlozDashboardSummary, TlozMissionDetail, TlozMissionRecord };
 export const getTlozDashboardSummary = cache(() => dataClient.tloz.getDashboardSummary());
 export const getTlozMissions = cache(() => dataClient.tloz.getMissions());
 export const getTlozMissionDetail = cache((missionId: string) => dataClient.tloz.getMissionDetail(missionId));
+export const getTlozMissionDetailWithAttachmentMetadata = cache(async (missionId: string) => {
+  const mission = await dataClient.tloz.getMissionDetail(missionId);
+  if (!mission) return mission;
+  const groups = await dataClient.tloz.getAttachmentGroups(mission.id);
+  if (groups.length === 0) return mission;
+  return hydrateTlozMissionResources(mission, groups);
+});
 export const getTlozMissionDetailWithAttachments = cache(async (missionId: string) => {
   const mission = await dataClient.tloz.getMissionDetail(missionId);
   if (!mission) return mission;
@@ -20,16 +27,17 @@ export const getTlozMissionDetailWithAttachments = cache(async (missionId: strin
 export async function hydrateTlozMissionResources(
   mission: TlozMissionDetail,
   groups: TlozAttachmentGroup[],
-  createSignedRead: (path: string) => Promise<string>,
+  createSignedRead?: (path: string) => Promise<string>,
 ): Promise<TlozMissionDetail> {
-  const attachments = new Map(groups.flatMap((group) => group.attachments.map((attachment) => [attachment.id, attachment] as const)));
+  const attachments = new Map(groups.flatMap((group) => group.attachments.map((attachment) => [attachment.id, { attachment, groupName: group.groupName }] as const)));
   const resources = await Promise.all(mission.resources.map(async (resource) => {
-    const attachment = attachments.get(resource.id);
-    if (!attachment?.storagePath || resource.url) return resource;
+    const metadata = attachments.get(resource.id);
+    const namedResource = metadata?.groupName ? { ...resource, groupName: metadata.groupName } : resource;
+    if (!createSignedRead || !metadata?.attachment.storagePath || resource.url) return namedResource;
     try {
-      return { ...resource, url: await createSignedRead(attachment.storagePath) };
+      return { ...namedResource, url: await createSignedRead(metadata.attachment.storagePath) };
     } catch {
-      return resource;
+      return namedResource;
     }
   }));
   return { ...mission, resources };

@@ -4,7 +4,7 @@ import {
   checklistItems, currentUser, episodes, missionDependencies, missionQuestItems, missions,
   projects, questItems, resources, seasons, userMissionStates, users
 } from "../seed-data";
-import { createPrismaDataClient, databaseUrlWithApplicationName } from "./prisma";
+import { createPrismaDataClient, databaseUrlWithApplicationName, deserializeAttachmentManifest } from "./prisma";
 
 const date = (value: string) => new Date(value);
 const nullable = <T>(value: T | undefined) => value ?? null;
@@ -157,6 +157,15 @@ function createPrismaStub() {
 }
 
 describe("prisma data driver", () => {
+  it("reads legacy attachment arrays and named manifests without a migration", () => {
+    const file = { key: "desktop", storagePath: "missions/1/desktop.png" };
+    expect(deserializeAttachmentManifest([file])).toEqual({ files: [file] });
+    expect(deserializeAttachmentManifest({ groupName: "Checkout responsive", files: [file] })).toEqual({
+      groupName: "Checkout responsive",
+      files: [file],
+    });
+  });
+
   it("tags pooled connections without replacing an explicit application name", () => {
     expect(databaseUrlWithApplicationName("postgresql://user:pass@localhost/db?pgbouncer=true", "preview"))
       .toContain("application_name=zipform%3Apreview");

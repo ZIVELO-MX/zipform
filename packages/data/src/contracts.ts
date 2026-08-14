@@ -54,6 +54,7 @@ export type TlozAttachmentBatch = {
   uploadBatchId: string;
   missionId: string;
   groupKey: string;
+  groupName?: string;
   sourceRevision: string;
   generation: number;
   status: "prepared" | "finalized";
@@ -220,7 +221,7 @@ export type TlozRepository = {
   removeProjectResource(projectId: string, resourceId: string): Promise<TlozResource[]>;
   addQuestItemResource(questItemId: string, input: TlozResourceInput): Promise<TlozResource[]>;
   removeQuestItemResource(questItemId: string, resourceId: string): Promise<TlozResource[]>;
-  prepareAttachmentBatch(missionId: string, groupKey: string, sourceRevision: string, files: TlozAttachmentFileInput[]): Promise<TlozAttachmentBatch>;
+  prepareAttachmentBatch(missionId: string, groupKey: string, sourceRevision: string, files: TlozAttachmentFileInput[], groupName?: string): Promise<TlozAttachmentBatch>;
   getAttachmentBatch(uploadBatchId: string): Promise<TlozAttachmentBatch>;
   finalizeAttachmentBatch(uploadBatchId: string): Promise<TlozAttachmentFinalizeResult>;
   getAttachmentGroups(missionId: string): Promise<TlozAttachmentGroup[]>;

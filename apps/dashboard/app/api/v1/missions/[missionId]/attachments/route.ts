@@ -51,9 +51,9 @@ export async function POST(request: Request, { params }: RouteContext) {
       const storagePath = attachmentStoragePath(missionId, manifest.groupKey, file.key, file.contentType);
       return { ...file, storagePath };
     });
-    const batch = await dataClient.tloz.prepareAttachmentBatch(missionId, manifest.groupKey, manifest.sourceRevision, filesWithPaths);
+    const batch = await dataClient.tloz.prepareAttachmentBatch(missionId, manifest.groupKey, manifest.sourceRevision, filesWithPaths, manifest.groupName);
     const uploads = await Promise.all(batch.files.map(async (file) => ({ ...file, ...(await storage.createSignedUpload(file.storagePath, file.contentType)) })));
-    return NextResponse.json({ data: { uploadBatchId: batch.uploadBatchId, generation: batch.generation, groupKey: batch.groupKey, sourceRevision: batch.sourceRevision, status: batch.status, uploads: uploads.map(({ key, fileName, contentType, sizeBytes, storagePath, uploadUrl }) => ({ key, fileName, contentType, sizeBytes, storagePath, uploadUrl })) } });
+    return NextResponse.json({ data: { uploadBatchId: batch.uploadBatchId, generation: batch.generation, groupKey: batch.groupKey, ...(batch.groupName ? { groupName: batch.groupName } : {}), sourceRevision: batch.sourceRevision, status: batch.status, uploads: uploads.map(({ key, fileName, contentType, sizeBytes, storagePath, uploadUrl }) => ({ key, fileName, contentType, sizeBytes, storagePath, uploadUrl })) } });
   } catch (error) {
     return mapError(error);
   }
@@ -82,9 +82,8 @@ export async function PUT(request: Request, { params }: RouteContext) {
     }
     const result = await dataClient.tloz.finalizeAttachmentBatch(batch.uploadBatchId);
     const warnings: string[] = [];
-    for (const path of result.previousStoragePaths) {
-      try { await storage.removeObject(path); } catch { warnings.push("No se pudo limpiar un objeto anterior; el snapshot nuevo permanece activo."); }
-    }
+    const removals = await Promise.allSettled([...new Set(result.previousStoragePaths)].map((path) => storage.removeObject(path)));
+    if (removals.some((removal) => removal.status === "rejected")) warnings.push("No se pudo limpiar un objeto anterior; el snapshot nuevo permanece activo.");
     const group = await signedGroup(result.group);
     return NextResponse.json({ data: { ...group, uploadBatchId: result.batch.uploadBatchId, warnings: [...new Set(warnings)] } });
   } catch (error) {
