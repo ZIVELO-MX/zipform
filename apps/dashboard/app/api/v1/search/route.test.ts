@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dataClient } from "@tloz/data";
+import type { UserProfile } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { GET } from "./route";
 
@@ -19,7 +20,7 @@ const findDocuments = vi.mocked(dataClient.canonicalDocuments.find);
 const getDocument = vi.mocked(dataClient.canonicalDocuments.get);
 const findResources = vi.mocked(dataClient.tloz.findResources);
 
-const actor = { id: "agent-1", name: "Zibot", username: "zibot", email: "zibot@tloz.dev", role: "agent:operative", type: "agent", avatarUrl: "", theme: "system" };
+const actor: UserProfile = { id: "agent-1", name: "Zibot", username: "zibot", email: "zibot@tloz.dev", role: "agent:operative", type: "agent", avatarUrl: "", theme: "system" };
 
 describe("GET /api/v1/search", () => {
   beforeEach(() => {
