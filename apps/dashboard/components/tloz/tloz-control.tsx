@@ -20,6 +20,7 @@ import {
 import type { TlozView } from "../../lib/tloz-routes";
 import { useTlozViewState } from "./tloz-view-state";
 import { CreateNewEntityButton } from "./tloz-create";
+import { useTlozCapabilities } from "./tloz-capabilities";
 
 const viewConfig: Record<TlozView, { label: string; icon: React.ElementType }> = {
   dashboard: { label: "Dashboard", icon: LayoutDashboard },
@@ -39,6 +40,7 @@ export function TlozControl({ createControl }: { createControl?: React.ReactNode
     users,
     capabilities,
   } = useTlozViewState();
+  const uiCapabilities = useTlozCapabilities();
 
   return (
     <Popover>
@@ -140,7 +142,7 @@ export function TlozControl({ createControl }: { createControl?: React.ReactNode
             ) : null}
           </>
         ) : null}
-        {createControl === false ? null : (
+        {createControl === false || !uiCapabilities.canCreate ? null : (
           <>
             <Separator className="my-4" />
             {createControl ?? <CreateNewEntityButton variant="control" />}

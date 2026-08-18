@@ -16,6 +16,7 @@ vi.mock("../../../../../../lib/tloz-attachment-storage", async () => {
 
 const manifest = {
   groupKey: "pr-57",
+  groupName: "Checkout responsive",
   sourceRevision: "0123456789abcdef0123456789abcdef01234567",
   files: [{ key: "home-desktop", title: "Home desktop", fileName: "home.png", contentType: "image/png", sizeBytes: 1024, width: 1440, height: 900 }],
 } as const;
@@ -37,7 +38,7 @@ describe("/api/v1/missions/:missionId/attachments", () => {
     storage.inspectObject.mockResolvedValue({ contentType: "image/png", sizeBytes: 1024 });
     storage.createSignedRead.mockResolvedValue("https://storage.test/read");
     storage.removeObject.mockResolvedValue(undefined);
-    vi.mocked(dataClient.tloz.prepareAttachmentBatch).mockResolvedValue({ uploadBatchId: "batch-1", missionId: "mission-1", groupKey: "pr-57", sourceRevision: manifest.sourceRevision, generation: 1, status: "prepared", files: [{ ...manifest.files[0], storagePath: "missions/mission-1/pr-57/home-desktop/id.png" }] });
+    vi.mocked(dataClient.tloz.prepareAttachmentBatch).mockResolvedValue({ uploadBatchId: "batch-1", missionId: "mission-1", groupKey: "pr-57", groupName: manifest.groupName, sourceRevision: manifest.sourceRevision, generation: 1, status: "prepared", files: [{ ...manifest.files[0], storagePath: "missions/mission-1/pr-57/home-desktop/id.png" }] });
   });
 
   it("rejects invalid manifests before creating signed URLs", async () => {
@@ -63,8 +64,8 @@ describe("/api/v1/missions/:missionId/attachments", () => {
   it("prepares a direct-upload batch without receiving image bytes", async () => {
     const response = await POST(new Request("https://tloz.test/api/v1/missions/mission-1/attachments", { method: "POST", body: JSON.stringify(manifest) }), { params: Promise.resolve({ missionId: "mission-1" }) });
     expect(response.status).toBe(200);
-    expect(dataClient.tloz.prepareAttachmentBatch).toHaveBeenCalledWith("mission-1", "pr-57", manifest.sourceRevision, expect.arrayContaining([expect.objectContaining({ key: "home-desktop", storagePath: expect.stringContaining("missions/mission-1/pr-57/home-desktop/") })]));
-    await expect(response.json()).resolves.toMatchObject({ data: { uploadBatchId: "batch-1", uploads: [{ key: "home-desktop", uploadUrl: "https://storage.test/upload" }] } });
+    expect(dataClient.tloz.prepareAttachmentBatch).toHaveBeenCalledWith("mission-1", "pr-57", manifest.sourceRevision, expect.arrayContaining([expect.objectContaining({ key: "home-desktop", storagePath: expect.stringContaining("missions/mission-1/pr-57/home-desktop/") })]), "Checkout responsive");
+    await expect(response.json()).resolves.toMatchObject({ data: { uploadBatchId: "batch-1", groupName: "Checkout responsive", uploads: [{ key: "home-desktop", uploadUrl: "https://storage.test/upload" }] } });
   });
 
   it("does not finalize a batch when an uploaded object is missing", async () => {

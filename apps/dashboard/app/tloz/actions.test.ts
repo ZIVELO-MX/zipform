@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   auth: vi.fn(),
   revalidatePath: vi.fn(),
   getTlozMissionDetailWithAttachments: vi.fn(),
+  getTlozMissionDetailWithAttachmentMetadata: vi.fn(),
+  createSignedRead: vi.fn(),
   documents: {
     get: vi.fn(),
     getDefinition: vi.fn(),
@@ -18,6 +20,7 @@ const mocks = vi.hoisted(() => ({
     getEpisodes: vi.fn(),
     getQuestItems: vi.fn(),
     getResources: vi.fn(),
+    getAttachmentGroups: vi.fn(),
     getUsers: vi.fn(),
     createMission: vi.fn(),
     updateMission: vi.fn(),
@@ -49,6 +52,10 @@ vi.mock("@tloz/data", () => ({
 }));
 vi.mock("../../lib/tloz-data", () => ({
   getTlozMissionDetailWithAttachments: mocks.getTlozMissionDetailWithAttachments,
+  getTlozMissionDetailWithAttachmentMetadata: mocks.getTlozMissionDetailWithAttachmentMetadata,
+}));
+vi.mock("../../lib/tloz-attachment-storage", () => ({
+  getTlozAttachmentStorage: () => ({ createSignedRead: mocks.createSignedRead }),
 }));
 
 import {
@@ -56,6 +63,7 @@ import {
   deleteMission,
   getDocumentDetailOptions,
   getMissionCapabilities,
+  getMissionAttachmentGroupPreviewUrls,
   getMissionDetailOptions,
   patchMissionStatus,
   saveMissionDocument,
@@ -93,10 +101,27 @@ describe("TLOZ Server Action authorization", () => {
     mocks.tloz.getEpisodes.mockResolvedValue([]);
     mocks.tloz.getQuestItems.mockResolvedValue([]);
     mocks.tloz.getResources.mockResolvedValue([]);
+    mocks.tloz.getAttachmentGroups.mockResolvedValue([]);
     mocks.tloz.getUsers.mockResolvedValue([publicOwner]);
     mocks.documents.get.mockResolvedValue(null);
     mocks.tloz.createMission.mockResolvedValue(mission);
     mocks.tloz.updateMission.mockResolvedValue(mission);
+    mocks.createSignedRead.mockImplementation(async (path: string) => `https://signed.test/${path}`);
+  });
+
+  it("opens an attachment group with one authorized server request", async () => {
+    mocks.auth.mockResolvedValue({ user: reader });
+    mocks.tloz.getAttachmentGroups.mockResolvedValue([{ groupKey: "checkout", attachments: [
+      { id: "desktop", title: "Desktop", storagePath: "missions/1/checkout/desktop.png" },
+      { id: "mobile", title: "Mobile", storagePath: "missions/1/checkout/mobile.png" },
+    ] }]);
+
+    await expect(getMissionAttachmentGroupPreviewUrls("mission-1", "checkout")).resolves.toEqual([
+      { id: "desktop", title: "Desktop", url: "https://signed.test/missions/1/checkout/desktop.png" },
+      { id: "mobile", title: "Mobile", url: "https://signed.test/missions/1/checkout/mobile.png" },
+    ]);
+    expect(mocks.tloz.getAttachmentGroups).toHaveBeenCalledOnce();
+    expect(mocks.createSignedRead).toHaveBeenCalledTimes(2);
   });
 
   it("allows a developer to create and edit owned Missions", async () => {

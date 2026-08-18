@@ -1,5 +1,6 @@
 import { CanonicalPresentationPage } from "../../components/tloz/canonical-presentation-page";
 
-export default function WorkshopPage() {
-  return <CanonicalPresentationPage presentation="workshop" title="Workshop" />;
+export default async function WorkshopPage({ searchParams }: { searchParams: Promise<{ cursor?: string }> }) {
+  const { cursor } = await searchParams;
+  return <CanonicalPresentationPage presentation="workshop" title="Workshop" cursor={cursor} />;
 }

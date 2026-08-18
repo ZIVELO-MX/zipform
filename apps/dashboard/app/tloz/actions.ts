@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  collectPaginated,
   dataClient,
   validateDocumentProperties,
   type TlozMissionCreateInput,
@@ -31,6 +32,7 @@ import {
   toPublicUserProfile,
 } from "../../lib/authorization";
 import { getTlozAttachmentStorage } from "../../lib/tloz-attachment-storage";
+import { getTlozMissionDetailWithAttachmentMetadata } from "../../lib/tloz-data";
 
 const revalidateTloz = () => revalidatePath("/", "layout");
 
@@ -254,7 +256,7 @@ export async function getMissionDocumentOptions(missionId: string) {
 export async function getMissionPanelData(missionId: string, includeOptions = true) {
   const [actor, mission, document] = await Promise.all([
     authenticatedActor(),
-    dataClient.tloz.getMissionDetail(missionId),
+    getTlozMissionDetailWithAttachmentMetadata(missionId),
     dataClient.canonicalDocuments.get(missionId),
   ]);
   if (!mission) throw new Error("Misión no encontrada.");
@@ -299,6 +301,22 @@ export async function getMissionResourcePreviewUrl(missionId: string, resourceId
   const attachment = groups.flatMap((group) => group.attachments).find((candidate) => candidate.id === resourceId);
   if (!attachment?.storagePath) throw new Error("La captura no está disponible.");
   return getTlozAttachmentStorage().createSignedRead(attachment.storagePath, 3600);
+}
+
+export async function getMissionAttachmentGroupPreviewUrls(missionId: string, groupKey: string) {
+  const { mission } = await authorizeMission(missionId, "read");
+  const groups = await dataClient.tloz.getAttachmentGroups(mission.id);
+  const group = groups.find((candidate) => candidate.groupKey === groupKey);
+  if (!group) throw new Error("El grupo de capturas no está disponible.");
+  const storage = getTlozAttachmentStorage();
+  return Promise.all(group.attachments.map(async (attachment) => {
+    if (!attachment.storagePath) throw new Error("Una captura del grupo no está disponible.");
+    return {
+      id: attachment.id,
+      title: attachment.title,
+      url: await storage.createSignedRead(attachment.storagePath, 3600),
+    };
+  }));
 }
 
 export async function getDocumentDetailOptions(documentId: string) {
@@ -360,10 +378,8 @@ export async function updateDocumentBody(
 
 export async function getEntityResources(kind: "project" | "inventory", entityId: string) {
   await authenticatedActor();
-  return (await dataClient.tloz.findResources(
-    kind === "project" ? { projectId: entityId } : { questItemId: entityId },
-    { limit: 100 },
-  )).data;
+  const filters = kind === "project" ? { projectId: entityId } : { questItemId: entityId };
+  return collectPaginated((cursor) => dataClient.tloz.findResources(filters, { limit: 25, cursor }));
 }
 
 export async function getTlozDetailUsers() {

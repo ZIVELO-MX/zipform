@@ -7,6 +7,7 @@ import {
 import type { ContainerRecord, ContentRecord } from "@tloz/types";
 import { NextResponse } from "next/server";
 import { errorResponse, parseExpectedRevision, revisionEtag } from "./api-response";
+import { paginationErrorResponse } from "./api-pagination";
 
 export { errorResponse, parseExpectedRevision, revisionEtag } from "./api-response";
 
@@ -20,6 +21,8 @@ export function responseFor<T extends ContainerRecord | ContentRecord>(request: 
 }
 
 export function handleContainerContentError(error: unknown) {
+  const paginationResponse = paginationErrorResponse(error);
+  if (paginationResponse) return paginationResponse;
   if (error instanceof ContainerContentError) {
     const status = error.code === "STORE_NOT_FOUND" ? 404 : error.code === "STORE_REVISION_CONFLICT" ? 409 : error.code === "STORE_UNAVAILABLE" ? 503 : 400;
     return errorResponse(error.code, error.message, status, error.fields);

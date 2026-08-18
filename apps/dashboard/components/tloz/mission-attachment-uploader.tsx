@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import Image from "next/image";
 import { FileImage, RefreshCw, Upload } from "lucide-react";
-import { Button, ResourcePreview, type ResourcePreviewSlide } from "@tloz/ui";
+import { Button, Input, ResourcePreview, type ResourcePreviewSlide } from "@tloz/ui";
 import type { TlozAttachmentGroup, TlozResource } from "@tloz/types";
 import {
   AttachmentClientError,
+  buildAttachmentManifest,
   createAttachmentGroupKey,
   createAttachmentRevision,
   finalizeAttachmentBatch,
   fetchExistingAttachment,
   formatAttachmentSize,
+  normalizeAttachmentGroupName,
   prepareAttachmentBatch,
   toAttachmentItem,
   uploadAttachmentFile,
@@ -35,8 +38,9 @@ function errorMessage(error: unknown) {
 
 export function MissionAttachmentUploader({ missionId, resources, canUpdate, onGroupCompleted }: MissionAttachmentUploaderProps) {
   const [state, dispatch] = useStateReducer();
+  const [groupName, setGroupName] = useState("");
   const [selectionError, setSelectionError] = useState<string>();
-  const [replaceResource, setReplaceResource] = useState<(TlozResource & { groupKey: string; externalKey: string; url: string }) | null>(null);
+  const replaceResourceRef = useRef<(TlozResource & { groupKey: string; externalKey: string; url: string }) | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -61,12 +65,14 @@ export function MissionAttachmentUploader({ missionId, resources, canUpdate, onG
     setSelectionError(undefined);
     void (async () => {
       try {
+        const normalizedGroupName = normalizeAttachmentGroupName(groupName);
+        if (!normalizedGroupName) throw new AttachmentClientError("Escribe un nombre para el grupo.", "INVALID_ATTACHMENT_MANIFEST", 400, "validate");
         const items = await Promise.all(files.map((file) => toAttachmentItem(file)));
         validateAttachmentCount(items);
         const groupKey = createAttachmentGroupKey();
         const sourceRevision = createAttachmentRevision();
-        dispatch({ type: "select", groupKey, sourceRevision, items });
-        await executeUpload(items, groupKey, sourceRevision, new Set());
+        dispatch({ type: "select", groupKey, groupName: normalizedGroupName, sourceRevision, items });
+        await executeUpload(items, groupKey, sourceRevision, new Set(), normalizedGroupName);
       } catch (error) {
         if (error instanceof AttachmentClientError && error.stage === "validate") setSelectionError(error.message);
         else dispatch({ type: "error", message: errorMessage(error) });
@@ -76,17 +82,13 @@ export function MissionAttachmentUploader({ missionId, resources, canUpdate, onG
     })();
   }
 
-  async function executeUpload(items: AttachmentItemState[] | Awaited<ReturnType<typeof toAttachmentItem>>[], groupKey: string, sourceRevision: string, alreadyUploaded: Set<string>) {
+  async function executeUpload(items: AttachmentItemState[] | Awaited<ReturnType<typeof toAttachmentItem>>[], groupKey: string, sourceRevision: string, alreadyUploaded: Set<string>, currentGroupName?: string) {
     const controller = new AbortController();
     abortRef.current?.abort();
     abortRef.current = controller;
     try {
       dispatch({ type: "preparing" });
-      const manifest = {
-        groupKey,
-        sourceRevision,
-        files: items.map((item) => ({ key: item.key, title: item.title, fileName: item.fileName, contentType: item.contentType, sizeBytes: item.sizeBytes, width: item.width, height: item.height })),
-      };
+      const manifest = buildAttachmentManifest(groupKey, sourceRevision, items, currentGroupName);
       const batch = await prepareAttachmentBatch(missionId, manifest, controller.signal);
       dispatch({ type: "prepared", uploadBatchId: batch.uploadBatchId });
       const failures: string[] = [];
@@ -121,17 +123,17 @@ export function MissionAttachmentUploader({ missionId, resources, canUpdate, onG
   function retryFailed() {
     const failed = state.items.filter((item) => item.status === "error");
     if (!failed.length) return;
-    void executeUpload(state.items, state.groupKey, state.sourceRevision, new Set(state.items.filter((item) => item.status === "uploaded").map((item) => item.key)));
+    void executeUpload(state.items, state.groupKey, state.sourceRevision, new Set(state.items.filter((item) => item.status === "uploaded").map((item) => item.key)), state.groupName);
   }
 
   function triggerReplacement(resource: TlozResource & { groupKey: string; externalKey: string; url: string }) {
-    setReplaceResource(resource);
+    replaceResourceRef.current = resource;
     replaceInputRef.current?.click();
   }
 
   function replaceFile(file: File | undefined) {
-    const target = replaceResource;
-    setReplaceResource(null);
+    const target = replaceResourceRef.current;
+    replaceResourceRef.current = null;
     if (!file || !target) return;
     void (async () => {
       try {
@@ -143,8 +145,8 @@ export function MissionAttachmentUploader({ missionId, resources, canUpdate, onG
         }));
         validateAttachmentCount(items);
         const revision = createAttachmentRevision();
-        dispatch({ type: "select", groupKey: target.groupKey, sourceRevision: revision, items });
-        await executeUpload(items, target.groupKey, revision, new Set());
+        dispatch({ type: "select", groupKey: target.groupKey, groupName: target.groupName, sourceRevision: revision, items });
+        await executeUpload(items, target.groupKey, revision, new Set(), target.groupName);
       } catch (error) {
         dispatch({ type: "error", message: errorMessage(error) });
       } finally {
@@ -155,9 +157,10 @@ export function MissionAttachmentUploader({ missionId, resources, canUpdate, onG
 
   if (!canUpdate && !groups.length) return null;
   return <section className="col-span-full flex min-w-0 flex-col gap-2.5" aria-labelledby="mission-attachments-title">
-    <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex flex-wrap items-end justify-between gap-2">
       <h2 id="mission-attachments-title" className="m-0 text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Capturas</h2>
       {canUpdate ? <>
+        <label htmlFor="mission-attachment-group-name" className="flex min-w-0 flex-1 basis-full flex-col gap-1 text-[11px] font-bold text-carbon/60 sm:basis-auto"><span>Nombre del grupo</span><Input id="mission-attachment-group-name" className="h-10 min-w-0 text-[13px]" maxLength={80} value={groupName} onChange={(event) => setGroupName(event.target.value)} placeholder="Ej. Checkout responsive" aria-describedby="mission-attachment-help" /></label>
         <label htmlFor="mission-attachment-input" className="inline-flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white px-3 text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-within:outline focus-within:outline-2 focus-within:outline-[#1D1D1B]/20"><Upload className="size-3.5" aria-hidden="true" />Seleccionar capturas</label>
         <input ref={inputRef} id="mission-attachment-input" type="file" className="sr-only" multiple accept="image/png,image/jpeg,image/webp" onChange={(event) => selectFiles(event.target.files)} aria-describedby="mission-attachment-help" />
         <input ref={replaceInputRef} type="file" className="sr-only" accept="image/png,image/jpeg,image/webp" onChange={(event) => replaceFile(event.target.files?.[0])} aria-label="Seleccionar reemplazo de captura" />
@@ -184,5 +187,5 @@ function AttachmentGroupRow({ groupKey, resources, canUpdate, onReplace }: { gro
 function AttachmentResourceRow({ resource, previewSlides, canUpdate, onReplace }: { resource: TlozResource & { url: string }; previewSlides: ResourcePreviewSlide[]; canUpdate: boolean; onReplace: () => void }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  return <li className="flex min-w-0 items-center gap-2 rounded-lg border border-carbon/5 px-2.5 py-2"><button ref={triggerRef} type="button" className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" onClick={() => setOpen(true)} aria-label={`Previsualizar ${resource.title}`}><img src={resource.url} alt="" className="size-9 shrink-0 rounded object-cover" /><span className="min-w-0 flex-1 truncate text-xs font-semibold">{resource.title}</span></button><span className="shrink-0 text-[11px] text-carbon/50">{formatAttachmentSize(resource.sizeBytes ?? 0)}</span>{canUpdate ? <Button type="button" size="sm" variant="ghost" className="min-h-12 shrink-0" onClick={onReplace}><RefreshCw className="size-3.5" aria-hidden="true" />Reemplazar</Button> : null}<ResourcePreview slides={previewSlides} open={open} onClose={() => setOpen(false)} index={Math.max(previewSlides.findIndex((slide) => slide.id === resource.id), 0)} triggerRef={triggerRef} /></li>;
+  return <li className="flex min-w-0 items-center gap-2 rounded-lg border border-carbon/5 px-2.5 py-2"><button ref={triggerRef} type="button" className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" onClick={() => setOpen(true)} aria-label={`Previsualizar ${resource.title}`}><Image src={resource.url} alt="" width={36} height={36} unoptimized className="size-9 shrink-0 rounded object-cover" /><span className="min-w-0 flex-1 truncate text-xs font-semibold">{resource.title}</span></button><span className="shrink-0 text-[11px] text-carbon/50">{formatAttachmentSize(resource.sizeBytes ?? 0)}</span>{canUpdate ? <Button type="button" size="sm" variant="ghost" className="min-h-12 shrink-0" onClick={onReplace}><RefreshCw className="size-3.5" aria-hidden="true" />Reemplazar</Button> : null}<ResourcePreview slides={previewSlides} open={open} onClose={() => setOpen(false)} index={Math.max(previewSlides.findIndex((slide) => slide.id === resource.id), 0)} triggerRef={triggerRef} /></li>;
 }

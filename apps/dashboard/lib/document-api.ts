@@ -8,6 +8,7 @@ import { authorizeApiOperation, type TlozOperation } from "./authorization";
 import { errorResponse, parseExpectedRevision as parseRevision, revisionEtag } from "./api-response";
 
 export { errorResponse, revisionEtag } from "./api-response";
+import { paginationErrorResponse } from "./api-pagination";
 
 type Actor = { id: string; type: string; role: string };
 
@@ -48,6 +49,8 @@ export function authorizeDocumentOperation(
 }
 
 export function handleDocumentError(error: unknown) {
+  const paginationResponse = paginationErrorResponse(error);
+  if (paginationResponse) return paginationResponse;
   if (error instanceof TlozDocumentError) {
     const status = error.code === "DOCUMENT_NOT_FOUND"
       ? 404

@@ -4,11 +4,11 @@ import { TlozPageShell } from "./tloz-shell";
 import { ContainerContentCollection } from "./container-content-collection";
 import { canonicalCollectionViews, canonicalControlKind } from "./container-content-view-model";
 
-export async function CanonicalPresentationPage({ presentation, title }: { presentation: "workshop" | "library"; title: string }) {
+export async function CanonicalPresentationPage({ presentation, title, cursor }: { presentation: "workshop" | "library"; title: string; cursor?: string }) {
   const container = await getCanonicalContainer(presentation);
   if (!container) notFound();
   const [contents, users] = await Promise.all([
-    getCanonicalContents(container.id),
+    getCanonicalContents(container.id, cursor),
     getTlozUsers(),
   ]);
   const supportedViews = canonicalCollectionViews(container.definition);
@@ -27,7 +27,14 @@ export async function CanonicalPresentationPage({ presentation, title }: { prese
       canonicalContainer={container}
       documentNavigation={{ documents: [], users }}
     >
-      <ContainerContentCollection container={container} initialContents={contents} users={users} />
+      <ContainerContentCollection
+        container={container}
+        initialContents={contents.data}
+        users={users}
+        currentCursor={cursor}
+        nextCursor={contents.nextCursor}
+        basePath={`/${presentation}`}
+      />
     </TlozPageShell>
   );
 }

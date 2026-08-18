@@ -74,6 +74,38 @@ describe("mock data driver", () => {
     );
   });
 
+  it("rejects missing cursors across v1 repositories", async () => {
+    const client = createMockDataClient();
+    const reads = [
+      client.tloz.findUsers({}, { cursor: "missing" }),
+      client.tloz.findProjects({}, { cursor: "missing" }),
+      client.tloz.findMissions({}, { cursor: "missing" }),
+      client.tloz.findQuestItems({}, { cursor: "missing" }),
+      client.tloz.findResources({}, { cursor: "missing" }),
+    ];
+
+    for (const read of reads) {
+      await expect(read).rejects.toMatchObject({
+        name: "PaginationCursorError",
+        cursor: "missing",
+      });
+    }
+  });
+
+  it("applies combined mission filters before stable cursor pagination", async () => {
+    const client = createMockDataClient();
+    const source = missions[0];
+    const page = await client.tloz.findMissions({
+      projectId: source.projectId,
+      ownerId: source.ownerId,
+      status: source.status,
+      title: source.title.slice(0, 4),
+    }, { limit: 1 });
+
+    expect(page.data).toEqual([expect.objectContaining({ id: source.id })]);
+    expect(page.nextCursor === null || typeof page.nextCursor === "string").toBe(true);
+  });
+
   it("avoids project slugs reserved by root routes", async () => {
     const client = createMockDataClient();
     const project = await client.tloz.createProject({

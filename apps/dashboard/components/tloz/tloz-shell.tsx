@@ -1,7 +1,6 @@
 import { PageSubHeader } from "@tloz/ui";
 import { getTlozMissions, getTlozProjectDocuments, getTlozProjects, getTlozQuestItems, getTlozUsers } from "../../lib/tloz-data";
 import { TlozHeader } from "./tloz-header";
-import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import type { TlozView } from "../../lib/tloz-routes";
 import type { ContainerRecord, TlozDocument, UserProfile } from "@tloz/types";
 import { TlozViewStateProvider } from "./tloz-view-state";
@@ -93,29 +92,6 @@ export async function TlozPageShell({
           showHeader={showHeader}
           showControls={showControls}
           controlCreate={controlCreate}
-          commandEntities={{
-            missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type, href: mission.project ? missionHref(mission.project, mission.displayId) : "/" })),
-            projects: documentNavigation
-              ? documentNavigation.documents
-                .filter((document) => document.kind === "project")
-                .map((document) => ({
-                  id: document.id,
-                  label: document.title,
-                  icon: typeof document.properties.icon === "string" ? document.properties.icon : "FolderKanban",
-                  href: document.projectSlug ? `/${document.projectSlug}` : `/projects/${document.publicId}`,
-                }))
-              : projects.map((project) => ({ id: project.id, label: project.name, icon: project.icon, href: projectHref(project) })),
-            questItems: documentNavigation
-              ? documentNavigation.documents
-                .filter((document) => document.kind === "inventory")
-                .map((document) => ({
-                  id: document.id,
-                  label: document.title,
-                  icon: typeof document.properties.icon === "string" ? document.properties.icon : "PackageOpen",
-                  href: inventoryItemHref(document.publicId),
-                }))
-              : questItems.map((questItem) => ({ id: questItem.id, label: questItem.name, icon: questItem.icon, href: inventoryItemHref(questItem.id) })),
-          }}
         />
 
         <main className="tloz-page-content" id="tloz-content" tabIndex={-1}>

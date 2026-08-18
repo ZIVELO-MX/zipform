@@ -7,6 +7,7 @@ const styles = readFileSync(new URL("../../app/globals.css", import.meta.url), "
 const utils = readFileSync(new URL("./tloz-utils.ts", import.meta.url), "utf8");
 const attachmentUploader = readFileSync(new URL("./mission-attachment-uploader.tsx", import.meta.url), "utf8");
 const attachmentClient = readFileSync(new URL("../../lib/tloz-attachments-client.ts", import.meta.url), "utf8");
+const resourceGroups = readFileSync(new URL("./mission-resource-groups.ts", import.meta.url), "utf8");
 
 describe("mission detail interaction contracts", () => {
   it("keeps Description, Detail, and Checklist open by default in left-icon accordions", () => {
@@ -57,15 +58,31 @@ describe("mission detail interaction contracts", () => {
     expect(attachmentUploader).toContain('aria-live="polite"');
     expect(attachmentUploader).toContain("Reintentar fallos");
     expect(attachmentUploader).toContain("Reemplazar");
+    expect(attachmentUploader).toContain('htmlFor="mission-attachment-group-name"');
+    expect(attachmentUploader).toContain("groupName: normalizedGroupName");
   });
 
   it("keeps the attachment uploader hidden while API-created groups render in Resources", () => {
     expect(detail).toContain("MISSION_ATTACHMENT_UPLOAD_UI_ENABLED = false");
     expect(detail).toContain("MissionAttachmentGroupReference");
-    expect(detail).toContain("Grupo de capturas");
-    expect(detail).toContain("elementos");
-    expect(detail).toContain("aria-expanded={expanded}");
+    expect(detail).toContain("Previsualizar ${group.groupName}");
+    expect(detail).toContain("Ver grupo");
+    expect(detail).toContain("<ResourcePreview slides={slides}");
+    expect(detail).not.toContain("aria-expanded={expanded}");
     expect(detail).not.toContain('resources={current.resources.filter((resource) => !resource.groupKey)}');
+  });
+
+  it("renders one named item per capture group with a legacy fallback", () => {
+    expect(detail).toContain("groupMissionResources(resources)");
+    expect(resourceGroups).toContain("item.groupName?.trim()");
+    expect(resourceGroups).toContain("attachmentGroupFallbackName(groupKey)");
+    expect(detail).toContain("group.resources.length === 1 ? \"captura\" : \"capturas\"");
+  });
+
+  it("hides resource mutation controls without update permission", () => {
+    expect(detail).toContain("onRemove={canUpdate ?");
+    expect(detail).toContain("{canUpdate ? <AddResource");
+    expect(detail).toContain("{onRemove ? <IconButton");
   });
 
   it("keeps attachment limits and signed URL handling in the client contract", () => {

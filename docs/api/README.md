@@ -84,6 +84,7 @@ in `ETag`.
 | `GET` | `/api/v1/episodes` | List episodes, optional filter by seasonId | — |
 | `GET` | `/api/v1/quest-items` | List quest items with owner/status/category filters | ✅ cursor |
 | `GET` | `/api/v1/resources` | List resources filtered by owner entity or type | ✅ cursor |
+| `GET` | `/api/v1/search` | Search projects, missions, Inventory, Workshop, Library and owned resources | ✅ cursor |
 
 ### Write operations (authenticated — session or Bearer token)
 

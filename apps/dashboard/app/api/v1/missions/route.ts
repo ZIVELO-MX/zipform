@@ -4,6 +4,7 @@ import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation, isFullStackDeveloper, isReadOnlyAgent, toPublicMissionOwner } from "../../../../lib/authorization";
 import { observedJson } from "../../../../lib/read-telemetry";
+import { paginationErrorResponse, parsePaginationLimit } from "../../../../lib/api-pagination";
 
 const VALID_CREATE_FIELDS = new Set([
   "id", "title", "description", "descriptionDetail", "icon", "type", "status",
@@ -34,13 +35,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limit = limitParam ? Math.max(1, Math.min(100, Number(limitParam))) : 25;
-  if (isNaN(limit)) {
-    return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "limit debe ser un número entre 1 y 100.", requestId: crypto.randomUUID() } },
-      { status: 400 }
-    );
-  }
+  const limit = parsePaginationLimit(limitParam);
+  if (limit instanceof Response) return limit;
 
   try {
     const result = await dataClient.tloz.findMissions(
@@ -51,7 +47,9 @@ export async function GET(request: NextRequest) {
       ? { ...result, data: result.data.map(toPublicMissionOwner) }
       : result;
     return observedJson({ request, actorId: auth.user.id, operation: "missions.list", payload, startedAt });
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }

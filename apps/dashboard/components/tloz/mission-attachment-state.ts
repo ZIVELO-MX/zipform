@@ -11,6 +11,7 @@ export type AttachmentItemState = AttachmentUploadItem & {
 
 export type AttachmentUploadState = {
   groupKey: string;
+  groupName?: string;
   sourceRevision: string;
   status: AttachmentBatchStatus;
   items: AttachmentItemState[];
@@ -19,7 +20,7 @@ export type AttachmentUploadState = {
 };
 
 export type AttachmentStateAction =
-  | { type: "select"; groupKey: string; sourceRevision: string; items: AttachmentUploadItem[] }
+  | { type: "select"; groupKey: string; groupName?: string; sourceRevision: string; items: AttachmentUploadItem[] }
   | { type: "replace-item"; key: string; item: AttachmentUploadItem }
   | { type: "remove-item"; key: string }
   | { type: "preparing" }
@@ -42,7 +43,7 @@ export const emptyAttachmentState: AttachmentUploadState = {
 export function attachmentStateReducer(state: AttachmentUploadState, action: AttachmentStateAction): AttachmentUploadState {
   switch (action.type) {
     case "select":
-      return { groupKey: action.groupKey, sourceRevision: action.sourceRevision, status: "ready", items: action.items.map((item) => ({ ...item, status: "pending" })) };
+      return { groupKey: action.groupKey, ...(action.groupName ? { groupName: action.groupName } : {}), sourceRevision: action.sourceRevision, status: "ready", items: action.items.map((item) => ({ ...item, status: "pending" })) };
     case "replace-item":
       return { ...state, status: "ready", error: undefined, items: state.items.map((item) => item.key === action.key ? { ...action.item, key: item.key, status: "pending" } : item) };
     case "remove-item":

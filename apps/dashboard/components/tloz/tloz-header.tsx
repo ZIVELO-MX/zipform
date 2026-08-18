@@ -1,14 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useState } from "react";
 import {
-  FolderKanban,
   Menu,
-  PackageOpen,
   Search,
-  Sword,
 } from "lucide-react";
 import {
   Breadcrumb,
@@ -17,12 +13,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-  Command,
-  CommandDialog,
 } from "@tloz/ui";
-import type { TlozMissionType } from "@tloz/types";
-import { missionTypeTone, resolveMissionIcon } from "./tloz-utils";
 import { TlozControl } from "./tloz-control";
+import { GlobalSearch } from "./global-search";
 
 type TlozHeaderProps = {
   title: string;
@@ -33,36 +26,12 @@ type TlozHeaderProps = {
   showHeader?: boolean;
   showControls?: boolean;
   controlCreate?: React.ReactNode | false;
-  commandEntities: {
-    missions: Array<{ id: string; label: string; icon: string; type: TlozMissionType; href: string }>;
-    projects: Array<{ id: string; label: string; icon: string; href: string }>;
-    questItems: Array<{ id: string; label: string; icon: string; href: string }>;
-  };
 };
-
-const commandGroups = [
-  {
-    heading: "Acciones",
-    items: [
-      { label: "Abrir Inventory", href: "/inventory", icon: PackageOpen, keywords: "inventory inventario items" },
-      { label: "Abrir Projects", href: "/projects", icon: FolderKanban, keywords: "proyectos projects" },
-      { label: "Abrir Workshop", href: "/workshop", icon: Sword, keywords: "workshop ideas" },
-      { label: "Abrir Library", href: "/library", icon: FolderKanban, keywords: "library biblioteca documentos" },
-    ],
-  },
-  {
-    heading: "Navegación",
-    items: [
-      { label: "Lobby", href: "/", icon: Sword, keywords: "lobby missions misiones" },
-    ],
-  },
-];
-
-export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showSearch = true, showHeader = true, showControls = true, controlCreate, commandEntities }: TlozHeaderProps) {
+export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showSearch = true, showHeader = true, showControls = true, controlCreate }: TlozHeaderProps) {
   const [commandOpen, setCommandOpen] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
+    if (!showSearch) return;
     function handleOpen() { setCommandOpen(true); }
     window.addEventListener("open-command", handleOpen);
 
@@ -78,14 +47,9 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
       window.removeEventListener("open-command", handleOpen);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [showSearch]);
 
   if (!showHeader) return null;
-
-  function runCommand(href: string) {
-    setCommandOpen(false);
-    router.push(href);
-  }
 
   const segments = breadcrumb ?? [projectLabel, detailLabel].filter((value): value is string => Boolean(value));
 
@@ -101,6 +65,14 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           >
             <Menu size={18} aria-hidden="true" />
           </button>
+          {showSearch ? <button
+            type="button"
+            className="mr-1 grid size-8 shrink-0 place-items-center rounded-lg text-carbon/60 hover:bg-carbon/5 md:hidden"
+            aria-label="Buscar documentos"
+            onClick={() => setCommandOpen(true)}
+          >
+            <Search size={17} aria-hidden="true" />
+          </button> : null}
           {segments.length ? (
             <Breadcrumb>
               <BreadcrumbList className="flex-nowrap text-carbon/60">
@@ -118,79 +90,22 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           ) : null}
         </div>
 
-        <div className="hidden md:flex flex-1 justify-center">
+        {showSearch ? <div className="hidden md:flex flex-1 justify-center">
           <button
             type="button"
             className="tloz-command-trigger"
             onClick={() => setCommandOpen(true)}
           >
             <Search size={14} aria-hidden="true" />
-            <span>Buscar misiones, proyectos e inventario...</span>
+            <span>Buscar documentos, misiones o recursos...</span>
             <kbd>⌘K</kbd>
           </button>
-        </div>
+        </div> : null}
 
         {showControls ? <div className="tloz-header-trailing"><TlozControl createControl={controlCreate} /></div> : null}
       </header>
 
-      <CommandDialog
-        className="tloz-command-dialog"
-        label="Buscar y ejecutar comandos"
-        open={commandOpen}
-        onOpenChange={setCommandOpen}
-      >
-        <div className="tloz-command-input-wrap">
-          <Search aria-hidden="true" />
-          <Command.Input autoFocus placeholder="Buscar misiones, proyectos e inventario..." />
-        </div>
-        <Command.List>
-          <Command.Empty>No se encontraron resultados.</Command.Empty>
-          {commandGroups.map((group) => (
-            <Command.Group key={group.heading} heading={group.heading}>
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Command.Item
-                    key={`${group.heading}-${item.label}`}
-                    keywords={[item.keywords]}
-                    value={item.label}
-                    onSelect={() => runCommand(item.href)}
-                  >
-                    <Icon aria-hidden="true" />
-                    <span>{item.label}</span>
-                  </Command.Item>
-                );
-              })}
-            </Command.Group>
-          ))}
-          <Command.Group heading="Misiones">
-            {commandEntities.missions.map((mission) => { const MissionIcon = resolveMissionIcon(mission.icon); return (
-              <Command.Item key={mission.id} value={`Misión ${mission.label}`} onSelect={() => runCommand(mission.href)}>
-                <span className="grid size-7 shrink-0 place-items-center rounded-lg" style={{ color: missionTypeTone[mission.type], backgroundColor: missionTypeBackground[mission.type] ?? "#F1F0EE" }}><MissionIcon aria-hidden="true" /></span>
-                <span>{mission.label}</span>
-              </Command.Item>
-            ); })}
-          </Command.Group>
-          <Command.Group heading="Proyectos">
-            {commandEntities.projects.map((project) => (
-              <Command.Item key={project.id} value={`Proyecto ${project.label}`} onSelect={() => runCommand(project.href)}>
-                <FolderKanban aria-hidden="true" />
-                <span>{project.label}</span>
-              </Command.Item>
-            ))}
-          </Command.Group>
-          <Command.Group heading="Inventory">
-            {commandEntities.questItems.map((questItem) => (
-              <Command.Item key={questItem.id} value={`Inventory ${questItem.label}`} onSelect={() => runCommand(questItem.href)}>
-                <PackageOpen aria-hidden="true" />
-                <span>{questItem.label}</span>
-              </Command.Item>
-            ))}
-          </Command.Group>
-        </Command.List>
-      </CommandDialog>
+      <GlobalSearch open={commandOpen} onOpenChange={setCommandOpen} />
     </>
   );
 }
-
-const missionTypeBackground: Record<string, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
