@@ -143,12 +143,12 @@ export type PageSubHeaderProps = {
 
 export function PageSubHeader({ title, description, actions, className }: PageSubHeaderProps) {
   return (
-    <div className={cn("flex shrink-0 flex-wrap items-center justify-between gap-4 px-[26px] pb-3.5 pt-4", className)}>
+    <div className={cn("flex shrink-0 flex-wrap items-center justify-between gap-3 px-4 pb-3.5 pt-4 sm:px-[26px]", className)}>
       <div className="min-w-0">
-        <h1 className="m-0 truncate text-[21px] font-bold tracking-normal text-carbon">{title}</h1>
-        {description ? <p className="m-0 mt-1 text-[13px] text-carbon/65">{description}</p> : null}
+        <h1 className="m-0 text-[1.3125rem] font-bold tracking-normal text-carbon [text-wrap:balance]">{title}</h1>
+        {description ? <p className="m-0 mt-1 max-w-[68ch] text-[0.8125rem] leading-relaxed text-carbon/65">{description}</p> : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{actions}</div> : null}
     </div>
   );
 }

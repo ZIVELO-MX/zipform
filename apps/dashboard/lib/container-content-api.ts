@@ -6,30 +6,17 @@ import {
 } from "@tloz/data";
 import type { ContainerRecord, ContentRecord } from "@tloz/types";
 import { NextResponse } from "next/server";
+import { errorResponse, parseExpectedRevision, revisionEtag } from "./api-response";
 
-export function revisionEtag(revision: number) {
-  return `"${revision}"`;
-}
-
-export function parseExpectedRevision(request: Request): number | Response {
-  const value = request.headers.get("if-match");
-  if (!value) return errorResponse("PRECONDITION_REQUIRED", "If-Match es obligatorio.", 428);
-  const revision = Number(value.replace(/^W\//, "").replace(/^"|"$/g, ""));
-  if (!Number.isInteger(revision) || revision < 1) return errorResponse("INVALID_REQUEST", "If-Match no contiene una revisión válida.", 400);
-  return revision;
-}
+export { errorResponse, parseExpectedRevision, revisionEtag } from "./api-response";
 
 export function responseFor<T extends ContainerRecord | ContentRecord>(request: Request, record: T) {
   if (request.headers.get("accept")?.includes("text/markdown")) {
     return new Response(record.body, {
-      headers: { ETag: revisionEtag(record.revision), "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": "private, no-store" },
+      headers: { ETag: revisionEtag(record.revision), "Content-Type": "text/markdown; charset=utf-8", "Cache-Control": "private, no-store", Vary: "Accept" },
     });
   }
-  return NextResponse.json({ data: record }, { headers: { ETag: revisionEtag(record.revision), "Cache-Control": "private, no-store" } });
-}
-
-export function errorResponse(code: string, message: string, status: number, fields?: Record<string, string>) {
-  return NextResponse.json({ error: { code, message, ...(fields && Object.keys(fields).length ? { fields } : {}), requestId: crypto.randomUUID() } }, { status });
+  return NextResponse.json({ data: record }, { headers: { ETag: revisionEtag(record.revision), "Cache-Control": "private, no-store", Vary: "Accept" } });
 }
 
 export function handleContainerContentError(error: unknown) {

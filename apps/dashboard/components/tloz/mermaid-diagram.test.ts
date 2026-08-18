@@ -14,6 +14,7 @@ describe("Mermaid Markdown diagrams", () => {
     const markdownSource = readFileSync(new URL("./markdown-editor.tsx", import.meta.url), "utf8");
     expect(source).toContain('import("mermaid")');
     expect(source).toContain('securityLevel: "strict"');
+    expect(source).not.toContain("dangerouslySetInnerHTML");
     expect(source).toContain("Diagrama Mermaid inválido");
     expect(source).toContain("<code>{source}</code>");
     expect(markdownSource).toContain("if (isMermaidCodeBlock(className))");

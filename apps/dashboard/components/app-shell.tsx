@@ -114,6 +114,7 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
       className="shell shell-tloz min-h-dvh bg-ivory text-carbon"
       data-sidebar={collapsed ? "collapsed" : "expanded"}
     >
+      <a className="skip-link" href="#main-content">Saltar al contenido</a>
       <DesktopSidebar
         collapsed={collapsed}
         pathname={pathname}
@@ -127,7 +128,7 @@ function DashboardLayoutClient({ children, user, tlozProjects, projectActiveCoun
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <main className="main-surface tloz-main-surface min-w-0">{children}</main>
+      <main id="main-content" className="main-surface tloz-main-surface min-w-0" tabIndex={-1}>{children}</main>
 
       <MobileMenuPanel
         open={mobileMenuOpen}

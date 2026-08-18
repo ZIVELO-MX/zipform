@@ -5,6 +5,9 @@ import {
 import type { TlozDocument } from "@tloz/types";
 import { NextResponse } from "next/server";
 import { authorizeApiOperation, type TlozOperation } from "./authorization";
+import { errorResponse, parseExpectedRevision as parseRevision, revisionEtag } from "./api-response";
+
+export { errorResponse, revisionEtag } from "./api-response";
 
 type Actor = { id: string; type: string; role: string };
 
@@ -32,20 +35,7 @@ export function documentResponse(request: Request, document: TlozDocument) {
 }
 
 export function parseExpectedRevision(request: Request): number | Response {
-  const value = request.headers.get("if-match");
-  if (!value) {
-    return errorResponse(
-      "PRECONDITION_REQUIRED",
-      "If-Match con la revisión vigente es obligatorio.",
-      428,
-    );
-  }
-  const normalized = value.replace(/^W\//, "").replace(/^"|"$/g, "");
-  const revision = Number(normalized);
-  if (!Number.isInteger(revision) || revision < 1) {
-    return errorResponse("INVALID_REQUEST", "If-Match no contiene una revisión válida.", 400);
-  }
-  return revision;
+  return parseRevision(request, "If-Match con la revisión vigente es obligatorio.");
 }
 
 export function authorizeDocumentOperation(
@@ -69,26 +59,6 @@ export function handleDocumentError(error: unknown) {
     return errorResponse(error.code, error.message, status, error.fields);
   }
   return errorResponse("INTERNAL_ERROR", "Error interno del servidor.", 500);
-}
-
-export function errorResponse(
-  code: string,
-  message: string,
-  status: number,
-  fields?: Record<string, string>,
-) {
-  return NextResponse.json({
-    error: {
-      code,
-      message,
-      ...(fields && Object.keys(fields).length ? { fields } : {}),
-      requestId: crypto.randomUUID(),
-    },
-  }, { status });
-}
-
-export function revisionEtag(revision: number) {
-  return `"${revision}"`;
 }
 
 function stringProperty(document: TlozDocument, key: string) {
