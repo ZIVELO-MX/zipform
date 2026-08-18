@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ClipboardCopy, Edit3, MoreHorizontal } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -21,6 +21,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorId = useId();
 
   useEffect(() => {
     setDraft(value);
@@ -37,8 +38,13 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
     setEditing(false);
   }
 
-  function handleCopy() {
-    navigator.clipboard.writeText(value).then(() => toast.success("Copiado al portapapeles"));
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success("Copiado al portapapeles");
+    } catch {
+      toast.error("No se pudo copiar el detalle");
+    }
   }
 
   return (
@@ -68,10 +74,12 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
 
       {editing ? (
         <div className="flex flex-col gap-2">
+            <label className="sr-only" htmlFor={editorId}>Detalle en Markdown</label>
             <textarea
+              id={editorId}
               ref={textareaRef}
               autoFocus
-              className="min-h-[45dvh] w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10 md:min-h-80"
+              className="min-h-[45dvh] w-full resize-y rounded-xl border border-carbon/15 bg-paper px-3 py-2 font-mono text-[0.8125rem] leading-relaxed text-carbon/80 outline-none focus-visible:border-carbon/30 focus-visible:ring-2 focus-visible:ring-carbon/10 md:min-h-80"
               value={draft}
               placeholder={placeholder}
               onChange={(event) => setDraft(event.target.value)}
@@ -83,8 +91,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
         </div>
       ) : (
         <div
-          className="min-h-24 w-full rounded-xl border border-transparent bg-[#FAF9F7] px-4 py-3 text-[15px] leading-[1.6] text-[#454543] transition-colors hover:border-carbon/15 hover:bg-white"
-          tabIndex={0}
+          className="min-h-24 w-full rounded-xl border border-transparent bg-[var(--surface-subtle)] px-4 py-3 text-[0.9375rem] leading-relaxed text-carbon/80 transition-colors hover:border-carbon/15 hover:bg-paper"
         >
           {value ? <MarkdownContent onToggleTask={onToggleTask}>{value}</MarkdownContent> : <span className="text-carbon/45">{placeholder}</span>}
         </div>
@@ -112,7 +119,7 @@ export function MarkdownContent({ children, onToggleTask }: { children: string; 
             return (
               <li className="mb-1 flex items-start gap-2 last:mb-0" {...props}>
                 <input type="checkbox" checked={checked} disabled={!onToggleTask} onChange={(event) => onToggleTask?.(position, event.target.checked)} aria-label={`Task ${position + 1}`} className="mt-0.5 size-[17px] shrink-0 cursor-pointer accent-[#D72228] disabled:cursor-default" />
-                <span className="min-w-0 flex-1 text-[15px] leading-[1.6]">{rest}</span>
+                <span className="min-w-0 flex-1 text-[0.9375rem] leading-relaxed">{rest}</span>
               </li>
             );
           }
@@ -130,7 +137,7 @@ export function MarkdownContent({ children, onToggleTask }: { children: string; 
         h1: ({ ...props }) => <h1 className="mb-3 text-2xl font-bold last:mb-0" {...props} />,
         h2: ({ ...props }) => <h2 className="mb-2 text-xl font-bold last:mb-0" {...props} />,
         h3: ({ ...props }) => <h3 className="mb-2 text-lg font-semibold last:mb-0" {...props} />,
-        blockquote: ({ ...props }) => <blockquote className="mb-3 border-l-4 border-carbon/15 pl-4 text-carbon/65 italic last:mb-0" {...props} />,
+        blockquote: ({ ...props }) => <blockquote className="mb-3 border-l border-carbon/20 pl-3 text-carbon/65 italic last:mb-0" {...props} />,
         hr: ({ ...props }) => <hr className="mb-3 border-carbon/10 last:mb-0" {...props} />,
       }}
     >

@@ -23,6 +23,8 @@ body {
     radial-gradient(circle at 88% 10%, rgba(200, 185, 154, 0.42), transparent 30%),
     var(--off-white);
   font-family: var(--font-body);
+  line-height: 1.45;
+  color-scheme: light;
 }
 
 a {
@@ -39,6 +41,27 @@ select {
 
 button {
   color: inherit;
+}
+
+.skip-link {
+  position: fixed;
+  inset-block-start: 0.75rem;
+  inset-inline-start: 0.75rem;
+  z-index: 100;
+  transform: translateY(-160%);
+  border-radius: var(--radius-control);
+  background: var(--carbon);
+  color: white;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition: transform 160ms ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 0.1875rem solid var(--focus-ring);
+  outline-offset: 0.125rem;
 }
 
 .shell {
@@ -126,7 +149,8 @@ button {
 .icon-button:hover,
 .icon-button:focus-visible {
   border-color: rgba(215, 34, 40, 0.45);
-  outline: none;
+  outline: 0.125rem solid var(--focus-ring);
+  outline-offset: 0.125rem;
 }
 
 .nav-stack,
@@ -408,9 +432,9 @@ button {
 .not-found,
 .roadmap-lane {
   border: 1px solid var(--line);
-  border-radius: 24px;
-  background: rgba(255, 253, 248, 0.78);
-  box-shadow: 0 16px 44px rgba(29, 29, 27, 0.07);
+  border-radius: var(--radius-surface);
+  background: var(--surface-translucent);
+  box-shadow: var(--shadow-card);
 }
 
 .metric-card {
@@ -442,7 +466,7 @@ button {
 }
 
 .panel {
-  padding: 18px;
+  padding: 1.125rem;
 }
 
 .panel-heading {
@@ -680,6 +704,12 @@ button {
   flex: 1;
   flex-direction: column;
   overflow: auto;
+}
+
+.tloz-page-content:focus-visible,
+.main-surface:focus-visible {
+  outline: 0.1875rem solid var(--focus-ring);
+  outline-offset: -0.1875rem;
 }
 
 .tloz-main-header {
@@ -1022,15 +1052,12 @@ button {
 
 .tloz-mission-card {
   overflow: clip;
-  border-inline-end: 3px solid var(--mission-tone);
-  box-shadow: rgba(29, 29, 27, 0.04) 0px 1px 2px 0px;
+  box-shadow: var(--shadow-card);
   transition: box-shadow 0.2s ease;
 }
 
 .tloz-mission-card:hover {
-  box-shadow:
-    rgba(29, 29, 27, 0.04) 0px 1px 2px 0px,
-    var(--mission-tone) 4px 4px 0 -2px;
+  box-shadow: var(--shadow-soft);
 }
 
 .tloz-card-badges,
@@ -1630,6 +1657,17 @@ button {
 }
 .tloz-scrl::-webkit-scrollbar-track {
   background: transparent;
+}
+
+:where(a, button, input, textarea, select, summary):focus-visible {
+  outline: 0.1875rem solid var(--focus-ring);
+  outline-offset: 0.125rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
 }
 
 @media (max-width: 639px) {
