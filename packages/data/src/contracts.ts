@@ -124,6 +124,28 @@ export type PaginationInput = {
   cursor?: string;
 };
 
+export type TlozActivityEvent = {
+  id: string;
+  contentId: string;
+  actorId: string;
+  action: string;
+  metadata: Record<string, unknown>;
+  occurredAt: string;
+};
+
+export type TlozActivityInput = {
+  contentId: string;
+  actorId: string;
+  action: string;
+  metadata?: Record<string, unknown>;
+  idempotencyKey?: string;
+};
+
+export type TlozActivityRepository = {
+  list(contentId: string, pagination?: PaginationInput): Promise<PaginatedResult<TlozActivityEvent>>;
+  append(input: TlozActivityInput): Promise<TlozActivityEvent>;
+};
+
 export type TlozMissionFilters = {
   projectId?: string;
   seasonId?: string;
@@ -260,5 +282,6 @@ export type TlozDataClient = {
   documents: TlozDocumentRepository;
   canonicalDocuments: TlozDocumentRepository;
   containerContent: ContainerContentStore;
+  activity: TlozActivityRepository;
   tloz: TlozRepository;
 };

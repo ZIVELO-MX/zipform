@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       body: typeof raw.body === "string" ? raw.body : "",
       data,
     });
+    await dataClient.activity?.append({ contentId: record.id, actorId: auth.user.id, action: "content.created", metadata: { revision: record.revision }, idempotencyKey: request.headers.get("idempotency-key") ?? undefined });
     return new Response(JSON.stringify({ data: record }), { status: 201, headers: { "Content-Type": "application/json", ETag: `"${record.revision}"`, Location: `/api/v2/contents/${encodeURIComponent(record.publicId)}` } });
   } catch (error) { return handleContainerContentError(error); }
 }

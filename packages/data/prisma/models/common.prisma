@@ -24,6 +24,7 @@ model User {
   projects          TlozProject[]
   questItems        TlozQuestItem[]
   userMissionStates TlozUserMissionState[]
+  activityEvents    TlozActivityEvent[]
 
   @@map("users")
 }

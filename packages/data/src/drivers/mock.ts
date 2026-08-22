@@ -25,6 +25,7 @@ import { createMockDocumentRepository } from "./mock-documents";
 import { createJsonbPrototypeStore } from "../container-content-prototype";
 import { createContainerContentDocumentRepository } from "../container-content-document";
 import { paginationStartIndex } from "../pagination";
+import { createMockActivityRepository } from "../activity";
 
 export function createMockDataClient(): TlozDataClient {
   const tlozData = {
@@ -119,6 +120,7 @@ export function createMockDataClient(): TlozDataClient {
 
   return {
     containerContent: containerContentStore,
+    activity: createMockActivityRepository(),
     canonicalDocuments: createContainerContentDocumentRepository(containerContentStore),
     user: {
       async getCurrent() {
