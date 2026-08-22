@@ -26,7 +26,7 @@ import {
   documentValue,
   isDocumentDetailValuePresent,
 } from "./document-view-model";
-import { formatDate } from "./tloz-utils";
+import { formatDate, resolveStatusPresentation } from "./tloz-utils";
 
 export function DocumentPropertyFields({
   document,
@@ -114,7 +114,7 @@ export function DocumentPropertyFields({
         <DetailPropertyRow
           key={field.key}
           label={field.label}
-          display={<PresentationValue field={field} value={value} users={users} />}
+          display={<PresentationValue field={field} value={value} users={users} kind={current.kind} />}
           readOnly={fieldReadOnly}
         >
           {fieldReadOnly ? null : (
@@ -253,23 +253,24 @@ function PresentationValue({
   field,
   value,
   users,
+  kind,
 }: {
   field: TlozDocumentPresentationField;
   value: TlozDocumentScalar;
   users: Array<{ id: string; name: string }>;
+  kind: TlozDocument["kind"];
 }) {
   if (field.key === "color" && typeof value === "string") {
     return <ColorValue value={value} />;
   }
   if (field.format === "status" && typeof value === "string") {
-    const option = field.options?.find((candidate) => candidate.value === value);
-    const tone = value === "active" ? "#4B8D5E" : option?.color ?? statusTone(option?.role, value);
+    const status = resolveStatusPresentation(value, field.options, kind);
     return (
       <span
         className="inline-block rounded-full px-[9px] py-[3px] text-[11px] font-bold"
-        style={{ background: `${tone}18`, color: tone }}
+        style={{ background: `${status.textColor}18`, color: status.textColor }}
       >
-        {option?.label ?? humanize(value)}
+        {status.label}
       </span>
     );
   }
@@ -371,19 +372,6 @@ function displayValue(
     return field.options?.find((option) => option.value === value)?.label ?? value;
   }
   return String(value);
-}
-
-function humanize(value: string) {
-  return value
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function statusTone(role: string | undefined, value: string) {
-  if (role === "done" || value === "active" || value === "unlocked") return "#1E6B3C";
-  if (role === "blocked" || value === "blocked") return "#B91C22";
-  if (role === "ready" || value === "planned") return "#3A47B5";
-  return "#7A5A12";
 }
 
 function CreatePropertyEditor({

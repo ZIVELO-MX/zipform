@@ -109,4 +109,11 @@ describe("mission detail interaction contracts", () => {
     expect(detail).toContain("inheritedColor={isMissionDocument ? detailColor : undefined}");
     expect(detail).toContain("tone={detailColor}");
   });
+
+  it("resolves the header status chip with document context", () => {
+    expect(detail).toContain("resolveStatusPresentation");
+    expect(detail).toContain('options.document?.kind ?? "mission"');
+    expect(detail).toContain("statusPresentation.textColor");
+    expect(detail).toContain("statusPresentation.label");
+  });
 });

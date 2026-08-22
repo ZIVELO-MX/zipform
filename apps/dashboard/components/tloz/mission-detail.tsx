@@ -22,7 +22,7 @@ import {
 } from "../../app/tloz/actions";
 import { detailFieldOptions, MissionInlineEditor, type MissionEditorOptions } from "./mission-inline-editor";
 import { MissionAttachmentUploader } from "./mission-attachment-uploader";
-import { missionStatusLabel, missionStatusTone, missionTypeIcon, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
+import { missionStatusLabel, missionTypeIcon, missionTypeLabel, missionTypeTone, resolveMissionIcon, resolveStatusPresentation } from "./tloz-utils";
 import {
   inventoryItemHref,
   missionHref,
@@ -284,7 +284,12 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
     ? resolveDocumentDetailColor(options.document, categoryOption?.color ?? tone, tone)
     : categoryOption?.color ?? tone;
   const typeColor = detailColor;
-  const statusColor = statusOption?.color ?? missionStatusTone[current.status];
+  const statusPresentation = resolveStatusPresentation(
+    current.status,
+    statusOption ? [statusOption] : [],
+    options.document?.kind ?? "mission",
+  );
+  const statusColor = statusPresentation.textColor;
 
   return (
     <article className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-[26px] md:py-7" aria-busy={isPending}>
@@ -304,7 +309,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
           <header>
             <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
               {(() => { const TypeIcon = missionTypeIcon[current.type]; return <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold" style={{ backgroundColor: `${typeColor}18`, color: typeColor }}><TypeIcon className="size-[13px]" aria-hidden="true" />{categoryOption?.label ?? missionTypeLabel[current.type]}</span>; })()}
-              <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold" style={{ backgroundColor: `${statusColor}18`, color: statusColor }}><span className={`size-[7px] rounded-full bg-current ${statusOption?.role === "active" || (!statusOption && current.status === "now") ? "animate-pulse" : ""}`} aria-hidden="true" />{statusOption?.label ?? missionStatusLabel[current.status]}</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold" style={{ backgroundColor: `${statusColor}18`, color: statusColor }}><span className={`size-[7px] rounded-full bg-current ${statusPresentation.role === "active" ? "animate-pulse" : ""}`} aria-hidden="true" />{statusPresentation.label}</span>
               <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.displayId}</span>
             </div>
             <div className="flex items-start gap-2.5">

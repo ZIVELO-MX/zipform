@@ -168,7 +168,7 @@ export const projects: TlozProject[] = [
     descriptionDetail: "",
     color: "#8a6f2a",
     icon: "Shield",
-    status: "planned",
+    status: "paused",
     type: "normal",
     ownerId: "owner",
     startDate: "2026-07-01",

@@ -106,9 +106,9 @@ export function DocumentViewRenderer({
         />
         <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
           {state.view === "list" ? (
-            <MissionList missions={visibleRecords} grouping={state.grouping} statusOptions={statusOptions} onSelect={openRecord} />
+            <MissionList missions={visibleRecords} grouping={state.grouping} statusOptions={statusOptions} documentKind={definition.kind} onSelect={openRecord} />
           ) : (
-            <MissionTable missions={visibleRecords} statusOptions={statusOptions} onSelect={openRecord} />
+            <MissionTable missions={visibleRecords} statusOptions={statusOptions} documentKind={definition.kind} onSelect={openRecord} />
           )}
         </div>
       </div>

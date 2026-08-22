@@ -364,7 +364,7 @@ function systemProjectDocument(
     body: "",
     revision: state.revision,
     properties: {
-      status: slug === "unassigned" ? "archived" : "active",
+      status: slug === "unassigned" ? "completed" : "active",
       category: "system",
       icon: slug === "inventory" ? "PackageOpen" : "FolderKanban",
       ...state.custom,
@@ -459,9 +459,10 @@ function mockDefinition(
         presentationField("publicId", "ID", "id", 0),
         presentationField("title", "Project", "text", 1),
         presentationField("status", "Estado", "status", 2, [
-          { value: "planned", label: "Planeado", role: "backlog", color: "#3A47B5" },
-          { value: "active", label: "Activo", role: "active", color: "#4B8D5E" },
-          { value: "archived", label: "Archivado", role: "done", color: "#6B6B6B" },
+          { value: "active", label: "Active", role: "active", color: "#4B8D5E" },
+          { value: "maintenance", label: "Maintenance", role: "ready", color: "#3B82F6" },
+          { value: "paused", label: "Paused / Blocked", role: "blocked", color: "#6B7280" },
+          { value: "completed", label: "Completed", role: "done", color: "#166534" },
         ]),
         presentationField("category", "Tipo", "text", 3),
         presentationField("mission_count", "Missions", "number", 4),

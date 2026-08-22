@@ -6,7 +6,7 @@ describe("mission status selector", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
 
     expect(source).toMatch(
-      /<SelectTrigger aria-label="Estado"><SelectValue><OptionValue value=\{status\} options=\{statusOptions\} status \/><\/SelectValue><\/SelectTrigger><SelectContent position="item-aligned">/,
+      /<SelectTrigger aria-label="Estado"><SelectValue><OptionValue value=\{status\} options=\{statusOptions\} status kind=\{options\?\.document\?\.kind\} \/><\/SelectValue><\/SelectTrigger><SelectContent position="item-aligned">/,
     );
   });
 
