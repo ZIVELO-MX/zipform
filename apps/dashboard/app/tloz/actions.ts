@@ -37,6 +37,12 @@ import { recordMissionActivity } from "../../lib/mission-activity";
 
 const revalidateTloz = () => revalidatePath("/", "layout");
 
+async function recordDocumentActivity(document: TlozDocument) {
+  if (document.kind !== "mission") return;
+  const actor = await authenticatedActor();
+  await recordMissionActivity({ mission: { id: document.id, displayId: document.publicId }, actorId: actor.id, source: "session", action: "mission.document_updated", metadata: { revision: document.revision } });
+}
+
 async function authenticatedActor() {
   const session = await auth();
   if (!session?.user?.id) throw new TlozAuthorizationError("UNAUTHORIZED", 401);
@@ -115,6 +121,7 @@ export async function updateDocument(
   revision: number,
 ) {
   const updated = await mutateDocument(documentId, input, revision);
+  await recordDocumentActivity(updated);
   revalidateTloz();
   return updated;
 }
@@ -357,6 +364,7 @@ export async function updateDocumentProperties(
   revision?: number,
 ) {
   const updated = await mutateDocument(documentId, { properties }, revision);
+  await recordDocumentActivity(updated);
   revalidateTloz();
   return updated;
 }
@@ -367,6 +375,7 @@ export async function updateDocumentContent(
   revision: number,
 ) {
   const updated = await mutateDocument(documentId, input, revision);
+  await recordDocumentActivity(updated);
   revalidateTloz();
   return updated;
 }
@@ -377,6 +386,7 @@ export async function updateDocumentBody(
   revision: number,
 ) {
   const updated = await mutateDocument(documentId, { body }, revision);
+  await recordDocumentActivity(updated);
   revalidateTloz();
   return updated;
 }
