@@ -1,5 +1,5 @@
 import { getPrismaClient } from "../src/drivers/prisma";
-import { assertContainerContentReconciled, readCutoverState, setCutoverState } from "../src/cutover";
+import { assertContainerContentReconciled, listCutoverObservations, readCutoverState, setCutoverState } from "../src/cutover";
 
 const args = new Set(process.argv.slice(2));
 const command = process.argv.slice(2).find((arg) => !arg.startsWith("--"));
@@ -14,7 +14,7 @@ if (!command || !allowed.has(command)) {
 const prisma = getPrismaClient();
 try {
   if (command === "status") {
-    console.log(JSON.stringify({ state: await readCutoverState(prisma), reconciliation: await assertContainerContentReconciled(prisma) }, null, 2));
+    console.log(JSON.stringify({ state: await readCutoverState(prisma), reconciliation: await assertContainerContentReconciled(prisma), observations: await listCutoverObservations(prisma, 7) }, null, 2));
   } else {
     if (!confirm) throw new Error("Mutating a cutover requires --confirm");
     const reconciliation = await assertContainerContentReconciled(prisma);

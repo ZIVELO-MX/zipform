@@ -135,6 +135,7 @@ async function seedReferenceData(prisma: PrismaClient) {
 
 async function cleanDatabase(prisma: PrismaClient) {
   await prisma.tlozActivityEvent.deleteMany();
+  await prisma.tlozDomainCutoverObservation.deleteMany();
   await prisma.content.deleteMany();
   await prisma.container.deleteMany();
   await prisma.tlozUserMissionState.deleteMany();

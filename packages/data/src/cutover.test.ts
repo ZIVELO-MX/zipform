@@ -12,14 +12,17 @@ const repository = () => ({
 });
 
 function prismaWith(state: { source: "legacy" | "canonical"; writesEnabled: boolean }) {
-  return { tlozDomainCutover: { findUnique: vi.fn(async () => ({ key: "domain", ...state, reason: "test", version: 1, updatedAt: new Date() })) } } as never;
+  return {
+    tlozDomainCutover: { findUnique: vi.fn(async () => ({ key: "domain", ...state, reason: "test", version: 1, updatedAt: new Date() })) },
+    tlozDomainCutoverObservation: { upsert: vi.fn(async () => undefined) },
+  };
 }
 
 describe("cutover document repository", () => {
   it("routes reads and writes to the selected source", async () => {
     const legacy = repository();
     const canonical = repository();
-    const proxy = createCutoverDocumentRepository(prismaWith({ source: "canonical", writesEnabled: true }), legacy, canonical);
+    const proxy = createCutoverDocumentRepository(prismaWith({ source: "canonical", writesEnabled: true }) as never, legacy, canonical);
     await proxy.find({});
     await proxy.update("id", { title: "updated" }, 1);
     expect(canonical.find).toHaveBeenCalled();
@@ -27,8 +30,26 @@ describe("cutover document repository", () => {
     expect(legacy.find).not.toHaveBeenCalled();
   });
 
+  it("records selected-source reads and writes", async () => {
+    const prisma = prismaWith({ source: "canonical", writesEnabled: true });
+    const proxy = createCutoverDocumentRepository(prisma as never, repository(), repository());
+    await proxy.get("id");
+    await proxy.update("id", { title: "updated" }, 1);
+    expect(prisma.tlozDomainCutoverObservation.upsert).toHaveBeenCalledTimes(2);
+    expect(prisma.tlozDomainCutoverObservation.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ source: "canonical", operation: "read", count: 1 }),
+    }));
+    expect(prisma.tlozDomainCutoverObservation.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ source: "canonical", operation: "write", count: 1 }),
+    }));
+  });
+
   it("blocks writes during the read-only window", async () => {
-    const proxy = createCutoverDocumentRepository(prismaWith({ source: "legacy", writesEnabled: false }), repository(), repository());
+    const prisma = prismaWith({ source: "legacy", writesEnabled: false });
+    const proxy = createCutoverDocumentRepository(prisma as never, repository(), repository());
     await expect(proxy.delete("id", 1)).rejects.toMatchObject({ code: "DOCUMENT_CUTOVER_READ_ONLY" } satisfies Partial<TlozDocumentError>);
+    expect(prisma.tlozDomainCutoverObservation.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      create: expect.objectContaining({ source: "legacy", operation: "write_blocked" }),
+    }));
   });
 });
