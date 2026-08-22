@@ -247,9 +247,19 @@ describe("prisma integration", () => {
 
       const first = await backfillContainerContent(prisma, true);
       expect(first).toMatchObject({ mode: "apply", inserted: 7 });
+      await client.containerContent.createContent({
+        id: "canonical-only-content",
+        publicId: "library-canonical-only",
+        containerId: "00000000-0000-0000-0000-000000000101",
+        presentation: "library",
+        title: "Canonical-only content",
+        summary: "",
+        body: "",
+        data: {},
+      });
       const second = await backfillContainerContent(prisma, true);
       expect(second).toMatchObject({ mode: "apply", unchanged: 7 });
-      await expect(reconcileContainerContent(prisma)).resolves.toMatchObject({ matches: true });
+      await expect(reconcileContainerContent(prisma)).resolves.toMatchObject({ matches: true, canonicalOnly: ["content:canonical-only-content"] });
     });
 
     itIf(hasDb)("migrates idempotently and enforces optimistic revisions", async () => {

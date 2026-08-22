@@ -409,12 +409,18 @@ export async function reconcileContainerContent(prisma: PrismaClient) {
       });
     }
   }
+  const blockingMismatches = mismatches.filter((mismatch) => mismatch.reason !== "unexpected");
+  const canonicalOnly = mismatches.filter((mismatch) => mismatch.reason === "unexpected").map((mismatch) => mismatch.record);
   return {
-    matches: expectedChecksum === actualChecksum && mismatches.length === 0,
+    // Canonical-only records are valid: v2 can create Library/Workshop content
+    // that has no legacy EAV counterpart. They remain visible in the report but
+    // must not block cutover or trigger destructive cleanup.
+    matches: blockingMismatches.length === 0,
     expectedChecksum,
     actualChecksum,
     expected: { containers: expected.containers.length, contents: expected.contents.length },
     actual: { containers: actual.containers.length, contents: actual.contents.length },
+    canonicalOnly,
     mismatches,
   };
 }
