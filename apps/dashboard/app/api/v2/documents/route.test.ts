@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PaginationCursorError } from "@tloz/data";
 
 const mocks = vi.hoisted(() => ({
   authenticateRequest: vi.fn(),
@@ -27,7 +28,7 @@ vi.mock("../../../../lib/api-auth", () => ({
   authenticateRequest: mocks.authenticateRequest,
 }));
 
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const statusField = {
   id: "status",
@@ -71,6 +72,18 @@ describe("POST /api/v2/documents", () => {
     vi.clearAllMocks();
     mocks.authenticateRequest.mockResolvedValue({
       user: { id: "agent-1", type: "agent", role: "agent:operative" },
+    });
+    mocks.documents.find.mockResolvedValue({ data: [], nextCursor: null });
+  });
+
+  it("returns 400 for an invalid document cursor", async () => {
+    mocks.documents.find.mockRejectedValue(new PaginationCursorError("missing"));
+
+    const response = await GET(new NextRequest("https://tloz.test/api/v2/documents?cursor=missing"));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "INVALID_REQUEST", fields: { cursor: "invalid" } },
     });
   });
 

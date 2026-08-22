@@ -3,6 +3,7 @@ import { performance } from "node:perf_hooks";
 const DEFAULT_BASE_URL = "http://127.0.0.1:3100";
 const DEFAULT_SAMPLES = 30;
 const DEFAULT_CONCURRENCY = 8;
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
 
 export class ApiLoadError extends Error {
   constructor(message, { cause, url, status } = {}) {
@@ -19,16 +20,37 @@ export function percentile(values, rank = 0.95) {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * rank) - 1)];
 }
 
-function headers(token) {
-  return token ? { Authorization: `Bearer ${token}`, Accept: "application/json" } : { Accept: "application/json" };
+export function assertLoopbackUrl(baseUrl) {
+  let url;
+  try {
+    url = new URL(baseUrl);
+  } catch (cause) {
+    throw new ApiLoadError(`URL inválida para benchmark: ${baseUrl}`, { cause, url: baseUrl });
+  }
+  if (!LOOPBACK_HOSTS.has(url.hostname)) {
+    throw new ApiLoadError(`El benchmark solo puede ejecutarse contra loopback; se rechazó ${url.origin}`, { url: url.toString() });
+  }
 }
 
-async function request(baseUrl, path, token, fetchImpl = fetch) {
-  const url = new URL(path, baseUrl).toString();
+function headers(token, hasBody = false) {
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    Accept: "application/json",
+    ...(hasBody ? { "Content-Type": "application/json" } : {}),
+  };
+}
+
+async function request(baseUrl, endpoint, token, fetchImpl = fetch) {
+  const descriptor = typeof endpoint === "string" ? { path: endpoint } : endpoint;
+  const url = new URL(descriptor.path, baseUrl).toString();
   const started = performance.now();
   let response;
   try {
-    response = await fetchImpl(url, { headers: headers(token) });
+    response = await fetchImpl(url, {
+      method: descriptor.method ?? "GET",
+      headers: headers(token, descriptor.body !== undefined),
+      ...(descriptor.body !== undefined ? { body: JSON.stringify(descriptor.body) } : {}),
+    });
   } catch (cause) {
     throw new ApiLoadError(`Falló la red al consultar ${url}`, { cause, url });
   }
@@ -49,19 +71,44 @@ async function jsonRequest(baseUrl, path, token, fetchImpl) {
   }
 }
 
-async function discoverWorkload(baseUrl, token, fetchImpl) {
-  const projects = await jsonRequest(baseUrl, "/api/v1/projects?limit=100", token, fetchImpl);
-  const missions = await jsonRequest(baseUrl, "/api/v1/missions?limit=100", token, fetchImpl);
-  const projectId = projects.json?.data?.[0]?.id;
-  const missionId = missions.json?.data?.[0]?.id;
+export async function discoverWorkload(baseUrl, token, fetchImpl) {
+  const collectionEndpoints = [
+    { name: "projects", path: "/api/v1/projects?limit=2" },
+    { name: "missions", path: "/api/v1/missions?limit=2" },
+    { name: "inventory", path: "/api/v1/quest-items?limit=2" },
+    { name: "resources", path: "/api/v1/resources?limit=2" },
+    { name: "containers", path: "/api/v2/containers?limit=2" },
+    { name: "contents", path: "/api/v2/contents?limit=2" },
+    { name: "documents", path: "/api/v2/documents?limit=2" },
+  ];
+  const discovered = await Promise.all(collectionEndpoints.map(async (endpoint) => ({
+    endpoint,
+    response: await jsonRequest(baseUrl, endpoint.path, token, fetchImpl),
+  })));
+  const projects = discovered.find((item) => item.endpoint.name === "projects")?.response;
+  const missions = discovered.find((item) => item.endpoint.name === "missions")?.response;
+  const projectId = projects?.json?.data?.[0]?.id;
+  const missionId = missions?.json?.data?.[0]?.id;
   if (!projectId || !missionId) throw new ApiLoadError("El dataset no contiene un proyecto y una misión para el benchmark");
+  const secondPages = discovered.flatMap(({ endpoint, response }) => response.json?.nextCursor
+    ? [{
+        name: `${endpoint.name}-page-2`,
+        path: `${endpoint.path}&cursor=${encodeURIComponent(response.json.nextCursor)}`,
+      }]
+    : []);
   return [
     { name: "openapi", path: "/api/openapi" },
     { name: "users-me", path: "/api/v1/users/me" },
-    { name: "projects", path: "/api/v1/projects?limit=100" },
-    { name: "missions", path: "/api/v1/missions?limit=100" },
-    { name: "missions-by-project", path: `/api/v1/missions?projectId=${encodeURIComponent(projectId)}&limit=100` },
+    ...collectionEndpoints,
+    ...secondPages,
+    { name: "missions-by-project", path: `/api/v1/missions?projectId=${encodeURIComponent(projectId)}&limit=25` },
     { name: "mission-detail", path: `/api/v1/missions/${encodeURIComponent(missionId)}` },
+    {
+      name: "mission-batch",
+      path: "/api/v1/missions/batch",
+      method: "POST",
+      body: { ids: [missionId] },
+    },
   ];
 }
 
@@ -70,7 +117,7 @@ async function collectEndpoint(baseUrl, endpoint, token, { samples, concurrency,
   let bytes = 0;
   let errors = 0;
   let firstError = null;
-  await request(baseUrl, endpoint.path, token, fetchImpl);
+  await request(baseUrl, endpoint, token, fetchImpl);
   let next = 0;
   const started = performance.now();
   async function worker() {
@@ -78,7 +125,7 @@ async function collectEndpoint(baseUrl, endpoint, token, { samples, concurrency,
       const index = next++;
       if (index >= samples) return;
       try {
-        const result = await request(baseUrl, endpoint.path, token, fetchImpl);
+        const result = await request(baseUrl, endpoint, token, fetchImpl);
         durations.push(result.duration);
         bytes += result.bytes;
       } catch (error) {
@@ -109,6 +156,7 @@ export async function benchmarkApi({
   concurrency = DEFAULT_CONCURRENCY,
   fetchImpl = fetch,
 } = {}) {
+  assertLoopbackUrl(baseUrl);
   const endpoints = await discoverWorkload(baseUrl, token, fetchImpl);
   const results = [];
   for (const endpoint of endpoints) {

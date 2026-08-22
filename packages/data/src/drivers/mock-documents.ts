@@ -24,6 +24,7 @@ import {
 } from "../document-contract";
 import { TlozDocumentError } from "../document-errors";
 import { parseMarkdownChecklist } from "../tloz-hydration";
+import { paginationStartIndex } from "../pagination";
 
 type MockDocumentData = {
   projects: TlozProject[];
@@ -198,10 +199,7 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
       .filter((candidate) => candidate.parentId === document.id)
       .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
     const limit = Math.min(Math.max(options.childrenPagination?.limit ?? 25, 1), 100);
-    const cursorIndex = options.childrenPagination?.cursor
-      ? children.findIndex((candidate) => candidate.id === options.childrenPagination?.cursor)
-      : -1;
-    const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+    const start = paginationStartIndex(children, options.childrenPagination?.cursor);
     const data = children.slice(start, start + limit);
     return {
       ...document,
@@ -228,11 +226,9 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
         })
         .filter((document) => !query || `${document.publicId} ${document.title} ${document.summary}`.toLocaleLowerCase().includes(query))
         .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id));
-      const cursorIndex = pagination.cursor
-        ? documents.findIndex((document) => document.id === pagination.cursor)
-        : -1;
-      const page = documents.slice(cursorIndex >= 0 ? cursorIndex + 1 : 0, cursorIndex >= 0 ? cursorIndex + 1 + limit : limit);
-      const lastIndex = cursorIndex >= 0 ? cursorIndex + page.length : page.length - 1;
+      const start = paginationStartIndex(documents, pagination.cursor);
+      const page = documents.slice(start, start + limit);
+      const lastIndex = start + page.length - 1;
       return {
         data: page,
         nextCursor: lastIndex < documents.length - 1 ? page.at(-1)?.id ?? null : null,
@@ -426,6 +422,7 @@ function applyInventoryProperties(item: TlozQuestItem, properties?: Record<strin
   if (typeof properties.category === "string") item.category = properties.category as TlozQuestItem["category"];
   if (typeof properties.assignee === "string" || properties.assignee === null) item.ownerId = properties.assignee ?? undefined;
   if (typeof properties.icon === "string") item.icon = properties.icon;
+  if (typeof properties.color === "string") item.color = properties.color;
   if (typeof properties.acquired === "string" || properties.acquired === null) item.acquiredAt = properties.acquired ?? undefined;
 }
 

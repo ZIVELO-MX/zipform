@@ -1,0 +1,2 @@
+ALTER TABLE "tloz_quest_items"
+ADD COLUMN "color" TEXT NOT NULL DEFAULT '#2D6CDF';

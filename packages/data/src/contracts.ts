@@ -54,6 +54,7 @@ export type TlozAttachmentBatch = {
   uploadBatchId: string;
   missionId: string;
   groupKey: string;
+  groupName?: string;
   sourceRevision: string;
   generation: number;
   status: "prepared" | "finalized";
@@ -101,7 +102,7 @@ export type TlozMissionUpdateInput = Partial<
 };
 
 export type TlozProjectUpdateInput = Partial<Pick<TlozProject, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "type" | "ownerId" | "startDate" | "dueDate">>;
-export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "status" | "category" | "ownerId" | "acquiredAt">>;
+export type TlozQuestItemUpdateInput = Partial<Pick<TlozQuestItem, "name" | "description" | "descriptionDetail" | "icon" | "color" | "status" | "category" | "ownerId" | "acquiredAt">>;
 
 export type PaginatedResult<T> = {
   data: T[];
@@ -143,6 +144,7 @@ export type ResourceFilters = {
   projectId?: string;
   questItemId?: string;
   type?: TlozResource["type"];
+  query?: string;
 };
 
 export type DocumentFilters = {
@@ -183,17 +185,22 @@ export type TlozRepository = {
   getDashboardSummary(): Promise<TlozDashboardSummary>;
   getMissions(filters?: TlozMissionFilters): Promise<TlozMissionRecord[]>;
   getMissionDetail(missionId: string): Promise<TlozMissionDetail | null>;
+  getMissionDetails(missionIds: string[]): Promise<Array<TlozMissionDetail | null>>;
   findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>>;
   findProjects(filters?: ProjectFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozProject>>;
   findMissions(filters?: TlozMissionFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozMissionRecord>>;
   findQuestItems(filters?: QuestItemFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozQuestItem>>;
   findResources(filters?: ResourceFilters, pagination?: PaginationInput): Promise<PaginatedResult<TlozResource>>;
   getProjects(): Promise<TlozProject[]>;
+  getProject(projectId: string): Promise<TlozProject | null>;
   getSeasons(): Promise<TlozSeason[]>;
   getEpisodes(): Promise<TlozEpisode[]>;
   getQuestItems(): Promise<TlozQuestItem[]>;
+  getQuestItem(questItemId: string): Promise<TlozQuestItem | null>;
   getResources(): Promise<TlozResource[]>;
+  getResource(resourceId: string): Promise<TlozResource | null>;
   getUsers(): Promise<UserProfile[]>;
+  getUserByEmail(email: string): Promise<UserProfile | null>;
   updateUserRole(userId: string, role: UserRole): Promise<UserProfile>;
   createProject(input: TlozProjectCreateInput): Promise<TlozProject>;
   createQuestItem(input: TlozQuestItemCreateInput): Promise<TlozQuestItem>;
@@ -214,7 +221,7 @@ export type TlozRepository = {
   removeProjectResource(projectId: string, resourceId: string): Promise<TlozResource[]>;
   addQuestItemResource(questItemId: string, input: TlozResourceInput): Promise<TlozResource[]>;
   removeQuestItemResource(questItemId: string, resourceId: string): Promise<TlozResource[]>;
-  prepareAttachmentBatch(missionId: string, groupKey: string, sourceRevision: string, files: TlozAttachmentFileInput[]): Promise<TlozAttachmentBatch>;
+  prepareAttachmentBatch(missionId: string, groupKey: string, sourceRevision: string, files: TlozAttachmentFileInput[], groupName?: string): Promise<TlozAttachmentBatch>;
   getAttachmentBatch(uploadBatchId: string): Promise<TlozAttachmentBatch>;
   finalizeAttachmentBatch(uploadBatchId: string): Promise<TlozAttachmentFinalizeResult>;
   getAttachmentGroups(missionId: string): Promise<TlozAttachmentGroup[]>;

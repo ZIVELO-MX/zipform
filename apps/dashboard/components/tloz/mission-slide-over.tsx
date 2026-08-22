@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { SlideOver } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozQuestItem } from "@tloz/types";
-import { getMissionCapabilities, getMissionDetail, getMissionDetailOptions, getMissionDocumentOptions } from "../../app/tloz/actions";
+import { getMissionPanelData } from "../../app/tloz/actions";
 import type { MissionDetailOptions } from "./mission-detail";
 import { DocumentDetail } from "./document-view-renderer";
 import { SystemDocumentDetail } from "./system-project-detail";
@@ -32,23 +32,23 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
     setSelectedQuestItem(null);
     setCanUpdate(false);
     setCanMove(false);
-    if (mission) Promise.all([getMissionDetail(mission.id), editorOptions ? Promise.resolve(null) : getMissionDetailOptions(), getMissionCapabilities(mission.id), getMissionDocumentOptions(mission.id)]).then(([result, options, capabilities, documentOptions]) => {
+    if (mission) getMissionPanelData(mission.id, !editorOptions).then((result) => {
       if (active) {
-        setDetail(result);
-        setCanUpdate(capabilities.canUpdate);
-        setCanMove(capabilities.canMove);
+        setDetail(result.mission);
+        setCanUpdate(result.capabilities.canUpdate);
+        setCanMove(result.capabilities.canMove);
         setLoadedOptions({
-          projects: editorOptions?.projects ?? options?.projects ?? (mission.project ? [mission.project] : []),
-          users: editorOptions?.users ?? options?.users ?? [mission.owner],
-          missions: editorOptions?.missions ?? options?.missions ?? [mission],
-          questItems: editorOptions?.questItems ?? options?.questItems ?? mission.questItems,
-          document: documentOptions.document ?? undefined,
-          contract: documentOptions.contract,
+          projects: editorOptions?.projects ?? result.options?.projects ?? (mission.project ? [mission.project] : []),
+          users: editorOptions?.users ?? result.options?.users ?? [mission.owner],
+          missions: editorOptions?.missions ?? result.options?.missions ?? [mission],
+          questItems: editorOptions?.questItems ?? result.options?.questItems ?? mission.questItems,
+          document: result.document ?? undefined,
+          contract: result.contract,
         });
       }
     });
     return () => { active = false; };
-  }, [mission]);
+  }, [mission?.id, Boolean(editorOptions)]);
 
   const options: MissionDetailOptions = {
     projects: editorOptions?.projects ?? loadedOptions?.projects ?? (mission?.project ? [mission.project] : []),
@@ -62,10 +62,10 @@ export function MissionSlideOver({ mission, onClose, editorOptions, onMissionCha
   async function navigateToMission(missionId: string) {
     if (detail) setHistory((items) => [...items, detail]);
     setDetail(null);
-    setDetail(await getMissionDetail(missionId));
-    const capabilities = await getMissionCapabilities(missionId);
-    setCanUpdate(capabilities.canUpdate);
-    setCanMove(capabilities.canMove);
+    const result = await getMissionPanelData(missionId, false);
+    setDetail(result.mission);
+    setCanUpdate(result.capabilities.canUpdate);
+    setCanMove(result.capabilities.canMove);
   }
 
   function navigateBack() {

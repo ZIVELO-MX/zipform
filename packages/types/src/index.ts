@@ -132,6 +132,7 @@ export type TlozQuestItem = {
   description: string;
   descriptionDetail: string;
   icon: string;
+  color: string;
   status: TlozInventoryStatus;
   category: TlozInventoryCategory;
   ownerId?: string;
@@ -169,6 +170,7 @@ export type TlozResource = {
   url?: string;
   fileId?: string;
   groupKey?: string;
+  groupName?: string;
   externalKey?: string;
   storagePath?: string;
   contentType?: string;
@@ -192,6 +194,7 @@ export type TlozAttachmentFile = {
 
 export type TlozAttachmentGroup = {
   groupKey: string;
+  groupName?: string;
   sourceRevision: string;
   generation: number;
   attachments: Array<Omit<TlozResource, "url"> & { url: string }>;
@@ -330,6 +333,7 @@ export type ContainerDefinition = {
     required?: boolean;
     visible?: boolean;
     defaultValue?: ContainerContentData;
+    options?: TlozFieldOption[];
   }>;
   views: Array<{
     id: string;

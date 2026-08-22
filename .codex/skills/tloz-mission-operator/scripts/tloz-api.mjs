@@ -56,6 +56,8 @@ export async function run(args, { token = process.env.TLOZ_TOKEN ?? process.env.
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
+        "User-Agent": "tloz-api/1",
+        "X-TLOZ-Client": "tloz-api/1",
         ...(body ? { "Content-Type": "application/json" } : {}),
       },
       ...(body ? { body } : {}),

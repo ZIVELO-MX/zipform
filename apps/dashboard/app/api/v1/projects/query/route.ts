@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
 import type { TlozProjectStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
+import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
 
 const VALID_STATUSES: TlozProjectStatus[] = ["planned", "active", "archived"];
 
@@ -26,7 +27,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const limit = body.limit ? Math.max(1, Math.min(100, Number(body.limit))) : 25;
+  const limit = parsePaginationLimit(body.limit);
+  if (limit instanceof Response) return limit;
 
   try {
     const result = await dataClient.tloz.findProjects(
@@ -34,7 +36,9 @@ export async function POST(request: NextRequest) {
       { limit, cursor: body.cursor }
     );
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }

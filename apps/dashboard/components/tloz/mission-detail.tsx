@@ -1,14 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Check, ChevronDown, FileStack, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, FileStack, Images, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozAttachmentGroup, TlozDocument, TlozDocumentUpdate, TlozFieldOption, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@tloz/types";
 import {
   addMissionDependency,
   addMissionResource,
+  getMissionAttachmentGroupPreviewUrls,
+  getMissionResourcePreviewUrl,
   removeMissionDependency,
   removeMissionQuestItem,
   removeMissionResource,
@@ -31,6 +34,7 @@ import { MarkdownEditor } from "./markdown-editor";
 import { inferResourceIconId, isGithubUrl, RESOURCE_ICON_OPTIONS, resourceTypeLabel, resolveResourceIcon, resolveResourceImageUrl, resourceUsesFileId, TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
 import type { TlozResourceInput } from "@tloz/data";
 import { DocumentPropertyFields } from "./document-property-fields";
+import { groupMissionResources, type MissionResourceGroup } from "./mission-resource-groups";
 
 const missionIcons: IconPickerOption[] = TLOZ_ICON_OPTIONS;
 const defaultMissionContentSections = ["description", "detail", "checklist"];
@@ -43,7 +47,7 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
 
 type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "descriptionDetail" | "icon">;
 
-export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onAddResource, onRemoveResource, onMissionChange, onNavigateMission, onNavigateQuestItem, variant = "full" }: {
+export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onAddResource, onRemoveResource, onMissionChange, onNavigateMission, onNavigateQuestItem, fullDetailHref: detailHrefOverride, variant = "full" }: {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
   canUpdate?: boolean;
@@ -56,6 +60,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   onMissionChange?: (mission: TlozMissionDetail) => void;
   onNavigateMission?: (missionId: string) => void;
   onNavigateQuestItem?: (questItemId: string) => void;
+  fullDetailHref?: string;
   variant?: "panel" | "full";
 }) {
   const [current, setCurrent] = useState(mission);
@@ -76,7 +81,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
-  const fullDetailHref = resolveFullDetailHref(current, options.document);
+  const fullDetailHref = detailHrefOverride ?? resolveFullDetailHref(current, options.document);
   const projectMissionsHref = options.document?.kind === "project" && current.project
     ? projectHref(current.project)
     : null;
@@ -368,16 +373,16 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
           <RelationsSection className="mt-7" title="Recursos">
             <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
               {MISSION_ATTACHMENT_UPLOAD_UI_ENABLED ? <MissionAttachmentUploader missionId={current.id} resources={current.resources.filter((resource) => Boolean(resource.groupKey && resource.externalKey))} canUpdate={canUpdate} onGroupCompleted={acceptAttachmentGroup} /> : null}
-              <MissionResourceReferences resources={current.resources} onRemove={(resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id))} />
+              <MissionResourceReferences resources={current.resources} onRemove={canUpdate ? (resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id)) : undefined} />
               {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
             </div>
-            <AddResource onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} />
+            {canUpdate ? <AddResource onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} /> : null}
           </RelationsSection></> : null}
 
           {!isMissionDocument ? (
             <RelationsSection className="mt-7" title="Recursos">
               <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
-                <MissionResourceReferences resources={current.resources} onRemove={removeResource} />
+                <MissionResourceReferences resources={current.resources} onRemove={canUpdateDocument ? removeResource : undefined} />
                 {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
               </div>
               {canUpdateDocument ? <AddResource onAdd={addResource} /> : null}
@@ -497,50 +502,99 @@ function MissionReferences({ missions, project, statusOptions = [], onRemove, on
   })}</div>;
 }
 
-function MissionResourceReferences({ resources, onRemove }: { resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
-  const grouped = new Map<string, TlozResource[]>();
-  const standalone: TlozResource[] = [];
-  for (const resource of resources) {
-    if (!resource.groupKey) {
-      standalone.push(resource);
-      continue;
-    }
-    grouped.set(resource.groupKey, [...(grouped.get(resource.groupKey) ?? []), resource]);
-  }
+function MissionResourceReferences({ resources, onRemove }: { resources: TlozResource[]; onRemove?: (resource: TlozResource) => void }) {
+  const { groups, standalone } = groupMissionResources(resources);
   const previewSlides: ResourcePreviewSlide[] = standalone.flatMap((resource) => {
     const src = resolveResourceImageUrl(resource);
     return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
   });
-  return <>{[...grouped.entries()].map(([groupKey, group]) => <MissionAttachmentGroupReference key={groupKey} groupKey={groupKey} resources={group} onRemove={onRemove} />)}{standalone.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</>;
+  return <>{groups.map((group) => <MissionAttachmentGroupReference key={group.groupKey} group={group} />)}{standalone.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={onRemove ? () => onRemove(resource) : undefined} />)}</>;
 }
 
-function MissionAttachmentGroupReference({ groupKey, resources, onRemove }: { groupKey: string; resources: TlozResource[]; onRemove: (resource: TlozResource) => void }) {
-  const [expanded, setExpanded] = useState(true);
-  const previewSlides: ResourcePreviewSlide[] = resources.flatMap((resource) => {
+function MissionAttachmentGroupReference({ group }: { group: MissionResourceGroup }) {
+  const [open, setOpen] = useState(false);
+  const [resolvedSlides, setResolvedSlides] = useState<ResourcePreviewSlide[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const previewSlides: ResourcePreviewSlide[] = group.resources.flatMap((resource) => {
     const src = resolveResourceImageUrl(resource);
     return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
   });
-  const groupName = groupKey.replace(/[._-]+/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
-  return <section className="col-span-full min-w-0 rounded-xl border border-[#1D1D1B]/10 bg-white p-3" aria-labelledby={`resource-group-${groupKey}`}>
-    <div className="mb-2.5 flex min-w-0 items-center gap-3">
-      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-4"><FileStack aria-hidden="true" /></span>
-      <div className="min-w-0 flex-1"><h3 id={`resource-group-${groupKey}`} className="m-0 truncate text-[13.5px] font-semibold text-[#1D1D1B]">{groupName}</h3><p className="m-0 text-[11.5px] text-[#9A9A98]">Grupo de capturas</p></div>
-      <button type="button" className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg border border-[#1D1D1B]/10 px-2.5 text-[11px] font-bold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" aria-expanded={expanded} aria-controls={`resource-group-items-${groupKey}`} onClick={() => setExpanded((value) => !value)}><span>{resources.length}/{resources.length} elementos</span><ChevronDown className={`size-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} aria-hidden="true" /></button>
-    </div>
-    {expanded ? <div id={`resource-group-items-${groupKey}`} className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">{resources.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={() => onRemove(resource)} />)}</div> : null}
-  </section>;
+  const slides = resolvedSlides ?? previewSlides;
+  const revision = group.resources.find((resource) => resource.sourceRevision)?.sourceRevision?.slice(0, 7);
+  const firstPreview = previewSlides[0]?.src;
+
+  async function openPreview() {
+    setError(null);
+    if (!group.resources.length) {
+      setError("Este grupo todavía no contiene capturas.");
+      return;
+    }
+    if (previewSlides.length === group.resources.length) {
+      setOpen(true);
+      return;
+    }
+    setLoading(true);
+    try {
+      const missionId = group.resources.find((resource) => resource.missionId)?.missionId;
+      if (!missionId) throw new Error("La preview del grupo no está disponible.");
+      const previews = await getMissionAttachmentGroupPreviewUrls(missionId, group.groupKey);
+      const nextSlides = previews.map((preview) => ({ id: preview.id, src: preview.url, alt: preview.title, title: preview.title } satisfies ResourcePreviewSlide));
+      setResolvedSlides(nextSlides);
+      setOpen(true);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudo abrir el grupo de capturas.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return <article className="col-span-full min-w-0 overflow-hidden rounded-xl border border-[#1D1D1B]/10 bg-white">
+    <button ref={triggerRef} type="button" disabled={loading} className="flex min-h-16 w-full min-w-0 items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[#D72228]/[0.025] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[#1D1D1B]/25 disabled:cursor-wait" onClick={() => void openPreview()} aria-label={`Previsualizar ${group.groupName}: ${group.resources.length} ${group.resources.length === 1 ? "captura" : "capturas"}`}>
+      <span className="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5]">
+        {firstPreview ? <Image src={firstPreview} alt="" width={44} height={44} unoptimized className="size-full object-cover" /> : <Images className="size-4" aria-hidden="true" />}
+        {group.resources.length > 1 ? <span className="absolute bottom-0.5 right-0.5 rounded bg-[#1D1D1B]/80 px-1 py-0.5 text-[9px] font-bold leading-none text-white">+{group.resources.length - 1}</span> : null}
+      </span>
+      <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold text-[#1D1D1B]">{group.groupName}</span><span className="mt-0.5 block truncate text-[11.5px] text-[#9A9A98]">{group.resources.length} {group.resources.length === 1 ? "captura" : "capturas"}{revision ? ` · rev ${revision}` : ""}</span></span>
+      <span className="hidden shrink-0 rounded-lg border border-[#1D1D1B]/10 px-2.5 py-1.5 text-[11px] font-bold text-[#6B6B6B] min-[320px]:inline-flex">{loading ? "Abriendo…" : "Ver grupo"}</span>
+    </button>
+    {error ? <p className="m-0 border-t border-[#1D1D1B]/[0.07] px-3 py-2 text-xs font-semibold text-[#B91C22]" role="alert">{error}</p> : null}
+    {slides.length ? <ResourcePreview slides={slides} open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} /> : null}
+  </article>;
 }
 
-function ResourceReference({ resource, previewSlides, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; onRemove: () => void }) {
+function ResourceReference({ resource, previewSlides, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; onRemove?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const isGithub = isGithubUrl(resource.url);
-  const previewUrl = resolveResourceImageUrl(resource);
-  const isPreviewable = Boolean(previewUrl);
+  const previewUrl = resolvedPreviewUrl ?? resolveResourceImageUrl(resource);
+  const isPreviewable = Boolean(previewUrl) || Boolean(resource.missionId && resource.groupKey && resource.type === "image");
+  const slides = previewUrl
+    ? [{ id: resource.id, src: previewUrl, alt: resource.title, title: resource.title }]
+    : previewSlides;
   const ResourceIcon = resolveResourceIcon(resource);
   const content = <><span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-lg bg-[#EEF2FF] text-[#3A47B5] [&_svg]:size-3"><ResourceIcon aria-hidden="true" /></span><div className="min-w-0 flex-1"><p className="m-0 truncate text-sm font-semibold">{resource.title}</p><p className="m-0 truncate text-xs text-carbon/45">{resourceTypeLabel[resource.type]}{resource.fileId && !previewUrl ? ` · ${resource.fileId}` : ""}</p></div></>;
-  const primary = isPreviewable ? <button ref={triggerRef} type="button" className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" onClick={() => setOpen(true)} aria-label={`Previsualizar ${resource.title}`}>{content}</button> : resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>;
-  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{primary}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}<IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} />{isPreviewable ? <ResourcePreview slides={previewSlides} open={open} onClose={() => setOpen(false)} index={Math.max(previewSlides.findIndex((slide) => slide.id === resource.id), 0)} triggerRef={triggerRef} /> : null}</div>;
+  async function openPreview() {
+    if (previewUrl) {
+      setOpen(true);
+      return;
+    }
+    if (!resource.missionId) return;
+    setLoadingPreview(true);
+    try {
+      setResolvedPreviewUrl(await getMissionResourcePreviewUrl(resource.missionId, resource.id));
+      setOpen(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "No se pudo abrir la captura.");
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+  const primary = isPreviewable ? <button ref={triggerRef} type="button" disabled={loadingPreview} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" onClick={() => void openPreview()} aria-label={`Previsualizar ${resource.title}`}>{content}</button> : resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>;
+  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{primary}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}{onRemove ? <IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} /> : null}{isPreviewable ? <ResourcePreview slides={slides} open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} /> : null}</div>;
 }
 
 function OpenReferenceButton({ label, href, onOpen, className }: { label: string; href: string; onOpen?: () => void; className?: string }) {

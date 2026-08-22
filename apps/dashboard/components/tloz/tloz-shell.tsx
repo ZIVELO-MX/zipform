@@ -1,11 +1,11 @@
 import { PageSubHeader } from "@tloz/ui";
 import { getTlozMissions, getTlozProjectDocuments, getTlozProjects, getTlozQuestItems, getTlozUsers } from "../../lib/tloz-data";
 import { TlozHeader } from "./tloz-header";
-import { inventoryItemHref, missionHref, projectHref } from "../../lib/tloz-routes";
 import type { TlozView } from "../../lib/tloz-routes";
-import type { TlozDocument, UserProfile } from "@tloz/types";
+import type { ContainerRecord, TlozDocument, UserProfile } from "@tloz/types";
 import { TlozViewStateProvider } from "./tloz-view-state";
 import { TlozCreateProvider, type TlozCreateKind } from "./tloz-create";
+import type { TlozControlKind } from "./tloz-control-capabilities";
 
 type TlozPageShellProps = {
   title: string;
@@ -22,7 +22,10 @@ type TlozPageShellProps = {
   defaultView?: TlozView;
   stateScope?: string;
   controlProjectId?: string;
+  controlKind?: TlozControlKind;
+  controlCreate?: React.ReactNode | false;
   createKind?: TlozCreateKind;
+  canonicalContainer?: ContainerRecord;
   documentNavigation?: {
     documents: TlozDocument[];
     users: UserProfile[];
@@ -43,7 +46,10 @@ export async function TlozPageShell({
   defaultView = "dashboard",
   stateScope,
   controlProjectId,
+  controlKind,
+  controlCreate,
   createKind = "mission",
+  canonicalContainer,
   documentNavigation,
   children
 }: TlozPageShellProps) {
@@ -66,13 +72,13 @@ export async function TlozPageShell({
   );
 
   return (
-    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={createKind === "mission" ? controlProjectId : undefined}>
+    <TlozCreateProvider kind={createKind} projects={projects} users={allUsers} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={createKind === "mission" ? controlProjectId : undefined} canonicalContainer={canonicalContainer}>
     <TlozViewStateProvider
       supportedViews={supportedViews}
       defaultView={defaultView}
       projects={controlProjects}
       users={users}
-      controlKind={createKind}
+      controlKind={controlKind ?? (createKind === "workshop" ? "project" : createKind === "library" ? "inventory" : createKind)}
       fixedProject={Boolean(controlProjectId)}
       storageScope={stateScope}
     >
@@ -85,29 +91,7 @@ export async function TlozPageShell({
           showSearch={showSearch}
           showHeader={showHeader}
           showControls={showControls}
-          commandEntities={{
-            missions: missions.map((mission) => ({ id: mission.id, label: mission.title, icon: mission.icon, type: mission.type, href: mission.project ? missionHref(mission.project, mission.displayId) : "/" })),
-            projects: documentNavigation
-              ? documentNavigation.documents
-                .filter((document) => document.kind === "project")
-                .map((document) => ({
-                  id: document.id,
-                  label: document.title,
-                  icon: typeof document.properties.icon === "string" ? document.properties.icon : "FolderKanban",
-                  href: document.projectSlug ? `/${document.projectSlug}` : `/projects/${document.publicId}`,
-                }))
-              : projects.map((project) => ({ id: project.id, label: project.name, icon: project.icon, href: projectHref(project) })),
-            questItems: documentNavigation
-              ? documentNavigation.documents
-                .filter((document) => document.kind === "inventory")
-                .map((document) => ({
-                  id: document.id,
-                  label: document.title,
-                  icon: typeof document.properties.icon === "string" ? document.properties.icon : "PackageOpen",
-                  href: inventoryItemHref(document.publicId),
-                }))
-              : questItems.map((questItem) => ({ id: questItem.id, label: questItem.name, icon: questItem.icon, href: inventoryItemHref(questItem.id) })),
-          }}
+          controlCreate={controlCreate}
         />
 
         <main className="tloz-page-content" id="tloz-content" tabIndex={-1}>

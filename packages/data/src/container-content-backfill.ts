@@ -21,8 +21,94 @@ const EMPTY_DEFINITION: ContainerDefinition = {
 
 const SYSTEM_INVENTORY_ID = "system-inventory";
 const SYSTEM_PLANNING_ID = "system-planning";
+export const SYSTEM_WORKSHOP_ID = "system-workshop";
+export const SYSTEM_LIBRARY_ID = "system-library";
 
 const iso = (date: Date) => date.toISOString();
+
+export const WORKSHOP_DEFINITION: ContainerDefinition = {
+  fields: [
+    {
+      key: "status",
+      label: "Estado",
+      format: "status",
+      visible: true,
+      defaultValue: "active",
+      options: [
+        { value: "planned", label: "Planeado", role: "backlog", color: "#3A47B5" },
+        { value: "active", label: "Activo", role: "active", color: "#1E6B3C" },
+        { value: "archived", label: "Archivado", role: "done", color: "#6B6B6B" },
+      ],
+    },
+    { key: "category", label: "Categoría", format: "text", visible: true, defaultValue: "normal" },
+    { key: "ownerId", label: "Responsable", format: "person", visible: true },
+    { key: "color", label: "Color", format: "text", visible: true, defaultValue: "#2D6CDF" },
+    { key: "startDate", label: "Inicio", format: "date", visible: true },
+    { key: "dueDate", label: "Vence", format: "date", visible: true },
+  ],
+  views: [
+    { id: "list", fields: ["icon", "publicId", "title", "project", "ownerId", "dueDate"] },
+    { id: "table", fields: ["icon", "publicId", "title", "project", "ownerId", "dueDate"] },
+    { id: "detail", fields: ["publicId", "status", "category", "ownerId", "startDate", "dueDate"] },
+  ],
+  defaultView: "table",
+};
+
+export const LIBRARY_DEFINITION: ContainerDefinition = {
+  fields: [
+    {
+      key: "status",
+      label: "Estado",
+      format: "status",
+      visible: true,
+      defaultValue: "locked",
+      options: [
+        { value: "locked", label: "Bloqueado", role: "backlog", color: "#7A5A12" },
+        { value: "unlocked", label: "Desbloqueado", role: "done", color: "#1E6B3C" },
+      ],
+    },
+    {
+      key: "category",
+      label: "Categoría",
+      format: "text",
+      visible: true,
+      defaultValue: "other",
+      options: [
+        { value: "tool", label: "Herramienta" },
+        { value: "access", label: "Acceso" },
+        { value: "asset", label: "Activo" },
+        { value: "document", label: "Documento" },
+        { value: "other", label: "Otro" },
+      ],
+    },
+    { key: "ownerId", label: "Responsable", format: "person", visible: true },
+    { key: "color", label: "Color", format: "text", visible: true, defaultValue: "#2D6CDF" },
+    { key: "acquiredAt", label: "Completado", format: "date", visible: true },
+  ],
+  views: [
+    { id: "list", fields: ["icon", "publicId", "title", "project", "ownerId", "acquiredAt"] },
+    { id: "table", fields: ["icon", "publicId", "title", "project", "ownerId", "acquiredAt"] },
+    { id: "detail", fields: ["publicId", "status", "category", "ownerId", "acquiredAt"] },
+  ],
+  defaultView: "table",
+};
+
+export function buildSystemContainer(id: string, title: string, presentation: string, definition: ContainerDefinition, createdAt: Date, updatedAt: Date): ContainerRecord {
+  return {
+    id,
+    publicId: presentation,
+    slug: presentation,
+    presentation,
+    title,
+    summary: "",
+    body: "",
+    definition,
+    data: {},
+    revision: 1,
+    createdAt: iso(createdAt),
+    updatedAt: iso(updatedAt),
+  };
+}
 
 function values(value: unknown): ContainerContentData {
   return JSON.parse(JSON.stringify(value)) as ContainerContentData;
@@ -168,6 +254,8 @@ export async function buildLegacyContainerContentSnapshot(
       createdAt: iso(createdAt),
       updatedAt: iso(updatedAt),
     },
+    buildSystemContainer(SYSTEM_WORKSHOP_ID, "Workshop", "workshop", WORKSHOP_DEFINITION, createdAt, updatedAt),
+    buildSystemContainer(SYSTEM_LIBRARY_ID, "Library", "library", LIBRARY_DEFINITION, createdAt, updatedAt),
   ];
 
   const contents: ContentRecord[] = [

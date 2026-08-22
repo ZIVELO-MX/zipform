@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
 import type { TlozResourceType } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
+import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
 
 const VALID_TYPES: TlozResourceType[] = ["link", "document", "image", "file", "note"];
 
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
-  let body: { missionId?: string; projectId?: string; questItemId?: string; type?: string; limit?: number; cursor?: string };
+  let body: { missionId?: string; projectId?: string; questItemId?: string; type?: string; query?: string; limit?: number; cursor?: string };
   try {
     body = await request.json();
   } catch {
@@ -26,15 +27,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const limit = body.limit ? Math.max(1, Math.min(100, Number(body.limit))) : 25;
+  const limit = parsePaginationLimit(body.limit);
+  if (limit instanceof Response) return limit;
 
   try {
     const result = await dataClient.tloz.findResources(
-      { missionId: body.missionId, projectId: body.projectId, questItemId: body.questItemId, type: body.type as TlozResourceType | undefined },
+      { missionId: body.missionId, projectId: body.projectId, questItemId: body.questItemId, type: body.type as TlozResourceType | undefined, query: body.query?.trim() || undefined },
       { limit, cursor: body.cursor }
     );
     return NextResponse.json(result);
-  } catch {
+  } catch (error) {
+    const paginationResponse = paginationErrorResponse(error);
+    if (paginationResponse) return paginationResponse;
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }

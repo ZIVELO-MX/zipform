@@ -79,10 +79,12 @@ in `ETag`.
 | `GET` | `/api/v1/projects/{projectId}` | Retrieve one project by ID | — |
 | `GET` | `/api/v1/missions` | List missions with project/owner/status/season/episode/title filters | ✅ cursor |
 | `GET` | `/api/v1/missions/{missionId}` | Mission detail with checklist, resources, dependencies | — |
+| `POST` | `/api/v1/missions/batch` | Retrieve up to 8 mission details in one request | — |
 | `GET` | `/api/v1/seasons` | List all seasons | — |
 | `GET` | `/api/v1/episodes` | List episodes, optional filter by seasonId | — |
 | `GET` | `/api/v1/quest-items` | List quest items with owner/status/category filters | ✅ cursor |
 | `GET` | `/api/v1/resources` | List resources filtered by owner entity or type | ✅ cursor |
+| `GET` | `/api/v1/search` | Search projects, missions, Inventory, Workshop, Library and owned resources | ✅ cursor |
 
 ### Write operations (authenticated — session or Bearer token)
 

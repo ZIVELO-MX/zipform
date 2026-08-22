@@ -7,7 +7,14 @@
   --paper: #fffdf8;
   --ink-muted: #6f6a5f;
   --line: rgba(29, 29, 27, 0.12);
+  --line-strong: rgba(29, 29, 27, 0.2);
+  --surface-subtle: rgba(245, 244, 240, 0.78);
+  --surface-translucent: rgba(255, 253, 248, 0.84);
+  --focus-ring: #b51e24;
   --shadow-soft: 0 24px 70px rgba(29, 29, 27, 0.13);
+  --shadow-card: 0 14px 36px rgba(29, 29, 27, 0.07);
+  --radius-control: 0.75rem;
+  --radius-surface: 1rem;
   --sidebar-expanded: 16rem;
   --sidebar-collapsed: 4rem;
   --font-body:

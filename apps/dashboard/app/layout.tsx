@@ -4,6 +4,7 @@ import { getTlozMissions, getTlozProjectDocuments, getTlozProjects } from "../li
 import { AppShell } from "../components/app-shell";
 import { Toaster } from "@tloz/ui";
 import type { TlozProject } from "@tloz/types";
+import { tlozUiCapabilities } from "../lib/authorization";
 import "./globals.css";
 import "yet-another-react-lightbox/styles.css";
 
@@ -49,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es">
       <body>
-        <AppShell user={user} tlozProjects={projects} projectActiveCounts={projectActiveCounts} projectActivity={projectActivity}>
+        <AppShell user={user} capabilities={tlozUiCapabilities(user)} tlozProjects={projects} projectActiveCounts={projectActiveCounts} projectActivity={projectActivity}>
           {children}
         </AppShell>
         <Toaster />

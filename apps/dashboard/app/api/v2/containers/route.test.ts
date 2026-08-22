@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PaginationCursorError } from "@tloz/data";
 
 const mocks = vi.hoisted(() => ({
   authenticateRequest: vi.fn(),
-  listContainers: vi.fn(),
+  findContainers: vi.fn(),
   createContainer: vi.fn(),
 }));
 
@@ -25,7 +26,7 @@ describe("/api/v2/containers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.authenticateRequest.mockResolvedValue({ user: { id: "agent-1", type: "agent", role: "agent:operative" } });
-    mocks.listContainers.mockResolvedValue([container]);
+    mocks.findContainers.mockResolvedValue({ data: [container], nextCursor: null });
     mocks.createContainer.mockResolvedValue(container);
   });
 
@@ -35,6 +36,17 @@ describe("/api/v2/containers", () => {
     await expect(response.json()).resolves.toMatchObject({ data: [container], nextCursor: null });
   });
 
+  it("returns 400 for a cursor outside the container collection", async () => {
+    mocks.findContainers.mockRejectedValue(new PaginationCursorError("missing"));
+
+    const response = await GET(new NextRequest("https://tloz.test/api/v2/containers?cursor=missing"));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: "INVALID_REQUEST", fields: { cursor: "invalid" } },
+    });
+  });
+
   it("creates a container without calling a legacy repository", async () => {
     const response = await POST(new NextRequest("https://tloz.test/api/v2/containers", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -42,5 +54,14 @@ describe("/api/v2/containers", () => {
     }));
     expect(response.status).toBe(201);
     expect(mocks.createContainer).toHaveBeenCalledWith(expect.objectContaining({ presentation: "project", title: "Core" }));
+  });
+
+  it("accepts a new presentation without introducing a document kind", async () => {
+    const response = await POST(new NextRequest("https://tloz.test/api/v2/containers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId: "workshop", presentation: "workshop", title: "Workshop", data: {} }),
+    }));
+    expect(response.status).toBe(201);
+    expect(mocks.createContainer).toHaveBeenCalledWith(expect.objectContaining({ presentation: "workshop", publicId: "workshop" }));
   });
 });

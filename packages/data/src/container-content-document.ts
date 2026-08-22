@@ -47,7 +47,7 @@ function fieldDefinitions(definition: ContainerDefinition): TlozFieldDefinition[
     visible: field.visible ?? true,
     position: index,
     defaultValue: scalar(field.defaultValue ?? null),
-    options: [],
+    options: field.options ?? [],
   }));
 }
 
@@ -63,6 +63,7 @@ function documentDefinition(id: string, key: string, kind: TlozDocumentKind, def
       format: field.format as "text" | "status" | "date" | "person" | "number" | "id",
       position,
       visible: field.visible ?? true,
+      options: field.options,
     })),
     views: definition.views.map((view) => ({ ...view, id: view.id as TlozDocumentDefinition["views"][number]["id"] })),
     defaultView: definition.defaultView as TlozDocumentDefinition["defaultView"],
@@ -79,7 +80,24 @@ function parentData(container: ContainerRecord) {
 }
 
 function contentDocument(content: ContentRecord, container?: ContainerRecord): TlozDocument {
-  const kind: TlozDocumentKind = content.presentation === "mission" ? "mission" : "inventory";
+  const kind: TlozDocumentKind = content.presentation === "mission"
+    ? "mission"
+    : content.presentation === "workshop" ? "project" : "inventory";
+  const rawProperties = properties(content.data);
+  const canonicalProperties = kind === "project"
+    ? {
+        ...rawProperties,
+        owner: rawProperties.owner ?? rawProperties.ownerId,
+        start: rawProperties.start ?? rawProperties.startDate,
+        due: rawProperties.due ?? rawProperties.dueDate,
+      }
+    : kind === "inventory"
+      ? {
+          ...rawProperties,
+          assignee: rawProperties.assignee ?? rawProperties.ownerId,
+          acquired: rawProperties.acquired ?? rawProperties.acquiredAt,
+        }
+      : rawProperties;
   return {
     id: content.id,
     publicId: content.publicId,
@@ -91,7 +109,7 @@ function contentDocument(content: ContentRecord, container?: ContainerRecord): T
     summary: content.summary,
     body: content.body,
     revision: content.revision,
-    properties: properties(content.data),
+    properties: canonicalProperties,
     createdAt: content.createdAt,
     updatedAt: content.updatedAt,
     source: { type: kind, id: content.id },
@@ -118,30 +136,39 @@ function containerDocument(container: ContainerRecord): TlozDocument {
 
 export function createContainerContentDocumentRepository(store: ContainerContentStore): TlozDocumentRepository {
   async function resolve(reference: string) {
-    const container = await store.getContainer(reference) ?? (await store.listContainers()).find((item) => item.publicId === reference);
+    const container = await store.getContainer(reference);
     if (container) return { type: "container" as const, container };
-    const content = await store.getContent(reference) ?? (await store.listContents()).find((item) => item.publicId === reference);
+    const content = await store.getContent(reference);
     return content ? { type: "content" as const, content, container: await store.getContainer(content.containerId) } : null;
   }
 
   return {
     async find(filters = {}, pagination = {}) {
-      const containers = filters.kind === "project" || !filters.kind ? await store.listContainers({ presentation: filters.kind === "project" ? "project" : undefined }) : [];
-      const contents = filters.kind === "project" ? [] : await store.listContents({
+      const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
+      const containers = filters.kind === "project" || !filters.kind
+        ? (await store.findContainers(
+            { presentation: filters.kind === "project" ? "project" : undefined },
+            { limit: limit + 1, cursor: pagination.cursor },
+          )).data
+        : [];
+      const contents = filters.kind === "project" ? [] : (await store.findContents({
         containerId: filters.parentId,
         presentation: filters.kind ? PRESENTATIONS[filters.kind] : undefined,
-      });
-      const contentDocuments = await Promise.all(contents.map(async (content) => contentDocument(content, await store.getContainer(content.containerId) ?? undefined)));
+      }, { limit: limit + 1, cursor: pagination.cursor })).data;
+      const containersById = new Map<string, ContainerRecord>();
+      await Promise.all([...new Set(contents.map((content) => content.containerId))].map(async (containerId) => {
+        const container = await store.getContainer(containerId);
+        if (container) containersById.set(containerId, container);
+      }));
+      const contentDocuments = contents.map((content) => contentDocument(content, containersById.get(content.containerId)));
       let data = [...containers.map(containerDocument), ...contentDocuments];
       if (filters.query) {
         const query = filters.query.toLowerCase();
         data = data.filter((item) => `${item.title} ${item.summary} ${item.publicId}`.toLowerCase().includes(query));
       }
       data.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id));
-      const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
-      const start = pagination.cursor ? Math.max(data.findIndex((item) => item.id === pagination.cursor) + 1, 0) : 0;
-      const page = data.slice(start, start + limit);
-      return { data: page, nextCursor: start + page.length < data.length ? page.at(-1)?.id ?? null : null };
+      const page = data.slice(0, limit);
+      return { data: page, nextCursor: data.length > limit ? page.at(-1)?.id ?? null : null };
     },
 
     async get(documentId, options = {}) {
@@ -184,7 +211,15 @@ export function createContainerContentDocumentRepository(store: ContainerContent
       const updated = await store.updateContainer(resolved.container.id, {
         definition: {
           ...definition,
-          fields: fields.map((field) => ({ key: field.key, label: field.label, format: field.type, required: field.required, visible: field.visible, defaultValue: field.defaultValue })),
+          fields: fields.map((field) => ({
+            key: field.key,
+            label: field.label,
+            format: field.type,
+            required: field.required,
+            visible: field.visible,
+            defaultValue: field.defaultValue,
+            options: field.options,
+          })),
         },
       }, expectedRevision);
       return containerDocument(updated);

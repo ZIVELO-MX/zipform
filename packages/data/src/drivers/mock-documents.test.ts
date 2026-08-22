@@ -148,6 +148,13 @@ describe("mock document repository", () => {
     );
   });
 
+  it("rejects missing document cursors instead of restarting at page one", async () => {
+    const client = createMockDataClient();
+
+    await expect(client.documents.find({}, { cursor: "missing" }))
+      .rejects.toMatchObject({ name: "PaginationCursorError", cursor: "missing" });
+  });
+
   it("preserves custom values without leaking them across Project contracts", async () => {
     const client = createMockDataClient();
     const mission = missions.find((candidate) => candidate.projectId === projects[0].id)!;

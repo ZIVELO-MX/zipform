@@ -30,6 +30,27 @@ export type TlozAuthorizationDecision =
   | { allowed: true }
   | { allowed: false; code: "FORBIDDEN"; status: 403 };
 
+export type TlozUiCapabilities = {
+  canCreate: boolean;
+  canUpdate: boolean;
+  canMove: boolean;
+  canDelete: boolean;
+  canManageRoles: boolean;
+  canManageAgents: boolean;
+};
+
+/** Server-derived capabilities serialized to the client; the client never reimplements role rules. */
+export function tlozUiCapabilities(actor: Actor): TlozUiCapabilities {
+  return {
+    canCreate: authorizeTlozOperation(actor, "create", { requestedOwnerId: actor.id }).allowed,
+    canUpdate: authorizeTlozOperation(actor, "update").allowed,
+    canMove: authorizeTlozOperation(actor, "move").allowed,
+    canDelete: authorizeTlozOperation(actor, "delete-mission").allowed,
+    canManageRoles: authorizeTlozOperation(actor, "manage-roles", { targetUserId: "another-user" }).allowed,
+    canManageAgents: authorizeTlozOperation(actor, "admin").allowed,
+  };
+}
+
 export class TlozAuthorizationError extends Error {
   constructor(
     public readonly code: "UNAUTHORIZED" | "FORBIDDEN",
@@ -143,6 +164,7 @@ const TLOZ_API_PREFIXES = [
   "/api/v1/projects",
   "/api/v1/quest-items",
   "/api/v1/resources",
+  "/api/v1/search",
   "/api/v1/seasons",
   "/api/v1/episodes",
   "/api/v1/users",

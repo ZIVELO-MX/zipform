@@ -24,6 +24,7 @@ import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjec
 import { createMockDocumentRepository } from "./mock-documents";
 import { createJsonbPrototypeStore } from "../container-content-prototype";
 import { createContainerContentDocumentRepository } from "../container-content-document";
+import { paginationStartIndex } from "../pagination";
 
 export function createMockDataClient(): TlozDataClient {
   const tlozData = {
@@ -47,10 +48,7 @@ export function createMockDataClient(): TlozDataClient {
     pagination: PaginationInput = {},
   ): PaginatedResult<T> => {
     const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
-    const cursorIndex = pagination.cursor
-      ? data.findIndex((item) => item.id === pagination.cursor)
-      : -1;
-    const start = cursorIndex >= 0 ? cursorIndex + 1 : 0;
+    const start = paginationStartIndex(data, pagination.cursor);
     const page = data.slice(start, start + limit);
     return {
       data: page,
@@ -155,6 +153,9 @@ export function createMockDataClient(): TlozDataClient {
       async getMissionDetail(missionId) {
         return buildTlozMissionDetail(tlozData, missionId);
       },
+      async getMissionDetails(missionIds) {
+        return missionIds.map((missionId) => buildTlozMissionDetail(tlozData, missionId));
+      },
       async findUsers(filters?: UserFilters, pagination?: PaginationInput): Promise<PaginatedResult<UserProfile>> {
         let data = [...tlozData.users];
         if (filters?.email) data = data.filter((u) => u.email.toLowerCase() === filters.email!.toLowerCase());
@@ -190,10 +191,17 @@ export function createMockDataClient(): TlozDataClient {
         if (filters?.projectId) data = data.filter((r) => r.projectId === filters.projectId);
         if (filters?.questItemId) data = data.filter((r) => r.questItemId === filters.questItemId);
         if (filters?.type) data = data.filter((r) => r.type === filters.type);
+        if (filters?.query) {
+          const query = filters.query.trim().toLocaleLowerCase();
+          data = data.filter((r) => `${r.title} ${r.url ?? ""}`.toLocaleLowerCase().includes(query));
+        }
         return paginate(data, pagination);
       },
       async getProjects() {
         return tlozData.projects;
+      },
+      async getProject(projectId) {
+        return tlozData.projects.find((project) => project.id === projectId) ?? null;
       },
       async getSeasons() {
         return seasons;
@@ -204,11 +212,20 @@ export function createMockDataClient(): TlozDataClient {
       async getQuestItems() {
         return tlozData.questItems;
       },
+      async getQuestItem(questItemId) {
+        return tlozData.questItems.find((item) => item.id === questItemId) ?? null;
+      },
       async getResources() {
         return tlozData.resources;
       },
+      async getResource(resourceId) {
+        return tlozData.resources.find((resource) => resource.id === resourceId) ?? null;
+      },
       async getUsers() {
         return tlozData.users;
+      },
+      async getUserByEmail(email) {
+        return tlozData.users.find((user) => user.email.toLowerCase() === email.trim().toLowerCase()) ?? null;
       },
       async updateUserRole(userId: string, role: UserRole) {
         const user = tlozData.users.find((candidate) => candidate.id === userId);
@@ -389,12 +406,12 @@ export function createMockDataClient(): TlozDataClient {
         tlozData.resources = tlozData.resources.filter((item) => item.id !== resourceId || item.questItemId !== questItemId);
         return tlozData.resources.filter((item) => item.questItemId === questItemId);
       },
-      async prepareAttachmentBatch(missionId, groupKey, sourceRevision, files: TlozAttachmentFileInput[]) {
+      async prepareAttachmentBatch(missionId, groupKey, sourceRevision, files: TlozAttachmentFileInput[], groupName?: string) {
         const existing = attachmentBatches.find((batch) => batch.missionId === missionId && batch.groupKey === groupKey && batch.sourceRevision === sourceRevision);
         if (existing) return { ...existing, files: existing.files.map((file) => ({ ...file })) };
         if (!tlozData.missions.some((mission) => mission.id === missionId)) throw new TlozAttachmentError("ATTACHMENT_MISSION_NOT_FOUND", "Mission not found");
         const generation = Math.max(0, ...attachmentBatches.filter((batch) => batch.missionId === missionId && batch.groupKey === groupKey).map((batch) => batch.generation)) + 1;
-        const batch: TlozAttachmentBatch = { uploadBatchId: crypto.randomUUID(), missionId, groupKey, sourceRevision, generation, status: "prepared", files: files.map((file) => ({ ...file })) };
+        const batch: TlozAttachmentBatch = { uploadBatchId: crypto.randomUUID(), missionId, groupKey, ...(groupName ? { groupName } : {}), sourceRevision, generation, status: "prepared", files: files.map((file) => ({ ...file })) };
         attachmentBatches.push(batch);
         return { ...batch, files: batch.files.map((file) => ({ ...file })) };
       },
@@ -447,6 +464,7 @@ export function createMockDataClient(): TlozDataClient {
 function mockAttachmentGroup(batch: TlozAttachmentBatch, resources: TlozResource[]): TlozAttachmentGroup {
   return {
     groupKey: batch.groupKey,
+    ...(batch.groupName ? { groupName: batch.groupName } : {}),
     sourceRevision: batch.sourceRevision,
     generation: batch.generation,
     attachments: resources.map((resource) => ({ ...resource, url: "" })),

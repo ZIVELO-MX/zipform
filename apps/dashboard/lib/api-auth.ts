@@ -45,10 +45,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
 
   const session = await auth();
   if (session?.user?.email) {
-    const users = await dataClient.tloz.getUsers();
-    const user = users.find(
-      (candidate) => candidate.email.trim().toLowerCase() === session.user.email!.toLowerCase()
-    );
+    const user = await dataClient.tloz.getUserByEmail(session.user.email);
     if (user) return authenticated(user, request);
   }
 

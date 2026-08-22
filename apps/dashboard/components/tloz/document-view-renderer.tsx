@@ -362,7 +362,7 @@ function DocumentDetailLoading({ label }: { label: string }) {
   return <div className="flex min-h-40 items-center justify-center gap-2 p-6 text-sm text-carbon/50" role="status" aria-live="polite"><span className="size-4 animate-spin rounded-full border-2 border-carbon/20 border-t-carbon/70" aria-hidden="true" />{label}</div>;
 }
 
-function documentToDetailMission(document: TlozDocument, users: DocumentUser[], resources: DocumentResource[] = []): TlozMissionDetail {
+export function documentToDetailMission(document: TlozDocument, users: DocumentUser[], resources: DocumentResource[] = []): TlozMissionDetail {
   const stringValue = (key: string) => {
     const value = documentValue(document, key);
     return typeof value === "string" && value ? value : undefined;

@@ -32,4 +32,21 @@ describe("Container/Content document adapter", () => {
     const repository = createContainerContentDocumentRepository(store);
     await expect(repository.update("mission-1", { title: "Updated", properties: { status: "completed" } }, 1)).resolves.toMatchObject({ title: "Updated", revision: 2, properties: { status: "completed" } });
   });
+
+  it("uses project and inventory detail semantics for Workshop and Library", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate({
+      containers: [
+        { ...snapshot.containers[0], id: "workshop-1", publicId: "workshop", slug: "workshop", presentation: "workshop", title: "Workshop" },
+        { ...snapshot.containers[0], id: "library-1", publicId: "library", slug: "library", presentation: "library", title: "Library" },
+      ],
+      contents: [
+        { ...snapshot.contents[0], id: "content-workshop", publicId: "W-1", containerId: "workshop-1", presentation: "workshop", data: { ownerId: "user-1", startDate: "2026-01-01", dueDate: "2026-02-01" } },
+        { ...snapshot.contents[0], id: "content-library", publicId: "L-1", containerId: "library-1", presentation: "library", data: { ownerId: "user-1", acquiredAt: "2026-03-01" } },
+      ],
+    });
+    const repository = createContainerContentDocumentRepository(store);
+    await expect(repository.get("W-1")).resolves.toMatchObject({ kind: "project", properties: { owner: "user-1", start: "2026-01-01", due: "2026-02-01" } });
+    await expect(repository.get("L-1")).resolves.toMatchObject({ kind: "inventory", properties: { assignee: "user-1", acquired: "2026-03-01" } });
+  });
 });

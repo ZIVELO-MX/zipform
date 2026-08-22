@@ -52,7 +52,7 @@ function MermaidViewer({ svg }: { svg: string }) {
     <>
       <figure className="group relative mb-3 overflow-x-auto rounded-xl border border-carbon/10 bg-paper p-3 last:mb-0" aria-label="Diagrama Mermaid">
         <button ref={triggerRef} type="button" className="block min-w-fit w-full cursor-zoom-in rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-zivelo" onClick={() => setOpen(true)} aria-label="Abrir diagrama Mermaid">
-          <span className="block min-w-fit [&_svg]:h-auto [&_svg]:max-w-full" dangerouslySetInnerHTML={{ __html: svg }} />
+          {previewSrc ? <img className="block h-auto max-w-full min-w-fit" src={previewSrc} alt="Diagrama Mermaid" {...(dimensions ?? {})} /> : <span className="block min-h-16 min-w-fit animate-pulse rounded-lg bg-carbon/5" aria-label="Cargando diagrama" />}
         </button>
         <figcaption className="sr-only">Haz clic en el diagrama para abrir la vista previa con zoom.</figcaption>
       </figure>

@@ -19,6 +19,7 @@ import {
   validateContentRecord,
 } from "../container-content-store";
 import { checksumContainerContentSnapshot } from "../container-content-checksum";
+import { PaginationCursorError } from "../pagination";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
@@ -84,10 +85,11 @@ function commonData(record: ContainerRecord | ContentRecord) {
   };
 }
 
-function translatePrismaError(error: unknown): never {
+function translatePrismaError(error: unknown, cursor?: string): never {
   if (error instanceof ContainerContentError) throw error;
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2025") {
+      if (cursor) throw new PaginationCursorError(cursor, { cause: error });
       throw new ContainerContentError("STORE_NOT_FOUND", "El registro no existe.", {}, { cause: error });
     }
     if (error.code === "P2003") {
@@ -235,7 +237,14 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
             unchanged,
             checksum: checksumContainerContentSnapshot(await exportFrom(tx)),
           };
-        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        }, {
+          isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+          // Backfill processes the legacy snapshot row-by-row. Prisma's default
+          // five-second interactive transaction timeout is too short for the
+          // production dataset (currently 161 records).
+          maxWait: 30_000,
+          timeout: 120_000,
+        });
       } catch (error) {
         return translatePrismaError(error);
       }
@@ -243,7 +252,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
 
     async getContainer(id) {
       try {
-        const row = await prisma.container.findUnique({ where: { id } });
+        const row = await prisma.container.findFirst({ where: { OR: [{ id }, { publicId: id }] } });
         return row ? mapContainer(row) : null;
       } catch (error) {
         return translatePrismaError(error);
@@ -252,7 +261,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
 
     async getContent(id) {
       try {
-        const row = await prisma.content.findUnique({ where: { id } });
+        const row = await prisma.content.findFirst({ where: { OR: [{ id }, { publicId: id }] } });
         return row ? mapContent(row) : null;
       } catch (error) {
         return translatePrismaError(error);
@@ -283,6 +292,46 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
         return rows.map(mapContent);
       } catch (error) {
         return translatePrismaError(error);
+      }
+    },
+
+    async findContainers(filters = {}, pagination = {}) {
+      try {
+        const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
+        const rows = await prisma.container.findMany({
+          where: { presentation: filters.presentation },
+          orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
+        const data = rows.slice(0, limit).map(mapContainer);
+        return { data, nextCursor: rows.length > limit ? data.at(-1)?.id ?? null : null };
+      } catch (error) {
+        return translatePrismaError(error, pagination.cursor);
+      }
+    },
+
+    async findContents(filters: ContentFilters = {}, pagination = {}) {
+      try {
+        const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
+        const rows = await prisma.content.findMany({
+          where: {
+            containerId: filters.containerId,
+            presentation: filters.presentation,
+            ...(filters.data ? {
+              AND: Object.entries(filters.data).map(([key, value]) => ({
+                data: { path: [key], equals: toJson(value) },
+              })),
+            } : {}),
+          },
+          orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+          take: limit + 1,
+          ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
+        });
+        const data = rows.slice(0, limit).map(mapContent);
+        return { data, nextCursor: rows.length > limit ? data.at(-1)?.id ?? null : null };
+      } catch (error) {
+        return translatePrismaError(error, pagination.cursor);
       }
     },
 

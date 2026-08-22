@@ -19,6 +19,7 @@ import type {
 import { validateDocumentProperties, validateProjectFields } from "../document-contract";
 import { TlozDocumentError } from "../document-errors";
 import { parseMarkdownChecklist } from "../tloz-hydration";
+import { PaginationCursorError } from "../pagination";
 
 const documentInclude = {
   project: {
@@ -52,6 +53,22 @@ const documentInclude = {
     select: { children: true },
   },
 } satisfies Prisma.TlozDocumentInclude;
+
+async function readDocumentPage<T>(cursor: string | undefined, query: () => Promise<T>): Promise<T> {
+  if (cursor && !isUuid(cursor)) throw new PaginationCursorError(cursor);
+  try {
+    return await query();
+  } catch (error) {
+    if (
+      cursor
+      && error instanceof Prisma.PrismaClientKnownRequestError
+      && error.code === "P2025"
+    ) {
+      throw new PaginationCursorError(cursor, { cause: error });
+    }
+    throw error;
+  }
+}
 
 type DocumentRow = Prisma.TlozDocumentGetPayload<{ include: typeof documentInclude }>;
 const definitionInclude = {
@@ -87,15 +104,15 @@ export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocume
 
     const limit = Math.min(Math.max(options.childrenPagination?.limit ?? 25, 1), 100);
     const [children, total] = await Promise.all([
-      prisma.tlozDocument.findMany({
+      readDocumentPage(options.childrenPagination?.cursor, () => prisma.tlozDocument.findMany({
         where: { projectId: row.id },
         include: documentInclude,
         orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
         take: limit + 1,
-        ...(options.childrenPagination?.cursor && isUuid(options.childrenPagination.cursor)
+        ...(options.childrenPagination?.cursor
           ? { cursor: { id: options.childrenPagination.cursor }, skip: 1 }
           : {}),
-      }),
+      })),
       prisma.tlozDocument.count({ where: { projectId: row.id } }),
     ]);
     const data = children.slice(0, limit).map(mapDocument);
@@ -117,7 +134,7 @@ export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocume
         : filters.parentId
           ? documentReferenceWhere(filters.parentId)
           : undefined;
-      const rows = await prisma.tlozDocument.findMany({
+      const rows = await readDocumentPage(pagination.cursor, () => prisma.tlozDocument.findMany({
         where: {
           ...(filters.kind ? { kind: filters.kind } : {}),
           ...(!filters.includeSystem ? {
@@ -139,10 +156,10 @@ export function createPrismaDocumentRepository(prisma: PrismaClient): TlozDocume
         include: documentInclude,
         orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
         take: limit + 1,
-        ...(pagination.cursor && isUuid(pagination.cursor)
+        ...(pagination.cursor
           ? { cursor: { id: pagination.cursor }, skip: 1 }
           : {}),
-      });
+      }));
       const data = rows.slice(0, limit).map(mapDocument);
       return {
         data,
