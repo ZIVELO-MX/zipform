@@ -666,7 +666,9 @@ export function MissionBoard({ missions, statusOptions = [], onSelect, onStatusC
 function statusPresentation(status: string, options: TlozFieldOption[]) {
   const option = options.find((candidate) => candidate.value === status);
   const fallback = statusConfig[status];
-  const color = option?.color ?? fallback?.dotColor ?? "#6B6B6B";
+  const color = status === "active"
+    ? "#4B8D5E"
+    : option?.color ?? fallback?.dotColor ?? "#6B6B6B";
   return {
     label: option?.label ?? fallback?.label ?? missionStatusLabel[status as TlozMissionStatus],
     dotColor: color,

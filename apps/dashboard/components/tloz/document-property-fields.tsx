@@ -263,7 +263,7 @@ function PresentationValue({
   }
   if (field.format === "status" && typeof value === "string") {
     const option = field.options?.find((candidate) => candidate.value === value);
-    const tone = option?.color ?? statusTone(option?.role, value);
+    const tone = value === "active" ? "#4B8D5E" : option?.color ?? statusTone(option?.role, value);
     return (
       <span
         className="inline-block rounded-full px-[9px] py-[3px] text-[11px] font-bold"
