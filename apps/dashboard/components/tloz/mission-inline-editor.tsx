@@ -34,6 +34,13 @@ export type MissionPropertyValues = {
 };
 
 const statuses: TlozMissionStatus[] = ["now", "next", "later", "blocked", "completed"];
+
+const projectStatusOptions: ContractOption[] = [
+  { value: "active", label: "Active", role: "active", color: "#4B8D5E" },
+  { value: "maintenance", label: "Maintenance", role: "ready", color: "#3B82F6" },
+  { value: "paused", label: "Paused / Blocked", role: "blocked", color: "#6B7280" },
+  { value: "completed", label: "Completed", role: "done", color: "#166534" },
+];
 const missionTypes: TlozMissionType[] = ["main_quest", "side_quest", "farming_quest", "exploration_quest"];
 
 export function MissionInlineEditor({
@@ -84,7 +91,13 @@ export function MissionInlineEditor({
 
 export function MissionPropertyFields({ values, options, onChange, ariaBusy = false, layout = "stacked", readOnly = false, responsibleReadOnly = readOnly, inheritedColor }: { values: MissionPropertyValues & { owner?: { name: string; username?: string; avatarUrl?: string }; project?: { name: string; color?: string; icon?: string } }; options?: MissionEditorOptions; onChange: (field: keyof MissionPropertyValues, value: string) => void; ariaBusy?: boolean; layout?: "stacked" | "grid"; readOnly?: boolean; responsibleReadOnly?: boolean; inheritedColor?: string }) {
   const projects = options?.projects ?? [];
-  const statusOptions = detailFieldOptions(options, "status", statuses.map((value) => ({ value, label: missionStatusLabel[value], color: missionStatusTone[value] })));
+  const statusOptions = detailFieldOptions(
+    options,
+    "status",
+    options?.document?.kind === "project"
+      ? projectStatusOptions
+      : statuses.map((value) => ({ value, label: missionStatusLabel[value], color: missionStatusTone[value] })),
+  );
   const categoryOptions = detailFieldOptions(options, "category", missionTypes.map((value) => ({ value, label: missionTypeLabel[value], color: missionTypeTone[value] })));
   const selectedOwner = options?.users.find((user) => user.id === values.ownerId);
   const selectedProject = projects.find((project) => project.id === values.projectId);

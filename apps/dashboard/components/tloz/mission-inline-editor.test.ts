@@ -41,6 +41,15 @@ describe("mission status selector", () => {
     expect(source).toContain("readOnly={readOnly}");
   });
 
+  it("falls back to Project states in Project properties", () => {
+    const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
+    expect(source).toContain('options?.document?.kind === "project"');
+    expect(source).toContain('value: "maintenance"');
+    expect(source).toContain('value: "paused"');
+    expect(source).toContain('value: "completed"');
+    expect(source).toContain('label: "Paused / Blocked"');
+  });
+
   it("separates reassignment permission from ordinary property updates", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
     expect(source).toContain("responsibleReadOnly = readOnly");
