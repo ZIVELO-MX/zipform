@@ -41,6 +41,8 @@ export function tlozStatusRole(status: string, options: TlozFieldOption[]) {
   const defaults: Record<string, "active" | "blocked" | "ready" | "backlog" | "done"> = {
     now: "active",
     active: "active",
+    maintenance: "ready",
+    paused: "blocked",
     blocked: "blocked",
     next: "ready",
     later: "backlog",

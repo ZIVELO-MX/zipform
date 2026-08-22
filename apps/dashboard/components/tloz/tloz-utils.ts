@@ -1,6 +1,6 @@
 import { CircleDot, Compass, Flag, Star, type LucideIcon } from "lucide-react";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
-import type { TlozMissionStatus, TlozMissionType } from "@tloz/types";
+import type { TlozDocumentKind, TlozFieldOption, TlozMissionStatus, TlozMissionType, TlozStatusRole } from "@tloz/types";
 
 export { resolveTlozIcon as resolveMissionIcon } from "./tloz-icon-catalog";
 
@@ -26,6 +26,57 @@ export const missionStatusTone = withFallback<Record<TlozMissionStatus, string>>
   blocked: "#B91C22",
   completed: "#D72228"
 }, () => "#6B6B6B");
+
+type StatusPresentation = {
+  label: string;
+  dotColor: string;
+  textColor: string;
+  role: TlozStatusRole;
+};
+
+const missionStatusPresentation: Record<string, StatusPresentation> = {
+  now: { label: "Now", dotColor: "#1E8E5A", textColor: "#1E8E5A", role: "active" },
+  next: { label: "Next", dotColor: "#3A47B5", textColor: "#3A47B5", role: "ready" },
+  later: { label: "Later", dotColor: "#9A9A98", textColor: "#6B6B6B", role: "backlog" },
+  blocked: { label: "Blocked", dotColor: "#B91C22", textColor: "#B91C22", role: "blocked" },
+  completed: { label: "Completed", dotColor: "#D72228", textColor: "#B91C22", role: "done" },
+};
+
+const projectStatusPresentation: Record<string, StatusPresentation> = {
+  active: { label: "Active", dotColor: "#4B8D5E", textColor: "#4B8D5E", role: "active" },
+  maintenance: { label: "Maintenance", dotColor: "#3B82F6", textColor: "#3B82F6", role: "ready" },
+  paused: { label: "Paused / Blocked", dotColor: "#6B7280", textColor: "#6B7280", role: "blocked" },
+  completed: { label: "Completed", dotColor: "#166534", textColor: "#166534", role: "done" },
+};
+
+const inventoryStatusPresentation: Record<string, StatusPresentation> = {
+  locked: { label: "Bloqueado", dotColor: "#7A5A12", textColor: "#7A5A12", role: "backlog" },
+  unlocked: { label: "Desbloqueado", dotColor: "#1E6B3C", textColor: "#1E6B3C", role: "done" },
+};
+
+export function resolveStatusPresentation(
+  status: string,
+  options: TlozFieldOption[] = [],
+  kind: TlozDocumentKind = "mission",
+): StatusPresentation {
+  const option = options.find((candidate) => candidate.value === status);
+  const fallback = kind === "project"
+    ? projectStatusPresentation[status]
+    : kind === "inventory"
+      ? inventoryStatusPresentation[status]
+      : missionStatusPresentation[status];
+  const color = option?.color ?? fallback?.textColor ?? "#6B6B6B";
+  return {
+    label: option?.label ?? fallback?.label ?? humanizeStatus(status),
+    dotColor: option?.color ?? fallback?.dotColor ?? color,
+    textColor: color,
+    role: option?.role ?? fallback?.role ?? "backlog",
+  };
+}
+
+function humanizeStatus(status: string) {
+  return status.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
 export const missionTypeTone = withFallback<Record<TlozMissionType, string>>({
   main_quest: "#d72228",

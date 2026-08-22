@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
-import type { TlozProjectStatus } from "@tloz/types";
+import { isTlozProjectStatus, type TlozProjectStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation, isFullStackDeveloper } from "../../../../lib/authorization";
 import { paginationErrorResponse, parsePaginationLimit } from "../../../../lib/api-pagination";
@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
   const limitParam = searchParams.get("limit");
   const cursor = searchParams.get("cursor");
 
-  if (status && !["planned", "active", "archived"].includes(status)) {
+  if (status && !isTlozProjectStatus(status)) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "status debe ser planned, active o archived.", requestId: crypto.randomUUID() } },
+      { error: { code: "INVALID_REQUEST", message: "status debe ser active, maintenance, paused o completed.", requestId: crypto.randomUUID() } },
       { status: 400 }
     );
   }
@@ -69,6 +69,12 @@ export async function POST(request: NextRequest) {
   if (!allowedFields.name) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "name es requerido.", requestId: crypto.randomUUID() } },
+      { status: 400 }
+    );
+  }
+  if (allowedFields.status !== undefined && !isTlozProjectStatus(allowedFields.status)) {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "status debe ser active, maintenance, paused o completed.", requestId: crypto.randomUUID() } },
       { status: 400 }
     );
   }

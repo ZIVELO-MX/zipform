@@ -342,6 +342,7 @@ model TlozInventoryDocument {
   category    String              @default("other")
   status      String              @default("locked")
   icon        String              @default("PackageOpen")
+  color       String              @default("#2D6CDF")
   acquiredAt  String?
 
   @@index([projectId, status])

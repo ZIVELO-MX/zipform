@@ -301,8 +301,8 @@ describe("mock data driver", () => {
     const project = (await client.tloz.getProjects())[0];
     const item = (await client.tloz.getQuestItems())[0];
 
-    expect(await client.tloz.updateProject(project.id, { name: "Updated project", status: "archived", dueDate: "2026-08-01" }))
-      .toMatchObject({ name: "Updated project", status: "archived", dueDate: "2026-08-01" });
+    expect(await client.tloz.updateProject(project.id, { name: "Updated project", status: "completed", dueDate: "2026-08-01" }))
+      .toMatchObject({ name: "Updated project", status: "completed", dueDate: "2026-08-01" });
     expect(await client.tloz.updateQuestItem(item.id, { status: "unlocked", category: "asset", acquiredAt: "2026-07-01" }))
       .toMatchObject({ status: "unlocked", category: "asset", acquiredAt: "2026-07-01" });
 

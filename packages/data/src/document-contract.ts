@@ -171,6 +171,10 @@ function validateSystemProperty(
     }
     return;
   }
+  if (key === "color") {
+    if (typeof value !== "string" || !/^#[0-9A-F]{6}$/i.test(value)) throw invalid();
+    return;
+  }
   if (key === "start" || key === "due" || key === "acquired") {
     if (
       typeof value !== "string"
@@ -198,7 +202,7 @@ const STATUS_ROLES = new Set<TlozStatusRole>(["backlog", "ready", "active", "blo
 const SYSTEM_PROPERTY_KEYS: Record<TlozDocumentKind, Set<string>> = {
   project: new Set(["status", "category", "owner", "color", "icon", "start", "due"]),
   mission: new Set(["assignee", "icon", "start", "due", "progress", "blocked_reason"]),
-  inventory: new Set(["assignee", "icon", "acquired"]),
+  inventory: new Set(["assignee", "color", "icon", "acquired"]),
 };
 
 function validatePropertyValue(definition: TlozFieldDefinition, value: TlozDocumentScalar) {

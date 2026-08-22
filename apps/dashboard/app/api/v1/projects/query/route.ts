@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
-import type { TlozProjectStatus } from "@tloz/types";
+import { isTlozProjectStatus, type TlozProjectStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
-
-const VALID_STATUSES: TlozProjectStatus[] = ["planned", "active", "archived"];
 
 export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -20,9 +18,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (body.status && !VALID_STATUSES.includes(body.status as TlozProjectStatus)) {
+  if (body.status && !isTlozProjectStatus(body.status)) {
     return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "status debe ser planned, active o archived.", requestId: crypto.randomUUID() } },
+      { error: { code: "INVALID_REQUEST", message: "status debe ser active, maintenance, paused o completed.", requestId: crypto.randomUUID() } },
       { status: 400 }
     );
   }

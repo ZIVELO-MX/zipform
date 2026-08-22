@@ -11,6 +11,7 @@ import {
   documentValue,
   isDocumentDetailValuePresent,
   resolveDocumentDetailPropertyProjection,
+  resolveDocumentDetailColor,
   resolveVisibleDocumentFields,
 } from "./document-view-model";
 
@@ -102,8 +103,8 @@ describe("document view model", () => {
   it("defines the typed detail property matrix without type-specific renderers", () => {
     expect(DOCUMENT_DETAIL_PROPERTY_MATRIX).toEqual({
       mission: ["status", "category", "assignee", "project", "start", "due"],
-      project: ["status", "category", "owner", "start", "due", "mission_count"],
-      inventory: ["status", "category", "assignee", "acquired"],
+      project: ["status", "category", "owner", "start", "due", "mission_count", "color"],
+      inventory: ["status", "category", "assignee", "acquired", "color"],
     });
     expect(DEFAULT_MISSION_DETAIL_CORE_PROPERTIES).toEqual([
       "status",
@@ -148,6 +149,7 @@ describe("document view model", () => {
     expect(projection.fields.map((field) => field.key)).toEqual([
       "mission_count",
       "custom_priority",
+      "color",
     ]);
     expect(projection.core).not.toContain("project");
     expect(project.properties).toEqual(originalProperties);
@@ -176,6 +178,7 @@ describe("document view model", () => {
     expect(projection.fields.map((field) => field.key)).toEqual([
       "acquired",
       "serial",
+      "color",
     ]);
     expect(projection.core).not.toContain("project");
   });
@@ -191,6 +194,21 @@ describe("document view model", () => {
       inventory,
       detailDefinition("inventory"),
     ).core).toContain("responsible");
+  });
+
+  it("uses configured entity colors and inherited Mission type colors", () => {
+    const project = {
+      ...document("project-tloz", { color: "#d72228" }),
+      kind: "project" as const,
+    };
+    const mission = {
+      ...document("TLO-0001", {}),
+      kind: "mission" as const,
+    };
+
+    expect(resolveDocumentDetailColor(project, "#2D6CDF")).toBe("#D72228");
+    expect(resolveDocumentDetailColor(mission, "#7a4ed9")).toBe("#7A4ED9");
+    expect(resolveDocumentDetailColor(mission, "invalid", "#1E8E5A")).toBe("#1E8E5A");
   });
 
   it("treats null, empty text and empty selections as absent without hiding zero or false", () => {

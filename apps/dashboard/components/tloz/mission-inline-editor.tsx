@@ -6,7 +6,7 @@ import type { TlozMissionUpdateInput } from "@tloz/data";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozDocument, TlozDocumentPresentationField, TlozFieldDefinition, TlozFieldOption, TlozMissionStatus, TlozMissionType } from "@tloz/types";
 import { patchMissionStatus, updateMission } from "../../app/tloz/actions";
-import { formatDate, missionStatusLabel, missionStatusTone, missionTypeLabel, missionTypeTone, resolveMissionIcon } from "./tloz-utils";
+import { formatDate, missionStatusLabel, missionStatusTone, missionTypeLabel, missionTypeTone, resolveMissionIcon, resolveStatusPresentation } from "./tloz-utils";
 import { DetailPropertyRow } from "./detail-property-row";
 import {
   DEFAULT_MISSION_DETAIL_CORE_PROPERTIES,
@@ -34,6 +34,13 @@ export type MissionPropertyValues = {
 };
 
 const statuses: TlozMissionStatus[] = ["now", "next", "later", "blocked", "completed"];
+
+const projectStatusOptions: ContractOption[] = [
+  { value: "active", label: "Active", role: "active", color: "#4B8D5E" },
+  { value: "maintenance", label: "Maintenance", role: "ready", color: "#3B82F6" },
+  { value: "paused", label: "Paused / Blocked", role: "blocked", color: "#6B7280" },
+  { value: "completed", label: "Completed", role: "done", color: "#166534" },
+];
 const missionTypes: TlozMissionType[] = ["main_quest", "side_quest", "farming_quest", "exploration_quest"];
 
 export function MissionInlineEditor({
@@ -44,6 +51,7 @@ export function MissionInlineEditor({
   onStatusUpdate = (missionId, status) => patchMissionStatus(missionId, status),
   readOnly = false,
   responsibleReadOnly = readOnly,
+  inheritedColor,
 }: {
   mission: TlozMissionRecord;
   options?: MissionEditorOptions;
@@ -52,6 +60,7 @@ export function MissionInlineEditor({
   onStatusUpdate?: (missionId: string, status: TlozMissionStatus) => Promise<TlozMissionRecord>;
   readOnly?: boolean;
   responsibleReadOnly?: boolean;
+  inheritedColor?: string;
 }) {
   const [current, setCurrent] = useState(mission);
   const [projects, setProjects] = useState(options?.projects ?? []);
@@ -77,12 +86,18 @@ export function MissionInlineEditor({
     });
   }
 
-  return <MissionPropertyFields values={current} options={options} onChange={(field, value) => field === "status" ? changeStatus(value as TlozMissionStatus) : persist({ [field]: value }, `${field === "type" ? "Tipo" : field === "ownerId" ? "Responsable" : field === "projectId" ? "Proyecto" : "Fecha"} actualizado`)} ariaBusy={isPending} readOnly={readOnly} responsibleReadOnly={responsibleReadOnly} />;
+  return <MissionPropertyFields values={current} options={options} onChange={(field, value) => field === "status" ? changeStatus(value as TlozMissionStatus) : persist({ [field]: value }, `${field === "type" ? "Tipo" : field === "ownerId" ? "Responsable" : field === "projectId" ? "Proyecto" : "Fecha"} actualizado`)} ariaBusy={isPending} readOnly={readOnly} responsibleReadOnly={responsibleReadOnly} inheritedColor={inheritedColor} />;
 }
 
-export function MissionPropertyFields({ values, options, onChange, ariaBusy = false, layout = "stacked", readOnly = false, responsibleReadOnly = readOnly }: { values: MissionPropertyValues & { owner?: { name: string; username?: string; avatarUrl?: string }; project?: { name: string; color?: string; icon?: string } }; options?: MissionEditorOptions; onChange: (field: keyof MissionPropertyValues, value: string) => void; ariaBusy?: boolean; layout?: "stacked" | "grid"; readOnly?: boolean; responsibleReadOnly?: boolean }) {
+export function MissionPropertyFields({ values, options, onChange, ariaBusy = false, layout = "stacked", readOnly = false, responsibleReadOnly = readOnly, inheritedColor }: { values: MissionPropertyValues & { owner?: { name: string; username?: string; avatarUrl?: string }; project?: { name: string; color?: string; icon?: string } }; options?: MissionEditorOptions; onChange: (field: keyof MissionPropertyValues, value: string) => void; ariaBusy?: boolean; layout?: "stacked" | "grid"; readOnly?: boolean; responsibleReadOnly?: boolean; inheritedColor?: string }) {
   const projects = options?.projects ?? [];
-  const statusOptions = detailFieldOptions(options, "status", statuses.map((value) => ({ value, label: missionStatusLabel[value], color: missionStatusTone[value] })));
+  const statusOptions = detailFieldOptions(
+    options,
+    "status",
+    options?.document?.kind === "project"
+      ? projectStatusOptions
+      : statuses.map((value) => ({ value, label: missionStatusLabel[value], color: missionStatusTone[value] })),
+  );
   const categoryOptions = detailFieldOptions(options, "category", missionTypes.map((value) => ({ value, label: missionTypeLabel[value], color: missionTypeTone[value] })));
   const selectedOwner = options?.users.find((user) => user.id === values.ownerId);
   const selectedProject = projects.find((project) => project.id === values.projectId);
@@ -91,8 +106,9 @@ export function MissionPropertyFields({ values, options, onChange, ariaBusy = fa
     options?.detailProperties?.core ?? DEFAULT_MISSION_DETAIL_CORE_PROPERTIES,
   );
   return <div className={layout === "grid" ? "grid grid-cols-1 gap-1 sm:grid-cols-2" : "flex flex-col"} data-layout={layout} aria-busy={ariaBusy}>
-    {visibleProperties.has("status") ? <DetailPropertyRow label="Estado" display={<OptionValue value={status} options={statusOptions} status />} readOnly={readOnly}><Select value={status} onValueChange={(value) => onChange("status", value)}><SelectTrigger aria-label="Estado"><SelectValue><OptionValue value={status} options={statusOptions} status /></SelectValue></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{statusOptions.map((option) => <SelectItem key={option.value} value={option.value}><OptionValue value={option.value} options={statusOptions} status /></SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow> : null}
+    {visibleProperties.has("status") ? <DetailPropertyRow label="Estado" display={<OptionValue value={status} options={statusOptions} status kind={options?.document?.kind} />} readOnly={readOnly}><Select value={status} onValueChange={(value) => onChange("status", value)}><SelectTrigger aria-label="Estado"><SelectValue><OptionValue value={status} options={statusOptions} status kind={options?.document?.kind} /></SelectValue></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{statusOptions.map((option) => <SelectItem key={option.value} value={option.value}><OptionValue value={option.value} options={statusOptions} status kind={options?.document?.kind} /></SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow> : null}
     {visibleProperties.has("category") ? <DetailPropertyRow label="Categoría" display={<OptionValue value={values.type} options={categoryOptions} />} readOnly={readOnly}><Select value={values.type} onValueChange={(value) => onChange("type", value)}><SelectTrigger aria-label="Tipo"><SelectValue><OptionValue value={values.type} options={categoryOptions} /></SelectValue></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{categoryOptions.map((option) => <SelectItem key={option.value} value={option.value}><OptionValue value={option.value} options={categoryOptions} /></SelectItem>)}</SelectGroup></SelectContent></Select></DetailPropertyRow> : null}
+    {inheritedColor ? <DetailPropertyRow label="Color" display={<InheritedColorValue value={inheritedColor} />} readOnly>{null}</DetailPropertyRow> : null}
     {visibleProperties.has("responsible") && options?.users.length && (!options.hideEmptyFields || values.ownerId) ? <DetailPropertyRow label="Responsable" display={<UserAvatarLabel name={values.owner?.name ?? selectedOwner?.name ?? "Sin responsable"} label={values.owner?.username ?? selectedOwner?.username ?? "Sin responsable"} labelOnly imageUrl={values.owner?.avatarUrl ?? selectedOwner?.avatarUrl} size="sm" />} readOnly={responsibleReadOnly}><UserPicker users={options.users} value={values.ownerId} label="Responsable" onValueChange={(value) => onChange("ownerId", value)} /></DetailPropertyRow> : null}
     {visibleProperties.has("project") && (!options?.hideEmptyFields || values.projectId) ? <DetailPropertyRow label="Proyecto" display={<ProjectValue project={values.project ?? selectedProject} />} readOnly={readOnly}><EntityPicker label="Proyecto" options={projects.map((project) => ({ ...project, iconComponent: resolveMissionIcon(project.icon), color: project.color }))} value={values.projectId} onValueChange={(value) => onChange("projectId", value)} /></DetailPropertyRow> : null}
     {visibleProperties.has("start") && (!options?.hideEmptyFields || values.startDate) ? <DetailPropertyRow label="Inicio" display={<span className="font-mono text-[12.5px] font-semibold">{formatDate(values.startDate)}</span>} readOnly={readOnly}><DatePicker value={values.startDate} label="Fecha de inicio" onValueChange={(value) => onChange("startDate", value ?? "")} /></DetailPropertyRow> : null}
@@ -101,6 +117,10 @@ export function MissionPropertyFields({ values, options, onChange, ariaBusy = fa
 }
 
 function ProjectValue({ project }: { project?: { name: string; color?: string; icon?: string } }) { const color = project?.color ?? "#6B6B6B"; const Icon = resolveMissionIcon(project?.icon); return <span className="inline-flex min-w-0 items-center gap-1.5"><span className="grid size-6 shrink-0 place-items-center rounded-md [&_svg]:size-3.5" style={{ backgroundColor: `${color}18`, color }}><Icon aria-hidden="true" /></span><span className="truncate">{project?.name ?? "Sin proyecto"}</span></span>; }
+
+function InheritedColorValue({ value }: { value: string }) {
+  return <span className="inline-flex min-w-0 items-center gap-2"><span className="size-4 shrink-0 rounded-md border border-carbon/15 shadow-inner" style={{ backgroundColor: value }} aria-hidden="true" /><span className="truncate font-mono text-[11.5px] font-semibold">{value}</span></span>;
+}
 
 type ContractOption = Pick<TlozFieldOption, "value" | "label" | "color" | "role">;
 
@@ -121,18 +141,17 @@ export function detailFieldOptions(
   return optionsForField?.length ? optionsForField : fallback;
 }
 
-function OptionValue({ value, options, status = false }: { value: string; options: ContractOption[]; status?: boolean }) {
+function OptionValue({ value, options, status = false, kind = "mission" }: { value: string; options: ContractOption[]; status?: boolean; kind?: TlozDocument["kind"] }) {
   const option = options.find((candidate) => candidate.value === value);
-  const color = option?.color ?? optionColor(value, status);
+  const color = status
+    ? resolveStatusPresentation(value, options, kind).textColor
+    : option?.color ?? optionColor(value);
   if (status) return <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color }}><span className="size-[7px] rounded-full bg-current" aria-hidden="true" />{option?.label ?? value}</span>;
   const Icon = resolveMissionIcon(optionIcon(value));
   return <span className="inline-flex items-center gap-1.5 rounded-full px-[9px] py-[3px] text-xs font-bold" style={{ background: `${color}18`, color }}><Icon className="size-3.5" aria-hidden="true" />{option?.label ?? value}</span>;
 }
 
-function optionColor(value: string, status: boolean) {
-  if (status) {
-    return ({ now: "#1E8E5A", next: "#2D6CDF", later: "#7A4ED9", blocked: "#B91C22", completed: "#D72228", locked: "#7A5A12", unlocked: "#1E6B3C" } as Record<string, string>)[value] ?? "#6B6B6B";
-  }
+function optionColor(value: string) {
   return ({ main_quest: "#D72228", side_quest: "#2D6CDF", farming_quest: "#1E8E5A", exploration_quest: "#7A4ED9", tool: "#2D6CDF", access: "#7A4ED9", asset: "#1E8E5A", document: "#7A5A12", other: "#6B6B6B", normal: "#3A47B5" } as Record<string, string>)[value] ?? "#6B6B6B";
 }
 

@@ -48,14 +48,12 @@ export function DashboardClient({ summary, detailOptions, statusOptions = [], hi
             title="Próximas · Next"
             subtitle="Validadas, esperando capacidad"
             missions={summary.upcomingMissions}
-            type="next"
             onSelect={setSelectedMission}
           />
           <DashboardNextLaterSection
             title="Más adelante · Later"
             subtitle="Ideas · sin validar · bloqueadas"
             missions={summary.futureMissions}
-            type="later"
             onSelect={setSelectedMission}
           />
         </section>

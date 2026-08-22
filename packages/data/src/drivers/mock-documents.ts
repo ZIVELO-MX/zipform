@@ -176,6 +176,7 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
             category: item.category,
             assignee: item.ownerId ?? null,
             icon: item.icon,
+            color: item.color,
             acquired: item.acquiredAt ?? null,
           }),
           ...visibleCustomProperties(documentState, inventoryProject.id),
@@ -363,7 +364,7 @@ function systemProjectDocument(
     body: "",
     revision: state.revision,
     properties: {
-      status: slug === "unassigned" ? "archived" : "active",
+      status: slug === "unassigned" ? "completed" : "active",
       category: "system",
       icon: slug === "inventory" ? "PackageOpen" : "FolderKanban",
       ...state.custom,
@@ -422,7 +423,7 @@ function applyInventoryProperties(item: TlozQuestItem, properties?: Record<strin
   if (typeof properties.category === "string") item.category = properties.category as TlozQuestItem["category"];
   if (typeof properties.assignee === "string" || properties.assignee === null) item.ownerId = properties.assignee ?? undefined;
   if (typeof properties.icon === "string") item.icon = properties.icon;
-  if (typeof properties.color === "string") item.color = properties.color;
+  if (typeof properties.color === "string") item.color = properties.color.toUpperCase();
   if (typeof properties.acquired === "string" || properties.acquired === null) item.acquiredAt = properties.acquired ?? undefined;
 }
 
@@ -458,9 +459,10 @@ function mockDefinition(
         presentationField("publicId", "ID", "id", 0),
         presentationField("title", "Project", "text", 1),
         presentationField("status", "Estado", "status", 2, [
-          { value: "planned", label: "Planeado", role: "backlog", color: "#3A47B5" },
-          { value: "active", label: "Activo", role: "active", color: "#1E6B3C" },
-          { value: "archived", label: "Archivado", role: "done", color: "#6B6B6B" },
+          { value: "active", label: "Active", role: "active", color: "#4B8D5E" },
+          { value: "maintenance", label: "Maintenance", role: "ready", color: "#3B82F6" },
+          { value: "paused", label: "Paused / Blocked", role: "blocked", color: "#6B7280" },
+          { value: "completed", label: "Completed", role: "done", color: "#166534" },
         ]),
         presentationField("category", "Tipo", "text", 3),
         presentationField("mission_count", "Missions", "number", 4),

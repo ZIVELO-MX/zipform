@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
+import { isTlozProjectStatus } from "@tloz/types";
 import { TlozValidationError, nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
 
 describe("TLOZ creation validation", () => {
+  it("accepts only the current Project statuses", () => {
+    expect(["active", "maintenance", "paused", "completed"].every(isTlozProjectStatus)).toBe(true);
+    expect(isTlozProjectStatus("planned")).toBe(false);
+    expect(isTlozProjectStatus("archived")).toBe(false);
+  });
+
   it("rejects incomplete entities before persistence", () => {
     expect(() => validateMissionCreate({ title: "", description: "", icon: "", type: "side_quest", status: "next", ownerId: "", projectId: "", progress: 0 })).toThrow(TlozValidationError);
     expect(() => validateProjectCreate({ name: "x", description: "", icon: "FolderKanban", color: "blue", status: "active", type: "normal", ownerId: "", startDate: "" })).toThrow(TlozValidationError);

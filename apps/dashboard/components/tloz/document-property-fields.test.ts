@@ -24,4 +24,10 @@ describe("document property fields", () => {
     expect(source).toContain('"publicId"');
     expect(source).toContain('"project"');
   });
+
+  it("uses the compact hexadecimal picker for Color properties", () => {
+    expect(source).toContain('field.key === "color"');
+    expect(source).toContain("<ColorPicker");
+    expect(source).toContain("<ColorValue value={value} />");
+  });
 });

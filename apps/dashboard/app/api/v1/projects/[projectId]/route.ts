@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
+import { isTlozProjectStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeProjectOperation } from "../../../../../lib/tloz-api-authorization";
 
@@ -67,6 +68,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
   if (Object.keys(allowedFields).length === 0) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "No se proporcionaron campos válidos para actualizar.", requestId: crypto.randomUUID() } },
+      { status: 400 }
+    );
+  }
+  if (allowedFields.status !== undefined && !isTlozProjectStatus(allowedFields.status)) {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "status debe ser active, maintenance, paused o completed.", requestId: crypto.randomUUID() } },
       { status: 400 }
     );
   }

@@ -6,7 +6,7 @@ describe("mission status selector", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
 
     expect(source).toMatch(
-      /<SelectTrigger aria-label="Estado"><SelectValue><OptionValue value=\{status\} options=\{statusOptions\} status \/><\/SelectValue><\/SelectTrigger><SelectContent position="item-aligned">/,
+      /<SelectTrigger aria-label="Estado"><SelectValue><OptionValue value=\{status\} options=\{statusOptions\} status kind=\{options\?\.document\?\.kind\} \/><\/SelectValue><\/SelectTrigger><SelectContent position="item-aligned">/,
     );
   });
 
@@ -26,12 +26,28 @@ describe("mission status selector", () => {
     expect(source).toContain("<ProjectValue project={values.project ?? selectedProject} />");
   });
 
+  it("shows the inherited Mission color as a read-only property", () => {
+    const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
+    expect(source).toContain('label="Color"');
+    expect(source).toContain("inheritedColor");
+    expect(source).toContain("<InheritedColorValue value={inheritedColor} />");
+  });
+
   it("uses the shared projection and presentation metadata in detail rows", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
     expect(source).toContain("options?.detailProperties?.core");
     expect(source).toContain('visibleProperties.has("project")');
     expect(source).toContain("options?.presentationFields");
     expect(source).toContain("readOnly={readOnly}");
+  });
+
+  it("falls back to Project states in Project properties", () => {
+    const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
+    expect(source).toContain('options?.document?.kind === "project"');
+    expect(source).toContain('value: "maintenance"');
+    expect(source).toContain('value: "paused"');
+    expect(source).toContain('value: "completed"');
+    expect(source).toContain('label: "Paused / Blocked"');
   });
 
   it("separates reassignment permission from ordinary property updates", () => {

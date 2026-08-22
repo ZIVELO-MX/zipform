@@ -101,4 +101,19 @@ describe("mission detail interaction contracts", () => {
     expect(detail).toContain('const day = event.occurredAt.slice(0, 10)');
     expect(detail).not.toContain("Estado: ${missionStatusLabel[current.status]}");
   });
+
+  it("uses one effective detail color for the type, icon, activity, and inherited property", () => {
+    expect(detail).toContain("resolveDocumentDetailColor");
+    expect(detail).toContain("const typeColor = detailColor");
+    expect(detail).toContain("color={detailColor}");
+    expect(detail).toContain("inheritedColor={isMissionDocument ? detailColor : undefined}");
+    expect(detail).toContain("tone={detailColor}");
+  });
+
+  it("resolves the header status chip with document context", () => {
+    expect(detail).toContain("resolveStatusPresentation");
+    expect(detail).toContain('options.document?.kind ?? "mission"');
+    expect(detail).toContain("statusPresentation.textColor");
+    expect(detail).toContain("statusPresentation.label");
+  });
 });

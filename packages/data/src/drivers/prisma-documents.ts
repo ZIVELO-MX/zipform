@@ -403,6 +403,7 @@ function mapDocument(row: DocumentRow): TlozDocument {
           category: row.inventoryDocument.category,
           assignee: row.inventoryDocument.ownerId,
           icon: row.inventoryDocument.icon,
+          color: row.inventoryDocument.color,
           acquired: row.inventoryDocument.acquiredAt,
         })
         : {};
@@ -660,6 +661,7 @@ async function updateLegacySource(
         ? { ownerId: properties.assignee }
         : {}),
       ...(typeof properties.icon === "string" ? { icon: properties.icon } : {}),
+      ...(typeof properties.color === "string" ? { color: properties.color.toUpperCase() } : {}),
       ...(properties.acquired === null || typeof properties.acquired === "string"
         ? { acquiredAt: properties.acquired }
         : {}),
@@ -676,6 +678,7 @@ async function updateLegacySource(
           ? { ownerId: properties.assignee }
           : {}),
         ...(typeof properties.icon === "string" ? { icon: properties.icon } : {}),
+        ...(typeof properties.color === "string" ? { color: properties.color.toUpperCase() } : {}),
         ...(properties.acquired === null || typeof properties.acquired === "string"
           ? { acquiredAt: properties.acquired }
           : {}),

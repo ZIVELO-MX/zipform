@@ -30,7 +30,11 @@ export type PlatformMetric = {
 };
 
 export type TlozEntityStatus = "planned" | "active" | "completed" | "blocked" | "archived";
-export type TlozProjectStatus = "planned" | "active" | "archived";
+export const TLOZ_PROJECT_STATUSES = ["active", "maintenance", "paused", "completed"] as const;
+export type TlozProjectStatus = typeof TLOZ_PROJECT_STATUSES[number];
+export function isTlozProjectStatus(value: unknown): value is TlozProjectStatus {
+  return typeof value === "string" && (TLOZ_PROJECT_STATUSES as readonly string[]).includes(value);
+}
 export type TlozProjectType = "normal" | "system";
 export type TlozInventoryStatus = "locked" | "unlocked";
 export type TlozInventoryCategory = "tool" | "access" | "asset" | "document" | "other";
