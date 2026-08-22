@@ -1,22 +1,43 @@
-import { getPrismaClient } from "../src/drivers/prisma";
-import { assertContainerContentReconciled, readCutoverState } from "../src/cutover";
+import { PrismaClient } from "@prisma/client";
+import {
+  LegacyRetirementError,
+  parseRetirementArgs,
+  retireLegacy,
+} from "../src/legacy-retirement";
 
-const args = new Set(process.argv.slice(2));
-const required = ["--confirm", "--legacy-traffic-zero", "--backup-verified"];
-const missing = required.filter((flag) => !args.has(flag));
-if (missing.length) {
-  console.error(JSON.stringify({ error: "retirement_requires_evidence", missing }));
+function createRetirementClient() {
+  const directUrl = process.env.DIRECT_URL;
+  if (!directUrl) {
+    throw new LegacyRetirementError(
+      "retirement_database_url_missing",
+      "DIRECT_URL es obligatorio para ejecutar el retiro con una conexión directa.",
+    );
+  }
+  return new PrismaClient({ datasources: { db: { url: directUrl } } });
+}
+
+let options;
+try {
+  options = parseRetirementArgs(process.argv.slice(2));
+} catch (error) {
+  if (error instanceof LegacyRetirementError) {
+    console.error(JSON.stringify({ error: error.code, message: error.message, details: error.details }));
+  } else {
+    console.error(JSON.stringify({ error: "retirement_requires_evidence", message: "No se pudieron validar las compuertas de retiro." }));
+  }
   process.exit(2);
 }
 
-const prisma = getPrismaClient();
+const prisma = createRetirementClient();
 try {
-  const state = await readCutoverState(prisma);
-  if (state.source !== "canonical" || !state.writesEnabled) throw new Error("canonical cutover must be enabled before legacy retirement");
-  const reconciliation = await assertContainerContentReconciled(prisma);
-  console.log(JSON.stringify({ ready: true, state, reconciliation, note: "Run the guarded retirement migration with tloz.allow_legacy_retirement=on during a maintenance window." }, null, 2));
+  const result = await retireLegacy(prisma, options.execute);
+  console.log(JSON.stringify(result, null, 2));
 } catch (error) {
-  console.error(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+  if (error instanceof LegacyRetirementError) {
+    console.error(JSON.stringify({ error: error.code, message: error.message, details: error.details }));
+  } else {
+    console.error(JSON.stringify({ error: "retirement_failed", message: "El retiro no se completó y la transacción fue revertida." }));
+  }
   process.exitCode = 1;
 } finally {
   await prisma.$disconnect();
