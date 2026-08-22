@@ -1,5 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
-import { assertContainerContentReconciled, readCutoverState } from "./cutover";
+import { assertContainerContentReconciled, listCutoverObservationsSince, readCutoverState, type CutoverState } from "./cutover";
 
 export const LEGACY_RETIREMENT_TABLES = [
   "tloz_document_relations",
@@ -84,7 +84,30 @@ async function validateCutover(prisma: PrismaExecutor) {
       { reconciliation },
     );
   }
-  return { state, reconciliation };
+  const observations = await listCutoverObservationsSince(prisma as PrismaClient, new Date(state.updatedAt));
+  assertStableCanonicalWindow(state, observations);
+  return { state, reconciliation, observations };
+}
+
+type RetirementObservation = { source: string; operation: string; count: number; lastAt: string };
+
+export function assertStableCanonicalWindow(
+  state: CutoverState,
+  observations: RetirementObservation[],
+  now = new Date(),
+) {
+  const enabledAt = new Date(state.updatedAt);
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+  const observedMs = now.getTime() - enabledAt.getTime();
+  const legacy = observations.filter((observation) => observation.source === "legacy");
+  const canonical = observations.filter((observation) => observation.source === "canonical" && observation.count > 0);
+  if (!Number.isFinite(observedMs) || observedMs < sevenDaysMs || legacy.length || !canonical.length) {
+    throw new LegacyRetirementError(
+      "observation_window_incomplete",
+      "Se requieren siete días canónicos observados, actividad canónica y cero tráfico legacy después del corte.",
+      { enabledAt: state.updatedAt, observedDays: Math.max(0, Math.floor(observedMs / (24 * 60 * 60 * 1000))), legacy, canonicalObserved: canonical.length > 0 },
+    );
+  }
 }
 
 export async function retireLegacy(prisma: PrismaClient, execute: boolean) {

@@ -2,6 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import { reconcileContainerContent } from "./container-content-backfill";
 
 export type CutoverSource = "legacy" | "canonical";
+export type CutoverOperation = "read" | "write" | "write_blocked";
 export type CutoverState = {
   source: CutoverSource;
   writesEnabled: boolean;
@@ -56,4 +57,51 @@ export async function assertContainerContentReconciled(prisma: PrismaClient) {
   const result = await reconcileContainerContent(prisma);
   if (!result.matches) throw new Error("legacy and canonical Container/Content data are not reconciled");
   return result;
+}
+
+export async function recordCutoverObservation(
+  prisma: PrismaClient,
+  source: CutoverSource,
+  operation: CutoverOperation,
+  observedAt = new Date(),
+) {
+  const bucket = new Date(`${observedAt.toISOString().slice(0, 10)}T00:00:00.000Z`);
+  try {
+    await prisma.tlozDomainCutoverObservation.upsert({
+      where: { bucket_source_operation: { bucket, source, operation } },
+      create: { bucket, source, operation, count: 1, lastAt: observedAt },
+      update: { count: { increment: 1 }, lastAt: observedAt },
+    });
+  } catch (error) {
+    if (!tableMissing(error)) throw error;
+  }
+}
+
+export async function listCutoverObservations(prisma: PrismaClient, days = 7) {
+  const since = new Date();
+  since.setUTCDate(since.getUTCDate() - Math.max(1, days) + 1);
+  since.setUTCHours(0, 0, 0, 0);
+  try {
+    const rows = await prisma.tlozDomainCutoverObservation.findMany({
+      where: { bucket: { gte: since } },
+      orderBy: [{ bucket: "asc" }, { source: "asc" }, { operation: "asc" }],
+    });
+    return rows.map((row) => ({ ...row, bucket: row.bucket.toISOString().slice(0, 10), count: Number(row.count), lastAt: row.lastAt.toISOString() }));
+  } catch (error) {
+    if (tableMissing(error)) return [];
+    throw error;
+  }
+}
+
+export async function listCutoverObservationsSince(prisma: PrismaClient, since: Date) {
+  try {
+    const rows = await prisma.tlozDomainCutoverObservation.findMany({
+      where: { lastAt: { gte: since } },
+      orderBy: [{ lastAt: "asc" }, { source: "asc" }, { operation: "asc" }],
+    });
+    return rows.map((row) => ({ ...row, bucket: row.bucket.toISOString().slice(0, 10), count: Number(row.count), lastAt: row.lastAt.toISOString() }));
+  } catch (error) {
+    if (tableMissing(error)) return [];
+    throw error;
+  }
 }

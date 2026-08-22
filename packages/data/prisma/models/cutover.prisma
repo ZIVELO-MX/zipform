@@ -9,3 +9,15 @@ model TlozDomainCutover {
 
   @@map("tloz_domain_cutover")
 }
+
+model TlozDomainCutoverObservation {
+  bucket    DateTime @db.Date
+  source    String
+  operation String
+  count     BigInt   @default(0)
+  lastAt    DateTime @default(now())
+
+  @@id([bucket, source, operation])
+  @@index([source, bucket])
+  @@map("tloz_domain_cutover_observations")
+}

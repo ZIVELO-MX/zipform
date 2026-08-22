@@ -28,8 +28,9 @@ try {
   process.exit(2);
 }
 
-const prisma = createRetirementClient();
+let prisma: PrismaClient | undefined;
 try {
+  prisma = createRetirementClient();
   const result = await retireLegacy(prisma, options.execute);
   console.log(JSON.stringify(result, null, 2));
 } catch (error) {
@@ -40,5 +41,5 @@ try {
   }
   process.exitCode = 1;
 } finally {
-  await prisma.$disconnect();
+  await prisma?.$disconnect();
 }

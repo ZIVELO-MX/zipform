@@ -144,6 +144,28 @@ For the Vercel project settings, use `apps/dashboard` as the Root Directory and 
 - Confirm authentication works (login page, session persistence)
 - Check that Mission CRUD and Project contract editing work end-to-end
 
+### Container/Content Cutover
+
+Run the cutover only after migrations are deployed and from an environment with `DATABASE_URL` and `DIRECT_URL` configured. Every document read, write, and blocked write is counted by source in daily database buckets.
+
+```bash
+pnpm --filter @tloz/data db:cutover:status
+pnpm --filter @tloz/data db:cutover:prepare -- --confirm
+pnpm --filter @tloz/data db:cutover:enable -- --confirm
+pnpm --filter @tloz/data db:cutover:status
+```
+
+The first status must report reconciliation parity. After `enable`, smoke-test `/api/v2/containers` and `/api/v2/contents`; use `db:cutover:rollback -- --confirm` if either fails. The status output includes the last seven days of `legacy` and `canonical` observations.
+
+Legacy retirement remains a separate maintenance operation. Its CLI now rejects execution until the canonical state has remained enabled for seven real days, canonical traffic has been observed, and no legacy traffic has been recorded since enablement. The backup and approval flags are still required:
+
+```bash
+pnpm --filter @tloz/data db:retire:legacy -- --confirm --legacy-traffic-zero --backup-verified
+pnpm --filter @tloz/data db:retire:legacy -- --confirm --legacy-traffic-zero --backup-verified --execute
+```
+
+The first command validates without dropping tables. Run `--execute` only in the approved maintenance window with a restorable backup and direct database connection.
+
 ### Rollback
 
 - **Database**: `prisma migrate deploy` is applied sequentially. To roll back, deploy the previous migration or restore from a database backup.

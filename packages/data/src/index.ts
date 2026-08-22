@@ -46,8 +46,8 @@ export { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "./tloz-
 export { TlozDocumentError } from "./document-errors";
 export { collectPaginated, PaginationCursorError, paginationStartIndex } from "./pagination";
 export { createContainerContentDocumentRepository } from "./container-content-document";
-export { readCutoverState, setCutoverState, assertContainerContentReconciled } from "./cutover";
-export type { CutoverState, CutoverSource } from "./cutover";
+export { readCutoverState, setCutoverState, assertContainerContentReconciled, listCutoverObservations, listCutoverObservationsSince, recordCutoverObservation } from "./cutover";
+export type { CutoverOperation, CutoverState, CutoverSource } from "./cutover";
 export {
   ContainerContentError,
   type ContainerContentErrorCode,
