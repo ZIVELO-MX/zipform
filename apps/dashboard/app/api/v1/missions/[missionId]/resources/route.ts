@@ -3,6 +3,7 @@ import { dataClient } from "@tloz/data";
 import type { TlozResourceType } from "@tloz/types";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
+import { recordMissionActivity } from "../../../../../../lib/mission-activity";
 
 const VALID_TYPES: TlozResourceType[] = ["link", "document", "image", "file", "note"];
 
@@ -42,6 +43,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ mis
       missionId,
       { type: body.type as TlozResourceType, title: body.title, url: body.url, fileId: body.fileId, icon: body.icon }
     );
+    await recordMissionActivity({ mission: detail, actorId: auth.user.id, source: auth.source, action: "mission.resource_added", metadata: { type: body.type }, idempotencyKey: request.headers.get("idempotency-key") });
     return NextResponse.json({ data: detail });
   } catch {
     return NextResponse.json(

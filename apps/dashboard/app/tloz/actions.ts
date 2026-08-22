@@ -33,8 +33,15 @@ import {
 } from "../../lib/authorization";
 import { getTlozAttachmentStorage } from "../../lib/tloz-attachment-storage";
 import { getTlozMissionDetailWithAttachmentMetadata } from "../../lib/tloz-data";
+import { recordMissionActivity } from "../../lib/mission-activity";
 
 const revalidateTloz = () => revalidatePath("/", "layout");
+
+async function recordDocumentActivity(document: TlozDocument) {
+  if (document.kind !== "mission") return;
+  const actor = await authenticatedActor();
+  await recordMissionActivity({ mission: { id: document.id, displayId: document.publicId }, actorId: actor.id, source: "session", action: "mission.document_updated", metadata: { revision: document.revision } });
+}
 
 async function authenticatedActor() {
   const session = await auth();
@@ -114,6 +121,7 @@ export async function updateDocument(
   revision: number,
 ) {
   const updated = await mutateDocument(documentId, input, revision);
+  await recordDocumentActivity(updated);
   revalidateTloz();
   return updated;
 }
@@ -153,6 +161,7 @@ export async function createMission(
       document.revision,
     );
   }
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.created" });
   revalidateTloz();
   return mission;
 }
@@ -164,17 +173,19 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
     Object.prototype.hasOwnProperty.call(input, field)
   ));
   if (document?.kind === "mission" && !requiresLegacyMutation) {
+    const actor = await authenticatedActor();
     await mutateDocument(document.id, missionDocumentUpdate(input), document.revision);
     const mission = (await dataClient.tloz.getMissions())
       .find((candidate) => candidate.id === missionId);
     if (!mission) throw new Error("Misión no encontrada.");
+    await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.updated", metadata: { fields: Object.keys(input).sort() } });
     revalidateTloz();
     return mission;
   }
 
   const changesPlacement = ["ownerId", "projectId", "seasonId", "episodeId"]
     .some((field) => Object.prototype.hasOwnProperty.call(input, field));
-  const { mission: current } = await authorizeMission(
+  const { actor, mission: current } = await authorizeMission(
     missionId,
     changesPlacement ? "move" : "update",
   );
@@ -209,6 +220,7 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
     }
   }
   const mission = await dataClient.tloz.updateMission(missionId, next);
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: input.status !== undefined && Object.keys(input).length === 1 ? "mission.status_changed" : "mission.updated", metadata: { fields: Object.keys(input).sort(), ...(input.status === undefined ? {} : { status: input.status }) } });
   revalidateTloz();
   return mission;
 }
@@ -352,6 +364,7 @@ export async function updateDocumentProperties(
   revision?: number,
 ) {
   const updated = await mutateDocument(documentId, { properties }, revision);
+  await recordDocumentActivity(updated);
   revalidateTloz();
   return updated;
 }
@@ -362,6 +375,7 @@ export async function updateDocumentContent(
   revision: number,
 ) {
   const updated = await mutateDocument(documentId, input, revision);
+  await recordDocumentActivity(updated);
   revalidateTloz();
   return updated;
 }
@@ -372,6 +386,7 @@ export async function updateDocumentBody(
   revision: number,
 ) {
   const updated = await mutateDocument(documentId, { body }, revision);
+  await recordDocumentActivity(updated);
   revalidateTloz();
   return updated;
 }
@@ -455,59 +470,67 @@ export async function replaceProjectContract(
 }
 
 export async function saveMissionDocument(missionId: string, markdown: string) {
+  const { actor } = await authorizeMission(missionId);
   const document = await dataClient.canonicalDocuments.get(missionId);
   if (!document || document.kind !== "mission") {
-    await authorizeMission(missionId);
     const mission = await dataClient.tloz.saveMissionDocument(missionId, markdown);
+    await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.document_updated" });
     revalidateTloz();
     return mission;
   }
   await mutateDocument(document.id, { body: markdown }, document.revision);
   const mission = await dataClient.tloz.getMissionDetail(missionId);
   if (!mission) throw new Error("Misión no encontrada.");
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.document_updated" });
   revalidateTloz();
   return mission;
 }
 
 export async function addMissionDependency(missionId: string, dependsOnMissionId: string) {
-  await authorizeMission(missionId);
+  const { actor } = await authorizeMission(missionId);
   const mission = await dataClient.tloz.addMissionDependency(missionId, dependsOnMissionId);
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.dependency_added", metadata: { dependencyId: dependsOnMissionId } });
   revalidateTloz();
   return mission;
 }
 
 export async function removeMissionDependency(missionId: string, dependsOnMissionId: string) {
-  await authorizeMission(missionId);
+  const { actor } = await authorizeMission(missionId);
   const mission = await dataClient.tloz.removeMissionDependency(missionId, dependsOnMissionId);
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.dependency_removed", metadata: { dependencyId: dependsOnMissionId } });
   revalidateTloz();
   return mission;
 }
 
 export async function setMissionQuestItem(missionId: string, questItemId: string, required: boolean) {
-  await authorizeMission(missionId);
+  const { actor } = await authorizeMission(missionId);
   const mission = await dataClient.tloz.setMissionQuestItem(missionId, questItemId, required);
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.quest_item_set", metadata: { questItemId, required } });
   revalidateTloz();
   return mission;
 }
 
 export async function removeMissionQuestItem(missionId: string, questItemId: string) {
-  await authorizeMission(missionId);
+  const { actor } = await authorizeMission(missionId);
   const mission = await dataClient.tloz.removeMissionQuestItem(missionId, questItemId);
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.quest_item_removed", metadata: { questItemId } });
   revalidateTloz();
   return mission;
 }
 
 export async function addMissionResource(missionId: string, input: TlozResourceInput) {
-  await authorizeMission(missionId);
+  const { actor } = await authorizeMission(missionId);
   const mission = await dataClient.tloz.addMissionResource(missionId, input);
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.resource_added" });
   revalidateTloz();
   return mission;
 }
 
 export async function removeMissionResource(missionId: string, resourceId: string) {
-  const { mission } = await authorizeMission(missionId);
+  const { actor, mission } = await authorizeMission(missionId);
   if (!mission.resources.some((resource) => resource.id === resourceId)) throw new Error("Recurso no encontrado.");
   const value = await dataClient.tloz.removeMissionResource(missionId, resourceId);
+  await recordMissionActivity({ mission: value, actorId: actor.id, source: "session", action: "mission.resource_removed", metadata: { resourceId } });
   revalidateTloz();
   return value;
 }
@@ -615,6 +638,7 @@ export async function deleteMission(missionId: string) {
   assertTlozOperation(actor, "delete-mission");
   const mission = await dataClient.tloz.getMissionDetail(missionId);
   if (!mission) throw new Error("Misión no encontrada.");
+  await recordMissionActivity({ mission, actorId: actor.id, source: "session", action: "mission.deleted" });
   await dataClient.tloz.deleteMission(missionId);
   revalidateTloz();
 }

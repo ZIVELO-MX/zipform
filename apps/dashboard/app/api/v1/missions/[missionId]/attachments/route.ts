@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
 import { attachmentStoragePath, getTlozAttachmentStorage, TlozAttachmentRequestError, validateAttachmentManifest } from "../../../../../../lib/tloz-attachment-storage";
+import { recordMissionActivity } from "../../../../../../lib/mission-activity";
 
 type RouteContext = { params: Promise<{ missionId: string }> };
 
@@ -85,6 +86,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
     const removals = await Promise.allSettled([...new Set(result.previousStoragePaths)].map((path) => storage.removeObject(path)));
     if (removals.some((removal) => removal.status === "rejected")) warnings.push("No se pudo limpiar un objeto anterior; el snapshot nuevo permanece activo.");
     const group = await signedGroup(result.group);
+    await recordMissionActivity({ mission: permission.entity, actorId: auth.user.id, source: auth.source, action: "mission.attachments_updated", metadata: { groupKey: result.group.groupKey, attachmentCount: result.group.attachments.length }, idempotencyKey: request.headers.get("idempotency-key") });
     return NextResponse.json({ data: { ...group, uploadBatchId: result.batch.uploadBatchId, warnings: [...new Set(warnings)] } });
   } catch (error) {
     return mapError(error);

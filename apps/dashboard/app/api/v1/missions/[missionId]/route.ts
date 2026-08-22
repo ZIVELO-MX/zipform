@@ -4,6 +4,7 @@ import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation, isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
 import { observedJson } from "../../../../../lib/read-telemetry";
+import { recordMissionActivity } from "../../../../../lib/mission-activity";
 
 const VALID_MISSION_FIELDS = new Set([
   "title", "description", "descriptionDetail", "icon", "type", "status",
@@ -113,7 +114,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mi
     });
     if (forbidden) return forbidden;
 
-    await dataClient.tloz.updateMission(missionId, allowedFields);
+    const updated = await dataClient.tloz.updateMission(missionId, allowedFields);
+    await recordMissionActivity({ mission: updated, actorId: auth.user.id, source: auth.source, action: "mission.updated", metadata: { fields: Object.keys(allowedFields).sort() }, idempotencyKey: request.headers.get("idempotency-key") });
     return NextResponse.json({ data: await dataClient.tloz.getMissionDetail(missionId) });
   } catch {
     return NextResponse.json(
@@ -146,6 +148,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ m
         { status: 404 },
       );
     }
+    await recordMissionActivity({ mission: existing, actorId: auth.user.id, source: auth.source, action: "mission.deleted", idempotencyKey: request.headers.get("idempotency-key") });
     await dataClient.tloz.deleteMission(missionId);
     return NextResponse.json({ success: true });
   } catch {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
+import { recordMissionActivity } from "../../../../../../lib/mission-activity";
 
 export async function POST(request: Request, { params }: { params: Promise<{ missionId: string }> }) {
   const auth = await authenticateRequest(request as Parameters<typeof authenticateRequest>[0]);
@@ -36,6 +37,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ mis
     const permission = await authorizeMissionOperation(auth.user, missionId);
     if (!permission.allowed) return permission.response;
     const detail = await dataClient.tloz.setMissionQuestItem(missionId, body.questItemId, body.required ?? false);
+    await recordMissionActivity({ mission: detail, actorId: auth.user.id, source: auth.source, action: "mission.quest_item_set", metadata: { questItemId: body.questItemId, required: body.required ?? false }, idempotencyKey: request.headers.get("idempotency-key") });
     return NextResponse.json({ data: detail });
   } catch {
     return NextResponse.json(

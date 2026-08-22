@@ -74,6 +74,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const [deletingChecklist, setDeletingChecklist] = useState<number | null>(null);
   const [checklistFilter, setChecklistFilter] = useState<"all" | "pending">("all");
   const [activity, setActivity] = useState<Array<{ id: string; action: string; occurredAt: string }>>([]);
+  const [activityState, setActivityState] = useState<"loading" | "ready" | "error">("loading");
   const undoStack = useRef<EditableSnapshot[]>([]);
   const redoStack = useRef<EditableSnapshot[]>([]);
   const skipTitleSave = useRef(false);
@@ -83,14 +84,22 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
   useEffect(() => {
-    const publicId = options.document?.publicId ?? current.displayId;
     let cancelled = false;
-    fetch(`/api/v2/contents/${encodeURIComponent(publicId)}/activity?limit=8`)
-      .then((response) => response.ok ? response.json() : null)
-      .then((payload) => { if (!cancelled && payload?.data) setActivity(payload.data); })
-      .catch(() => undefined);
+    setActivityState("loading");
+    fetch(`/api/v1/missions/${encodeURIComponent(current.displayId)}/activity?limit=8`)
+      .then((response) => {
+        if (!response.ok) throw new Error("activity_request_failed");
+        return response.json();
+      })
+      .then((payload) => {
+        if (!cancelled) {
+          setActivity(payload.data ?? []);
+          setActivityState("ready");
+        }
+      })
+      .catch(() => { if (!cancelled) setActivityState("error"); });
     return () => { cancelled = true; };
-  }, [current.displayId, options.document?.publicId]);
+  }, [current.displayId]);
   const fullDetailHref = detailHrefOverride ?? resolveFullDetailHref(current, options.document);
   const projectMissionsHref = options.document?.kind === "project" && current.project
     ? projectHref(current.project)
@@ -412,7 +421,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
             </DetailNavigationLink>
           ) : null}
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} onUpdate={documentMutation ? async (_missionId, input) => documentMutation(missionInputToDocumentUpdate(input, options.document?.kind ?? "mission")) : undefined} onStatusUpdate={documentMutation ? async (_missionId, status) => documentMutation({ properties: { status } }) : undefined} readOnly={!canUpdateDocument} responsibleReadOnly={!canMove} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdateDocument} moveReadOnly={!canMove} onDocumentChange={onBackingDocumentChange} /></div></section>
-          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]">{activity.length ? activity.map((event) => <ActivityItem key={event.id} label={event.action} date={event.occurredAt} tone={tone} />) : <ActivityItem label={`Estado: ${missionStatusLabel[current.status]}`} date={current.updatedAt} tone={missionStatusTone[current.status]} />}</div></section>
+          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]" aria-live="polite">{activityState === "loading" ? <EmptyText>Cargando actividad…</EmptyText> : activityState === "error" ? <EmptyText>No se pudo cargar la actividad.</EmptyText> : activity.length ? groupActivityByDay(activity).map((group) => <div key={group.day} className="flex flex-col gap-2.5"><time className="text-[10px] font-bold uppercase tracking-[0.05em] text-carbon/35" dateTime={group.day}>{formatActivityDay(group.day)}</time>{group.events.map((event) => <ActivityItem key={event.id} label={activityLabel(event.action)} date={event.occurredAt} tone={tone} />)}</div>) : <EmptyText>Sin actividad registrada.</EmptyText>}</div></section>
           {isMissionDocument && canUpdate ? <Button className="min-h-11 rounded-xl" disabled={isCompleted} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button> : null}
         </aside>
       </div>
@@ -623,6 +632,36 @@ export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => vo
 function IconButton({ label, onClick, className }: { label: string; onClick: () => void; className?: string }) { return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className={`size-6 rounded-md [&_svg]:size-3 ${className ?? ""}`} aria-label={label} onClick={onClick}><X aria-hidden="true" /></Button></TooltipTrigger><TooltipContent>Eliminar</TooltipContent></Tooltip>; }
 function EmptyText({ children }: { children: React.ReactNode }) { return <p className="m-0 text-sm text-carbon/45">{children}</p>; }
 function ActivityItem({ label, date, tone = "#9a9a98" }: { label: string; date: string; tone?: string }) { return <div className="flex gap-2.5"><span className="mt-1 size-2 shrink-0 rounded-full" style={{ backgroundColor: tone }} aria-hidden="true" /><span><strong className="block font-semibold text-carbon/75">{label}</strong><time className="font-mono text-[10.5px] text-carbon/40" dateTime={date}>{new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" }).format(new Date(date))}</time></span></div>; }
+
+function activityLabel(action: string) {
+  return ({
+    "mission.created": "Misión creada",
+    "mission.updated": "Misión actualizada",
+    "mission.deleted": "Misión eliminada",
+    "mission.status_changed": "Estado actualizado",
+    "mission.document_updated": "Documento actualizado",
+    "mission.dependency_added": "Dependencia agregada",
+    "mission.dependency_removed": "Dependencia eliminada",
+    "mission.quest_item_set": "Quest item actualizado",
+    "mission.quest_item_removed": "Quest item eliminado",
+    "mission.resource_added": "Recurso agregado",
+    "mission.resource_removed": "Recurso eliminado",
+    "mission.attachments_updated": "Evidencia actualizada",
+  } as Record<string, string>)[action] ?? "Misión actualizada";
+}
+
+export function groupActivityByDay<T extends { occurredAt: string }>(events: T[]) {
+  const groups = new Map<string, T[]>();
+  for (const event of events) {
+    const day = event.occurredAt.slice(0, 10);
+    groups.set(day, [...(groups.get(day) ?? []), event]);
+  }
+  return [...groups].map(([day, groupedEvents]) => ({ day, events: groupedEvents }));
+}
+
+function formatActivityDay(day: string) {
+  return new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${day}T00:00:00.000Z`));
+}
 
 const missionTypeBackground: Record<string, string> = { main_quest: "#FDECEC", side_quest: "#EEF2FF", farming_quest: "#E6F4EA", exploration_quest: "#F2EAFE" };
 const missionTypeSurfaceClass: Record<TlozMissionRecord["type"], string> = { main_quest: "bg-[#FDECEC] hover:bg-[#F9DDDE]", side_quest: "bg-[#EEF2FF] hover:bg-[#E1E8FF]", farming_quest: "bg-[#E6F4EA] hover:bg-[#D9EEDF]", exploration_quest: "bg-[#F2EAFE] hover:bg-[#E8DBFA]" };

@@ -126,23 +126,31 @@ export type PaginationInput = {
 
 export type TlozActivityEvent = {
   id: string;
-  contentId: string;
+  contentId: string | null;
+  entityType: string;
+  entityId: string;
+  entityPublicId: string;
   actorId: string;
   action: string;
+  source: "session" | "api_key" | "system";
   metadata: Record<string, unknown>;
   occurredAt: string;
 };
 
 export type TlozActivityInput = {
-  contentId: string;
+  contentId?: string;
+  entityType: string;
+  entityId: string;
+  entityPublicId: string;
   actorId: string;
   action: string;
+  source: TlozActivityEvent["source"];
   metadata?: Record<string, unknown>;
   idempotencyKey?: string;
 };
 
 export type TlozActivityRepository = {
-  list(contentId: string, pagination?: PaginationInput): Promise<PaginatedResult<TlozActivityEvent>>;
+  list(entityId: string, pagination?: PaginationInput): Promise<PaginatedResult<TlozActivityEvent>>;
   append(input: TlozActivityInput): Promise<TlozActivityEvent>;
 };
 

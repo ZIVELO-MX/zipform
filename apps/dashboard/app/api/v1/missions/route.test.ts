@@ -45,6 +45,7 @@ describe("POST /api/v1/missions", () => {
     mockedGetProjects.mockResolvedValue([{ id: "project-zivelo", slug: "zivelo" } as never]);
     mockedGetMissionDetail.mockResolvedValue({ id: "mission-1", checklistCount: 0, completed: 0 } as never);
     mockedAuthenticateRequest.mockResolvedValue({
+      source: "api_key",
       user: {
         id: "agent-1",
         name: "Zibot",

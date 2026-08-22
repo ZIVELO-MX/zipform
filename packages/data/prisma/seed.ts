@@ -34,6 +34,7 @@ function hashKey(key: string) {
 
 async function main() {
   await prisma.$transaction([
+    prisma.tlozActivityEvent.deleteMany(),
     prisma.tlozUserMissionState.deleteMany(),
     prisma.tlozResource.deleteMany(),
     prisma.tlozChecklistItem.deleteMany(),
