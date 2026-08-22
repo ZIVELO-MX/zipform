@@ -73,6 +73,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const [checklistTitleDraft, setChecklistTitleDraft] = useState("");
   const [deletingChecklist, setDeletingChecklist] = useState<number | null>(null);
   const [checklistFilter, setChecklistFilter] = useState<"all" | "pending">("all");
+  const [activity, setActivity] = useState<Array<{ id: string; action: string; occurredAt: string }>>([]);
   const undoStack = useRef<EditableSnapshot[]>([]);
   const redoStack = useRef<EditableSnapshot[]>([]);
   const skipTitleSave = useRef(false);
@@ -81,6 +82,15 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
+  useEffect(() => {
+    const publicId = options.document?.publicId ?? current.displayId;
+    let cancelled = false;
+    fetch(`/api/v2/contents/${encodeURIComponent(publicId)}/activity?limit=8`)
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => { if (!cancelled && payload?.data) setActivity(payload.data); })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [current.displayId, options.document?.publicId]);
   const fullDetailHref = detailHrefOverride ?? resolveFullDetailHref(current, options.document);
   const projectMissionsHref = options.document?.kind === "project" && current.project
     ? projectHref(current.project)
@@ -402,7 +412,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
             </DetailNavigationLink>
           ) : null}
           <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} onUpdate={documentMutation ? async (_missionId, input) => documentMutation(missionInputToDocumentUpdate(input, options.document?.kind ?? "mission")) : undefined} onStatusUpdate={documentMutation ? async (_missionId, status) => documentMutation({ properties: { status } }) : undefined} readOnly={!canUpdateDocument} responsibleReadOnly={!canMove} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdateDocument} moveReadOnly={!canMove} onDocumentChange={onBackingDocumentChange} /></div></section>
-          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]"><ActivityItem label={`Estado: ${missionStatusLabel[current.status]}`} date={current.updatedAt} tone={missionStatusTone[current.status]} /><ActivityItem label="Misión actualizada" date={current.updatedAt} tone={tone} /><ActivityItem label="Misión creada" date={current.createdAt} /></div></section>
+          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]">{activity.length ? activity.map((event) => <ActivityItem key={event.id} label={event.action} date={event.occurredAt} tone={tone} />) : <ActivityItem label={`Estado: ${missionStatusLabel[current.status]}`} date={current.updatedAt} tone={missionStatusTone[current.status]} />}</div></section>
           {isMissionDocument && canUpdate ? <Button className="min-h-11 rounded-xl" disabled={isCompleted} onClick={() => startTransition(async () => accept({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button> : null}
         </aside>
       </div>

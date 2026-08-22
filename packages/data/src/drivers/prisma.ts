@@ -30,6 +30,7 @@ import { assertAcyclicDependency, assertProjectScopedDependency } from "../depen
 import { RESERVED_TLOZ_SLUGS, slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 import { createPrismaDocumentRepository } from "./prisma-documents";
 import { createPrismaContainerContentStore } from "./prisma-container-content";
+import { createPrismaActivityRepository } from "../activity";
 import { createContainerContentDocumentRepository } from "../container-content-document";
 import { createCutoverDocumentRepository } from "../cutover-document-repository";
 import { PaginationCursorError } from "../pagination";
@@ -575,6 +576,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
 
   return {
     containerContent: containerContentStore,
+    activity: createPrismaActivityRepository(prisma),
     canonicalDocuments: createCutoverDocumentRepository(prisma, legacyDocuments, canonicalDocuments),
     user: {
       async getCurrent() {

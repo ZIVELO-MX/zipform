@@ -34,7 +34,10 @@ export type {
   UserFilters,
   UserRole,
   UserUpdateInput,
-  TlozDataClient
+  TlozDataClient,
+  TlozActivityEvent,
+  TlozActivityInput,
+  TlozActivityRepository
 } from "./contracts";
 export { currentUser, raulUser } from "./seed-data";
 export { assertProjectScopedDependency } from "./dependency-rules";

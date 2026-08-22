@@ -30,7 +30,24 @@ model Content {
   revision     Int       @default(1)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+  activityEvents TlozActivityEvent[]
 
   @@index([containerId, presentation, updatedAt, id])
   @@map("contents")
+}
+
+model TlozActivityEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  contentId      String
+  content        Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  actorId        String   @db.Uuid
+  actor          User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  action         String
+  metadata       Json     @default("{}")
+  idempotencyKey String?  @unique
+  occurredAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+
+  @@index([contentId, occurredAt, id])
+  @@map("tloz_activity_events")
 }
