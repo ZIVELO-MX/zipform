@@ -203,6 +203,11 @@ describe.each(factories)("%s Container/Content prototype", (_, createStore) => {
     )).rejects.toMatchObject({ code: "STORE_INVALID", fields: { title: "required" } });
     await expect(store.updateContent(
       "content-mission-75",
+      { data: { color: "red" } },
+      1,
+    )).rejects.toMatchObject({ code: "STORE_INVALID", fields: { color: "invalid" } });
+    await expect(store.updateContent(
+      "content-mission-75",
       {
         data: {
           relations: [{ contentId: "missing-content", relation: "depends_on" }],

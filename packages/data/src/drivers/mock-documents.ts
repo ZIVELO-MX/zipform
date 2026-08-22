@@ -176,6 +176,7 @@ export function createMockDocumentRepository(data: MockDocumentData): TlozDocume
             category: item.category,
             assignee: item.ownerId ?? null,
             icon: item.icon,
+            color: item.color,
             acquired: item.acquiredAt ?? null,
           }),
           ...visibleCustomProperties(documentState, inventoryProject.id),
@@ -422,7 +423,7 @@ function applyInventoryProperties(item: TlozQuestItem, properties?: Record<strin
   if (typeof properties.category === "string") item.category = properties.category as TlozQuestItem["category"];
   if (typeof properties.assignee === "string" || properties.assignee === null) item.ownerId = properties.assignee ?? undefined;
   if (typeof properties.icon === "string") item.icon = properties.icon;
-  if (typeof properties.color === "string") item.color = properties.color;
+  if (typeof properties.color === "string") item.color = properties.color.toUpperCase();
   if (typeof properties.acquired === "string" || properties.acquired === null) item.acquiredAt = properties.acquired ?? undefined;
 }
 

@@ -130,6 +130,16 @@ export function validateContentRecord(record: ContentRecord): void {
       { content: "invalid" },
     );
   }
+  if (
+    record.data.color !== undefined
+    && (typeof record.data.color !== "string" || !/^#[0-9A-F]{6}$/i.test(record.data.color))
+  ) {
+    throw new ContainerContentError(
+      "STORE_INVALID",
+      "El color de Content debe usar el formato #RRGGBB.",
+      { color: "invalid" },
+    );
+  }
 }
 
 export function getContentReferenceIds(record: ContentRecord): string[] {

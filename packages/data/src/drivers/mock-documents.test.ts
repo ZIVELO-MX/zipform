@@ -136,6 +136,26 @@ describe("mock document repository", () => {
     expect((await client.tloz.getMissionDetail(mission.source!.id))?.ownerId).toBe(nextOwner);
   });
 
+  it("projects and updates Inventory colors through the canonical document", async () => {
+    const client = createMockDataClient();
+    const inventory = (await client.documents.find({ kind: "inventory" }, { limit: 1 })).data[0];
+
+    expect(inventory.properties.color).toMatch(/^#[0-9A-F]{6}$/i);
+    const updated = await client.documents.update(inventory.id, {
+      properties: { color: "#ec4899" },
+    }, inventory.revision);
+
+    expect(updated.properties.color).toBe("#EC4899");
+    expect((await client.tloz.getQuestItems()).find((item) => item.id === inventory.source!.id)?.color)
+      .toBe("#EC4899");
+    await expect(client.documents.update(updated.id, {
+      properties: { color: "pink" },
+    }, updated.revision)).rejects.toMatchObject({
+      code: "DOCUMENT_INVALID",
+      fields: { "properties.color": "invalid" },
+    });
+  });
+
   it("advances cursor pagination without repeating records", async () => {
     const client = createMockDataClient();
     const first = await client.documents.find({}, { limit: 3 });

@@ -360,6 +360,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
           : undefined;
         if (mergedData) {
           const candidate = mapContent({ ...current, data: mergedData });
+          validateContentRecord(candidate);
           const referenceIds = getContentReferenceIds(candidate);
           const referenceCount = await prisma.content.count({
             where: { id: { in: [...new Set(referenceIds)] } },
