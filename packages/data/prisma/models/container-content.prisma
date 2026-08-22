@@ -38,16 +38,22 @@ model Content {
 
 model TlozActivityEvent {
   id             String   @id @default(uuid()) @db.Uuid
-  contentId      String
-  content        Content  @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  contentId      String?
+  content        Content? @relation(fields: [contentId], references: [id], onDelete: SetNull)
+  entityType     String
+  entityId       String
+  entityPublicId String
   actorId        String   @db.Uuid
   actor          User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
   action         String
+  source         String
   metadata       Json     @default("{}")
   idempotencyKey String?  @unique
   occurredAt     DateTime @default(now())
   createdAt      DateTime @default(now())
 
-  @@index([contentId, occurredAt, id])
+  @@index([entityType, entityId, occurredAt, id])
+  @@index([entityPublicId, occurredAt, id])
+  @@index([contentId])
   @@map("tloz_activity_events")
 }

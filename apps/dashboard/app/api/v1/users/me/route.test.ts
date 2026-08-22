@@ -16,6 +16,7 @@ describe("GET /api/v1/users/me", () => {
 
   it("returns the authenticated public profile", async () => {
     mockedAuthenticateRequest.mockResolvedValue({
+      source: "session",
       user: {
         id: "agent-1",
         name: "Zibot",
@@ -50,6 +51,7 @@ describe("GET /api/v1/users/me", () => {
 
   it("does not expose the reader agent email", async () => {
     mockedAuthenticateRequest.mockResolvedValue({
+      source: "session",
       user: {
         id: "zileo-1",
         name: "Zileo",

@@ -5,11 +5,11 @@ import { auth } from "../auth";
 import { authorizeApiRequest } from "./authorization";
 
 type AuthResult =
-  | { user: UserProfile }
+  | { user: UserProfile; source: "api_key" | "session" }
   | Response;
 
-function authenticated(user: UserProfile, request: NextRequest): AuthResult {
-  return authorizeApiRequest(request, user) ?? { user };
+function authenticated(user: UserProfile, request: NextRequest, source: "api_key" | "session"): AuthResult {
+  return authorizeApiRequest(request, user) ?? { user, source };
 }
 
 function unauthorizedResponse() {
@@ -34,11 +34,11 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
         const users = await dataClient.tloz.getUsers();
         const localUserId = process.env.TLOZ_LOCAL_API_USER_ID ?? process.env.ZIPFORM_LOCAL_API_USER_ID ?? "owner";
         const localUser = users.find((candidate) => candidate.id === localUserId);
-        if (localUser) return authenticated(localUser, request);
+        if (localUser) return authenticated(localUser, request, "api_key");
       }
 
       const user = await dataClient.agent.authenticateWithApiKey(apiKey);
-      if (user) return authenticated(user, request);
+      if (user) return authenticated(user, request, "api_key");
     }
     return unauthorizedResponse();
   }
@@ -46,7 +46,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
   const session = await auth();
   if (session?.user?.email) {
     const user = await dataClient.tloz.getUserByEmail(session.user.email);
-    if (user) return authenticated(user, request);
+    if (user) return authenticated(user, request, "session");
   }
 
   return unauthorizedResponse();

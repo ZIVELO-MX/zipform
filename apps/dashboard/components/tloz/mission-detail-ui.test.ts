@@ -92,4 +92,13 @@ describe("mission detail interaction contracts", () => {
     expect(attachmentClient).toContain('credentials: "omit"');
     expect(attachmentClient).not.toContain("TLOZ_TOKEN");
   });
+
+  it("renders persisted Mission activity with stable day groups and explicit states", () => {
+    expect(detail).toContain("/api/v1/missions/${encodeURIComponent(current.displayId)}/activity?limit=8");
+    expect(detail).toContain('activityState === "loading"');
+    expect(detail).toContain("Sin actividad registrada.");
+    expect(detail).toContain("groupActivityByDay(activity)");
+    expect(detail).toContain('const day = event.occurredAt.slice(0, 10)');
+    expect(detail).not.toContain("Estado: ${missionStatusLabel[current.status]}");
+  });
 });

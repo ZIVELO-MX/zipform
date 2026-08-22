@@ -45,7 +45,7 @@ describe("local API authentication", () => {
       headers: { authorization: "Bearer zaf_test_local" },
     }));
 
-    expect(result).toEqual({ user: localUser });
+    expect(result).toEqual({ user: localUser, source: "api_key" });
     expect(mocks.authenticateWithApiKey).not.toHaveBeenCalled();
   });
 
@@ -81,7 +81,7 @@ describe("local API authentication", () => {
       method: "POST",
       headers: { authorization: "Bearer zaf_reader" },
     }));
-    expect(query).toEqual({ user: readerUser });
+    expect(query).toEqual({ user: readerUser, source: "api_key" });
   });
 
   it("returns 401 for missing, malformed, invalid, and revoked credentials", async () => {
@@ -162,7 +162,7 @@ describe("local API authentication", () => {
     for (const path of paths) {
       await expect(authenticateRequest(new NextRequest(`http://localhost/api/v1/${path}`, {
         headers: { authorization: "Bearer zaf_reader" },
-      }))).resolves.toEqual({ user: readerUser });
+      }))).resolves.toEqual({ user: readerUser, source: "api_key" });
     }
   });
 
@@ -171,6 +171,6 @@ describe("local API authentication", () => {
     mocks.authenticateWithApiKey.mockResolvedValue(ownerUser);
     await expect(authenticateRequest(new NextRequest("http://localhost/api/v1/agents", {
       headers: { authorization: "Bearer zaf_owner" },
-    }))).resolves.toEqual({ user: ownerUser });
+    }))).resolves.toEqual({ user: ownerUser, source: "api_key" });
   });
 });
