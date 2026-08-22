@@ -5,6 +5,7 @@ import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation, isFullStackDeveloper, isReadOnlyAgent, toPublicMissionOwner } from "../../../../lib/authorization";
 import { observedJson } from "../../../../lib/read-telemetry";
 import { paginationErrorResponse, parsePaginationLimit } from "../../../../lib/api-pagination";
+import { recordMissionActivity } from "../../../../lib/mission-activity";
 
 const VALID_CREATE_FIELDS = new Set([
   "id", "title", "description", "descriptionDetail", "icon", "type", "status",
@@ -91,6 +92,7 @@ export async function POST(request: NextRequest) {
     });
     if (forbidden) return forbidden;
     const created = await dataClient.tloz.createMission(input as Parameters<typeof dataClient.tloz.createMission>[0]);
+    await recordMissionActivity({ mission: created, actorId: auth.user.id, source: auth.source, action: "mission.created", idempotencyKey: request.headers.get("idempotency-key") });
     const detail = await dataClient.tloz.getMissionDetail(created.id);
     return NextResponse.json({ data: detail }, { status: 201 });
   } catch (e) {

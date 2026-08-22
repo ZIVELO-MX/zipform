@@ -24,7 +24,7 @@ const actor: UserProfile = { id: "agent-1", name: "Zibot", username: "zibot", em
 
 describe("GET /api/v1/search", () => {
   beforeEach(() => {
-    auth.mockResolvedValue({ user: actor });
+    auth.mockResolvedValue({ user: actor, source: "session" });
     findDocuments.mockResolvedValue({ data: [], nextCursor: null });
     findResources.mockResolvedValue({ data: [], nextCursor: null });
     getDocument.mockResolvedValue(null);

@@ -636,6 +636,32 @@ describe("prisma integration", () => {
   });
 
   describe("concurrent-safe identifiers", () => {
+    itIf(hasDb)("persists ordered activity and deduplicates concurrent retries", async () => {
+      const entityId = `activity-${Date.now()}`;
+      const input = {
+        entityType: "mission",
+        entityId,
+        entityPublicId: "TLO-TEST",
+        actorId: "00000000-0000-4000-8000-000000000001",
+        action: "mission.updated",
+        source: "api_key" as const,
+        idempotencyKey: `retry-${entityId}`,
+      };
+      const events = await Promise.all([
+        client.activity.append(input),
+        client.activity.append(input),
+        client.activity.append(input),
+      ]);
+
+      expect(new Set(events.map((event) => event.id)).size).toBe(1);
+      await client.activity.append({ ...input, action: "mission.status_changed", idempotencyKey: undefined });
+      const page = await client.activity.list(entityId);
+      expect(page.data).toHaveLength(2);
+      expect(page.data.map((event) => event.occurredAt)).toEqual(
+        [...page.data].map((event) => event.occurredAt).sort().reverse(),
+      );
+    });
+
     itIf(hasDb)("handles concurrent project creation with unique slugs", async () => {
       const name = `Concurrent ${Date.now()}`;
       const results = await Promise.all([

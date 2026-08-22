@@ -3,6 +3,7 @@ import { dataClient } from "@tloz/data";
 import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
+import { recordMissionActivity } from "../../../../../../lib/mission-activity";
 
 const VALID_STATUSES: TlozMissionStatus[] = ["now", "next", "later", "completed", "blocked"];
 
@@ -38,7 +39,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mi
   try {
     const permission = await authorizeMissionOperation(auth.user, missionId);
     if (!permission.allowed) return permission.response;
-    await dataClient.tloz.patchMissionStatus(missionId, body.status as TlozMissionStatus);
+    const mission = await dataClient.tloz.patchMissionStatus(missionId, body.status as TlozMissionStatus);
+    await recordMissionActivity({ mission, actorId: auth.user.id, source: auth.source, action: "mission.status_changed", metadata: { status: body.status }, idempotencyKey: request.headers.get("idempotency-key") });
     return NextResponse.json({ data: await dataClient.tloz.getMissionDetail(missionId) });
   } catch {
     return NextResponse.json(

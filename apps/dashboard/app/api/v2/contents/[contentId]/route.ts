@@ -28,7 +28,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     const forbidden = authorizeApiOperation(auth.user, "update", { ownerId });
     if (forbidden) return forbidden;
     const updated = await dataClient.containerContent.updateContent(record.id, readUpdate(await request.json()), revision);
-    await dataClient.activity?.append({ contentId: record.id, actorId: auth.user.id, action: "content.updated", metadata: { revision: updated.revision }, idempotencyKey: request.headers.get("idempotency-key") ?? undefined });
+    await dataClient.activity?.append({ contentId: record.id, entityType: record.presentation, entityId: record.id, entityPublicId: record.publicId, actorId: auth.user.id, action: "content.updated", source: auth.source, metadata: { revision: updated.revision }, idempotencyKey: request.headers.get("idempotency-key") ?? undefined });
     return responseFor(request, updated);
   } catch (error) { return handleContainerContentError(error); }
 }
@@ -43,8 +43,8 @@ export async function DELETE(request: NextRequest, { params }: Context) {
     if (!record) return errorResponse("STORE_NOT_FOUND", "Content no encontrado.", 404);
     const forbidden = authorizeApiOperation(auth.user, "delete-mission");
     if (forbidden) return forbidden;
+    await dataClient.activity?.append({ contentId: record.id, entityType: record.presentation, entityId: record.id, entityPublicId: record.publicId, actorId: auth.user.id, action: "content.deleted", source: auth.source, idempotencyKey: request.headers.get("idempotency-key") ?? undefined });
     await dataClient.containerContent.deleteContent(record.id, revision);
-    await dataClient.activity?.append({ contentId: record.id, actorId: auth.user.id, action: "content.deleted", idempotencyKey: request.headers.get("idempotency-key") ?? undefined });
     return new Response(null, { status: 204 });
   } catch (error) { return handleContainerContentError(error); }
 }
