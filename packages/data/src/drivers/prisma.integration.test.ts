@@ -250,7 +250,7 @@ describe("prisma integration", () => {
       await client.containerContent.createContent({
         id: "canonical-only-content",
         publicId: "library-canonical-only",
-        containerId: "00000000-0000-0000-0000-000000000101",
+        containerId: "00000000-0000-4000-8000-000000000101",
         presentation: "library",
         title: "Canonical-only content",
         summary: "",
