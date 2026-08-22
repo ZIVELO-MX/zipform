@@ -138,7 +138,7 @@ function OptionValue({ value, options, status = false }: { value: string; option
 
 function optionColor(value: string, status: boolean) {
   if (status) {
-    return ({ now: "#1E8E5A", next: "#2D6CDF", later: "#7A4ED9", blocked: "#B91C22", completed: "#D72228", locked: "#7A5A12", unlocked: "#1E6B3C" } as Record<string, string>)[value] ?? "#6B6B6B";
+    return ({ active: "#4B8D5E", now: "#1E8E5A", next: "#2D6CDF", later: "#7A4ED9", blocked: "#B91C22", completed: "#D72228", locked: "#7A5A12", unlocked: "#1E6B3C" } as Record<string, string>)[value] ?? "#6B6B6B";
   }
   return ({ main_quest: "#D72228", side_quest: "#2D6CDF", farming_quest: "#1E8E5A", exploration_quest: "#7A4ED9", tool: "#2D6CDF", access: "#7A4ED9", asset: "#1E8E5A", document: "#7A5A12", other: "#6B6B6B", normal: "#3A47B5" } as Record<string, string>)[value] ?? "#6B6B6B";
 }
