@@ -37,6 +37,15 @@ describe("mock document repository", () => {
     expect(inventory.data[0].publicId).toMatch(/^INV-\d{4}$/);
   });
 
+  it("uses the configured green for the Project active status", async () => {
+    const client = createMockDataClient();
+    const definition = await client.documents.getDefinition("projects");
+    const status = definition?.fields.find((field) => field.key === "status");
+
+    expect(status?.options?.find((option) => option.value === "active")?.color)
+      .toBe("#4B8D5E");
+  });
+
   it("updates a document with optimistic revision checks and preserves custom values", async () => {
     const client = createMockDataClient();
     const source = missions[0];

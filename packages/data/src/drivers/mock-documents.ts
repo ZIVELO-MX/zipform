@@ -460,7 +460,7 @@ function mockDefinition(
         presentationField("title", "Project", "text", 1),
         presentationField("status", "Estado", "status", 2, [
           { value: "planned", label: "Planeado", role: "backlog", color: "#3A47B5" },
-          { value: "active", label: "Activo", role: "active", color: "#1E6B3C" },
+          { value: "active", label: "Activo", role: "active", color: "#4B8D5E" },
           { value: "archived", label: "Archivado", role: "done", color: "#6B6B6B" },
         ]),
         presentationField("category", "Tipo", "text", 3),
