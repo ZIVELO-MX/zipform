@@ -26,6 +26,13 @@ describe("mission status selector", () => {
     expect(source).toContain("<ProjectValue project={values.project ?? selectedProject} />");
   });
 
+  it("shows the inherited Mission color as a read-only property", () => {
+    const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
+    expect(source).toContain('label="Color"');
+    expect(source).toContain("inheritedColor");
+    expect(source).toContain("<InheritedColorValue value={inheritedColor} />");
+  });
+
   it("uses the shared projection and presentation metadata in detail rows", () => {
     const source = readFileSync(new URL("./mission-inline-editor.tsx", import.meta.url), "utf8");
     expect(source).toContain("options?.detailProperties?.core");

@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import {
   Button,
+  ColorPicker,
   Input,
   Select,
   SelectContent,
@@ -50,7 +51,6 @@ export function DocumentPropertyFields({
 
   useEffect(() => setCurrent(document), [document]);
   if (!current) return null;
-
   const customFields = fields.filter(
     (field) => field.visible && field.key !== "status" && field.key !== "category",
   );
@@ -240,6 +240,7 @@ function PropertyValue({
     return <span className={field.required ? "font-semibold text-[#B91C22]" : "text-carbon/40"}>{field.required ? "Pendiente" : "—"}</span>;
   }
   if (field.type === "boolean") return <span>{value ? "Sí" : "No"}</span>;
+  if (field.key === "color" && typeof value === "string") return <ColorValue value={value} />;
   if (field.type === "person") return <span>{users.find((user) => user.id === value)?.name ?? String(value)}</span>;
   if (field.type === "select") return <span>{field.options.find((option) => option.value === value)?.label ?? String(value)}</span>;
   if (Array.isArray(value)) {
@@ -257,6 +258,9 @@ function PresentationValue({
   value: TlozDocumentScalar;
   users: Array<{ id: string; name: string }>;
 }) {
+  if (field.key === "color" && typeof value === "string") {
+    return <ColorValue value={value} />;
+  }
   if (field.format === "status" && typeof value === "string") {
     const option = field.options?.find((candidate) => candidate.value === value);
     const tone = option?.color ?? statusTone(option?.role, value);
@@ -292,6 +296,14 @@ function PropertyEditor({
   users: Array<{ id: string; name: string }>;
   onChange: (value: TlozDocumentScalar) => void;
 }) {
+  if (field.key === "color") {
+    return (
+      <ColorPicker
+        value={typeof value === "string" ? value : "#6B6B6B"}
+        onValueChange={onChange}
+      />
+    );
+  }
   if (field.type === "select" || field.type === "boolean" || field.type === "person") {
     const options = field.type === "boolean"
       ? [{ value: "true", label: "Sí" }, { value: "false", label: "No" }]
@@ -385,6 +397,14 @@ function CreatePropertyEditor({
   users: Array<{ id: string; name: string }>;
   onChange: (value: TlozDocumentScalar) => void;
 }) {
+  if (field.key === "color") {
+    return (
+      <ColorPicker
+        value={typeof value === "string" ? value : "#6B6B6B"}
+        onValueChange={onChange}
+      />
+    );
+  }
   if (field.type === "select" || field.type === "boolean" || field.type === "person") {
     const options = field.type === "boolean"
       ? [{ value: "true", label: "Sí" }, { value: "false", label: "No" }]
@@ -464,5 +484,22 @@ function BlurInput({
         if (event.key === "Enter") event.currentTarget.blur();
       }}
     />
+  );
+}
+
+function ColorValue({ value }: { value: string }) {
+  const normalized = value.toUpperCase();
+  const valid = /^#[0-9A-F]{6}$/.test(normalized);
+  return (
+    <span className="inline-flex min-w-0 items-center gap-2">
+      <span
+        className="size-4 shrink-0 rounded-md border border-carbon/15 shadow-inner"
+        style={{ backgroundColor: valid ? normalized : "#6B6B6B" }}
+        aria-hidden="true"
+      />
+      <span className="truncate font-mono text-[11.5px] font-semibold">
+        {normalized}
+      </span>
+    </span>
   );
 }

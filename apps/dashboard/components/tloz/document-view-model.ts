@@ -19,6 +19,7 @@ export type TlozDetailCoreProperty =
 export type TlozDetailSystemProperty =
   | "status"
   | "category"
+  | "color"
   | "owner"
   | "assignee"
   | "project"
@@ -36,8 +37,8 @@ export type TlozDetailPropertyProjection = {
 
 export const DOCUMENT_DETAIL_PROPERTY_MATRIX = {
   mission: ["status", "category", "assignee", "project", "start", "due"],
-  project: ["status", "category", "owner", "start", "due", "mission_count"],
-  inventory: ["status", "category", "assignee", "acquired"],
+  project: ["status", "category", "owner", "start", "due", "mission_count", "color"],
+  inventory: ["status", "category", "assignee", "acquired", "color"],
 } as const satisfies Record<TlozDocumentKind, readonly TlozDetailSystemProperty[]>;
 
 export const DEFAULT_MISSION_DETAIL_CORE_PROPERTIES = [
@@ -64,6 +65,7 @@ const CORE_PROPERTY_BY_KEY: Partial<
 const SYSTEM_DETAIL_PROPERTIES = new Set<TlozDetailSystemProperty>([
   "status",
   "category",
+  "color",
   "owner",
   "assignee",
   "project",
@@ -96,7 +98,10 @@ export function resolveDocumentDetailPropertyProjection(
   definition: TlozDocumentDefinition,
 ): TlozDetailPropertyProjection {
   const detail = definition.views.find((view) => view.id === "detail");
-  const configuredKeys = detail?.fields ?? [];
+  const detailKeys = detail?.fields ?? [];
+  const configuredKeys = document.kind === "mission" || detailKeys.includes("color")
+    ? detailKeys
+    : [...detailKeys, "color"];
   const allowedSystemKeys = new Set<TlozDetailSystemProperty>(
     DOCUMENT_DETAIL_PROPERTY_MATRIX[document.kind],
   );
@@ -122,6 +127,19 @@ export function resolveDocumentDetailPropertyProjection(
   });
 
   return { core, fields };
+}
+
+export function resolveDocumentDetailColor(
+  document: TlozDocument,
+  inheritedColor?: string,
+  fallback = "#6B6B6B",
+) {
+  const configured = document.kind === "mission"
+    ? inheritedColor
+    : document.properties.color;
+  return typeof configured === "string" && /^#[0-9A-F]{6}$/i.test(configured)
+    ? configured.toUpperCase()
+    : fallback;
 }
 
 export function resolveVisibleDocumentFields(
