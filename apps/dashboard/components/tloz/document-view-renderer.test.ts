@@ -12,6 +12,7 @@ import {
   isDocumentDetailValuePresent,
   resolveDocumentDetailPropertyProjection,
   resolveDocumentDetailColor,
+  resolveDocumentRecordSelection,
   resolveVisibleDocumentFields,
 } from "./document-view-model";
 
@@ -217,6 +218,52 @@ describe("document view model", () => {
     expect(isDocumentDetailValuePresent([])).toBe(false);
     expect(isDocumentDetailValuePresent(0)).toBe(true);
     expect(isDocumentDetailValuePresent(false)).toBe(true);
+  });
+
+  it("resolves Mission documents across canonical and legacy identifiers", () => {
+    const legacyMission = {
+      ...document("FID-0001", {}),
+      id: "legacy-mission-1",
+      kind: "mission" as const,
+    };
+    const canonicalDocument = {
+      ...document("FID-0001", {}),
+      id: "document-1",
+      kind: "mission" as const,
+      source: { type: "mission" as const, id: legacyMission.id },
+    };
+    const record = documentToMissionView(legacyMission, []);
+
+    expect(resolveDocumentRecordSelection(
+      [{ ...canonicalDocument, id: legacyMission.id, source: undefined }],
+      record,
+      true,
+    )).toMatchObject({ kind: "document", document: { id: legacyMission.id } });
+    expect(resolveDocumentRecordSelection([canonicalDocument], record, true)).toEqual({
+      kind: "document",
+      document: canonicalDocument,
+    });
+    expect(resolveDocumentRecordSelection(
+      [{ ...canonicalDocument, source: undefined }],
+      record,
+      true,
+    )).toMatchObject({ kind: "document", document: { publicId: "FID-0001" } });
+  });
+
+  it("falls back to a legacy Mission only when the collection allows it", () => {
+    const record = documentToMissionView({
+      ...document("FID-0002", {}),
+      id: "legacy-mission-2",
+      kind: "mission",
+    }, []);
+
+    expect(resolveDocumentRecordSelection([], record, true)).toEqual({
+      kind: "legacy-mission",
+      mission: record,
+    });
+    expect(resolveDocumentRecordSelection([], record, false)).toEqual({
+      kind: "unavailable",
+    });
   });
 });
 
