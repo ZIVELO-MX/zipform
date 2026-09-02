@@ -284,7 +284,7 @@ export type TlozDataClient = {
     create(input: AgentCreateInput, createdByUserId: string): Promise<{ user: UserProfile; apiKey: ApiKeyCreateResult }>;
     listApiKeys(userId: string): Promise<ApiKey[]>;
     createApiKey(userId: string, name: string, createdByUserId: string): Promise<ApiKeyCreateResult>;
-    revokeApiKey(keyId: string): Promise<void>;
+    revokeApiKey(keyId: string, userId: string): Promise<boolean>;
     authenticateWithApiKey(key: string): Promise<UserProfile | null>;
   };
   documents: TlozDocumentRepository;

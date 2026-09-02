@@ -124,8 +124,10 @@ Owners, Full Stack Developers, and operative agents receive the operational
 profile needed for assignment. Reader agents receive a public profile without
 email.
 
-Only the Platform Owner may create users or agents, create/revoke/list API keys,
-or use other administrative surfaces. Platform Owners and `agent:operative` may
+Human users may create, list, and revoke only their own personal API keys through
+an active browser session. Only the Platform Owner may create users or agents and
+manage keys belonging to automation agents. API-key-authenticated requests cannot
+create, list, or revoke credentials. Platform Owners and `agent:operative` may
 change compatible roles through `PATCH /users/{userId}/role`; an operative cannot
 change itself or an existing Platform Owner. The last Platform Owner cannot be
 removed (`409`). No API response may expose a password hash, raw API key, key

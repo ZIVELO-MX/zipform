@@ -44,7 +44,7 @@ import {
   toast,
 } from "@tloz/ui";
 import type { ApiKey, Avatar as AvatarType, UserProfile } from "@tloz/types";
-import { createAgentApiKey, listAgentApiKeys, listAgents, listAvatars, revokeAgentApiKey } from "../lib/settings-actions";
+import { createAgentApiKey, createOwnApiKey, listAgentApiKeys, listAgents, listAvatars, listOwnApiKeys, revokeAgentApiKey, revokeOwnApiKey } from "../lib/settings-actions";
 import type { CreateApiKeyResult } from "../lib/settings-actions";
 import { updateProfile } from "../lib/settings-actions";
 import { useTlozCapabilities } from "./tloz/tloz-capabilities";
@@ -63,8 +63,6 @@ const themeOptions: Array<{ label: string; value: ThemeValue; icon: LucideIcon }
   { label: "Claro", value: "light", icon: Sun },
   { label: "Oscuro", value: "dark", icon: Moon },
 ];
-
-const agents = [{ id: "d5ca1936-3240-4247-8c2b-a7152a681311", name: "zibot", username: "zibot" }];
 
 export function SettingsDialog({
   open,
@@ -134,7 +132,7 @@ export function SettingsDialog({
         <div className="grid h-full min-h-0 grid-cols-1 bg-[#FCFCFB] md:grid-cols-[142px_minmax(0,1fr)]">
           <aside className="border-b border-carbon/[0.08] bg-[#FAFAF9] p-2.5 md:border-b-0 md:border-r md:pt-5">
             <nav className="flex gap-2 md:flex-col" aria-label="Secciones de configuración">
-              {sections.filter((item) => item.id !== "security" || capabilities.canManageAgents).map((item) => {
+              {sections.filter((item) => item.id !== "security" || capabilities.canManageAgents || capabilities.canManageOwnApiKeys).map((item) => {
                 const Icon = item.icon;
                 const selected = item.id === section;
                 return (
@@ -437,8 +435,9 @@ function ProfileSettings({
 }
 
 function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
-  const [keyName, setKeyName] = useState("Zibot production key");
-  const [agent, setAgent] = useState("d5ca1936-3240-4247-8c2b-a7152a681311");
+  const capabilities = useTlozCapabilities();
+  const [keyName, setKeyName] = useState("Personal TLOZ key");
+  const [agent, setAgent] = useState(currentUser.id);
   const [agents, setAgents] = useState<UserProfile[]>([]);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [createdKey, setCreatedKey] = useState<CreateApiKeyResult | null>(null);
@@ -446,17 +445,23 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
+    if (!capabilities.canManageAgents) return;
     listAgents().then(setAgents).catch((error) => toast.error(tlozErrorMessage(error, "No tienes permiso para administrar agentes")));
-  }, []);
+  }, [capabilities.canManageAgents]);
 
   useEffect(() => {
-    if (!agent) return;
+    if (agent === currentUser.id) {
+      listOwnApiKeys().then(setApiKeys).catch((error) => toast.error(tlozErrorMessage(error, "No tienes permiso para administrar tus API keys")));
+      return;
+    }
+    if (!capabilities.canManageAgents) return;
     listAgentApiKeys(agent).then(setApiKeys).catch((error) => toast.error(tlozErrorMessage(error, "No tienes permiso para administrar API keys")));
-  }, [agent]);
+  }, [agent, capabilities.canManageAgents, currentUser.id]);
 
-  const agentOptions = agents.map((a) => ({ id: a.id, name: a.name, username: a.username, avatarUrl: a.avatarUrl }));
-
-  const selectedAgentName = agents.find((a) => a.id === agent)?.name ?? agent;
+  const agentOptions = [
+    { id: currentUser.id, name: "Mi cuenta", username: currentUser.username, avatarUrl: currentUser.avatarUrl },
+    ...agents.map((a) => ({ id: a.id, name: a.name, username: a.username, avatarUrl: a.avatarUrl })),
+  ];
 
   return (
     <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]">
@@ -468,7 +473,7 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
             </span>
             <div className="min-w-0">
               <h3 className="m-0 text-[15px] font-bold text-carbon">Crear API key</h3>
-              <p className="m-0 mt-1 text-[12.5px] leading-5 text-carbon/55">Genera una llave para un agente autorizado.</p>
+              <p className="m-0 mt-1 text-[12.5px] leading-5 text-carbon/55">Genera una llave para tu cuenta o un agente autorizado.</p>
             </div>
           </div>
 
@@ -480,8 +485,8 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
               <Input id="api-key-name" value={keyName} onChange={(event) => setKeyName(event.target.value)} className="h-10 rounded-[11px] bg-white text-[13.5px]" />
             </Field>
             <Field className="gap-1.5">
-              <FieldLabel className="text-xs font-semibold text-[#454543]">Agente</FieldLabel>
-              <UserPicker users={agentOptions} value={agent} onValueChange={setAgent} label="Agente" />
+              <FieldLabel className="text-xs font-semibold text-[#454543]">Cuenta</FieldLabel>
+              <UserPicker users={agentOptions} value={agent} onValueChange={setAgent} label="Cuenta" />
             </Field>
           </FieldGroup>
 
@@ -508,7 +513,8 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
                       className="shrink-0 rounded-full text-carbon/45 hover:text-zivelo"
                       onClick={async () => {
                         try {
-                          await revokeAgentApiKey(key.id);
+                          if (agent === currentUser.id) await revokeOwnApiKey(key.id);
+                          else await revokeAgentApiKey(agent, key.id);
                           setApiKeys((current) => current.filter((k) => k.id !== key.id));
                           if (createdKey?.apiKey.id === key.id) {
                             setCreatedKey(null);
@@ -536,7 +542,7 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
 
       <footer className="relative flex justify-end border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[15px]">
         {keyPopoverOpen && <div className="fixed inset-0 z-40 bg-carbon/35 backdrop-blur-[2px]" aria-hidden="true" />}
-        <Popover open={keyPopoverOpen} onOpenChange={setKeyPopoverOpen}>
+        <Popover open={keyPopoverOpen} onOpenChange={(open) => { setKeyPopoverOpen(open); if (!open) setCreatedKey(null); }}>
           <PopoverTrigger asChild>
             <Button
               type="button"
@@ -546,7 +552,9 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
               onClick={async () => {
                 setPending(true);
                 try {
-                  const result = await createAgentApiKey(agent, keyName.trim() || "API key");
+                  const result = agent === currentUser.id
+                    ? await createOwnApiKey(keyName.trim() || "API key")
+                    : await createAgentApiKey(agent, keyName.trim() || "API key");
                   setApiKeys((current) => [result.apiKey, ...current]);
                   setCreatedKey(result);
                   setKeyPopoverOpen(true);

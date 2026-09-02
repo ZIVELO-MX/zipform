@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
-import { authenticateRequest } from "../../../../../../../lib/api-auth";
+import { authenticateSessionRequest } from "../../../../../../../lib/api-auth";
 
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ agentId: string; keyId: string }> }) {
-  const auth = await authenticateRequest(request);
+  const auth = await authenticateSessionRequest(request);
   if (auth instanceof Response) return auth;
 
   const { agentId, keyId } = await params;
@@ -16,7 +16,20 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   }
 
   try {
-    await dataClient.agent.revokeApiKey(keyId);
+    const agents = await dataClient.agent.list();
+    if (!agents.some((agent) => agent.id === agentId)) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Agente no encontrado.", requestId: crypto.randomUUID() } },
+        { status: 404 },
+      );
+    }
+    const revoked = await dataClient.agent.revokeApiKey(keyId, agentId);
+    if (!revoked) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "API key no encontrada.", requestId: crypto.randomUUID() } },
+        { status: 404 },
+      );
+    }
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

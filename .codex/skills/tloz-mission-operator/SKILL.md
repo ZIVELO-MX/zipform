@@ -14,7 +14,7 @@ Operate TLOZ data through the TLOZ Data API. Use `https://zipform.zivelo.dev` fo
 - For repeatable performance checks, run `pnpm perf:api` against local servers and compare the same workload; do not use production as a load-test target.
 - Read a resource before writing it and preserve unrelated content.
 - Inspect `GET /api/openapi` before using undocumented fields or operations.
-- Send the Bearer token from `TLOZ_TOKEN`; `ZIPFORM_TOKEN` is a one-release compatibility fallback. Never print, persist, commit, or place either value in a payload.
+- Send the Bearer token from `TLOZ_TOKEN`; for interactive work prefer the human user's personal key, while unattended automation may use an agent-owned key. `ZIPFORM_TOKEN` is a one-release compatibility fallback. Never print, persist, commit, or place either value in a payload.
 - Use the smallest valid mutation and verify every mutation with a subsequent GET.
 - Report failed, ambiguous, or unverified changes honestly.
 - Do not delete a mission without an explicit request identifying that mission.

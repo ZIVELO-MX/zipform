@@ -6,7 +6,7 @@ info:
     Document-first API for TLOZ Projects, Missions and Inventory.
     The v1 routes remain available temporarily as a compatibility bridge.
 
-    Authentication is via Bearer token (agent API key) or browser session cookie.
+    Authentication is via Bearer token (personal or agent API key) or browser session cookie.
     If both are present, the Bearer token takes priority.
   contact:
     name: TLOZ
@@ -143,6 +143,104 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "403":
           $ref: "#/components/responses/Forbidden"
+  /users/me/api-keys:
+    get:
+      operationId: listOwnApiKeys
+      summary: List the authenticated user's API keys
+      description: Returns key metadata only. Credential management requires an active browser session.
+      tags: [API Keys]
+      security:
+        - sessionCookie: []
+      responses:
+        "200":
+          description: API keys owned by the current user.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ApiKey"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createOwnApiKey
+      summary: Create an API key for the authenticated user
+      description: Generates a tloz_-prefixed key. The raw key is returned only once and credential management requires an active browser session.
+      tags: [API Keys]
+      security:
+        - sessionCookie: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [name]
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 120
+      responses:
+        "201":
+          description: API key created; raw secret shown once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyCreateResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+  /users/me/api-keys/{keyId}:
+    delete:
+      operationId: revokeOwnApiKey
+      summary: Revoke an API key owned by the authenticated user
+      tags: [API Keys]
+      security:
+        - sessionCookie: []
+      parameters:
+        - name: keyId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 128
+      responses:
+        "200":
+          description: Key revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success]
+                properties:
+                  success:
+                    type: boolean
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /users/{userId}:
     get:
       operationId: getUser
@@ -1611,6 +1709,8 @@ paths:
       summary: List or find agent accounts
       description: Returns all user profiles where type=agent. These are non-human accounts used for automation.
       tags: [Agents]
+      security:
+        - sessionCookie: []
       responses:
         "200":
           description: Agent list.
@@ -1633,8 +1733,10 @@ paths:
     post:
       operationId: createAgent
       summary: Create a new agent account
-      description: Creates a non-human user with type=agent and a default API key. The raw key is returned only once.
+      description: Creates a non-human user with type=agent and a default API key. The raw key is returned only once. Requires an active browser session.
       tags: [Agents]
+      security:
+        - sessionCookie: []
       requestBody:
         required: true
         content:
@@ -1678,7 +1780,10 @@ paths:
     get:
       operationId: listAgentApiKeys
       summary: List API keys for an agent
+      description: Returns key metadata only. Credential management requires an active browser session.
       tags: [API Keys]
+      security:
+        - sessionCookie: []
       parameters:
         - name: agentId
           in: path
@@ -1711,8 +1816,10 @@ paths:
     post:
       operationId: createAgentApiKey
       summary: Create a new API key for an agent
-      description: Generates a new tloz_-prefixed key. The raw key is returned only once.
+      description: Generates a new tloz_-prefixed key. The raw key is returned only once. Requires an active browser session.
       tags: [API Keys]
+      security:
+        - sessionCookie: []
       parameters:
         - name: agentId
           in: path
@@ -1751,6 +1858,8 @@ paths:
       operationId: revokeAgentApiKey
       summary: Revoke (delete) an API key
       tags: [API Keys]
+      security:
+        - sessionCookie: []
       parameters:
         - name: agentId
           in: path

@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
 import type { UserProfile } from "@tloz/types";
 import { auth } from "../auth";
-import { authorizeApiRequest } from "./authorization";
+import { authorizeApiRequest, forbiddenResponse } from "./authorization";
 
 type AuthResult =
   | { user: UserProfile; source: "api_key" | "session" }
@@ -50,4 +50,10 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
   }
 
   return unauthorizedResponse();
+}
+
+export async function authenticateSessionRequest(request: NextRequest): Promise<AuthResult> {
+  const result = await authenticateRequest(request);
+  if (result instanceof Response) return result;
+  return result.source === "session" ? result : forbiddenResponse();
 }

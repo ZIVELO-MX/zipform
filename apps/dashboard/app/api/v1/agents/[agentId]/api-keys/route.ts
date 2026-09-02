@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
-import { authenticateRequest } from "../../../../../../lib/api-auth";
+import { authenticateSessionRequest } from "../../../../../../lib/api-auth";
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ agentId: string }> }) {
-  const auth = await authenticateRequest(request);
+  const auth = await authenticateSessionRequest(request);
   if (auth instanceof Response) return auth;
 
   const { agentId } = await params;
@@ -16,6 +16,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   try {
+    const agents = await dataClient.agent.list();
+    if (!agents.some((agent) => agent.id === agentId)) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Agente no encontrado.", requestId: crypto.randomUUID() } },
+        { status: 404 },
+      );
+    }
     const keys = await dataClient.agent.listApiKeys(agentId);
     return NextResponse.json({ data: keys });
   } catch {
@@ -27,7 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ agentId: string }> }) {
-  const auth = await authenticateRequest(request);
+  const auth = await authenticateSessionRequest(request);
   if (auth instanceof Response) return auth;
 
   const { agentId } = await params;
@@ -58,6 +65,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
+    const agents = await dataClient.agent.list();
+    if (!agents.some((agent) => agent.id === agentId)) {
+      return NextResponse.json(
+        { error: { code: "NOT_FOUND", message: "Agente no encontrado.", requestId: crypto.randomUUID() } },
+        { status: 404 },
+      );
+    }
     const result = await dataClient.agent.createApiKey(agentId, name, auth.user.id);
     return NextResponse.json(result, { status: 201 });
   } catch {
@@ -67,4 +81,3 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     );
   }
 }
-
