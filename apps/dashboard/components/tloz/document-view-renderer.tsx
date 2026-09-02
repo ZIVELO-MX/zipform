@@ -8,7 +8,7 @@ import type {
   UserProfile,
 } from "@tloz/types";
 import { parseMarkdownChecklist } from "@tloz/data";
-import { SlideOver } from "@tloz/ui";
+import { SlideOver, toast } from "@tloz/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -25,11 +25,12 @@ import {
   updateDocument,
 } from "../../app/tloz/actions";
 import { useIsMobile } from "../../hooks/use-is-mobile";
-import { inventoryItemHref } from "../../lib/tloz-routes";
+import { inventoryItemHref, missionHref } from "../../lib/tloz-routes";
 import {
   documentValue,
   documentToMissionView,
   resolveDocumentDetailPropertyProjection,
+  resolveDocumentRecordSelection,
 } from "./document-view-model";
 import { useTlozViewState } from "./tloz-view-state";
 import { filterAndSortTlozRecords } from "./tloz-view-query";
@@ -38,6 +39,7 @@ import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import { MissionList, MissionTable, type MissionViewRecord } from "./mission-views";
 import { TlozViewHeader } from "./tloz-shell";
+import { MissionSlideOver } from "./mission-slide-over";
 
 const collectionViewConfig = {
   list: { title: "Lista", description: "Todas las missions · agrupadas por estado" },
@@ -66,6 +68,7 @@ export function DocumentViewRenderer({
   const router = useRouter();
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<TlozDocument | null>(null);
+  const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
   const displayRecords = useMemo<MissionViewRecord[]>(
     () => missionRecords ?? documents.map((document) => documentToMissionView(document, users)),
     [documents, missionRecords, users],
@@ -84,14 +87,30 @@ export function DocumentViewRenderer({
   function openDocument(document: TlozDocument) {
     const href = documentHref(document);
     if (isMobile) router.push(href);
-    else setSelected(document);
+    else {
+      setSelectedMission(null);
+      setSelected(document);
+    }
   }
 
   function openRecord(record: MissionViewRecord) {
-    const document = documents.find((candidate) => (
-      candidate.id === record.id || candidate.source?.id === record.id
-    ));
-    if (document) openDocument(document);
+    const selection = resolveDocumentRecordSelection(documents, record, Boolean(missionRecords));
+    if (selection.kind === "document") {
+      openDocument(selection.document);
+      return;
+    }
+    if (selection.kind === "legacy-mission") {
+      if (isMobile && selection.mission.project) {
+        router.push(missionHref(selection.mission.project, selection.mission.displayId));
+      } else {
+        setSelected(null);
+        setSelectedMission(selection.mission);
+      }
+      return;
+    }
+    toast.error("No se pudo abrir el detalle", {
+      description: "El registro no tiene un documento asociado.",
+    });
   }
 
   if (state.view !== "list" && state.view !== "table" && fallback) return fallback;
@@ -130,6 +149,10 @@ export function DocumentViewRenderer({
           />
         ) : null}
       </SlideOver>
+      <MissionSlideOver
+        mission={selectedMission}
+        onClose={() => setSelectedMission(null)}
+      />
     </>
   );
 }
@@ -440,5 +463,7 @@ function documentResourceKind(kind: TlozDocument["kind"]): "project" | "inventor
 function documentHref(document: TlozDocument) {
   return document.kind === "project"
     ? `/projects/${encodeURIComponent(document.publicId)}`
-    : inventoryItemHref(document.publicId);
+    : document.kind === "mission" && document.projectSlug
+      ? missionHref({ name: document.projectSlug, slug: document.projectSlug }, document.publicId)
+      : inventoryItemHref(document.publicId);
 }

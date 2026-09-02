@@ -35,6 +35,11 @@ export type TlozDetailPropertyProjection = {
   fields: TlozDocumentPresentationField[];
 };
 
+export type DocumentRecordSelection =
+  | { kind: "document"; document: TlozDocument }
+  | { kind: "legacy-mission"; mission: MissionViewRecord }
+  | { kind: "unavailable" };
+
 export const DOCUMENT_DETAIL_PROPERTY_MATRIX = {
   mission: ["status", "category", "assignee", "project", "start", "due"],
   project: ["status", "category", "owner", "start", "due", "mission_count", "color"],
@@ -85,6 +90,21 @@ export function documentValue(document: TlozDocument, key: string): TlozDocument
   if (key === "project") return document.parentId ?? null;
   if (key === "mission_count" && document.children) return document.children.total;
   return document.properties[key] ?? null;
+}
+
+export function resolveDocumentRecordSelection(
+  documents: TlozDocument[],
+  record: MissionViewRecord,
+  allowLegacyMission: boolean,
+): DocumentRecordSelection {
+  const document = documents.find((candidate) => (
+    candidate.id === record.id
+    || candidate.source?.id === record.id
+    || candidate.publicId === record.displayId
+  ));
+  if (document) return { kind: "document", document };
+  if (allowLegacyMission) return { kind: "legacy-mission", mission: record };
+  return { kind: "unavailable" };
 }
 
 export function isDocumentDetailValuePresent(value: TlozDocumentScalar) {
