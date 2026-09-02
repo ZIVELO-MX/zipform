@@ -16,6 +16,7 @@ export function useTlozCapabilities() {
     canMove: false,
     canDelete: false,
     canManageRoles: false,
+    canManageOwnApiKeys: false,
     canManageAgents: false,
   } satisfies TlozUiCapabilities;
 }

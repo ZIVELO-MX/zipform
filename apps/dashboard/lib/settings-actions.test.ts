@@ -27,7 +27,7 @@ vi.mock("@tloz/data", () => ({
   }
 }));
 
-import { createAgentApiKey, listAgentApiKeys, listAgents, listAvatars, revokeAgentApiKey } from "./settings-actions";
+import { createAgentApiKey, createOwnApiKey, listAgentApiKeys, listAgents, listAvatars, listOwnApiKeys, revokeAgentApiKey, revokeOwnApiKey } from "./settings-actions";
 
 const agentUser: UserProfile = {
   id: "d5ca1936-3240-4247-8c2b-a7152a681311",
@@ -86,6 +86,7 @@ describe("settings actions (agent)", () => {
   describe("listAgentApiKeys", () => {
     it("returns API keys when authenticated", async () => {
       mocks.auth.mockResolvedValue(ownerSession);
+      mocks.list.mockResolvedValue([agentUser]);
       mocks.listApiKeys.mockResolvedValue([apiKey]);
 
       await expect(listAgentApiKeys("d5ca1936-3240-4247-8c2b-a7152a681311")).resolves.toEqual([apiKey]);
@@ -102,6 +103,7 @@ describe("settings actions (agent)", () => {
   describe("createAgentApiKey", () => {
     it("creates an API key with the session user as creator", async () => {
       mocks.auth.mockResolvedValue(ownerSession);
+      mocks.list.mockResolvedValue([agentUser]);
       mocks.createApiKey.mockResolvedValue({ key: "zaf_abc123", apiKey });
 
       const result = await createAgentApiKey("d5ca1936-3240-4247-8c2b-a7152a681311", "test key");
@@ -117,26 +119,51 @@ describe("settings actions (agent)", () => {
     });
   });
 
+  describe("personal API keys", () => {
+    it("lists, creates, and revokes the current user's key", async () => {
+      mocks.auth.mockResolvedValue(ownerSession);
+      mocks.listApiKeys.mockResolvedValue([apiKey]);
+      mocks.createApiKey.mockResolvedValue({ key: "tloz_personal", apiKey });
+      mocks.revokeApiKey.mockResolvedValue(true);
+
+      await expect(listOwnApiKeys()).resolves.toEqual([apiKey]);
+      await expect(createOwnApiKey("Benrod personal key")).resolves.toEqual({ key: "tloz_personal", apiKey });
+      await revokeOwnApiKey("key-1");
+
+      expect(mocks.listApiKeys).toHaveBeenCalledWith("owner");
+      expect(mocks.createApiKey).toHaveBeenCalledWith("owner", "Benrod personal key", "owner");
+      expect(mocks.revokeApiKey).toHaveBeenCalledWith("key-1", "owner");
+    });
+
+    it("rejects agent sessions from personal key management", async () => {
+      mocks.auth.mockResolvedValue({ user: { id: "operative", type: "agent", role: "agent:operative" } });
+
+      await expect(listOwnApiKeys()).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+      expect(mocks.listApiKeys).not.toHaveBeenCalled();
+    });
+  });
+
   describe("revokeAgentApiKey", () => {
     it("revokes an API key when authenticated", async () => {
       mocks.auth.mockResolvedValue(ownerSession);
-      mocks.revokeApiKey.mockResolvedValue(undefined);
+      mocks.list.mockResolvedValue([agentUser]);
+      mocks.revokeApiKey.mockResolvedValue(true);
 
-      await revokeAgentApiKey("key-1");
-      expect(mocks.revokeApiKey).toHaveBeenCalledWith("key-1");
+      await revokeAgentApiKey("d5ca1936-3240-4247-8c2b-a7152a681311", "key-1");
+      expect(mocks.revokeApiKey).toHaveBeenCalledWith("key-1", "d5ca1936-3240-4247-8c2b-a7152a681311");
     });
 
     it("rejects reader agents from key administration", async () => {
       mocks.auth.mockResolvedValue({ user: { id: "reader", type: "agent", role: "agent:reader" } });
 
-      await expect(revokeAgentApiKey("key-1")).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+      await expect(revokeAgentApiKey("agent-1", "key-1")).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
       expect(mocks.revokeApiKey).not.toHaveBeenCalled();
     });
 
     it("throws when not authenticated", async () => {
       mocks.auth.mockResolvedValue(null);
 
-      await expect(revokeAgentApiKey("key-1")).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
+      await expect(revokeAgentApiKey("agent-1", "key-1")).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
     });
   });
 

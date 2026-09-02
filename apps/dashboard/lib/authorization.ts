@@ -17,6 +17,7 @@ export type TlozOperation =
   | "structure"
   | "delete-mission"
   | "manage-roles"
+  | "manage-own-api-keys"
   | "admin";
 
 export type TlozAuthorizationContext = {
@@ -36,6 +37,7 @@ export type TlozUiCapabilities = {
   canMove: boolean;
   canDelete: boolean;
   canManageRoles: boolean;
+  canManageOwnApiKeys: boolean;
   canManageAgents: boolean;
 };
 
@@ -47,6 +49,7 @@ export function tlozUiCapabilities(actor: Actor): TlozUiCapabilities {
     canMove: authorizeTlozOperation(actor, "move").allowed,
     canDelete: authorizeTlozOperation(actor, "delete-mission").allowed,
     canManageRoles: authorizeTlozOperation(actor, "manage-roles", { targetUserId: "another-user" }).allowed,
+    canManageOwnApiKeys: authorizeTlozOperation(actor, "manage-own-api-keys", { targetUserId: actor.id }).allowed,
     canManageAgents: authorizeTlozOperation(actor, "admin").allowed,
   };
 }
@@ -97,6 +100,11 @@ export function authorizeTlozOperation(
   }
   if (operation === "admin") {
     return role === "owner" ? { allowed: true } : { allowed: false, code: "FORBIDDEN", status: 403 };
+  }
+  if (operation === "manage-own-api-keys") {
+    return (role === "owner" || role === "developer") && context.targetUserId === actor.id
+      ? { allowed: true }
+      : { allowed: false, code: "FORBIDDEN", status: 403 };
   }
   if (operation === "delete-mission") {
     return role === "owner" || role === "operative"

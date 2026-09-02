@@ -2,7 +2,7 @@
 
 ## Configure the token
 
-Use `TLOZ_TOKEN` in the environment that launches the agent. `ZIPFORM_TOKEN` remains a one-release compatibility fallback for existing installations.
+Use `TLOZ_TOKEN` in the environment that launches the agent. For interactive work delegated by a human, prefer a personal key created by that user in Configuración; the API will authenticate the agent as that user. Use an agent-owned key for unattended automation or when an agent identity is explicitly required. `ZIPFORM_TOKEN` remains a one-release compatibility fallback for existing installations.
 
 For Bash, Zsh, macOS, Linux, or WSL:
 
@@ -56,4 +56,4 @@ curl --fail-with-body --silent --show-error \
 - `400` or `422`: inspect `error.fields` and the current OpenAPI schema.
 - `500`: do not claim success; GET the affected resource when safe.
 
-If a key was lost or revoked, create a replacement through `POST /api/v1/agents/{agentId}/api-keys`. Raw keys are returned only once. Revoke keys through `DELETE /api/v1/agents/{agentId}/api-keys/{keyId}`.
+Personal keys are created and revoked from an active browser session through `/api/v1/users/me/api-keys`; raw keys are returned only once. Platform Owners can manage agent keys from an active browser session through `/api/v1/agents/{agentId}/api-keys`. API-key-authenticated requests cannot create, list, or revoke credentials. If a personal key is lost or revoked, create a replacement in Configuración and export the new raw value as `TLOZ_TOKEN` before launching the agent.

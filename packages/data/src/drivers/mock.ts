@@ -106,8 +106,10 @@ export function createMockDataClient(): TlozDataClient {
         apiKeysStore.push({ key: rawKey, ...apiKey });
         return { key: rawKey, apiKey } satisfies ApiKeyCreateResult;
       },
-      async revokeApiKey(keyId: string) {
-        apiKeysStore = apiKeysStore.filter((k) => k.id !== keyId);
+      async revokeApiKey(keyId: string, userId: string) {
+        const before = apiKeysStore.length;
+        apiKeysStore = apiKeysStore.filter((k) => !(k.id === keyId && k.userId === userId));
+        return apiKeysStore.length < before;
       },
       async authenticateWithApiKey(key: string) {
         const stored = apiKeysStore.find((k) => k.key === key);

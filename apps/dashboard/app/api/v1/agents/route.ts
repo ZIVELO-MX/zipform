@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
-import { authenticateRequest } from "../../../../lib/api-auth";
+import { authenticateSessionRequest } from "../../../../lib/api-auth";
 
 export async function GET(request: NextRequest) {
-  const auth = await authenticateRequest(request);
+  const auth = await authenticateSessionRequest(request);
   if (auth instanceof Response) return auth;
 
   try {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await authenticateRequest(request);
+  const auth = await authenticateSessionRequest(request);
   if (auth instanceof Response) return auth;
 
   let body: unknown;

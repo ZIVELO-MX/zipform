@@ -27,7 +27,7 @@ describe("TLOZ authorization policy", () => {
   it("serializes server-derived UI capabilities without role logic in the client", () => {
     expect(tlozUiCapabilities(actors.owner)).toMatchObject({ canCreate: true, canUpdate: true, canMove: true, canDelete: true, canManageAgents: true });
     expect(tlozUiCapabilities(actors.operative)).toMatchObject({ canCreate: true, canUpdate: true, canMove: true, canDelete: true, canManageRoles: true, canManageAgents: false });
-    expect(tlozUiCapabilities(actors.reader)).toEqual({ canCreate: false, canUpdate: false, canMove: false, canDelete: false, canManageRoles: false, canManageAgents: false });
+    expect(tlozUiCapabilities(actors.reader)).toEqual({ canCreate: false, canUpdate: false, canMove: false, canDelete: false, canManageRoles: false, canManageOwnApiKeys: false, canManageAgents: false });
   });
   it("implements the role matrix with deny-by-default behavior", () => {
     const cases: Array<[keyof typeof actors, TlozOperation, Record<string, string | boolean>, boolean]> = [
@@ -50,6 +50,10 @@ describe("TLOZ authorization policy", () => {
       ["operative", "structure", {}, true],
       ["reader", "mutate", {}, false],
       ["owner", "admin", {}, true],
+      ["owner", "manage-own-api-keys", { targetUserId: "owner-1" }, true],
+      ["developer", "manage-own-api-keys", { targetUserId: "developer-1" }, true],
+      ["developer", "manage-own-api-keys", { targetUserId: "owner-1" }, false],
+      ["operative", "manage-own-api-keys", { targetUserId: "operative-1" }, false],
       ["developer", "admin", {}, false],
       ["operative", "admin", {}, false],
       ["reader", "admin", {}, false],

@@ -15,7 +15,7 @@ vi.mock("@tloz/data", () => ({
 }));
 vi.mock("../auth", () => ({ auth: mocks.auth }));
 
-import { authenticateRequest } from "./api-auth";
+import { authenticateRequest, authenticateSessionRequest } from "./api-auth";
 
 const localUser = { id: "owner", name: "Owner", username: "owner", email: "owner@tloz.dev", role: "Platform Owner", type: "human", avatarUrl: "", theme: "system" };
 const readerUser = { id: "zileo", name: "Zileo", username: "zileo", email: "zileo@zivelo.dev", role: "agent:reader", type: "agent", avatarUrl: "", theme: "system" };
@@ -172,5 +172,17 @@ describe("local API authentication", () => {
     await expect(authenticateRequest(new NextRequest("http://localhost/api/v1/agents", {
       headers: { authorization: "Bearer zaf_owner" },
     }))).resolves.toEqual({ user: ownerUser, source: "api_key" });
+  });
+
+  it("requires a browser session for credential administration", async () => {
+    process.env.ZIPFORM_DATA_DRIVER = "prisma";
+    mocks.authenticateWithApiKey.mockResolvedValue(ownerUser);
+
+    const result = await authenticateSessionRequest(new NextRequest("http://localhost/api/v1/users/me/api-keys", {
+      headers: { authorization: "Bearer zaf_owner" },
+    }));
+
+    expect(result).toBeInstanceOf(Response);
+    if (result instanceof Response) expect(result.status).toBe(403);
   });
 });

@@ -644,8 +644,9 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         });
         return { key: rawKey, apiKey: mapApiKey(row) } satisfies ApiKeyCreateResult;
       },
-      async revokeApiKey(keyId: string) {
-        await prisma.apiKey.delete({ where: { id: keyId } });
+      async revokeApiKey(keyId: string, userId: string) {
+        const result = await prisma.apiKey.deleteMany({ where: { id: keyId, userId } });
+        return result.count > 0;
       },
       async authenticateWithApiKey(key: string) {
         const rows = await prisma.apiKey.findMany({ where: { keyPrefix: key.slice(0, 12) } });
