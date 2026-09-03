@@ -1,13 +1,24 @@
 # TLOZ Mission Operator
 
-La skill canónica está versionada en [`.codex/skills/tloz-mission-operator`](../../.codex/skills/tloz-mission-operator/SKILL.md).
+La skill canónica vive en el repositorio [`zivelo-skills`](https://github.com/ZIVELO-MX/zivelo-skills),
+en `skills/operations/tloz-mission-operator`. Este repositorio ya no versiona su propia copia:
+`zivelo-skills` es la fuente de verdad.
 
-## Codex
+## Instalación
 
-Al abrir este repositorio, Codex puede descubrir la skill desde `.codex/skills`. También puede copiarse la carpeta completa a `${CODEX_HOME:-$HOME/.codex}/skills/` para instalarla globalmente. Después, instalar el CLI reutilizable con `node ${CODEX_HOME:-$HOME/.codex}/skills/tloz-mission-operator/scripts/install-tloz-api.mjs`; quedará en `${HOME}/.local/bin/tloz-api`.
+Desde un clon de `zivelo-skills`:
 
-## Otros agentes
+```bash
+node scripts/install.mjs --agents codex,claude --categories operations
+```
 
-Copiar la carpeta completa al directorio de skills soportado por el agente. Conservar juntos `SKILL.md`, `agents/` y `references/`; las referencias forman parte de las instrucciones operativas.
+El instalador coloca la skill en el directorio de cada agente y deja el CLI `tloz-api` en
+`${HOME}/.local/bin`. Si ese directorio no está en `PATH`, invoca la ruta absoluta o agrégalo al
+entorno del agente.
 
-Configurar `TLOZ_TOKEN` en el proceso que inicia el agente. Nunca guardar el valor real en el repositorio. La skill usa `tloz-api` para llamadas de producción y conserva `pnpm tloz:api` como alias dentro de TLOZ.
+## Uso desde este repositorio
+
+`pnpm tloz:api /api/v1/... [GET|POST|PATCH|PUT|DELETE]` es un alias del CLI instalado. El CLI fija
+el origen de producción, lee el token de `ZIPFORM_TOKEN` y nunca lo imprime.
+
+Las pruebas del CLI viven junto a su implementación, en `zivelo-skills/tests/tloz-api.test.mjs`.
