@@ -23,3 +23,7 @@ scripts/
 .claude
 .playwright
 .playwright-cli
+
+# Playwright evidence stays local or in CI artifacts.
+test-results/
+playwright-report/

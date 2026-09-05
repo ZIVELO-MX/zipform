@@ -94,9 +94,9 @@ export async function TlozPageShell({
           controlCreate={controlCreate}
         />
 
-        <main className="tloz-page-content" id="tloz-content" tabIndex={-1}>
+        <div className="tloz-page-content" id="tloz-content" tabIndex={-1}>
           {children}
-        </main>
+        </div>
       </div>
     </TlozViewStateProvider>
     </TlozCreateProvider>

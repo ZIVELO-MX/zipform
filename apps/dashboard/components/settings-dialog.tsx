@@ -5,13 +5,10 @@ import {
   Copy,
   KeyRound,
   Mail,
-  Monitor,
-  Moon,
   Pencil,
   Search,
   Settings,
   ShieldCheck,
-  Sun,
   Trash2,
   User,
   X,
@@ -34,7 +31,7 @@ import {
   PopoverDescription,
   PopoverHeader,
   PopoverTitle,
-  PopoverTrigger,
+  PopoverAnchor,
   Separator,
   Tooltip,
   TooltipContent,
@@ -51,17 +48,10 @@ import { useTlozCapabilities } from "./tloz/tloz-capabilities";
 import { tlozErrorMessage } from "../lib/tloz-error";
 
 type SettingsSection = "profile" | "security";
-type ThemeValue = "system" | "light" | "dark";
 
 const sections: Array<{ id: SettingsSection; label: string; icon: LucideIcon }> = [
   { id: "profile", label: "Perfil", icon: User },
   { id: "security", label: "Seguridad", icon: ShieldCheck },
-];
-
-const themeOptions: Array<{ label: string; value: ThemeValue; icon: LucideIcon }> = [
-  { label: "Sistema", value: "system", icon: Monitor },
-  { label: "Claro", value: "light", icon: Sun },
-  { label: "Oscuro", value: "dark", icon: Moon },
 ];
 
 export function SettingsDialog({
@@ -77,46 +67,47 @@ export function SettingsDialog({
   const [section, setSection] = useState<SettingsSection>("profile");
   const [name, setName] = useState(user.name);
   const [username, setUsername] = useState(user.username);
-  const [theme, setTheme] = useState<ThemeValue>(user.theme || "system");
   const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || "");
   const [avatarSearch, setAvatarSearch] = useState("");
   const [avatars, setAvatars] = useState<AvatarType[]>([]);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
-    listAvatars().then(setAvatars).catch((error) => toast.error(tlozErrorMessage(error, "Error al cargar avatares")));
-  }, []);
+    if (!open) return;
+    let active = true;
+    listAvatars().then((items) => { if (active) setAvatars(items); }).catch((error) => { if (active) toast.error(tlozErrorMessage(error, "Error al cargar avatares")); });
+    return () => { active = false; };
+  }, [open]);
 
   const currentAvatar = avatars.find((a) => a.imageUrl && a.imageUrl === avatarUrl) ?? null;
   const filteredAvatars = avatars.filter((a) =>
     a.name.toLocaleLowerCase("es").includes(avatarSearch.trim().toLocaleLowerCase("es"))
   );
 
-  const hasChanges = name !== user.name || username !== user.username || theme !== (user.theme || "system") || avatarUrl !== (user.avatarUrl || "");
+  const hasChanges = name !== user.name || username !== user.username || avatarUrl !== (user.avatarUrl || "");
 
   const handleSave = useCallback(() => {
     startTransition(async () => {
       try {
-        await updateProfile({ name, username, theme, avatarUrl: avatarUrl || undefined });
+        await updateProfile({ name, username, avatarUrl: avatarUrl || undefined });
         toast.success("Perfil actualizado");
         onOpenChange(false);
       } catch (error) {
         toast.error(tlozErrorMessage(error, "Error al guardar los cambios"));
       }
     });
-  }, [name, username, theme, avatarUrl, onOpenChange]);
+  }, [name, username, avatarUrl, onOpenChange]);
 
   const handleCancel = useCallback(() => {
     setName(user.name);
     setUsername(user.username);
-    setTheme(user.theme || "system");
     setAvatarUrl(user.avatarUrl || "");
     onOpenChange(false);
   }, [onOpenChange, user]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Configuración" className="grid h-[min(680px,calc(100dvh-96px))] max-w-[620px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 md:grid-rows-[minmax(0,1fr)]">
+      <DialogContent title="Configuración" className="grid h-[min(680px,calc(100dvh-2rem))] max-w-[620px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 md:grid-rows-[minmax(0,1fr)]">
         <header className="flex items-center justify-between border-b border-carbon/[0.08] px-5 py-[17px] md:hidden">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-tintred text-zivelo">
@@ -129,8 +120,8 @@ export function SettingsDialog({
           </Button>
         </header>
 
-        <div className="grid h-full min-h-0 grid-cols-1 bg-[#FCFCFB] md:grid-cols-[142px_minmax(0,1fr)]">
-          <aside className="border-b border-carbon/[0.08] bg-[#FAFAF9] p-2.5 md:border-b-0 md:border-r md:pt-5">
+        <div className="grid h-full min-h-0 grid-cols-1 grid-rows-[auto_minmax(0,1fr)] bg-[#FCFCFB] md:grid-rows-1 md:grid-cols-[142px_minmax(0,1fr)]">
+          <aside className="border-b border-carbon/[0.08] bg-[#FAFAF9] p-2.5 md:flex md:flex-col md:border-b-0 md:border-r md:pt-5">
             <nav className="flex gap-2 md:flex-col" aria-label="Secciones de configuración">
               {sections.filter((item) => item.id !== "security" || capabilities.canManageAgents || capabilities.canManageOwnApiKeys).map((item) => {
                 const Icon = item.icon;
@@ -152,6 +143,7 @@ export function SettingsDialog({
                 );
               })}
             </nav>
+            <Button type="button" variant="ghost" size="sm" className="mt-auto hidden md:flex" onClick={handleCancel}>Cerrar configuración</Button>
           </aside>
 
           <main className="grid min-h-0 min-w-0 bg-white">
@@ -163,7 +155,6 @@ export function SettingsDialog({
                 avatarSearch={avatarSearch}
                 filteredAvatars={filteredAvatars}
                 name={name}
-                theme={theme}
                 username={username}
                 email={user.email}
                 hasChanges={hasChanges}
@@ -171,7 +162,6 @@ export function SettingsDialog({
                 onAvatarChange={setAvatarUrl}
                 onAvatarSearchChange={setAvatarSearch}
                 onNameChange={setName}
-                onThemeChange={setTheme}
                 onUsernameChange={setUsername}
                 onSave={handleSave}
                 onCancel={handleCancel}
@@ -193,7 +183,6 @@ function ProfileSettings({
   avatarSearch,
   filteredAvatars,
   name,
-  theme,
   username,
   email,
   hasChanges,
@@ -201,7 +190,6 @@ function ProfileSettings({
   onAvatarChange,
   onAvatarSearchChange,
   onNameChange,
-  onThemeChange,
   onUsernameChange,
   onSave,
   onCancel,
@@ -212,7 +200,6 @@ function ProfileSettings({
   avatarSearch: string;
   filteredAvatars: AvatarType[];
   name: string;
-  theme: ThemeValue;
   username: string;
   email: string;
   hasChanges: boolean;
@@ -220,7 +207,6 @@ function ProfileSettings({
   onAvatarChange: (value: string) => void;
   onAvatarSearchChange: (value: string) => void;
   onNameChange: (value: string) => void;
-  onThemeChange: (value: ThemeValue) => void;
   onUsernameChange: (value: string) => void;
   onSave: () => void;
   onCancel: () => void;
@@ -240,8 +226,8 @@ function ProfileSettings({
         <div className="flex w-full max-w-[360px] flex-col gap-5">
           <div className="flex items-center gap-4">
             <Avatar className="size-[72px] rounded-full shadow-[0_6px_16px_rgba(29,29,27,0.14)]">
-              {currentAvatar?.imageUrl ? (
-                <AvatarImage src={currentAvatar.imageUrl} alt={currentAvatar.name} />
+              {avatarUrl ? (
+                <AvatarImage src={avatarUrl} alt={currentAvatar?.name ?? "Avatar del perfil"} />
               ) : null}
               <AvatarFallback className="bg-carbon text-lg font-semibold text-white">
                 {initials}
@@ -256,21 +242,8 @@ function ProfileSettings({
                 Cambiar avatar
               </Button>
 
-              {/* Avatar picker overlay */}
-              <div
-                className={cn(
-                  "fixed inset-0 z-[60] flex items-center justify-center bg-carbon/30 backdrop-blur-sm p-6 transition-all duration-200",
-                  avatarPickerOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-                )}
-                onClick={() => setAvatarPickerOpen(false)}
-              >
-                <div
-                  className={cn(
-                    "flex w-[460px] max-w-full flex-col overflow-hidden rounded-[18px] border border-carbon/10 bg-paper shadow-[0_32px_80px_rgba(29,29,27,0.32)] transition-all duration-200",
-                    avatarPickerOpen ? "scale-100 opacity-100" : "scale-95 opacity-0"
-                  )}
-                  onClick={(e) => e.stopPropagation()}
-                >
+              <Dialog open={avatarPickerOpen} onOpenChange={setAvatarPickerOpen}>
+                <DialogContent title="Elegir avatar" className="flex max-w-[460px] flex-col gap-0 overflow-hidden">
                   {/* Header */}
                   <div className="flex items-start justify-between px-5 pb-[6px] pt-[17px]">
                     <div>
@@ -293,6 +266,7 @@ function ProfileSettings({
                       <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-carbon/40" />
                       <Input
                         value={avatarSearch}
+                        aria-label="Buscar avatar"
                         onChange={(event) => onAvatarSearchChange(event.target.value)}
                         placeholder="Buscar avatar..."
                         className="h-10 pl-9"
@@ -301,21 +275,23 @@ function ProfileSettings({
                   </div>
 
                   {/* Grid */}
-                  <div className="max-h-[300px] min-h-[150px] flex-1 overflow-y-auto px-5 pb-2">
+                  <div className="max-h-[300px] min-h-0 flex-1 overflow-y-auto px-5 pb-2">
                     {filteredAvatars.length > 0 ? (
-                      <div className="grid grid-cols-4 gap-x-3 gap-y-4 py-2">
+                      <div className="grid grid-cols-3 gap-x-3 gap-y-4 py-2 sm:grid-cols-4">
                         {filteredAvatars.map((option) => {
                           const selected = option.id === avatarTempId;
                           return (
                             <Tooltip key={option.id}>
                             <TooltipTrigger asChild><button
                               type="button"
-                              className="group relative flex flex-col items-center gap-[7px] border-none bg-transparent p-0 outline-none"
+                              aria-label={option.name}
+                              aria-pressed={selected}
+                              className="group relative flex flex-col items-center gap-[7px] rounded-full border-none bg-transparent p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-zivelo"
                               onClick={() => setAvatarTempId(option.id)}
                             >
                               <div
                                 className={cn(
-                                  "relative size-[66px] rounded-full border-[2.5px] transition-all duration-[160ms] overflow-hidden",
+                                  "relative size-[66px] rounded-full border-[2.5px] transition-all duration-150",
                                   selected
                                     ? "border-zivelo shadow-[0_0_0_3px_rgba(215,34,40,0.18)]"
                                     : "border-carbon/10 shadow-[0_2px_8px_rgba(29,29,27,0.10)] group-hover:border-zivelo/50"
@@ -323,10 +299,11 @@ function ProfileSettings({
                               >
                                 {option.imageUrl ? (
                                   <Avatar className="size-full rounded-full">
-                                    <AvatarImage src={option.imageUrl} alt={option.name} className="size-full object-cover" />
+                                    <AvatarImage src={option.imageUrl} alt="" className="size-full object-cover" />
+                                    <AvatarFallback className="bg-carbon/5 text-sm font-semibold text-carbon/70">{option.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                                   </Avatar>
                                 ) : (
-                                  <span className="flex size-full items-center justify-center bg-carbon/10 text-sm font-semibold text-carbon/45">
+                                  <span className="flex size-full items-center justify-center rounded-full bg-carbon/10 text-sm font-semibold text-carbon/45">
                                     ?
                                   </span>
                                 )}
@@ -353,7 +330,7 @@ function ProfileSettings({
                   </div>
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[14px]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[14px]">
                     <span className="text-[12.5px] text-carbon/55">
                       Seleccionado: <b className="font-bold text-carbon">{tempAvatar?.name ?? ""}</b>
                     </span>
@@ -361,13 +338,13 @@ function ProfileSettings({
                       <Button type="button" variant="outline" size="sm" className="h-[38px] rounded-[11px] bg-white px-[15px] text-[13px]" onClick={() => setAvatarPickerOpen(false)}>
                         Cancelar
                       </Button>
-                      <Button type="button" size="sm" className="h-[38px] rounded-[11px] px-[17px] text-[13px] shadow-[0_10px_22px_rgba(215,34,40,0.20)]" onClick={() => { const s = avatars.find((a) => a.id === avatarTempId); if (s) onAvatarChange(s.imageUrl); setAvatarPickerOpen(false); }}>
+                      <Button type="button" size="sm" disabled={!tempAvatar} className="h-[38px] rounded-[11px] px-[17px] text-[13px] shadow-[0_10px_22px_rgba(215,34,40,0.20)]" onClick={() => { const s = avatars.find((a) => a.id === avatarTempId); if (s) onAvatarChange(s.imageUrl); setAvatarPickerOpen(false); }}>
                         Usar avatar
                       </Button>
                     </div>
                   </div>
-                </div>
-              </div>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
 
@@ -395,14 +372,10 @@ function ProfileSettings({
                 Correo electrónico
                 <span className="inline-flex items-center gap-1 rounded-full bg-[#FFF4DE] px-2 py-0.5 text-[10px] font-semibold text-[#7A5A12]">
                   <Mail className="size-2.5" aria-hidden="true" />
-                  Gestionado por auth
+                  No editable
                 </span>
               </FieldLabel>
               <Input id="settings-email" value={email} disabled className="h-10 rounded-[11px] bg-[#F5F5F4] text-[13.5px]" />
-            </Field>
-            <Field className="gap-1.5">
-              <FieldLabel className="text-xs font-semibold text-[#454543]">Tema</FieldLabel>
-              <ThemeSegmentedControl value={theme} onValueChange={onThemeChange} />
             </Field>
           </FieldGroup>
         </div>
@@ -420,7 +393,7 @@ function ProfileSettings({
             <X className="size-3.5" aria-hidden="true" />
             Cancelar
           </Button>
-          <Button type="button" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending} onClick={onSave}>
+          <Button type="button" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending || !hasChanges || !name.trim() || !username.trim()} onClick={onSave}>
             {pending ? (
               <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             ) : (
@@ -443,6 +416,8 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
   const [createdKey, setCreatedKey] = useState<CreateApiKeyResult | null>(null);
   const [keyPopoverOpen, setKeyPopoverOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [keysLoading, setKeysLoading] = useState(true);
+  const [keysError, setKeysError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!capabilities.canManageAgents) return;
@@ -450,13 +425,18 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
   }, [capabilities.canManageAgents]);
 
   useEffect(() => {
-    if (agent === currentUser.id) {
-      listOwnApiKeys().then(setApiKeys).catch((error) => toast.error(tlozErrorMessage(error, "No tienes permiso para administrar tus API keys")));
-      return;
-    }
-    if (!capabilities.canManageAgents) return;
-    listAgentApiKeys(agent).then(setApiKeys).catch((error) => toast.error(tlozErrorMessage(error, "No tienes permiso para administrar API keys")));
-  }, [agent, capabilities.canManageAgents, currentUser.id]);
+    let active = true;
+    setApiKeys([]);
+    setKeysLoading(true);
+    setKeysError(null);
+    setCreatedKey(null);
+    setKeyPopoverOpen(false);
+    const request = agent === currentUser.id ? listOwnApiKeys() : listAgentApiKeys(agent);
+    request.then((keys) => { if (active) setApiKeys(keys); }).catch((error) => {
+      if (active) setKeysError(tlozErrorMessage(error, "No se pudieron cargar las API keys."));
+    }).finally(() => { if (active) setKeysLoading(false); });
+    return () => { active = false; };
+  }, [agent, currentUser.id]);
 
   const agentOptions = [
     { id: currentUser.id, name: "Mi cuenta", username: currentUser.username, avatarUrl: currentUser.avatarUrl },
@@ -486,7 +466,7 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
             </Field>
             <Field className="gap-1.5">
               <FieldLabel className="text-xs font-semibold text-[#454543]">Cuenta</FieldLabel>
-              <UserPicker users={agentOptions} value={agent} onValueChange={setAgent} label="Cuenta" />
+              <UserPicker users={agentOptions} value={agent} disabled={pending} onValueChange={setAgent} label="Cuenta" />
             </Field>
           </FieldGroup>
 
@@ -494,7 +474,7 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
 
           <section className="rounded-[14px] border border-dashed border-carbon/15 bg-carbon/[0.02] p-4 transition-all duration-200">
             <p className="m-0 text-[13px] font-bold text-carbon">API keys configuradas</p>
-            {apiKeys.length ? (
+            {keysLoading ? <p className="mt-2 text-xs text-carbon/65" role="status">Cargando API keys…</p> : keysError ? <p className="mt-2 text-xs text-zivelo" role="alert">{keysError}</p> : apiKeys.length ? (
               <div className="mt-3 flex flex-col gap-2">
                 {apiKeys.map((key) => (
                   <div key={key.id} className="flex min-h-11 items-center gap-3 rounded-xl border border-carbon/10 bg-white px-3 py-2">
@@ -543,12 +523,12 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
       <footer className="relative flex justify-end border-t border-carbon/[0.08] bg-[#FCFCFB] px-5 py-[15px]">
         {keyPopoverOpen && <div className="fixed inset-0 z-40 bg-carbon/35 backdrop-blur-[2px]" aria-hidden="true" />}
         <Popover open={keyPopoverOpen} onOpenChange={(open) => { setKeyPopoverOpen(open); if (!open) setCreatedKey(null); }}>
-          <PopoverTrigger asChild>
+          <PopoverAnchor asChild>
             <Button
               type="button"
               size="sm"
               className="h-[38px] rounded-[11px] text-[13px]"
-              disabled={pending || !agent}
+              disabled={pending || keysLoading || !agent}
               onClick={async () => {
                 setPending(true);
                 try {
@@ -569,7 +549,7 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
               <KeyRound className="size-3.5" aria-hidden="true" />
               {pending ? "Creando…" : "Crear API key"}
             </Button>
-          </PopoverTrigger>
+          </PopoverAnchor>
           <PopoverContent align="end" side="top" className="z-50 w-[min(360px,calc(100vw-32px))] rounded-[18px] p-4">
             <PopoverHeader>
               <PopoverTitle>API key creada</PopoverTitle>
@@ -582,7 +562,7 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
               </code>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <Button type="button" variant="outline" size="sm" className="h-9 rounded-[10px] bg-white text-[13px]" onClick={() => setKeyPopoverOpen(false)}>
+              <Button type="button" variant="outline" size="sm" className="h-9 rounded-[10px] bg-white text-[13px]" onClick={() => { setKeyPopoverOpen(false); setCreatedKey(null); }}>
                 Cerrar
               </Button>
               <Button
@@ -603,44 +583,11 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
   );
 }
 
-function ThemeSegmentedControl({ value, onValueChange }: { value: ThemeValue; onValueChange: (value: ThemeValue) => void }) {
-  return (
-    <div className="flex gap-0.5 rounded-[12px] bg-[#F1F0EE] p-[3px]" role="group" aria-label="Seleccionar tema">
-      {themeOptions.map((option) => {
-        const Icon = option.icon;
-        const selected = option.value === value;
-        return (
-          <button
-            key={option.value}
-            type="button"
-            className={cn(
-              "flex h-[38px] flex-1 items-center justify-center gap-1.5 rounded-[9px] text-[12.5px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon/25",
-              selected ? "bg-white font-bold text-carbon shadow-[0_1px_3px_rgba(29,29,27,0.10)]" : "font-medium text-carbon/60 hover:text-carbon"
-            )}
-            aria-pressed={selected}
-            onClick={() => onValueChange(option.value)}
-          >
-            <Icon className="size-3.5" aria-hidden="true" />
-            {option.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 async function copyText(value: string) {
-  if (navigator.clipboard?.writeText) {
+  try {
     await navigator.clipboard.writeText(value);
-    return;
+    toast.success("API key copiada");
+  } catch {
+    toast.error("No se pudo copiar. Selecciona la llave y cópiala manualmente.");
   }
-
-  const input = document.createElement("textarea");
-  input.value = value;
-  input.style.position = "fixed";
-  input.style.opacity = "0";
-  document.body.appendChild(input);
-  input.select();
-  document.execCommand("copy");
-  document.body.removeChild(input);
 }

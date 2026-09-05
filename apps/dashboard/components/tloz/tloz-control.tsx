@@ -68,6 +68,7 @@ export function TlozControl({ createControl }: { createControl?: React.ReactNode
                   className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
                     isActive ? "bg-carbon/10 text-carbon" : "text-carbon/60 hover:bg-carbon/5 hover:text-carbon"
                   }`}
+                  aria-pressed={isActive}
                   onClick={() => setState({ view: view as TlozView })}
                 >
                   <Icon size={14} aria-hidden="true" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, useTransition } from "react";
+import { cloneElement, createContext, isValidElement, useContext, useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { Plus } from "lucide-react";
@@ -34,12 +34,12 @@ export function TlozCreateProvider({ children, kind, projects, users, missions =
     label: kindLabel[kind],
     openCreate: () => {
       if (isMobile) {
-        router.push(`/new?kind=${kind}`);
+        router.push(`/new?${new URLSearchParams({ kind, ...(fixedProjectId ? { projectId: fixedProjectId } : {}) })}`);
       } else {
         setOpen(true);
       }
     },
-  }), [isMobile, kind, router]);
+  }), [fixedProjectId, isMobile, kind, router]);
   return <CreateContext.Provider value={value}>{children}<CreateEntitySlideOver open={open} onOpenChange={setOpen} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={fixedProjectId} canonicalContainer={canonicalContainer} /></CreateContext.Provider>;
 }
 
@@ -58,10 +58,11 @@ export function CreateNewEntityButton({ variant = "row" }: { variant?: "row" | "
     : <button type="button" className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-carbon/15 bg-white/60 text-[13px] font-semibold text-carbon/55 transition-colors hover:border-zivelo/30 hover:text-zivelo" onClick={openCreate}><Plus className="size-3.5" />Crear nuevo {label}</button>;
 }
 
-export function CreateForm({ kind, projects, users, missions = [], questItems = [], projectContracts = {}, fixedProjectId, canonicalContainer, onDone }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; projectContracts?: Record<string, TlozFieldDefinition[]>; fixedProjectId?: string; canonicalContainer?: ContainerRecord; onDone?: () => void }) {
+export function CreateForm({ kind, projects, users, missions = [], questItems = [], projectContracts = {}, fixedProjectId, canonicalContainer, onDone, showActions = true, onPendingChange }: { kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions?: TlozMissionRecord[]; questItems?: TlozQuestItem[]; projectContracts?: Record<string, TlozFieldDefinition[]>; fixedProjectId?: string; canonicalContainer?: ContainerRecord; onDone?: () => void; showActions?: boolean; onPendingChange?: (pending: boolean) => void }) {
   const router = useRouter();
   const toasterId = useOverlayToasterId();
   const [pending, startTransition] = useTransition();
+  const submitting = useRef(false);
   const today = new Date().toISOString().slice(0, 10);
   const defaultOwnerId = users.find((user) => user.username === "zibot")?.id ?? users[0]?.id ?? "";
   const defaultProjectId = fixedProjectId ?? projects.find((project) => project.slug === "zivelo")?.id ?? projects[0]?.id ?? "";
@@ -111,6 +112,8 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
   }
   function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (submitting.current) return;
+    setErrors({});
     try {
       const input = buildCreateInput(kind, draft, resources);
       if (kind === "mission") validateMissionCreate(input as never);
@@ -121,6 +124,8 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
       if (!draft.description.trim()) throw new TlozValidationError({ description: "La descripción es obligatoria." });
       if (!draft.ownerId) throw new TlozValidationError({ ownerId: "El responsable es obligatorio." });
       if (!/^#[0-9A-F]{6}$/i.test(draft.color)) throw new TlozValidationError({ color: "El color debe ser un HEX válido." });
+      submitting.current = true;
+      onPendingChange?.(true);
       startTransition(async () => {
         const toastId = toast.loading(`Creando ${kindLabel[kind]}…`, { toasterId });
         try {
@@ -129,15 +134,23 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
           else if (kind === "inventory") await createQuestItem(input as never);
           else await createCanonicalContent(canonicalContainer!, draft);
           toast.success(`${kindLabel[kind]} creado`, { id: toastId, toasterId }); reset(); onDone?.(); router.refresh();
-        } catch (error) { toast.error(tlozErrorMessage(error, "No se pudo crear. Revisa los datos e intenta de nuevo."), { id: toastId, toasterId }); }
+        } catch (error) {
+          const message = tlozErrorMessage(error, "No se pudo crear. Revisa los datos e intenta de nuevo.");
+          setErrors({ form: message });
+          toast.error(message, { id: toastId, toasterId });
+        } finally {
+          submitting.current = false;
+          onPendingChange?.(false);
+        }
       });
-    } catch (error) { if (error instanceof TlozValidationError) setErrors(error.fields); else throw error; }
+    } catch (error) { if (error instanceof TlozValidationError) setErrors(error.fields); else setErrors({ form: tlozErrorMessage(error, "No se pudo crear. Intenta nuevamente.") }); }
   }
   return (
-    <form id={formId} onSubmit={submit} className="mx-auto flex w-full max-w-2xl flex-col gap-5 p-6" noValidate>
+    <form id={formId} onSubmit={submit} aria-busy={pending} className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4 sm:p-6" noValidate>
+      {errors.form ? <p role="alert" className="text-xs font-semibold text-zivelo">{errors.form}</p> : null}
       <div><h3 className="mb-1 text-xl font-bold text-carbon">Nuevo {kindLabel[kind]}</h3><p className="m-0 text-sm text-carbon/55">Completa los datos requeridos antes de guardar.</p></div>
       {kind === "mission" ? <div className="flex items-end gap-2"><IconPicker icons={icons} value={draft.icon} label="Icono de misión" recentStorageKey="tloz-recent-icons" onValueChange={(icon) => field("icon", icon)} iconOnly className="size-10 shrink-0 justify-center" /><div className="min-w-0 flex-1"><FormField label="Título" error={errors.title} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField></div></div> : <FormField label="Nombre" error={errors.name} required><Input autoFocus value={draft.name} maxLength={160} onChange={(event) => field("name", event.target.value)} /></FormField>}
-      <FormField label={kind === "mission" ? "Descripción" : "Descripción"} error={errors.description}><textarea className="min-h-24 w-full rounded-xl border border-carbon/15 bg-white px-3 py-2 text-sm outline-none transition focus:border-zivelo/50 focus:ring-2 focus:ring-zivelo/10" value={draft.description} rows={4} maxLength={kind === "mission" ? 280 : 5000} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => field("description", event.target.value)} /></FormField>
+      <FormField label="Descripción" required error={errors.description}><textarea className="min-h-24 w-full rounded-xl border border-carbon/15 bg-white px-3 py-2 text-sm outline-none transition focus:border-zivelo/50 focus:ring-2 focus:ring-zivelo/10" value={draft.description} rows={4} maxLength={kind === "mission" ? 280 : 5000} onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => field("description", event.target.value)} /></FormField>
       {kind === "mission" ? <FormField label="Detalle" error={errors.descriptionDetail}><textarea className="min-h-40 w-full rounded-xl border border-carbon/15 bg-white px-3 py-2 font-mono text-[13px] leading-[1.6] outline-none transition focus:border-zivelo/50 focus:ring-2 focus:ring-zivelo/10" value={draft.descriptionDetail} rows={8} maxLength={20000} placeholder="Markdown, incluyendo - [ ] tasks…" onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => field("descriptionDetail", event.target.value)} /></FormField> : null}
       {kind !== "mission" ? <div className="grid gap-4 sm:grid-cols-2"><FormField label="Icono" error={errors.icon} required><IconPicker icons={icons} value={draft.icon} onValueChange={(icon) => field("icon", icon)} /></FormField>
         <FormField label="Color" error={errors.color} required><ColorPicker value={draft.color} onValueChange={(color) => field("color", color)} /></FormField>
@@ -147,13 +160,15 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
       {kind === "mission" ? <CreateSection title="Campos del Project"><CreateDocumentPropertyInputs fields={missionContract} values={documentProperties} users={users} onChange={(key, value) => setDocumentProperties((current) => ({ ...current, [key]: value }))} /></CreateSection> : null}
       {kind === "mission" ? <MissionRelations draft={draft} field={field} missions={missions} questItems={questItems} resources={resources} setResources={setResources} /> : null}
       {kind === "project" || kind === "workshop" ? <div className="grid gap-4 sm:grid-cols-2"><FormField label="Inicio" error={errors.startDate} required><DatePicker value={draft.startDate || undefined} label="Fecha de inicio" onValueChange={(value) => field("startDate", value ?? "")} /></FormField><FormField label="Vence" error={errors.dueDate}><DatePicker value={draft.dueDate || undefined} label="Fecha límite" onValueChange={(value) => field("dueDate", value ?? "")} /></FormField></div> : null}
+      {showActions ? <div className="sticky bottom-0 flex justify-end border-t border-carbon/10 bg-paper py-3"><Button type="submit" disabled={pending}>{pending ? "Guardando…" : "Guardar"}</Button></div> : null}
     </form>
   );
 }
 
 function CreateEntitySlideOver({ open, onOpenChange, kind, projects, users, missions, questItems, projectContracts, fixedProjectId, canonicalContainer }: { open: boolean; onOpenChange: (open: boolean) => void; kind: TlozCreateKind; projects: TlozProject[]; users: UserProfile[]; missions: TlozMissionRecord[]; questItems: TlozQuestItem[]; projectContracts: Record<string, TlozFieldDefinition[]>; fixedProjectId?: string; canonicalContainer?: ContainerRecord }) {
-  return <SlideOver open={open} title={`Crear ${kindLabel[kind]}`} onOpenChange={onOpenChange} footer={<><Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button><Button type="submit" form={`create-${kind}-form`}>Guardar</Button></>}>
-    <CreateForm key={String(open)} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={fixedProjectId} canonicalContainer={canonicalContainer} onDone={() => onOpenChange(false)} />
+  const [pending, setPending] = useState(false);
+  return <SlideOver dismissible={!pending} open={open} title={`Crear ${kindLabel[kind]}`} onOpenChange={onOpenChange} footer={<><Button type="button" variant="ghost" disabled={pending} onClick={() => onOpenChange(false)}>Cancelar</Button><Button type="submit" disabled={pending} form={`create-${kind}-form`}>{pending ? "Guardando…" : "Guardar"}</Button></>}>
+    <CreateForm showActions={false} onPendingChange={setPending} key={String(open)} kind={kind} projects={projects} users={users} missions={missions} questItems={questItems} projectContracts={projectContracts} fixedProjectId={fixedProjectId} canonicalContainer={canonicalContainer} onDone={() => onOpenChange(false)} />
   </SlideOver>;
 }
 
@@ -181,7 +196,14 @@ async function createCanonicalContent(container: ContainerRecord, draft: Record<
   if (!response.ok) throw new Error("No se pudo crear el contenido canónico.");
 }
 
-function FormField({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) { return <label className="flex flex-col gap-1.5"><span className="text-xs font-bold text-carbon/60">{label}{required ? <span className="text-zivelo"> *</span> : null}</span>{children}{error ? <span className="text-xs font-medium text-[#B91C22]">{error}</span> : null}</label>; }
+function FormField({ label, error, required, children }: { label: string; error?: string; required?: boolean; children: React.ReactNode }) {
+  const id = useId();
+  const control = isValidElement<{ id?: string; required?: boolean; "aria-invalid"?: boolean; "aria-describedby"?: string }>(children)
+    && (children.type === Input || children.type === "textarea" || children.type === "input")
+    ? cloneElement(children, { id, required, "aria-invalid": Boolean(error), "aria-describedby": error ? `${id}-error` : undefined })
+    : children;
+  return <label className="flex flex-col gap-1.5"><span className="text-xs font-bold text-carbon/60">{label}{required ? <span className="text-zivelo"> *</span> : null}</span>{control}{error ? <span id={`${id}-error`} role="alert" className="text-xs font-medium text-[#B91C22]">{error}</span> : null}</label>;
+}
 function MissionRelations({ draft, field, missions, questItems, resources, setResources }: { draft: Record<string, string>; field: (name: string, value: string) => void; missions: TlozMissionRecord[]; questItems: TlozQuestItem[]; resources: TlozResourceInput[]; setResources: React.Dispatch<React.SetStateAction<TlozResourceInput[]>> }) {
   const dependencyIds = splitCreateIds(draft.dependencyIds);
   const questIds = splitCreateIds(draft.requiredQuestItemIds);

@@ -16,12 +16,13 @@ export type UserPickerOption = {
   avatarUrl?: string;
 };
 
-export function UserPicker({ users, value, onValueChange, label = "Responsable", className, allowEmpty = false, emptyLabel = "Sin responsable" }: {
+export function UserPicker({ users, value, onValueChange, label = "Responsable", className, disabled = false, allowEmpty = false, emptyLabel = "Sin responsable" }: {
   users: UserPickerOption[];
   value?: string;
   onValueChange: (value: string) => void;
   label?: string;
   className?: string;
+  disabled?: boolean;
   allowEmpty?: boolean;
   emptyLabel?: string;
 }) {
@@ -33,7 +34,7 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className={cn("w-full justify-start [&_svg]:size-3.5", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
+        <Button type="button" variant="outline" disabled={disabled} className={cn("w-full justify-start [&_svg]:size-3.5", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
           {selected ? <UserAvatar user={selected} /> : <UserRound aria-hidden="true" />}
           <span className="min-w-0 truncate text-left">{selected?.username ? displayUsername(selected.username) : selected?.name ?? (allowEmpty ? emptyLabel : `Seleccionar ${label.toLowerCase()}`)}</span>
         </Button>

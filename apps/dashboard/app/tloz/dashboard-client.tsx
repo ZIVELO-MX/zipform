@@ -1,5 +1,7 @@
 "use client";
 
+import { useTlozViewState } from "../../components/tloz/tloz-view-state";
+import { useCurrentUserId } from "../../components/tloz/tloz-capabilities";
 import { useState } from "react";
 import { PageSubHeader, SegmentedControl } from "@tloz/ui";
 import {
@@ -17,20 +19,23 @@ import type { TlozFieldOption, TlozQuestItem } from "@tloz/types";
 import { SystemEntitySlideOver } from "../../components/tloz/system-project-detail";
 
 export function DashboardClient({ summary, detailOptions, statusOptions = [], hideProjectSections = false }: { summary: TlozDashboardSummary; detailOptions: MissionDetailOptions; statusOptions?: TlozFieldOption[]; hideProjectSections?: boolean }) {
+  const { state, setState } = useTlozViewState();
+  const currentUserId = useCurrentUserId();
   const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
   const [selectedQuestItem, setSelectedQuestItem] = useState<TlozQuestItem | null>(null);
 
   return (
     <>
-      <div className="px-4 pb-12 pt-6 md:px-[26px]" style={{ maxWidth: "1180px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "26px" }}>
+      <div className="tloz-dashboard min-w-0 w-full shrink-0 px-4 pb-6 pt-4 md:px-[26px]" style={{ maxWidth: "1180px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "26px" }}>
         <PageSubHeader
           className="px-0 pb-0 pt-0"
           title="Dashboard"
-          description="Visión general del equipo · trabajo activo en todos los proyectos · 4 personas"
+          description="Visión general del equipo · trabajo activo"
           actions={
             <SegmentedControl
               aria-label="Filtrar por audiencia"
-              value="team"
+              value={state.ownerId === currentUserId ? "me" : "team"}
+              onValueChange={(audience) => setState({ ownerId: audience === "me" ? currentUserId ?? "all" : "all" })}
               options={[
                 { label: "Todo el equipo", value: "team" },
                 { label: "Solo yo", value: "me" },

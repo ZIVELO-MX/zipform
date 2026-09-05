@@ -108,7 +108,7 @@ export function DashboardNowSection({ missions, statusOptions = [], onSelect }: 
           Límite de foco: <b style={{ color: "#1D1D1B", fontWeight: 700 }}>1 Quest + 1 Support</b> por persona
         </span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1.08fr 1fr", gap: "16px" }}>
+      <div className="tloz-dashboard-focus-grid">
         {focusedMissions.length > 0 ? (
           focusedMissions.map((mission) => (
             <DashboardNowCard key={mission.id} mission={mission} statusOptions={statusOptions} onSelect={onSelect} />
@@ -129,7 +129,11 @@ function DashboardNowCard({ mission, statusOptions, onSelect }: { mission: TlozM
 
   return (
     <div
-      className="tloz-card-hover"
+      className="tloz-card-hover min-w-0"
+      role="button"
+      tabIndex={0}
+      aria-label={`Abrir ${mission.displayId}: ${mission.title}`}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect?.(mission); } }}
       style={{
         background: "#fff",
         border: "1px solid rgba(29,29,27,0.10)",
@@ -239,7 +243,11 @@ function DashboardMainQuestCard({ mission, statusOptions, onSelect }: { mission:
 
   return (
     <div
-      className="tloz-card-hover"
+      className="tloz-card-hover min-w-0"
+      role="button"
+      tabIndex={0}
+      aria-label={`Abrir ${mission.displayId}: ${mission.title}`}
+      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect?.(mission); } }}
       style={{
         background: "#fff",
         border: "1px solid rgba(29,29,27,0.10)",
@@ -317,6 +325,10 @@ export function DashboardNextLaterSection({
               <div
                 key={mission.id}
                 className="tloz-row-hover"
+                role="button"
+                tabIndex={0}
+                aria-label={`Abrir ${mission.displayId}: ${mission.title}`}
+                onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect?.(mission); } }}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -383,7 +395,7 @@ export function DashboardProjectsSection({ projects, missions }: { projects: Arr
   return (
     <section>
       <SectionHeading icon={<FolderKanban size={15} aria-hidden="true" />} title="Projects" action={<Link href="/projects" className="text-[12.5px] font-semibold text-zivelo">Ver todos →</Link>} />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "13px" }}>
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
         {projects.map((project) => {
           const projectMissions = missions.filter((m) => m.projectId === project.id);
           const ownerSet = new Set(projectMissions.map(m => m.owner.id));
@@ -392,7 +404,7 @@ export function DashboardProjectsSection({ projects, missions }: { projects: Arr
             <Link
               href={projectHref(project)}
               key={project.id}
-              className="tloz-card-hover"
+              className="tloz-card-hover min-w-0"
               style={{
                 background: "#fff",
                 border: "1px solid rgba(29,29,27,0.10)",

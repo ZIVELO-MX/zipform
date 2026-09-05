@@ -3,10 +3,14 @@
 import { createContext, useContext } from "react";
 import type { TlozUiCapabilities } from "../../lib/authorization";
 
+const CurrentUserIdContext = createContext<string | null>(null);
+
+export function useCurrentUserId() { return useContext(CurrentUserIdContext); }
+
 const TlozCapabilitiesContext = createContext<TlozUiCapabilities | null>(null);
 
-export function TlozCapabilitiesProvider({ capabilities, children }: { capabilities: TlozUiCapabilities; children: React.ReactNode }) {
-  return <TlozCapabilitiesContext.Provider value={capabilities}>{children}</TlozCapabilitiesContext.Provider>;
+export function TlozCapabilitiesProvider({ capabilities, currentUserId = null, children }: { capabilities: TlozUiCapabilities; currentUserId?: string | null; children: React.ReactNode }) {
+  return <CurrentUserIdContext.Provider value={currentUserId}><TlozCapabilitiesContext.Provider value={capabilities}>{children}</TlozCapabilitiesContext.Provider></CurrentUserIdContext.Provider>;
 }
 
 export function useTlozCapabilities() {

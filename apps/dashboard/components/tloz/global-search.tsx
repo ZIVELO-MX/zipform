@@ -37,6 +37,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   }, [open]);
 
   useEffect(() => {
+    if (!open) return;
     const normalized = query.trim();
     if (normalized.length < 2) {
       requestRef.current?.abort();
@@ -48,9 +49,10 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     const controller = new AbortController();
     requestRef.current?.abort();
     requestRef.current = controller;
+    setLoading(true);
+    setResults([]);
+    setError(false);
     const timeout = window.setTimeout(async () => {
-      setLoading(true);
-      setError(false);
       try {
         const response = await fetch(`/api/v1/search?q=${encodeURIComponent(normalized)}&limit=20`, { signal: controller.signal });
         if (!response.ok) throw new Error("search_failed");
@@ -65,8 +67,11 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         if (!controller.signal.aborted) setLoading(false);
       }
     }, 180);
-    return () => window.clearTimeout(timeout);
-  }, [query]);
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [open, query]);
 
   function navigate(destination: string) {
     onOpenChange(false);
@@ -74,7 +79,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   }
 
   return (
-    <CommandDialog className="tloz-command-dialog" label="Buscar y navegar en TLOZ" open={open} onOpenChange={onOpenChange}>
+    <CommandDialog shouldFilter={query.trim().length < 2} className="tloz-command-dialog" label="Buscar y navegar en TLOZ" open={open} onOpenChange={onOpenChange}>
       <div className="tloz-command-input-wrap">
         <Search aria-hidden="true" />
         <Command.Input

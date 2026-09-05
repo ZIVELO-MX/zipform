@@ -5,11 +5,12 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Command } from "cmdk";
 import { useOverlayPortalContainer } from "./overlay-portal";
 
-function CommandDialog({ open, onOpenChange, label, className, children }: {
+function CommandDialog({ open, onOpenChange, label, className, children, shouldFilter = true }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   label: string;
   className?: string;
+  shouldFilter?: boolean;
   children: React.ReactNode;
 }) {
   const container = useOverlayPortalContainer();
@@ -18,7 +19,7 @@ function CommandDialog({ open, onOpenChange, label, className, children }: {
       <DialogPrimitive.Overlay cmdk-overlay="" />
       <DialogPrimitive.Content cmdk-dialog="" className={className} aria-describedby={undefined}>
         <DialogPrimitive.Title className="sr-only">{label}</DialogPrimitive.Title>
-        <Command label={label}>{children}</Command>
+        <Command label={label} shouldFilter={shouldFilter}>{children}</Command>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   </DialogPrimitive.Root>;

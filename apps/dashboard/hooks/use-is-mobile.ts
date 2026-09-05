@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export function useIsMobile(breakpoint = 920) {
+export function useIsMobile(breakpoint = 767) {
   const [mobile, setMobile] = useState(false);
   const mqlRef = useRef<MediaQueryList | null>(null);
   useEffect(() => {
