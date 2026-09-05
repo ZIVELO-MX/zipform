@@ -26,6 +26,7 @@ export async function CanonicalPresentationPage({ presentation, title, cursor }:
       createKind={presentation}
       canonicalContainer={container}
       documentNavigation={{ documents: [], users }}
+      paginated={Boolean(cursor || contents.nextCursor)}
     >
       <ContainerContentCollection
         container={container}

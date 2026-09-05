@@ -89,3 +89,13 @@ Verificación local de esta segunda revisión:
 - Los subagentes ejecutaron Vitest durante su revisión: dashboard 261/261 y UI 11/11, aprobados. Esta evidencia es local, no del pipeline del PR.
 - `git diff --check`: aprobado.
 - PR y CI quedan a cargo del usuario según su instrucción más reciente.
+
+## Tercera revisión: búsqueda, cierre de misiones y paginación
+
+- **Búsqueda:** títulos y contextos idénticos compartían el valor interno de selección, por lo que dos resultados aparecían seleccionados a la vez. Cada opción usa ahora su tipo e ID. Regresión E2E: elegir el segundo resultado con Flecha abajo y Enter abre su destino.
+- **Completar misión:** la acción no capturaba errores y permitía nuevas pulsaciones durante el guardado. Reutiliza el manejo de errores existente y deshabilita la acción mientras está pendiente. Regresión E2E con fallo de conexión y reintento sin duplicados.
+- **Colecciones paginadas:** los controles indican «Filtros de esta página» y «Orden de esta página» cuando hay más de una página. Regresión E2E con 26 registros y navegación a la segunda página; el Lobby conserva las etiquetas normales.
+
+**Pendiente:** los filtros y el orden globales entre páginas requieren ampliar las consultas paginadas del servidor. El ajuste de etiquetas aclara el alcance actual; no implementa esa consulta global. No se cargan colecciones enteras en memoria para simularla.
+
+Verificación local final: **26/26 E2E** sobre la compilación de producción (46.3 s), **21/21 pruebas focalizadas**, build con comprobación de tipos y `git diff --check` aprobados.

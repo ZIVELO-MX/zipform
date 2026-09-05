@@ -30,6 +30,7 @@ type TlozViewStateContextValue = {
   projects: TlozProject[];
   users: UserProfile[];
   capabilities: TlozControlCapabilities;
+  paginated: boolean;
 };
 
 const TlozViewStateContext = createContext<TlozViewStateContextValue | null>(null);
@@ -43,6 +44,7 @@ export function TlozViewStateProvider({
   controlKind = "mission",
   fixedProject = false,
   storageScope = "tloz-controls",
+  paginated = false,
 }: {
   children: React.ReactNode;
   supportedViews: TlozView[];
@@ -52,6 +54,7 @@ export function TlozViewStateProvider({
   controlKind?: TlozControlKind;
   fixedProject?: boolean;
   storageScope?: string;
+  paginated?: boolean;
 }) {
   const isMobile = useIsMobile();
   const responsiveViews = useMemo(
@@ -120,7 +123,8 @@ export function TlozViewStateProvider({
     projects,
     users,
     capabilities,
-  }), [capabilities, projects, state, effectiveViews, users]);
+    paginated,
+  }), [capabilities, paginated, projects, state, effectiveViews, users]);
 
   return <TlozViewStateContext.Provider value={value}>{children}</TlozViewStateContext.Provider>;
 }

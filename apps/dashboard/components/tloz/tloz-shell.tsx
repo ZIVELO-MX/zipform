@@ -30,6 +30,7 @@ type TlozPageShellProps = {
     documents: TlozDocument[];
     users: UserProfile[];
   };
+  paginated?: boolean;
 };
 
 export async function TlozPageShell({
@@ -51,6 +52,7 @@ export async function TlozPageShell({
   createKind = "mission",
   canonicalContainer,
   documentNavigation,
+  paginated = false,
   children
 }: TlozPageShellProps) {
   const [missions, projects, questItems, allUsers, documents] = documentNavigation
@@ -81,6 +83,7 @@ export async function TlozPageShell({
       controlKind={controlKind ?? (createKind === "workshop" ? "project" : createKind === "library" ? "inventory" : createKind)}
       fixedProject={Boolean(controlProjectId)}
       storageScope={stateScope}
+      paginated={paginated}
     >
       <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
         <TlozHeader

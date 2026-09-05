@@ -50,6 +50,7 @@ export async function DocumentCollectionPage({
       createKind={createKind}
       stateScope={definition.key}
       documentNavigation={{ documents: documents.data, users }}
+      paginated={Boolean(cursor || documents.nextCursor)}
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <DocumentViewRenderer

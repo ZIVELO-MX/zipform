@@ -389,3 +389,76 @@ test("desktop profile closes after a successful save", async ({ page }) => {
   await expect(page.getByText("Perfil actualizado", { exact: true })).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Configuración", exact: true })).toHaveCount(0);
 });
+
+test("search distinguishes documents with identical titles and context", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await page.route("**/api/v1/search?**", (route) => route.fulfill({ json: { data: [
+    { id: "first", type: "mission", title: "Repeated title", context: "Core", destination: "/projects" },
+    { id: "second", type: "mission", title: "Repeated title", context: "Core", destination: "/inventory" },
+  ] } }));
+  await page.getByRole("button", { name: "Buscar documentos", exact: true }).click();
+  await page.getByRole("combobox").fill("Repeated");
+  const hits = page.getByRole("option", { name: /Repeated title/ });
+  await expect(hits).toHaveCount(2);
+  await expect(hits.first()).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("ArrowDown");
+  await expect(hits.last()).toHaveAttribute("aria-selected", "true");
+  await expect(hits.first()).toHaveAttribute("aria-selected", "false");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL("http://127.0.0.1:3100/inventory");
+});
+
+test("mission completion recovers from a failed save without duplicate submissions", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  const complete = panel.getByRole("button", { name: "Marcar como completada", exact: true });
+  await expect(complete).toBeEnabled();
+  let submissions = 0;
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST") {
+      submissions += 1;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await complete.click();
+  await expect(complete).toBeDisabled();
+  await expect(page.getByText("No se pudieron guardar los cambios", { exact: true })).toBeVisible();
+  await expect(complete).toBeEnabled();
+  expect(submissions).toBe(1);
+  expect(errors).toEqual([]);
+  await complete.click();
+  await expect(complete).toBeDisabled();
+  await expect(complete).toBeEnabled();
+  expect(submissions).toBe(2);
+});
+
+test("paginated collection controls explain that filters and sorting apply to the current page", async ({ page, request }) => {
+  const headers = { Authorization: "Bearer zipform-local-e2e-api-only" };
+  for (let index = 0; index < 26; index += 1) {
+    const response = await request.post("/api/v2/contents", { headers, data: {
+      publicId: `e2e-page-scope-${index}`, containerId: "workshop", presentation: "workshop",
+      title: `Page scope ${index}`, data: { status: "later", category: "side_quest", ownerId: "owner" },
+    } });
+    expect(response.ok(), await response.text()).toBe(true);
+  }
+  await authenticate(page);
+  await page.goto("/workshop");
+  await expect(page.getByRole("link", { name: "Siguiente", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Filtros de esta página", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Orden de esta página", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.getByRole("link", { name: "Siguiente", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Primera página", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Filtros de esta página", exact: true })).toBeVisible();
+  await page.goto("/");
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Filtros", exact: true })).toBeVisible();
+});

@@ -39,6 +39,7 @@ export function TlozControl({ createControl }: { createControl?: React.ReactNode
     projects,
     users,
     capabilities,
+    paginated,
   } = useTlozViewState();
   const uiCapabilities = useTlozCapabilities();
 
@@ -82,7 +83,7 @@ export function TlozControl({ createControl }: { createControl?: React.ReactNode
         {capabilities.ownerFilter || capabilities.projectFilter ? (
           <>
             <Separator className="my-4" />
-            <ControlSection label="Filtros">
+            <ControlSection label={paginated ? "Filtros de esta página" : "Filtros"}>
               {capabilities.projectFilter && projects.length > 1 ? (
                 <ControlSelect
                   label="Proyecto"
@@ -106,7 +107,7 @@ export function TlozControl({ createControl }: { createControl?: React.ReactNode
 
             <Separator className="my-4" />
             <div className={state.view === "list" && capabilities.groupingOptions.length ? "grid grid-cols-2 gap-3" : "grid gap-3"}>
-              <ControlSection label="Orden">
+              <ControlSection label={paginated ? "Orden de esta página" : "Orden"}>
                 <ControlSelect
                   label="Orden"
                   value={state.sort}

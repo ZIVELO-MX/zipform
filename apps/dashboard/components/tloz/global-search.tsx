@@ -106,7 +106,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           <Command.Empty>No se encontraron documentos.</Command.Empty>
         ) : (
           <Command.Group heading="Resultados">
-            {results.map((result) => <Command.Item key={`${result.type}-${result.id}`} value={`${result.title} ${result.context}`} onSelect={() => navigate(result.destination)}>
+            {results.map((result) => <Command.Item key={`${result.type}-${result.id}`} value={`${result.type}-${result.id}`} onSelect={() => navigate(result.destination)}>
               {result.type === "resource" ? <FileText aria-hidden="true" /> : result.type === "inventory" ? <PackageOpen aria-hidden="true" /> : result.type === "mission" ? <Sword aria-hidden="true" /> : <FolderKanban aria-hidden="true" />}
               <span className="min-w-0 flex-1 truncate">{result.title}<span className="ml-2 text-[11px] opacity-60">{result.context}</span></span>
               <ExternalLink className="opacity-40" aria-hidden="true" />
