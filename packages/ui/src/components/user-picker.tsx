@@ -29,10 +29,22 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const selected = users.find((user) => user.id === value);
-  const filtered = users.filter((user) => `${user.name} ${user.username ?? ""}`.toLocaleLowerCase("es").includes(query.toLocaleLowerCase("es")));
+  const normalizedQuery = query.trim().toLocaleLowerCase("es");
+  const filtered = users.filter((user) => `${user.name} ${user.username ?? ""}`.toLocaleLowerCase("es").includes(normalizedQuery));
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) setQuery("");
+  }
+
+  function selectUser(id: string) {
+    onValueChange(id);
+    setOpen(false);
+    setQuery("");
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button type="button" variant="outline" disabled={disabled} className={cn("w-full justify-start [&_svg]:size-3.5", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
           {selected ? <UserAvatar user={selected} /> : <UserRound aria-hidden="true" />}
@@ -46,7 +58,14 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
         <label className="relative block">
           <span className="sr-only">Buscar usuarios</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-carbon/40" aria-hidden="true" />
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar usuarios…" className="pl-9" autoComplete="off" />
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.nativeEvent.isComposing || !normalizedQuery) return;
+            const exact = users.find((user) => user.name.toLocaleLowerCase("es") === normalizedQuery || user.username?.toLocaleLowerCase("es") === normalizedQuery);
+            const user = exact ?? filtered[0];
+            if (!user) return;
+            event.preventDefault();
+            selectUser(user.id);
+          }} placeholder="Buscar usuarios…" className="pl-9" autoComplete="off" />
         </label>
         <div className="mt-2 flex max-h-64 flex-col gap-1 overflow-y-auto overscroll-contain">
           {allowEmpty ? <button type="button" className="flex min-h-11 items-center gap-3 rounded-xl px-2.5 text-left text-carbon/55 transition-colors hover:bg-carbon/5" onClick={() => { onValueChange(""); setOpen(false); setQuery(""); }}><span className="grid size-7 place-items-center rounded-full bg-carbon/5"><X className="size-3.5" /></span><span className="text-sm font-semibold">{emptyLabel}</span></button> : null}
@@ -55,7 +74,8 @@ export function UserPicker({ users, value, onValueChange, label = "Responsable",
               key={user.id}
               type="button"
               className="flex min-h-11 items-center gap-3 rounded-xl px-2.5 text-left transition-colors hover:bg-carbon/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30"
-              onClick={() => { onValueChange(user.id); setOpen(false); setQuery(""); }}
+              aria-pressed={value === user.id}
+              onClick={() => selectUser(user.id)}
             >
               <UserAvatar user={user} />
               <span className="min-w-0 flex-1 truncate text-sm font-semibold">{user.username ? displayUsername(user.username) : user.name}</span>

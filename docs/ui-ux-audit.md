@@ -67,3 +67,25 @@ Las capturas y trazas se generan en `apps/dashboard/test-results/`, excluido de 
 La evidencia local corresponde a Chrome y datos mock, con movimiento reducido. No certifica todos los permisos, datos o integraciones de producción. El login real con credenciales y la autenticación OIDC completa quedan fuera de esta evidencia; el escenario de Zoho verifica recuperación ante fallo de red. Los detalles de misiones y la configuración se ejercitan; las colecciones canónicas se prueban con fixtures mínimos.
 
 La ejecución completa del workspace y PostgreSQL corresponde al pipeline del PR; los resultados anteriores son locales y no certifican CI ni preview.
+
+## Segunda revisión: escritorio
+
+Se revisaron selectores, Board, calendario y configuración con dos subagentes `gpt-5.6-luna`; los hallazgos se contrastaron con el código y los flujos E2E.
+
+- Configuración conserva la ventana y bloquea cambios de sección durante guardado de perfil y operaciones de API keys. Evita perder la llave antes de mostrarla.
+- El perfil admite Guardar con Enter, conserva el borrador tras fallos y evita envíos duplicados.
+- El tirador del Board permite iniciar el movimiento sin abrir el detalle al hacer clic.
+- El calendario permite abrir misiones con teclado y devuelve el foco al cerrar el panel.
+- Los grupos de lista por proyecto muestran el color del proyecto.
+- Los selectores de usuario y proyecto admiten consultas con espacios, selección con Enter y búsqueda limpia al reabrir. El selector de iconos también limpia la búsqueda al cerrar o eliminar.
+- El componente compartido de entidades captura fallos de creación, conserva la consulta y evita duplicados. Actualmente no hay consumidores de su callback opcional `onCreate`; este manejo no tiene evidencia E2E en rutas de producto.
+
+Ideas propuestas, sin implementar: mostrar filtros activos junto al título; abrir la edición de propiedades con un solo selector para reducir los popovers anidados.
+
+Verificación local de esta segunda revisión:
+
+- Build de producción de Next.js (incluye comprobación de tipos): aprobado.
+- Playwright sobre producción: 23 escenarios verificados. La ejecución conjunta aprobó 22; se corrigió un selector ambiguo de la prueba de usuario y su repetición focalizada aprobó usuario y calendario (2/2). La captura final del calendario espera al contenido cargado.
+- Los subagentes ejecutaron Vitest durante su revisión: dashboard 261/261 y UI 11/11, aprobados. Esta evidencia es local, no del pipeline del PR.
+- `git diff --check`: aprobado.
+- PR y CI quedan a cargo del usuario según su instrucción más reciente.

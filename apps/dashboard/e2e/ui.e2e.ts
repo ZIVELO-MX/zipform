@@ -278,3 +278,114 @@ test("settings and avatar actions fit a short mobile viewport", async ({ page })
   expect(await avatar.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
   await page.screenshot({ animations: "disabled", path: "test-results/avatar-mobile.png" });
 });
+
+test("desktop settings keeps API key creation visible until completion", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await settings(page);
+  await page.getByRole("button", { name: "Seguridad", exact: true }).click();
+  await expect(page.getByText("Cargando API keys…")).toHaveCount(0);
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST") await new Promise((resolve) => setTimeout(resolve, 900));
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Crear API key", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Perfil", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Configuración", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "API key creada", exact: true })).toBeVisible();
+});
+
+test("desktop profile submits with Enter and keeps the save visible", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await settings(page);
+  await page.getByLabel("Nombre", { exact: true }).fill("Owner desktop");
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST") {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await page.getByLabel("Nombre", { exact: true }).press("Enter");
+  await expect(page.getByRole("button", { name: "Guardando...", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Cancelar", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Configuración", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Guardar cambios", exact: true })).toBeEnabled();
+  await expect(page.getByLabel("Nombre", { exact: true })).toHaveValue("Owner desktop");
+});
+
+test("desktop Board handle does not open a mission and cards remain clickable", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  await page.getByRole("button", { name: "Board", exact: true }).click();
+  await page.keyboard.press("Escape");
+  const title = "Publicar dashboard operativo de TLOZ";
+  await page.getByRole("button", { name: `Mantén presionado para mover ${title}`, exact: true }).click();
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await page.locator(".tloz-kcard").filter({ hasText: title }).getByText(title, { exact: true }).click();
+  await expect(page.locator("dialog[open]")).toBeVisible();
+});
+
+test("desktop calendar opens missions from the keyboard", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  await page.getByRole("button", { name: "Calendario", exact: true }).click();
+  await page.keyboard.press("Escape");
+  const mission = page.getByRole("region", { name: "Calendario de Missions" }).getByRole("button").first();
+  await expect(mission).toBeVisible();
+  await page.screenshot({ animations: "disabled", path: "test-results/calendar-desktop.png" });
+  await mission.press("Enter");
+  await expect(page.locator("dialog[open]")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(mission).toBeFocused();
+});
+
+test("desktop user filter selects a trimmed query with Enter and resets after closing", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  const trigger = page.getByRole("button", { name: "Seleccionar responsable", exact: true });
+  await trigger.click();
+  await page.getByLabel("Buscar usuarios").fill("  owner  ");
+  await page.getByLabel("Buscar usuarios").press("Enter");
+  await expect(page.getByLabel("Buscar usuarios")).toHaveCount(0);
+  await expect(trigger).toContainText(/owner/i);
+  await trigger.click();
+  await page.getByLabel("Buscar usuarios").fill("no-match");
+  await page.keyboard.press("Escape");
+  await trigger.click();
+  await expect(page.getByLabel("Buscar usuarios")).toHaveValue("");
+  await expect(page.getByRole("button", { name: /Owner$/, pressed: true })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("desktop project picker selects with Enter without submitting the creation form", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  await page.getByRole("button", { name: "Crear nuevo Mission", exact: true }).click();
+  const panel = page.locator("dialog[open]");
+  await panel.getByRole("button", { name: /^Proyecto / }).click();
+  const trigger = panel.getByRole("button", { name: "Seleccionar proyecto", exact: true });
+  await trigger.click();
+  await page.getByLabel("Buscar proyecto", { exact: true }).fill("Core");
+  await page.getByLabel("Buscar proyecto", { exact: true }).press("Enter");
+  await expect(page.getByLabel("Buscar proyecto", { exact: true })).toHaveCount(0);
+  await expect(trigger).toContainText("Core");
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  await expect(panel).toBeVisible();
+});
+
+
+test("desktop profile closes after a successful save", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await settings(page);
+  await page.getByLabel("Nombre", { exact: true }).fill("Owner saved");
+  await page.getByRole("button", { name: "Guardar cambios", exact: true }).click();
+  await expect(page.getByText("Perfil actualizado", { exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Configuración", exact: true })).toHaveCount(0);
+});

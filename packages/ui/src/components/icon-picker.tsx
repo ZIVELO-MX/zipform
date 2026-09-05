@@ -65,7 +65,7 @@ export function IconPicker({ icons, value, color = "currentColor", label = "Icon
   </Button>;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(next) => { setOpen(next); if (!next) setQuery(""); }}>
       {iconOnly ? <Tooltip><TooltipTrigger asChild><PopoverTrigger asChild>{trigger}</PopoverTrigger></TooltipTrigger><TooltipContent>{selected?.label ?? label}</TooltipContent></Tooltip> : <PopoverTrigger asChild>{trigger}</PopoverTrigger>}
       <PopoverContent className="w-[min(340px,calc(100vw-32px))]" style={{ color }}>
         <PopoverHeader>
@@ -81,7 +81,7 @@ export function IconPicker({ icons, value, color = "currentColor", label = "Icon
         ) : null}
         <PickerSection title={query ? "Resultados" : "Todos los iconos"} icons={filtered} value={value} onSelect={selectIcon} />
         {filtered.length === 0 ? <p className="m-0 py-6 text-center text-sm text-carbon/50">No hay iconos que coincidan.</p> : null}
-        {allowClear && value ? <Button type="button" variant="ghost" className="mt-2 w-full justify-start text-carbon/55" onClick={() => { onValueChange(""); setOpen(false); }}><X data-icon="inline-start" aria-hidden="true" />Eliminar icono</Button> : null}
+        {allowClear && value ? <Button type="button" variant="ghost" className="mt-2 w-full justify-start text-carbon/55" onClick={() => { onValueChange(""); setOpen(false); setQuery(""); }}><X data-icon="inline-start" aria-hidden="true" />Eliminar icono</Button> : null}
       </PopoverContent>
     </Popover>
   );

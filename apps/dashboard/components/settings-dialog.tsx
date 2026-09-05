@@ -14,7 +14,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -71,6 +71,9 @@ export function SettingsDialog({
   const [avatarSearch, setAvatarSearch] = useState("");
   const [avatars, setAvatars] = useState<AvatarType[]>([]);
   const [pending, startTransition] = useTransition();
+  const [securityPending, setSecurityPending] = useState(false);
+  const savingProfile = useRef(false);
+  const busy = pending || securityPending;
 
   useEffect(() => {
     if (!open) return;
@@ -87,6 +90,8 @@ export function SettingsDialog({
   const hasChanges = name !== user.name || username !== user.username || avatarUrl !== (user.avatarUrl || "");
 
   const handleSave = useCallback(() => {
+    if (savingProfile.current || !hasChanges || !name.trim() || !username.trim()) return;
+    savingProfile.current = true;
     startTransition(async () => {
       try {
         await updateProfile({ name, username, avatarUrl: avatarUrl || undefined });
@@ -94,20 +99,23 @@ export function SettingsDialog({
         onOpenChange(false);
       } catch (error) {
         toast.error(tlozErrorMessage(error, "Error al guardar los cambios"));
+      } finally {
+        savingProfile.current = false;
       }
     });
-  }, [name, username, avatarUrl, onOpenChange]);
+  }, [name, username, avatarUrl, hasChanges, onOpenChange]);
 
   const handleCancel = useCallback(() => {
+    if (busy) return;
     setName(user.name);
     setUsername(user.username);
     setAvatarUrl(user.avatarUrl || "");
     onOpenChange(false);
-  }, [onOpenChange, user]);
+  }, [busy, onOpenChange, user]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent title="Configuración" className="grid h-[min(680px,calc(100dvh-2rem))] max-w-[620px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 md:grid-rows-[minmax(0,1fr)]">
+    <Dialog open={open} onOpenChange={(next) => { if (!busy) onOpenChange(next); }}>
+      <DialogContent aria-busy={busy} title="Configuración" className="grid h-[min(680px,calc(100dvh-2rem))] max-w-[620px] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 md:grid-rows-[minmax(0,1fr)]">
         <header className="flex items-center justify-between border-b border-carbon/[0.08] px-5 py-[17px] md:hidden">
           <div className="flex min-w-0 items-center gap-2.5">
             <span className="grid size-[30px] shrink-0 place-items-center rounded-[9px] bg-tintred text-zivelo">
@@ -115,7 +123,7 @@ export function SettingsDialog({
             </span>
             <h1 className="m-0 truncate text-base font-bold text-carbon">Configuración</h1>
           </div>
-          <Button type="button" variant="outline" size="icon-xs" aria-label="Cerrar" className="rounded-full bg-white" onClick={() => onOpenChange(false)}>
+          <Button type="button" variant="outline" size="icon-xs" aria-label="Cerrar" disabled={busy} className="rounded-full bg-white" onClick={handleCancel}>
             <X className="size-4" aria-hidden="true" />
           </Button>
         </header>
@@ -134,6 +142,7 @@ export function SettingsDialog({
                       "flex min-h-9 flex-1 items-center gap-2 rounded-[10px] px-3 text-left text-[13px] font-semibold transition-all duration-200 active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-carbon/25 md:flex-none",
                       selected ? "bg-carbon text-white" : "text-carbon/65 hover:bg-carbon/5"
                     )}
+                    disabled={busy}
                     aria-current={selected ? "page" : undefined}
                     onClick={() => setSection(item.id)}
                   >
@@ -143,7 +152,7 @@ export function SettingsDialog({
                 );
               })}
             </nav>
-            <Button type="button" variant="ghost" size="sm" className="mt-auto hidden md:flex" onClick={handleCancel}>Cerrar configuración</Button>
+            <Button type="button" variant="ghost" size="sm" className="mt-auto hidden md:flex" disabled={busy} onClick={handleCancel}>Cerrar configuración</Button>
           </aside>
 
           <main className="grid min-h-0 min-w-0 bg-white">
@@ -167,7 +176,7 @@ export function SettingsDialog({
                 onCancel={handleCancel}
               />
             ) : (
-              <SecuritySettings currentUser={user} />
+              <SecuritySettings currentUser={user} onPendingChange={setSecurityPending} />
             )}
           </main>
         </div>
@@ -221,7 +230,7 @@ function ProfileSettings({
     .slice(0, 2)
     .toUpperCase();
   return (
-    <div className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]">
+    <form onSubmit={(event) => { event.preventDefault(); onSave(); }} className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_auto]">
       <div className="flex min-h-0 flex-col items-center overflow-y-auto px-5 py-[22px]">
         <div className="flex w-full max-w-[360px] flex-col gap-5">
           <div className="flex items-center gap-4">
@@ -237,7 +246,7 @@ function ProfileSettings({
               <p className="mb-[7px] mt-0 text-xs font-bold uppercase tracking-[0.05em] text-[#9a9a98]">
                 Avatar · {currentAvatar ? currentAvatar.name : "Sin avatar"}
               </p>
-              <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]" onClick={() => { setAvatarTempId(currentAvatar?.id ?? avatars[0]?.id ?? ""); setAvatarPickerOpen(true); }}>
+              <Button type="button" variant="outline" size="sm" className="h-[34px] rounded-full bg-white px-3.5 text-[13px]" disabled={pending} onClick={() => { setAvatarTempId(currentAvatar?.id ?? avatars[0]?.id ?? ""); setAvatarPickerOpen(true); }}>
                 <Pencil className="size-3.5" aria-hidden="true" />
                 Cambiar avatar
               </Button>
@@ -353,13 +362,14 @@ function ProfileSettings({
           <FieldGroup className="gap-[15px]">
             <Field className="gap-1.5">
               <FieldLabel htmlFor="settings-name" className="text-xs font-semibold text-[#454543]">Nombre</FieldLabel>
-              <Input id="settings-name" value={name} onChange={(event) => onNameChange(event.target.value)} className="h-10 rounded-[11px] bg-white text-[13.5px]" />
+              <Input disabled={pending} id="settings-name" value={name} onChange={(event) => onNameChange(event.target.value)} className="h-10 rounded-[11px] bg-white text-[13.5px]" />
             </Field>
             <Field className="gap-1.5">
               <FieldLabel htmlFor="settings-username" className="text-xs font-semibold text-[#454543]">Username</FieldLabel>
               <div className="relative">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-[13.5px] text-carbon/40">@</span>
                 <Input
+                  disabled={pending}
                   id="settings-username"
                   value={username}
                   onChange={(event) => onUsernameChange(event.target.value)}
@@ -389,11 +399,11 @@ function ProfileSettings({
           </span>
         ) : null}
         <div className="flex gap-2 sm:ml-auto">
-          <Button type="button" variant="outline" size="sm" className="h-[38px] flex-1 rounded-[11px] bg-white text-[13px] sm:flex-none" onClick={onCancel}>
+          <Button type="button" variant="outline" size="sm" className="h-[38px] flex-1 rounded-[11px] bg-white text-[13px] sm:flex-none" disabled={pending} onClick={onCancel}>
             <X className="size-3.5" aria-hidden="true" />
             Cancelar
           </Button>
-          <Button type="button" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending || !hasChanges || !name.trim() || !username.trim()} onClick={onSave}>
+          <Button type="submit" size="sm" className="h-[38px] flex-1 rounded-[11px] text-[13px] sm:flex-none" disabled={pending || !hasChanges || !name.trim() || !username.trim()}>
             {pending ? (
               <span className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             ) : (
@@ -403,11 +413,11 @@ function ProfileSettings({
           </Button>
         </div>
       </footer>
-    </div>
+    </form>
   );
 }
 
-function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
+function SecuritySettings({ currentUser, onPendingChange }: { currentUser: UserProfile; onPendingChange: (pending: boolean) => void }) {
   const capabilities = useTlozCapabilities();
   const [keyName, setKeyName] = useState("Personal TLOZ key");
   const [agent, setAgent] = useState(currentUser.id);
@@ -415,9 +425,25 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [createdKey, setCreatedKey] = useState<CreateApiKeyResult | null>(null);
   const [keyPopoverOpen, setKeyPopoverOpen] = useState(false);
-  const [pending, setPending] = useState(false);
+  const [operation, setOperation] = useState<"create" | "revoke" | null>(null);
+  const pending = operation !== null;
   const [keysLoading, setKeysLoading] = useState(true);
   const [keysError, setKeysError] = useState<string | null>(null);
+  const mutating = useRef(false);
+
+  function beginMutation(nextOperation: "create" | "revoke") {
+    if (mutating.current) return false;
+    mutating.current = true;
+    setOperation(nextOperation);
+    onPendingChange(true);
+    return true;
+  }
+
+  function endMutation() {
+    mutating.current = false;
+    setOperation(null);
+    onPendingChange(false);
+  }
 
   useEffect(() => {
     if (!capabilities.canManageAgents) return;
@@ -462,7 +488,7 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
           <FieldGroup className="gap-[15px]">
             <Field className="gap-1.5">
               <FieldLabel htmlFor="api-key-name" className="text-xs font-semibold text-[#454543]">Nombre de la llave</FieldLabel>
-              <Input id="api-key-name" value={keyName} onChange={(event) => setKeyName(event.target.value)} className="h-10 rounded-[11px] bg-white text-[13.5px]" />
+              <Input disabled={pending} id="api-key-name" value={keyName} onChange={(event) => setKeyName(event.target.value)} className="h-10 rounded-[11px] bg-white text-[13.5px]" />
             </Field>
             <Field className="gap-1.5">
               <FieldLabel className="text-xs font-semibold text-[#454543]">Cuenta</FieldLabel>
@@ -489,9 +515,11 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
                       type="button"
                       variant="ghost"
                       size="icon-xs"
+                      disabled={pending}
                       aria-label={`Eliminar ${key.name}`}
                       className="shrink-0 rounded-full text-carbon/45 hover:text-zivelo"
                       onClick={async () => {
+                        if (!beginMutation("revoke")) return;
                         try {
                           if (agent === currentUser.id) await revokeOwnApiKey(key.id);
                           else await revokeAgentApiKey(agent, key.id);
@@ -503,6 +531,8 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
                           toast.success("API key eliminada");
                         } catch (error) {
                           toast.error(tlozErrorMessage(error, "Error al eliminar API key"));
+                        } finally {
+                          endMutation();
                         }
                       }}
                     >
@@ -530,7 +560,7 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
               className="h-[38px] rounded-[11px] text-[13px]"
               disabled={pending || keysLoading || !agent}
               onClick={async () => {
-                setPending(true);
+                if (!beginMutation("create")) return;
                 try {
                   const result = agent === currentUser.id
                     ? await createOwnApiKey(keyName.trim() || "API key")
@@ -542,12 +572,12 @@ function SecuritySettings({ currentUser }: { currentUser: UserProfile }) {
                 } catch (error) {
                   toast.error(tlozErrorMessage(error, "Error al crear API key"));
                 } finally {
-                  setPending(false);
+                  endMutation();
                 }
               }}
             >
               <KeyRound className="size-3.5" aria-hidden="true" />
-              {pending ? "Creando…" : "Crear API key"}
+              {operation === "create" ? "Creando…" : "Crear API key"}
             </Button>
           </PopoverAnchor>
           <PopoverContent align="end" side="top" className="z-50 w-[min(360px,calc(100vw-32px))] rounded-[18px] p-4">
