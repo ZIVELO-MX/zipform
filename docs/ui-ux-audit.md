@@ -96,6 +96,28 @@ Verificación local de esta segunda revisión:
 - **Completar misión:** la acción no capturaba errores y permitía nuevas pulsaciones durante el guardado. Reutiliza el manejo de errores existente y deshabilita la acción mientras está pendiente. Regresión E2E con fallo de conexión y reintento sin duplicados.
 - **Colecciones paginadas:** los controles indican «Filtros de esta página» y «Orden de esta página» cuando hay más de una página. Regresión E2E con 26 registros y navegación a la segunda página; el Lobby conserva las etiquetas normales.
 
-**Pendiente:** los filtros y el orden globales entre páginas requieren ampliar las consultas paginadas del servidor. El ajuste de etiquetas aclara el alcance actual; no implementa esa consulta global. No se cargan colecciones enteras en memoria para simularla.
+**Pendiente en la tercera revisión (resuelto en la cuarta):** los filtros y el orden globales entre páginas requieren ampliar las consultas paginadas del servidor. El ajuste de etiquetas aclara el alcance actual; no implementa esa consulta global. No se cargan colecciones enteras en memoria para simularla.
 
 Verificación local final: **26/26 E2E** sobre la compilación de producción (46.3 s), **21/21 pruebas focalizadas**, build con comprobación de tipos y `git diff --check` aprobados.
+
+
+## Cuarta revisión: consultas globales y borradores de escritorio
+
+Fecha: 2026-09-06. Se mantuvo Ponytail y se delegaron consultas y revisiones acotadas a `gpt-5.6-sol` y `gpt-5.6-luna`.
+
+- Projects, Inventory, Workshop y Library filtran por responsable y estado, y ordenan por título o fecha **antes de paginar**. Las consultas de PostgreSQL aplican filtros y cursores en SQL parametrizado con límite; no cargan la colección completa en el navegador. El adaptador conserva el orden del store para no alterar los cursores por diferencias de colación.
+- Los filtros y el orden quedan en la URL. Cambiarlos reinicia la paginación; Siguiente y Primera página conservan la consulta. Los controles reflejan inmediatamente la selección y bloquean nuevos cambios durante la carga.
+- Las colecciones muestran estados vacíos y encabezados de su entidad. Se retiran las etiquetas de alcance limitado a la página de la revisión anterior.
+- Un cursor inexistente muestra una pantalla recuperable. Primera página conserva filtros y vuelve a cargar la ruta; una navegación cliente sin recarga dejaba el error montado y fue corregida con un enlace nativo.
+- Markdown espera el resultado real del guardado. Un fallo mantiene el borrador abierto y permite reintentar el mismo texto; Guardar, Cancelar y el textarea quedan bloqueados durante el envío.
+- Guardar otra propiedad en Workshop o Library ya no desmonta el detalle por un cambio de revisión ni descarta el borrador de Markdown.
+
+Verificación **local** final:
+
+- **35/35 E2E aprobados** sobre la compilación de producción en Chrome: 47.2 s. Comando desde `apps/dashboard`: `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`.
+- Regresiones con 30 registros por colección: orden global, segunda página, cambio de responsable desde esa página, ocultar completadas y recarga conservando controles. Fallo/reintento de Markdown, guardado de propiedades con borrador abierto y recuperación de cursor inválido.
+- Dashboard verificado también a **1024 × 768** y **1920 × 900**, además de los tamaños previos. Inspección visual de capturas del dashboard de escritorio, colección filtrada y editor tras fallo.
+- **49/49 pruebas focalizadas** de Vitest: 28 de dashboard y 21 de stores/adaptador. TypeScript de dashboard y data, build Next.js y `git diff --check` aprobados.
+- Se añadió una prueba de integración PostgreSQL para alias, fechas ausentes, empates, cursores excluidos y valores con comillas. El archivo se carga, pero sus **25 casos se omiten localmente** porque `TEST_DATABASE_URL` no está configurado. No se declara validación contra PostgreSQL real.
+
+El PR y su pipeline siguen a cargo del usuario. Esta evidencia no certifica el login real, todos los roles ni las integraciones de producción; esas comprobaciones siguen necesarias antes de declarar escritorio listo al 100 %.

@@ -10,7 +10,7 @@ import { isMermaidCodeBlock } from "./mermaid-utils";
 
 type MarkdownEditorProps = {
   value: string;
-  onSave: (value: string) => void;
+  onSave: (value: string) => void | boolean | Promise<void | boolean>;
   onToggleTask?: (position: number, completed: boolean) => void;
   placeholder?: string;
   showHeader?: boolean;
@@ -20,22 +20,38 @@ type MarkdownEditorProps = {
 export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true, readOnly = false }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorId = useId();
+  const persistedValue = useRef(value);
 
   useEffect(() => {
-    setDraft(value);
-    setEditing(false);
-  }, [value]);
+    if (value === persistedValue.current) return;
+    const keepDraft = editing && draft !== persistedValue.current && draft !== value;
+    persistedValue.current = value;
+    if (!keepDraft) {
+      setDraft(value);
+      setEditing(false);
+    }
+  }, [value, draft, editing]);
 
   function cancel() {
     setDraft(value);
     setEditing(false);
   }
 
-  function save() {
-    if (draft !== value) onSave(draft);
-    setEditing(false);
+  async function save() {
+    if (saving) return;
+    if (draft === value) { setEditing(false); return; }
+    setSaving(true);
+    try {
+      const saved = await onSave(draft);
+      if (saved !== false) setEditing(false);
+    } catch {
+      toast.error("No se pudo guardar el detalle");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleCopy() {
@@ -76,6 +92,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
         <div className="flex flex-col gap-2">
             <label className="sr-only" htmlFor={editorId}>Detalle en Markdown</label>
             <textarea
+              disabled={saving}
               id={editorId}
               ref={textareaRef}
               autoFocus
@@ -85,8 +102,8 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
               onChange={(event) => setDraft(event.target.value)}
             />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={cancel}>Cancelar</Button>
-            <Button type="button" onClick={save}>Guardar</Button>
+            <Button type="button" variant="outline" onClick={cancel} disabled={saving}>Cancelar</Button>
+            <Button type="button" onClick={() => void save()} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</Button>
           </div>
         </div>
       ) : (

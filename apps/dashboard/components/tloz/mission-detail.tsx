@@ -145,12 +145,12 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
     onMissionChange?.(next);
   }
 
-  function mutate(label: string, operation: () => Promise<TlozMissionDetail>) {
+  function mutate(label: string, operation: () => Promise<TlozMissionDetail>): Promise<boolean> {
     const toastId = toast.loading(label, { toasterId });
-    startTransition(async () => {
-      try { accept(await operation()); toast.success("Cambios guardados", { id: toastId, toasterId }); }
-      catch { toast.error("No se pudieron guardar los cambios", { id: toastId, toasterId }); }
-    });
+    return new Promise((resolve) => startTransition(async () => {
+      try { accept(await operation()); toast.success("Cambios guardados", { id: toastId, toasterId }); resolve(true); }
+      catch { toast.error("No se pudieron guardar los cambios", { id: toastId, toasterId }); resolve(false); }
+    }));
   }
 
   function remember() {
@@ -218,8 +218,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   function saveDocument(nextMarkdown = detailMarkdown) {
     if (nextMarkdown === current.descriptionDetail) return;
     remember();
-    setDetailMarkdown(nextMarkdown);
-    mutate("Guardando documento…", () => documentMutation
+    return mutate("Guardando documento…", () => documentMutation
       ? documentMutation({ body: nextMarkdown })
       : saveMissionDocument(current.id, nextMarkdown));
   }

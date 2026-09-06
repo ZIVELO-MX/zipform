@@ -78,7 +78,7 @@ export function ContainerContentCollection({
       <SlideOver open={Boolean(selected)} title={selected?.title ?? "Detalle"} onOpenChange={(open) => !open && setSelectedId(null)}>
         {selected ? (
           <ContainerContentDetail
-            key={`${selected.id}:${selected.revision}`}
+            key={selected.id}
             container={container}
             content={selected}
             users={users}

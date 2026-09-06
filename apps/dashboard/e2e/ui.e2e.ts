@@ -492,6 +492,32 @@ for (const collection of ["projects", "inventory", "workshop", "library"] as con
   });
 }
 
+test("markdown keeps the draft after a failed save and retries unchanged text", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  await panel.getByRole("button", { name: "Opciones de descripción", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Editar", exact: true }).click();
+  const draft = panel.getByLabel("Detalle en Markdown", { exact: true });
+  await draft.fill("Desktop draft survives a failed save.");
+  await page.route("**/", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    await route.abort("failed");
+  });
+  await panel.getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect(draft).toBeDisabled();
+  await expect(page.getByText("No se pudieron guardar los cambios", { exact: true })).toBeVisible();
+  await expect(draft).toBeEnabled();
+  await expect(draft).toHaveValue("Desktop draft survives a failed save.");
+  await page.screenshot({ animations: "disabled", path: "test-results/markdown-retry-desktop.png" });
+  await page.unroute("**/");
+  await panel.getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect(draft).toHaveCount(0);
+  await expect(panel.getByText("Desktop draft survives a failed save.", { exact: true })).toBeVisible();
+});
+
 test("an invalid collection cursor offers a working first page without losing filters", async ({ page }) => {
   await authenticate(page);
   await page.goto("/workshop?cursor=missing-e2e-record&sort=title&owner=developer");
@@ -502,3 +528,30 @@ test("an invalid collection cursor offers a working first page without losing fi
   await expect(page.getByRole("button", { name: "Control", exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No se pudo cargar esta página", exact: true })).toHaveCount(0);
 });
+
+for (const collection of ["workshop", "library"] as const) {
+  test(`${collection} preserves the markdown draft when another property is saved`, async ({ page, request }) => {
+    const response = await request.post("/api/v2/contents", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: {
+      publicId: `e2e-draft-${collection}`, containerId: collection, presentation: collection,
+      title: `Draft ${collection}`, body: "Original detail", data: { status: "later", category: "side_quest", ownerId: "owner" },
+    } });
+    expect(response.ok(), await response.text()).toBe(true);
+    await authenticate(page);
+    await page.goto(`/${collection}`);
+    await page.getByText(`Draft ${collection}`, { exact: true }).click();
+    const panel = page.locator("dialog[open]");
+    await panel.getByRole("button", { name: "Opciones de descripción", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Editar", exact: true }).click();
+    const draft = panel.getByLabel("Detalle en Markdown", { exact: true });
+    await draft.fill("Unsaved description survives a status change.");
+    await panel.getByRole("button", { name: /^Estado / }).click();
+    await page.getByRole("combobox", { name: "Estado", exact: true }).click();
+    await page.getByRole("option", { name: "Now", exact: true }).click();
+    await expect(page.getByText("Estado actualizado", { exact: true })).toBeVisible();
+    await expect(draft).toHaveValue("Unsaved description survives a status change.");
+    await page.keyboard.press("Escape");
+    await panel.getByRole("button", { name: "Guardar", exact: true }).click();
+    await expect(draft).toHaveCount(0);
+    await expect(panel.getByText("Unsaved description survives a status change.", { exact: true })).toBeVisible();
+  });
+}
