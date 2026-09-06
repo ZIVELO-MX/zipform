@@ -1,9 +1,11 @@
+import type { CollectionSearchParams } from "../../components/tloz/collection-query";
 import { DocumentCollectionPage } from "../../components/tloz/document-collection-page";
 
-export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ cursor?: string }> }) {
-  const { cursor } = await searchParams;
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<CollectionSearchParams> }) {
+  const params = await searchParams;
+  const { cursor } = params;
   return (
-    <DocumentCollectionPage
+    <DocumentCollectionPage searchParams={params}
       definitionKey="projects"
       kind="project"
       title="Projects"

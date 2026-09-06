@@ -1,3 +1,4 @@
+import type { CollectionQuery } from "./collection-query";
 import { PageSubHeader } from "@tloz/ui";
 import { getTlozMissions, getTlozProjectDocuments, getTlozProjects, getTlozQuestItems, getTlozUsers } from "../../lib/tloz-data";
 import { TlozHeader } from "./tloz-header";
@@ -30,7 +31,7 @@ type TlozPageShellProps = {
     documents: TlozDocument[];
     users: UserProfile[];
   };
-  paginated?: boolean;
+  collectionQuery?: CollectionQuery;
 };
 
 export async function TlozPageShell({
@@ -52,7 +53,7 @@ export async function TlozPageShell({
   createKind = "mission",
   canonicalContainer,
   documentNavigation,
-  paginated = false,
+  collectionQuery,
   children
 }: TlozPageShellProps) {
   const [missions, projects, questItems, allUsers, documents] = documentNavigation
@@ -83,7 +84,7 @@ export async function TlozPageShell({
       controlKind={controlKind ?? (createKind === "workshop" ? "project" : createKind === "library" ? "inventory" : createKind)}
       fixedProject={Boolean(controlProjectId)}
       storageScope={stateScope}
-      paginated={paginated}
+      collectionQuery={collectionQuery}
     >
       <div className={fullWidth ? "tloz-page-full" : "page-stack tloz-page"}>
         <TlozHeader

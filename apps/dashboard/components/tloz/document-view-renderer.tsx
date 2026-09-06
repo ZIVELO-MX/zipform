@@ -8,7 +8,7 @@ import type {
   UserProfile,
 } from "@tloz/types";
 import { parseMarkdownChecklist } from "@tloz/data";
-import { Button, SlideOver, toast } from "@tloz/ui";
+import { Button, EmptyState, SlideOver, toast } from "@tloz/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -64,7 +64,7 @@ export function DocumentViewRenderer({
   fallback,
   missionRecords,
 }: DocumentViewRendererProps) {
-  const { state } = useTlozViewState();
+  const { state, serverQuery, queryPending } = useTlozViewState();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<TlozDocument | null>(null);
@@ -75,13 +75,13 @@ export function DocumentViewRenderer({
   );
   const statusOptions = definition.fields.find((field) => field.key === "status")?.options ?? [];
   const visibleRecords = useMemo(
-    () => filterAndSortTlozRecords(
+    () => serverQuery ? displayRecords : filterAndSortTlozRecords(
       displayRecords,
       state,
       statusOptions,
       { defaultSort: definition.kind === "mission" ? "dependencies" : "source" },
     ),
-    [definition.kind, displayRecords, state, statusOptions],
+    [definition.kind, displayRecords, serverQuery, state, statusOptions],
   );
 
   function openDocument(document: TlozDocument) {
@@ -118,13 +118,13 @@ export function DocumentViewRenderer({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div aria-busy={queryPending} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <TlozViewHeader
           title={collectionViewConfig[collectionView].title}
-          description={collectionViewConfig[collectionView].description}
+          description={definition.kind === "mission" ? collectionViewConfig[collectionView].description : `${definition.kind === "project" ? "Projects" : "Inventory"} · ${visibleRecords.length} ${visibleRecords.length === 1 ? "elemento" : "elementos"}`}
         />
         <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
-          {state.view === "list" ? (
+          {visibleRecords.length === 0 ? <EmptyState title="Sin coincidencias" description="Ajusta los filtros o crea un elemento desde Control." /> : state.view === "list" ? (
             <MissionList missions={visibleRecords} grouping={state.grouping} statusOptions={statusOptions} documentKind={definition.kind} onSelect={openRecord} />
           ) : (
             <MissionTable missions={visibleRecords} statusOptions={statusOptions} documentKind={definition.kind} onSelect={openRecord} />

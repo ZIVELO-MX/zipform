@@ -64,10 +64,10 @@ test("login validates required fields and recovers from a Zoho connection failur
   await expect(page.getByRole("button", { name: "Entrar", exact: true })).toBeEnabled();
 });
 
-for (const width of [320, 390, 834, 1440]) {
+for (const width of [320, 390, 834, 1024, 1440, 1920]) {
   test(`dashboard fits the workspace at ${width}px`, async ({ page }) => {
     await authenticate(page);
-    await page.setViewportSize({ width, height: 900 });
+    await page.setViewportSize({ width, height: width === 1024 ? 768 : 900 });
     await page.goto("/");
     await expect(page.getByRole("heading", { name: width < 768 ? "Lista" : "Dashboard", exact: true })).toBeVisible();
     await expectNoOverflow(page);
@@ -438,27 +438,67 @@ test("mission completion recovers from a failed save without duplicate submissio
   expect(submissions).toBe(2);
 });
 
-test("paginated collection controls explain that filters and sorting apply to the current page", async ({ page, request }) => {
-  const headers = { Authorization: "Bearer zipform-local-e2e-api-only" };
-  for (let index = 0; index < 26; index += 1) {
-    const response = await request.post("/api/v2/contents", { headers, data: {
-      publicId: `e2e-page-scope-${index}`, containerId: "workshop", presentation: "workshop",
-      title: `Page scope ${index}`, data: { status: "later", category: "side_quest", ownerId: "owner" },
-    } });
-    expect(response.ok(), await response.text()).toBe(true);
-  }
+for (const collection of ["projects", "inventory", "workshop", "library"] as const) {
+  test(`${collection} filters and sorts the full collection before pagination`, async ({ page, request }) => {
+    const headers = { Authorization: "Bearer zipform-local-e2e-api-only" };
+    for (let index = 0; index < 30; index += 1) {
+      const common = {
+        publicId: `e2e-query-${collection}-${index}`,
+        title: `AAA ${collection} ${String(index).padStart(2, "0")}`,
+        data: { owner: index < 2 ? "developer" : "owner", status: index === 0 ? "completed" : "later" },
+      };
+      const response = collection === "projects"
+        ? await request.post("/api/v2/containers", { headers, data: { ...common, presentation: "project", definition: { fields: [], views: [{ id: "list", fields: ["title"] }], defaultView: "list" } } })
+        : await request.post("/api/v2/contents", { headers, data: { ...common, containerId: collection, presentation: collection === "inventory" ? "quest-item" : collection } });
+      expect(response.ok(), await response.text()).toBe(true);
+    }
+    await authenticate(page);
+    await page.goto(`/${collection}`);
+    await expect(page.getByText(`AAA ${collection} 00`, { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Control", exact: true }).click();
+    await page.getByRole("combobox", { name: "Orden", exact: true }).click();
+    await page.getByRole("option", { name: "Título", exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/${collection}\\?sort=title$`));
+    await page.keyboard.press("Escape");
+    await expect(page.getByText(`AAA ${collection} 00`, { exact: true })).toBeVisible();
+    const next = page.getByRole("link", { name: "Siguiente", exact: true });
+    await expect(next).toHaveAttribute("href", new RegExp(`/${collection}\\?sort=title&cursor=`));
+    await next.click();
+    await expect(page.getByText(`AAA ${collection} 29`, { exact: true })).toBeVisible();
+    await expect(page.getByText(`AAA ${collection} 00`, { exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Control", exact: true }).click();
+    await page.getByRole("button", { name: "Seleccionar responsable", exact: true }).click();
+    await page.getByLabel("Buscar usuarios", { exact: true }).fill("developer");
+    await page.getByLabel("Buscar usuarios", { exact: true }).press("Enter");
+    await expect(page).toHaveURL(new RegExp(`/${collection}\\?sort=title&owner=developer$`));
+    await page.keyboard.press("Escape");
+    await expect(page.getByText(`AAA ${collection} 00`, { exact: true })).toBeVisible();
+    await expect(page.getByText(`AAA ${collection} 01`, { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Siguiente", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Control", exact: true }).click();
+    await page.getByRole("checkbox", { name: "Mostrar completadas", exact: true }).uncheck();
+    await expect(page).toHaveURL(/completed=0/);
+    await page.keyboard.press("Escape");
+    await expect(page.getByText(`AAA ${collection} 00`, { exact: true })).toHaveCount(0);
+    await expect(page.getByText(`AAA ${collection} 01`, { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText(`AAA ${collection} 01`, { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Control", exact: true }).click();
+    await expect(page.getByRole("combobox", { name: "Orden", exact: true })).toContainText("Título");
+    await expect(page.getByRole("checkbox", { name: "Mostrar completadas", exact: true })).not.toBeChecked();
+    await page.keyboard.press("Escape");
+    await expectNoOverflow(page);
+    await page.screenshot({ animations: "disabled", path: `test-results/${collection}-filtered-desktop.png` });
+  });
+}
+
+test("an invalid collection cursor offers a working first page without losing filters", async ({ page }) => {
   await authenticate(page);
-  await page.goto("/workshop");
-  await expect(page.getByRole("link", { name: "Siguiente", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Control", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Filtros de esta página", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Orden de esta página", exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await page.getByRole("link", { name: "Siguiente", exact: true }).click();
-  await expect(page.getByRole("link", { name: "Primera página", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Control", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Filtros de esta página", exact: true })).toBeVisible();
-  await page.goto("/");
-  await page.getByRole("button", { name: "Control", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Filtros", exact: true })).toBeVisible();
+  await page.goto("/workshop?cursor=missing-e2e-record&sort=title&owner=developer");
+  await expect(page.getByRole("heading", { name: "No se pudo cargar esta página", exact: true })).toBeVisible();
+  const first = page.getByRole("link", { name: "Primera página", exact: true });
+  await expect(first).toHaveAttribute("href", "/workshop?sort=title&owner=developer");
+  await first.click();
+  await expect(page.getByRole("button", { name: "Control", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No se pudo cargar esta página", exact: true })).toHaveCount(0);
 });
