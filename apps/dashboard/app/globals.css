@@ -1563,7 +1563,7 @@ button {
 }
 
 .mission-detail-layout {
-  grid-template-columns: minmax(0, 1fr) 308px;
+  grid-template-columns: minmax(0, 1fr) 260px;
 }
 
 .mission-detail-properties {
@@ -1572,10 +1572,15 @@ button {
 }
 
 .mission-slide-over .mission-detail-properties {
-  inset-block-start: 1rem;
+  position: static;
 }
 
-@container (max-width: 760px) {
+.mission-detail-workspace [data-radix-accordion-content],
+.mission-detail-workspace .mission-resource-grid {
+  overflow-wrap: anywhere;
+}
+
+@container (max-width: 680px) {
   .mission-detail-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1976,5 +1981,5 @@ button {
   .tloz-dashboard .grid { grid-template-columns: minmax(0, 1fr); }
 }
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition: none !important; scroll-behavior: auto !important; }
 }

@@ -73,6 +73,7 @@ export function ContainerContentDetail({
       canMove={false}
       canUpdateDocument
       documentMutation={mutate}
+      activityUrl={`/api/v2/contents/${encodeURIComponent(content.id)}/activity?limit=8`}
       onAddResource={async (input: TlozResourceInput) => updateResources((resources) => [...resources, createResource(input, content)])}
       onRemoveResource={async (resourceId: string) => updateResources((resources) => resources.filter((resource) => resource.id !== resourceId))}
       fullDetailHref={canonicalContentHref(content.presentation, content.publicId)}

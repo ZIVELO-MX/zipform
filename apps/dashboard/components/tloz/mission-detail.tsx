@@ -48,7 +48,7 @@ export type MissionDetailOptions = Omit<MissionEditorOptions, "missions"> & {
 
 type EditableSnapshot = Pick<TlozMissionDetail, "title" | "description" | "descriptionDetail" | "icon">;
 
-export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onAddResource, onRemoveResource, onMissionChange, onNavigateMission, onNavigateQuestItem, fullDetailHref: detailHrefOverride, variant = "full" }: {
+export function MissionDetail({ mission, options, canUpdate = true, canMove = canUpdate, canUpdateDocument = canUpdate, documentMutation, onBackingDocumentChange, onAddResource, onRemoveResource, onMissionChange, onNavigateMission, onNavigateQuestItem, fullDetailHref: detailHrefOverride, activityUrl, variant = "full" }: {
   mission: TlozMissionDetail;
   options: MissionDetailOptions;
   canUpdate?: boolean;
@@ -62,6 +62,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   onNavigateMission?: (missionId: string) => void;
   onNavigateQuestItem?: (questItemId: string) => void;
   fullDetailHref?: string;
+  activityUrl?: string | null;
   variant?: "panel" | "full";
 }) {
   const [current, setCurrent] = useState(mission);
@@ -84,10 +85,14 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
+  const resolvedActivityUrl = activityUrl === undefined
+    ? (isMissionDocument ? `/api/v1/missions/${encodeURIComponent(current.displayId)}/activity?limit=8` : null)
+    : activityUrl;
   useEffect(() => {
     let cancelled = false;
+    if (!resolvedActivityUrl) return;
     setActivityState("loading");
-    fetch(`/api/v1/missions/${encodeURIComponent(current.displayId)}/activity?limit=8`)
+    fetch(resolvedActivityUrl)
       .then((response) => {
         if (!response.ok) throw new Error("activity_request_failed");
         return response.json();
@@ -100,9 +105,9 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
       })
       .catch(() => { if (!cancelled) setActivityState("error"); });
     return () => { cancelled = true; };
-  }, [current.displayId]);
+  }, [current.displayId, current.updatedAt, resolvedActivityUrl]);
   const fullDetailHref = detailHrefOverride ?? resolveFullDetailHref(current, options.document);
-  const projectMissionsHref = options.document?.kind === "project" && current.project
+  const projectMissionsHref = !detailHrefOverride && options.document?.kind === "project" && current.project
     ? projectHref(current.project)
     : null;
   const completionStatus = (
@@ -291,7 +296,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const statusColor = statusPresentation.textColor;
 
   return (
-    <article className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-[26px] md:py-7" aria-busy={isPending}>
+    <article data-variant={variant} className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-6" aria-busy={isPending}>
       {variant === "full" && current.project ? (
         <Breadcrumb className="mb-5">
           <BreadcrumbList className="flex-nowrap text-carbon/60">
@@ -303,28 +308,29 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
           </BreadcrumbList>
         </Breadcrumb>
       ) : null}
-      <div className="mission-detail-layout grid min-w-0 gap-[30px]">
-        <main className="min-w-0">
-          <header>
-            <div className="mb-3.5 flex flex-wrap items-center gap-2.5">
-              {(() => { const TypeIcon = missionTypeIcon[current.type]; return <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold" style={{ backgroundColor: `${typeColor}18`, color: typeColor }}><TypeIcon className="size-[13px]" aria-hidden="true" />{categoryOption?.label ?? missionTypeLabel[current.type]}</span>; })()}
-              <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold" style={{ backgroundColor: `${statusColor}18`, color: statusColor }}><span className={`size-[7px] rounded-full bg-current ${statusPresentation.role === "active" ? "animate-pulse" : ""}`} aria-hidden="true" />{statusPresentation.label}</span>
-              <span className="ml-0.5 font-mono text-[11.5px] text-[#9A9A98]">{current.displayId}</span>
-            </div>
-            <div className="flex items-start gap-2.5">
-              {canUpdateDocument ? <span className="mt-0.5 shrink-0 rounded-lg" style={{ backgroundColor: `${detailColor}18` }}><IconPicker icons={missionIcons} value={current.icon} color={detailColor} recentStorageKey="tloz-recent-icons" onValueChange={saveIcon} iconOnly className="size-8 justify-center rounded-lg border-0 bg-transparent p-0 shadow-none hover:bg-transparent [&_svg]:size-[15px]" /></span> : (() => { const CurrentIcon = resolveMissionIcon(current.icon); return <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-[15px]" style={{ backgroundColor: `${detailColor}18`, color: detailColor }}><CurrentIcon aria-hidden="true" /></span>; })()}
-              {editingTitle ? <Input autoFocus className="h-auto border border-[#1D1D1B]/15 bg-white px-2 py-0 text-[30px] font-bold leading-[1.12] tracking-[-0.025em] shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : canUpdateDocument ? <button type="button" className="max-w-full rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="m-0 text-balance text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-[#1D1D1B]">{current.title}</h1></button> : <h1 className="m-0 text-balance text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-[#1D1D1B]">{current.title}</h1>}
-            </div>
-          </header>
+      <header className="mission-detail-header mb-5 min-w-0">
+        <div className="mb-3 flex flex-wrap items-center gap-2.5">
+          {(() => { const TypeIcon = missionTypeIcon[current.type]; return <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-[11.5px] font-bold" style={{ backgroundColor: `${typeColor}18`, color: typeColor }}><TypeIcon className="size-[13px]" aria-hidden="true" />{categoryOption?.label ?? missionTypeLabel[current.type]}</span>; })()}
+          <span className="inline-flex items-center gap-1.5 rounded-full px-[11px] py-[5px] text-xs font-semibold" style={{ backgroundColor: `${statusColor}18`, color: statusColor }}><span className={`size-[7px] rounded-full bg-current ${statusPresentation.role === "active" ? "animate-pulse" : ""}`} aria-hidden="true" />{statusPresentation.label}</span>
+          <span className="ml-0.5 min-w-0 truncate font-mono text-[11.5px] text-carbon/60">{current.displayId}</span>
+          {variant === "panel" ? <Link href={fullDetailHref} aria-label="Abrir en página completa" className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-carbon/65 hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30"><PanelRightOpen className="size-3.5" aria-hidden="true" />Página completa</Link> : null}
+        </div>
+        <div className="flex items-start gap-2.5">
+          {canUpdateDocument ? <span className="mt-0.5 shrink-0 rounded-lg" style={{ backgroundColor: `${detailColor}18` }}><IconPicker icons={missionIcons} value={current.icon} color={detailColor} recentStorageKey="tloz-recent-icons" onValueChange={saveIcon} iconOnly className="size-8 justify-center rounded-lg border-0 bg-transparent p-0 shadow-none hover:bg-transparent [&_svg]:size-[15px]" /></span> : (() => { const CurrentIcon = resolveMissionIcon(current.icon); return <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-[15px]" style={{ backgroundColor: `${detailColor}18`, color: detailColor }}><CurrentIcon aria-hidden="true" /></span>; })()}
+          {editingTitle ? <Input autoFocus className="mission-detail-title h-auto min-w-0 flex-1 border border-[#1D1D1B]/15 bg-white px-2 py-0 text-2xl font-bold leading-tight shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : canUpdateDocument ? <button type="button" className="min-w-0 flex-1 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1></button> : <h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1>}
+        </div>
+      </header>
+      <div className="mission-detail-layout grid min-w-0 gap-6">
+        <div className="min-w-0">
 
-          <Accordion type="multiple" defaultValue={defaultMissionContentSections} className="mb-7 mt-3" aria-label="Contenido de la misión">
+          <Accordion type="multiple" defaultValue={defaultMissionContentSections} className="mb-6" aria-label="Contenido de la misión">
             <AccordionItem value="description" className="border-0">
               <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">Descripción</AccordionTrigger>
               <AccordionContent className="pt-1">
             {editingDescription ? (
               <textarea
                 autoFocus
-                className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[15px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
+                className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[14px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
                 aria-label="Descripción de la misión"
                 value={descriptionDraft}
                 maxLength={280}
@@ -334,7 +340,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
                 placeholder="Resumen breve del resultado esperado."
               />
             ) : (
-              canUpdateDocument ? <button type="button" className="block max-w-[62ch] rounded-md text-left text-[15px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button> : <p className="m-0 block max-w-[62ch] text-[15px] leading-[1.6] text-[#454543]">{current.description || "Sin descripción"}</p>
+              canUpdateDocument ? <button type="button" className="block max-w-[62ch] rounded-md text-left text-[14px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button> : <p className="m-0 block max-w-[62ch] text-[14px] leading-[1.6] text-[#454543]">{current.description || "Sin descripción"}</p>
             )}
               </AccordionContent>
             </AccordionItem>
@@ -414,22 +420,17 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
               {canUpdateDocument ? <AddResource onAdd={addResource} /> : null}
             </RelationsSection>
           ) : null}
-        </main>
+        </div>
 
         <aside className="mission-detail-properties flex self-start flex-col gap-3.5" aria-label="Información de la misión">
-          {variant === "panel" ? (
-            <DetailNavigationLink href={fullDetailHref} label="Abrir en página completa">
-              <PanelRightOpen aria-hidden="true" />
-            </DetailNavigationLink>
-          ) : null}
           {projectMissionsHref ? (
             <DetailNavigationLink href={projectMissionsHref} label="Abrir Missions">
               <FileStack aria-hidden="true" />
             </DetailNavigationLink>
           ) : null}
-          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} onUpdate={documentMutation ? async (_missionId, input) => documentMutation(missionInputToDocumentUpdate(input, options.document?.kind ?? "mission")) : undefined} onStatusUpdate={documentMutation ? async (_missionId, status) => documentMutation({ properties: { status } }) : undefined} readOnly={!canUpdateDocument} responsibleReadOnly={!canMove} inheritedColor={isMissionDocument ? detailColor : undefined} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdateDocument} moveReadOnly={!canMove} onDocumentChange={onBackingDocumentChange} /></div></section>
-          <section className="overflow-hidden rounded-2xl border border-[#1D1D1B]/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-[#9A9A98]">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]" aria-live="polite">{activityState === "loading" ? <EmptyText>Cargando actividad…</EmptyText> : activityState === "error" ? <EmptyText>No se pudo cargar la actividad.</EmptyText> : activity.length ? groupActivityByDay(activity).map((group) => <div key={group.day} className="flex flex-col gap-2.5"><time className="text-[10px] font-bold uppercase tracking-[0.05em] text-carbon/35" dateTime={group.day}>{formatActivityDay(group.day)}</time>{group.events.map((event) => <ActivityItem key={event.id} label={activityLabel(event.action)} date={event.occurredAt} tone={detailColor} />)}</div>) : <EmptyText>Sin actividad registrada.</EmptyText>}</div></section>
-          {isMissionDocument && canUpdate ? <Button className="min-h-11 rounded-xl" disabled={isCompleted || isPending} onClick={() => mutate("Actualizando estado…", async () => ({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button> : null}
+          <section className="overflow-hidden rounded-xl border border-carbon/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/65">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} onUpdate={documentMutation ? async (_missionId, input) => documentMutation(missionInputToDocumentUpdate(input, options.document?.kind ?? "mission")) : undefined} onStatusUpdate={documentMutation ? async (_missionId, status) => documentMutation({ properties: { status } }) : undefined} readOnly={!canUpdateDocument} responsibleReadOnly={!canMove} inheritedColor={isMissionDocument ? detailColor : undefined} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdateDocument} moveReadOnly={!canMove} onDocumentChange={onBackingDocumentChange} /></div></section>
+          {resolvedActivityUrl ? <section className="overflow-hidden rounded-xl border border-carbon/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/65">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]" aria-live="polite">{activityState === "loading" ? <EmptyText>Cargando actividad…</EmptyText> : activityState === "error" ? <EmptyText>No se pudo cargar la actividad.</EmptyText> : activity.length ? groupActivityByDay(activity).map((group) => <div key={group.day} className="flex flex-col gap-2.5"><time className="text-[10px] font-bold uppercase tracking-[0.05em] text-carbon/35" dateTime={group.day}>{formatActivityDay(group.day)}</time>{group.events.map((event) => <ActivityItem key={event.id} label={activityLabel(event.action)} date={event.occurredAt} tone={detailColor} />)}</div>) : <EmptyText>Sin actividad registrada.</EmptyText>}</div></section> : null}
+          {isMissionDocument && canUpdate ? <Button className="min-h-9 rounded-lg text-xs" disabled={isCompleted || isPending} onClick={() => mutate("Actualizando estado…", async () => ({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button> : null}
         </aside>
       </div>
     </article>
@@ -642,6 +643,9 @@ function ActivityItem({ label, date, tone = "#9a9a98" }: { label: string; date: 
 
 function activityLabel(action: string) {
   return ({
+    "content.created": "Documento creado",
+    "content.updated": "Documento actualizado",
+    "content.deleted": "Documento eliminado",
     "mission.created": "Misión creada",
     "mission.updated": "Misión actualizada",
     "mission.deleted": "Misión eliminada",

@@ -76,6 +76,34 @@ for (const width of [320, 390, 834, 1024, 1440, 1920]) {
   });
 }
 
+for (const width of [1024, 1440, 1920]) {
+  test(`task panel keeps properties visible and actions reachable at ${width}px`, async ({ page }) => {
+    await authenticate(page);
+    await page.setViewportSize({ width, height: 768 });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+    const panel = page.locator("dialog[open]");
+    await expect(panel.getByRole("heading", { name: "Publicar dashboard operativo de TLOZ", level: 1, exact: true })).toBeVisible();
+    await expect(panel.getByText("Cargando actividad…", { exact: true })).toHaveCount(0);
+    const bounds = await panel.locator(".slide-over-content-panel").boundingBox();
+    expect(bounds!.width).toBeGreaterThan(850);
+    expect(bounds!.width).toBeLessThan(1000);
+    const properties = await panel.getByRole("complementary", { name: "Información de la misión" }).boundingBox();
+    expect(properties!.y).toBeLessThan(220);
+    expect(properties!.x).toBeGreaterThan(bounds!.x + 450);
+    expect(await panel.locator(".slide-over-scroll").evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    await expect(panel.getByRole("button", { name: "Marcar como completada", exact: true })).toBeInViewport();
+    await page.screenshot({ path: `test-results/task-panel-${width}.png`, animations: "disabled" });
+    await panel.getByRole("button", { name: "Añadir detalle", exact: true }).click();
+    await expect(panel.getByLabel("Detalle en Markdown", { exact: true })).toBeFocused();
+    await panel.getByRole("button", { name: "Cancelar", exact: true }).click();
+    await panel.locator(".slide-over-scroll").evaluate(el => { el.scrollTop = el.scrollHeight; });
+    await expect(panel.getByRole("button", { name: "Cerrar", exact: true })).toBeInViewport();
+    await panel.getByRole("button", { name: "Cerrar", exact: true }).click();
+    await expect(panel).toHaveCount(0);
+  });
+}
+
 test("all collections and mission views render without page errors", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
@@ -460,6 +488,7 @@ for (const collection of ["projects", "inventory", "workshop", "library"] as con
     await page.getByRole("option", { name: "Título", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/${collection}\\?sort=title$`));
     await page.keyboard.press("Escape");
+    await expect(page.getByRole("checkbox", { name: "Mostrar completadas", exact: true })).toHaveCount(0);
     await expect(page.getByText(`AAA ${collection} 00`, { exact: true })).toBeVisible();
     const next = page.getByRole("link", { name: "Siguiente", exact: true });
     await expect(next).toHaveAttribute("href", new RegExp(`/${collection}\\?sort=title&cursor=`));
@@ -472,6 +501,7 @@ for (const collection of ["projects", "inventory", "workshop", "library"] as con
     await page.getByLabel("Buscar usuarios", { exact: true }).press("Enter");
     await expect(page).toHaveURL(new RegExp(`/${collection}\\?sort=title&owner=developer$`));
     await page.keyboard.press("Escape");
+    await expect(page.getByRole("checkbox", { name: "Mostrar completadas", exact: true })).toHaveCount(0);
     await expect(page.getByText(`AAA ${collection} 00`, { exact: true })).toBeVisible();
     await expect(page.getByText(`AAA ${collection} 01`, { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "Siguiente", exact: true })).toHaveCount(0);
@@ -479,6 +509,7 @@ for (const collection of ["projects", "inventory", "workshop", "library"] as con
     await page.getByRole("checkbox", { name: "Mostrar completadas", exact: true }).uncheck();
     await expect(page).toHaveURL(/completed=0/);
     await page.keyboard.press("Escape");
+    await expect(page.getByRole("checkbox", { name: "Mostrar completadas", exact: true })).toHaveCount(0);
     await expect(page.getByText(`AAA ${collection} 00`, { exact: true })).toHaveCount(0);
     await expect(page.getByText(`AAA ${collection} 01`, { exact: true })).toBeVisible();
     await page.reload();
@@ -487,6 +518,7 @@ for (const collection of ["projects", "inventory", "workshop", "library"] as con
     await expect(page.getByRole("combobox", { name: "Orden", exact: true })).toContainText("Título");
     await expect(page.getByRole("checkbox", { name: "Mostrar completadas", exact: true })).not.toBeChecked();
     await page.keyboard.press("Escape");
+    await expect(page.getByRole("checkbox", { name: "Mostrar completadas", exact: true })).toHaveCount(0);
     await expectNoOverflow(page);
     await page.screenshot({ animations: "disabled", path: `test-results/${collection}-filtered-desktop.png` });
   });
@@ -497,8 +529,7 @@ test("markdown keeps the draft after a failed save and retries unchanged text", 
   await page.goto("/");
   await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
   const panel = page.locator("dialog[open]");
-  await panel.getByRole("button", { name: "Opciones de descripción", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Editar", exact: true }).click();
+  await panel.getByRole("button", { name: "Añadir detalle", exact: true }).click();
   const draft = panel.getByLabel("Detalle en Markdown", { exact: true });
   await draft.fill("Desktop draft survives a failed save.");
   await page.route("**/", async (route) => {
@@ -538,8 +569,11 @@ for (const collection of ["workshop", "library"] as const) {
     expect(response.ok(), await response.text()).toBe(true);
     await authenticate(page);
     await page.goto(`/${collection}`);
+    const activityResponse = page.waitForResponse((response) => /\/api\/v2\/contents\/[^/]+\/activity\?/.test(response.url()));
     await page.getByText(`Draft ${collection}`, { exact: true }).click();
+    expect((await activityResponse).ok()).toBe(true);
     const panel = page.locator("dialog[open]");
+    await expect(panel.getByRole("link", { name: "Abrir Missions", exact: true })).toHaveCount(0);
     await panel.getByRole("button", { name: "Opciones de descripción", exact: true }).click();
     await page.getByRole("menuitem", { name: "Editar", exact: true }).click();
     const draft = panel.getByLabel("Detalle en Markdown", { exact: true });
@@ -548,10 +582,60 @@ for (const collection of ["workshop", "library"] as const) {
     await page.getByRole("combobox", { name: "Estado", exact: true }).click();
     await page.getByRole("option", { name: "Now", exact: true }).click();
     await expect(page.getByText("Estado actualizado", { exact: true })).toBeVisible();
+    await expect(panel.getByText("Documento actualizado", { exact: true })).toBeVisible();
     await expect(draft).toHaveValue("Unsaved description survives a status change.");
     await page.keyboard.press("Escape");
     await panel.getByRole("button", { name: "Guardar", exact: true }).click();
     await expect(draft).toHaveCount(0);
     await expect(panel.getByText("Unsaved description survives a status change.", { exact: true })).toBeVisible();
+  });
+}
+
+for (const reducedMotion of ["reduce", "no-preference"] as const) {
+  test(`task detail contains long content without overflow (${reducedMotion})`, async ({ page, request }) => {
+    await page.emulateMedia({ reducedMotion });
+    const title = "Tarea".repeat(24) + reducedMotion;
+    const body = ["https://example.com/" + "documentation".repeat(28), "```ts\nconst result = \"" + "long value ".repeat(40) + "\";\n```", "```mermaid\nflowchart LR\n A[Inicio] --> B[Revisión]\n```", "| Estado | Responsable |\n| --- | --- |\n| En revisión | Equipo de producto |"].join("\n\n");
+    const response = await request.post("/api/v2/contents", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: {
+      publicId: `e2e-panel-long-${reducedMotion}`, containerId: "workshop", presentation: "workshop", title, body,
+      data: { status: "later", ownerId: "owner" },
+    } });
+    expect(response.ok(), await response.text()).toBe(true);
+    await authenticate(page);
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto("/workshop");
+    await page.getByText(title, { exact: true }).click();
+    const panel = page.locator("dialog[open]");
+    await expect(panel.getByRole("img", { name: "Diagrama Mermaid", exact: true })).toBeVisible();
+    const diagram = await panel.getByRole("img", { name: "Diagrama Mermaid", exact: true }).boundingBox();
+    expect(diagram!.height).toBeLessThan(180);
+    expect(await panel.getByRole("img", { name: "Diagrama Mermaid", exact: true }).evaluate(async (node: HTMLImageElement) => {
+      await node.decode();
+      const host = document.createElement("div");
+      host.style.cssText = "position:absolute;visibility:hidden;pointer-events:none";
+      host.innerHTML = await (await fetch(node.src)).text();
+      node.closest("dialog")!.append(host);
+      try {
+        const svg = host.querySelector("svg")!;
+        const box = svg.getBBox();
+        const view = svg.viewBox.baseVal;
+        return box.x >= view.x - 1 && box.y >= view.y - 1 && box.x + box.width <= view.x + view.width + 1 && box.y + box.height <= view.y + view.height + 1;
+      } finally { host.remove(); }
+    })).toBe(true);
+    await expect(panel.getByRole("link", { name: "Abrir Missions", exact: true })).toHaveCount(0);
+    await expect(panel.getByText("No se pudo cargar la actividad.", { exact: true })).toHaveCount(0);
+    await expect(panel.getByText("Cargando actividad…", { exact: true })).toHaveCount(0);
+    await expect(panel.locator("pre pre, pre figure")).toHaveCount(0);
+    await expect(panel.getByRole("table")).toBeVisible();
+    expect(await panel.locator(".slide-over-scroll").evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    const code = panel.locator("pre");
+    await expect(code).toHaveCount(1);
+    expect(await code.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+    await panel.locator(".slide-over-scroll").evaluate(el => { el.scrollTop = 0; });
+    await page.screenshot({ path: `test-results/task-panel-long-content-${reducedMotion}.png`, animations: "disabled" });
+    const resize = panel.getByRole("separator", { name: "Redimensionar panel", exact: true });
+    await resize.focus();
+    await resize.press("ArrowRight");
+    expect(await panel.locator(".slide-over-scroll").evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   });
 }

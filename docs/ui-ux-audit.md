@@ -121,3 +121,25 @@ Verificación **local** final:
 - Se añadió una prueba de integración PostgreSQL para alias, fechas ausentes, empates, cursores excluidos y valores con comillas. El archivo se carga, pero sus **25 casos se omiten localmente** porque `TEST_DATABASE_URL` no está configurado. No se declara validación contra PostgreSQL real.
 
 El PR y su pipeline siguen a cargo del usuario. Esta evidencia no certifica el login real, todos los roles ni las integraciones de producción; esas comprobaciones siguen necesarias antes de declarar escritorio listo al 100 %.
+
+
+## Quinta revisión: ventanas de tareas y contenido enriquecido
+
+Fecha: 2026-09-07. Se aplicó la densidad compacta de TLOZ con las skills Impeccable, baseline-ui y Ponytail. Revisiones acotadas delegadas a `gpt-5.6-luna`.
+
+- El panel lateral abre con un ancho objetivo de 960 px, limitado por el viewport y todavía redimensionable. Cabecera, cierre y acción de completar más compactos; título a todo el ancho y enlace directo a página completa.
+- Las propiedades ocupan una columna de 260 px. En el panel dejan de ser sticky para permitir llegar a toda la información al desplazar; la vista de página conserva su comportamiento. Etiquetas con mayor contraste.
+- El detalle vacío ofrece «Añadir detalle…» directamente. Markdown contiene URLs y títulos largos, permite desplazar código y tablas horizontalmente y evita anidar bloques `pre` o colocar figuras dentro de ellos.
+- Workshop y Library consultan la actividad del contenido v2, muestran etiquetas de documento y refrescan la actividad después de guardar. Se elimina el enlace a Missions que apuntaba a un proyecto inexistente; documentos sin ruta de actividad no muestran un error artificial.
+- La regla global de movimiento reducido asignaba una transición a todas las propiedades de todos los elementos, incluidas las dimensiones y transformaciones SVG. Mermaid medía valores intermedios y producía diagramas diminutos o recortados. Se desactivan las transiciones en ese modo; no se modifica Mermaid ni se añade código de medición al producto.
+
+La regresión E2E verifica paneles a 1024, 1440 y 1920 px, acciones accesibles, edición vacía, contenido largo y límites reales del SVG tanto con movimiento reducido como normal. Las pruebas de borradores verifican también actividad v2 y su actualización después de guardar.
+
+Verificación **local** final:
+
+- **40/40 E2E aprobados** sobre producción local en Chrome, en **47.7 s**: `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`, desde `apps/dashboard`.
+- La primera ejecución completa terminó con 39/40: la prueba de Library reabría Control antes de finalizar su cierre. Se añadió una espera por la desaparición del menú y la repetición completa pasó.
+- **26/26 pruebas focalizadas** de Vitest en `mission-detail-ui`, `document-entity-page` y `mermaid-download`; build Next.js con validación de tipos y `git diff --check` aprobados.
+- Inspección visual de las capturas de tareas a 1024/1440 px y del contenido largo con Mermaid: propiedades visibles, diagrama completo, tablas y código contenidos. La suite cubre también 1920 px y las regresiones móviles existentes.
+
+Capturas en `apps/dashboard/test-results/task-panel-*.png`, excluidas de Git. PR y pipeline siguen a cargo del usuario; la evidencia usa datos mock y no certifica autenticación real ni producción al 100 %.
