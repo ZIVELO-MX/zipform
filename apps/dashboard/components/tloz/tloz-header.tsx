@@ -14,7 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@tloz/ui";
-import { TlozControl } from "./tloz-control";
+import { TlozControl, TlozViewSwitcher } from "./tloz-control";
 import { GlobalSearch } from "./global-search";
 
 type TlozHeaderProps = {
@@ -103,7 +103,7 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           </button>
         </div> : null}
 
-        {showControls ? <div className="tloz-header-trailing"><TlozControl createControl={controlCreate} /></div> : null}
+        {showControls ? <div className="tloz-header-trailing gap-2"><TlozViewSwitcher /><TlozControl createControl={controlCreate} /></div> : null}
       </header>
 
       <GlobalSearch open={commandOpen} onOpenChange={setCommandOpen} />

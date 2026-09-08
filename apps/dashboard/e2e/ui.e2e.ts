@@ -132,7 +132,8 @@ test("dashboard audience filter updates and cards open with the keyboard", async
   await expect(page.getByRole("button", { name: "Solo yo", exact: true })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Todo el equipo", exact: true }).click();
   const cards = page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true });
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Abrir COR-0003: Integrar Wallet API", exact: true })).toBeVisible();
   await cards.first().press("Enter");
   await expect(page.locator("dialog[open]")).toBeVisible();
   await expect(page.locator("dialog[open]")).toHaveAttribute("aria-labelledby", /.+/);
@@ -234,7 +235,7 @@ test("mission panel displays a retry action after a loading failure", async ({ p
   await page.goto("/");
   await page.route("**/", (route) => route.request().method() === "POST" ? route.abort("failed") : route.continue());
   const cards = page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true });
-  await expect(cards).toHaveCount(2);
+  await expect(cards).toHaveCount(1);
   await cards.first().click();
   await expect(page.getByText("No se pudo cargar la misión.")).toBeVisible();
   await page.unroute("**/");
@@ -363,7 +364,7 @@ test("desktop calendar opens missions from the keyboard", async ({ page }) => {
   await page.getByRole("button", { name: "Control", exact: true }).click();
   await page.getByRole("button", { name: "Calendario", exact: true }).click();
   await page.keyboard.press("Escape");
-  const mission = page.getByRole("region", { name: "Calendario de Missions" }).getByRole("button").first();
+  const mission = page.getByRole("region", { name: "Calendario de misiones" }).getByRole("button", { name: /^Abrir / }).first();
   await expect(mission).toBeVisible();
   await page.screenshot({ animations: "disabled", path: "test-results/calendar-desktop.png" });
   await mission.press("Enter");
@@ -639,3 +640,153 @@ for (const reducedMotion of ["reduce", "no-preference"] as const) {
     expect(await panel.locator(".slide-over-scroll").evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
   });
 }
+
+async function selectDesktopView(page: Page, view: string) {
+  await page.getByRole("combobox", { name: "Vista actual", exact: true }).click();
+  await page.getByRole("option", { name: view, exact: true }).click();
+  await expect(page.getByRole("heading", { name: view, exact: true })).toBeVisible();
+}
+
+test("desktop list and table prioritize titles and preserve them while scrolling", async ({ page }) => {
+  await authenticate(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/");
+  await selectDesktopView(page, "Lista");
+  const row = page.locator(".tloz-lrow").filter({ hasText: "Publicar dashboard operativo de TLOZ" });
+  const id = row.getByText("COR-0001", { exact: true });
+  expect(await id.evaluate(node => getComputedStyle(node).whiteSpace)).toBe("nowrap");
+  const title = row.locator("strong");
+  expect((await title.boundingBox())!.width).toBeGreaterThan(230);
+  await page.screenshot({ path: "test-results/list-polished-1024.png", animations: "disabled" });
+  await selectDesktopView(page, "Tabla");
+  const table = page.getByRole("region", { name: "Tabla de elementos", exact: true });
+  const tableRow = table.getByRole("row").filter({ hasText: "Publicar dashboard operativo de TLOZ" });
+  await expect(tableRow.getByRole("cell").nth(2)).toBeInViewport();
+  await expect(tableRow.getByRole("cell").nth(3)).toBeInViewport();
+  const first = tableRow.getByRole("cell").first();
+  const initial = (await first.boundingBox())!.x;
+  await page.getByRole("button", { name: "Tabla de elementos: desplazar a la derecha", exact: true }).click();
+  expect(await table.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+  expect(Math.abs((await first.boundingBox())!.x - initial)).toBeLessThan(2);
+  await page.getByRole("button", { name: "Tabla de elementos: desplazar a la izquierda", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Tabla de elementos: desplazar a la izquierda", exact: true })).toBeDisabled();
+  await expectNoOverflow(page);
+  await page.screenshot({ path: "test-results/table-polished-1024.png", animations: "disabled" });
+  await page.reload();
+  await expect(page.getByRole("combobox", { name: "Vista actual", exact: true })).toContainText("Tabla");
+});
+
+test("desktop Board exposes horizontal navigation without opening tasks", async ({ page }) => {
+  await authenticate(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/");
+  await selectDesktopView(page, "Board");
+  const board = page.getByRole("region", { name: "Board de misiones", exact: true });
+  const right = page.getByRole("button", { name: "Board de misiones: desplazar a la derecha", exact: true });
+  await expect(right).toBeEnabled();
+  await right.click();
+  expect(await board.evaluate(node => node.scrollLeft)).toBeGreaterThan(0);
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
+  await page.getByRole("button", { name: "Board de misiones: desplazar a la izquierda", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Board de misiones: desplazar a la izquierda", exact: true })).toBeDisabled();
+  await expectNoOverflow(page);
+  await page.screenshot({ path: "test-results/board-polished-1024.png", animations: "disabled" });
+});
+
+test("calendar month and week retain all tasks and navigate across year boundaries", async ({ page, request }) => {
+  const headers = { Authorization: "Bearer zipform-local-e2e-api-only" };
+  const existing = await (await request.get("/api/v1/missions?limit=100", { headers })).json();
+  expect(existing.data.length).toBeGreaterThanOrEqual(6);
+  const longTitle = "Calendario".repeat(20);
+  for (let index = 0; index < 6; index += 1) {
+    const response = await request.patch(`/api/v1/missions/${existing.data[index].id}`, { headers, data: {
+      title: index === 5 ? longTitle : `Calendar load ${index}`, type: "side_quest", status: index === 0 ? "completed" : "later", dueDate: "2026-12-31",
+    } });
+    expect(response.ok(), await response.text()).toBe(true);
+  }
+  await page.clock.setFixedTime(new Date("2026-12-31T12:00:00-06:00"));
+  await authenticate(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/");
+  await selectDesktopView(page, "Lista");
+  await expect(page.locator(".tloz-lrow").filter({ hasText: longTitle })).toBeVisible();
+  await expectNoOverflow(page);
+  await selectDesktopView(page, "Board");
+  const card = page.locator(".tloz-kcard").filter({ hasText: longTitle });
+  await expect(card).toBeVisible();
+  expect(await card.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  const column = page.locator(".tloz-board-column").filter({ has: card });
+  const heading = column.getByText("Later", { exact: true });
+  const headingY = (await heading.boundingBox())!.y;
+  const list = column.locator(".tloz-droplist");
+  expect(await list.evaluate(node => node.scrollHeight > node.clientHeight)).toBe(true);
+  await list.evaluate(node => { node.scrollTop = node.scrollHeight; });
+  expect(Math.abs((await heading.boundingBox())!.y - headingY)).toBeLessThan(2);
+  await selectDesktopView(page, "Tabla");
+  const longTable = page.getByRole("region", { name: "Tabla de elementos", exact: true });
+  await expect(longTable.getByRole("row").filter({ hasText: longTitle })).toBeVisible();
+  expect(await longTable.evaluate(node => node.scrollWidth)).toBeLessThan(1000);
+  await selectDesktopView(page, "Calendario");
+  const calendar = page.getByRole("region", { name: "Calendario de misiones", exact: true });
+  await expect(calendar.getByRole("button", { name: new RegExp(longTitle) })).toBeVisible();
+  await calendar.getByRole("button", { name: "Mes", exact: true }).click();
+  await expect(calendar.getByRole("button", { name: new RegExp(longTitle) })).toBeVisible();
+  await calendar.getByRole("button", { name: new RegExp(longTitle) }).click();
+  await expect(page.locator("dialog[open]").getByRole("heading", { level: 1, name: longTitle, exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await calendar.getByRole("button", { name: "Periodo siguiente", exact: true }).click();
+  await expect(calendar.getByRole("heading", { level: 2 })).toContainText(/enero.*2027/i);
+  await expect(calendar.getByRole("table")).toBeVisible();
+  expect((await calendar.getByRole("table").boundingBox())!.width).toBeLessThanOrEqual((await calendar.boundingBox())!.width);
+  await calendar.getByRole("button", { name: "Hoy", exact: true }).click();
+  await calendar.getByRole("button", { name: "Semana", exact: true }).click();
+  await expect(calendar.getByRole("button", { name: new RegExp(longTitle) })).toBeVisible();
+  await expectNoOverflow(page);
+  await page.screenshot({ path: "test-results/calendar-week-1024.png", animations: "disabled" });
+  await calendar.getByRole("button", { name: "Mes", exact: true }).click();
+  await page.screenshot({ path: "test-results/calendar-month-1024.png", animations: "disabled" });
+});
+
+test("calendar explains missing dates and returns directly to List", async ({ page, request }) => {
+  const headers = { Authorization: "Bearer zipform-local-e2e-api-only" };
+  const missions = await request.get("/api/v1/missions?limit=100", { headers });
+  const payload = await missions.json();
+  for (const mission of payload.data) {
+    const response = await request.patch(`/api/v1/missions/${mission.id}`, { headers, data: { dueDate: "" } });
+    expect(response.ok(), await response.text()).toBe(true);
+  }
+  await authenticate(page);
+  await page.goto("/");
+  await selectDesktopView(page, "Calendario");
+  await expect(page.getByText("Sin misiones con fecha", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Ver Lista", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Lista", exact: true })).toBeVisible();
+});
+
+test.describe("local due dates", () => {
+  test.use({ timezoneId: "America/Mexico_City" });
+  test("due dates stay neutral for future and completed tasks and update at midnight", async ({ page, request }) => {
+    const headers = { Authorization: "Bearer zipform-local-e2e-api-only" };
+    const existing = await (await request.get("/api/v1/missions?limit=100", { headers })).json();
+    expect(existing.data.length).toBeGreaterThanOrEqual(4);
+    let index = 0;
+    for (const [id, status, dueDate] of [["past", "later", "2026-09-06"], ["today", "later", "2026-09-07"], ["future", "later", "2026-09-08"], ["done", "completed", "2026-09-06"]]) {
+      const response = await request.patch(`/api/v1/missions/${existing.data[index++].id}`, { headers, data: { title: `Date state ${id}`, type: "side_quest", status, dueDate } });
+      expect(response.ok(), await response.text()).toBe(true);
+    }
+    await page.clock.install({ time: new Date("2026-09-07T23:59:30-06:00") });
+    await authenticate(page);
+    await page.goto("/");
+    await selectDesktopView(page, "Lista");
+    const date = (id: string) => page.locator(".tloz-lrow").filter({ hasText: `Date state ${id}` }).locator("[data-due-state]");
+    await expect(date("past")).toHaveAttribute("data-due-state", "overdue");
+    await expect(date("today")).toHaveAttribute("data-due-state", "today");
+    await expect(date("future")).toHaveAttribute("data-due-state", "future");
+    await expect(date("done")).toHaveAttribute("data-due-state", "completed");
+    expect(await date("past").evaluate(node => getComputedStyle(node).color)).not.toBe(await date("future").evaluate(node => getComputedStyle(node).color));
+    await page.clock.fastForward(31_000);
+    await expect(date("today")).toHaveAttribute("data-due-state", "overdue");
+    await expect(date("future")).toHaveAttribute("data-due-state", "today");
+    await expect(date("done")).toHaveAttribute("data-due-state", "completed");
+  });
+});

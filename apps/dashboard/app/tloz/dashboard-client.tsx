@@ -17,12 +17,14 @@ import type { TlozDashboardSummary, TlozMissionRecord } from "../../lib/tloz-dat
 import type { MissionDetailOptions } from "../../components/tloz/mission-detail";
 import type { TlozFieldOption, TlozQuestItem } from "@tloz/types";
 import { SystemEntitySlideOver } from "../../components/tloz/system-project-detail";
+import { dashboardFocusMissionIds } from "./dashboard-focus";
 
 export function DashboardClient({ summary, detailOptions, statusOptions = [], hideProjectSections = false }: { summary: TlozDashboardSummary; detailOptions: MissionDetailOptions; statusOptions?: TlozFieldOption[]; hideProjectSections?: boolean }) {
   const { state, setState } = useTlozViewState();
   const currentUserId = useCurrentUserId();
   const [selectedMission, setSelectedMission] = useState<TlozMissionRecord | null>(null);
   const [selectedQuestItem, setSelectedQuestItem] = useState<TlozQuestItem | null>(null);
+  const focusMissionIds = dashboardFocusMissionIds(summary.nowMissions);
 
   return (
     <>
@@ -46,7 +48,7 @@ export function DashboardClient({ summary, detailOptions, statusOptions = [], hi
 
         <DashboardNowSection missions={summary.nowMissions} statusOptions={statusOptions} onSelect={setSelectedMission} />
 
-        <DashboardMainQuests missions={summary.mainQuests} statusOptions={statusOptions} onSelect={setSelectedMission} />
+        <DashboardMainQuests missions={summary.mainQuests.filter((mission) => !focusMissionIds.has(mission.id))} statusOptions={statusOptions} onSelect={setSelectedMission} />
 
         <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <DashboardNextLaterSection

@@ -143,3 +143,28 @@ Verificación **local** final:
 - Inspección visual de las capturas de tareas a 1024/1440 px y del contenido largo con Mermaid: propiedades visibles, diagrama completo, tablas y código contenidos. La suite cubre también 1920 px y las regresiones móviles existentes.
 
 Capturas en `apps/dashboard/test-results/task-panel-*.png`, excluidas de Git. PR y pipeline siguen a cargo del usuario; la evidencia usa datos mock y no certifica autenticación real ni producción al 100 %.
+
+## Sexta revisión: vistas del proyecto
+
+Fecha: 2026-09-08. Implementa el diagnóstico de Lista, Tabla, Board, Dashboard y Calendario, incluyendo la navegación temporal autorizada después de la revisión. Se mantuvo TLOZ como referencia visual y Ponytail para evitar dependencias nuevas; las tareas acotadas se delegaron a `gpt-5.6-luna` y `gpt-5.6-sol` y se revisaron durante la integración.
+
+- **Lista:** IDs en una línea; título con prioridad de ancho y protección para cadenas sin espacios. Proyecto y responsable pasan debajo del título cuando el espacio del workspace es limitado; vuelven a una fila al disponer de más ancho.
+- **Tabla:** orden de columnas Misión, Estado, Responsable, Vence, Tipo y Proyecto. Anchos definidos para evitar que un título ensanche toda la tabla; primera columna fija al desplazar. Los metadatos secundarios conservan acceso mediante desplazamiento horizontal.
+- **Board y Tabla:** controles de desplazamiento visibles cuando hay columnas fuera del área disponible, con límites deshabilitados y navegación nativa del área. Board tiene altura acotada y desplazamiento por columna, manteniendo el encabezado mientras se recorren muchas tareas.
+- **Fechas:** presentación compartida en Dashboard, Lista, Tabla, tarjetas, detalle y Calendario. Rojo solo para vencidas pendientes; hoy, futuras y completadas se distinguen mediante texto/estado. Comparación por fecha local, validación de fecha, render inicial estable entre servidor y navegador y actualización mediante un temporizador compartido al llegar la medianoche.
+- **Calendario:** Agenda con todas las fechas agrupadas por día; Mes y Semana con controles anterior/siguiente/Hoy y tablas nativas. Estado, responsable, títulos contenidos y acceso a todas las tareas, también cuando un día tiene más de cuatro. Los periodos vacíos mantienen su cuadrícula; una agenda sin fechas permite volver directamente a Lista.
+- **Dashboard:** tarjetas de foco más compactas; Main Quests excluye únicamente las tareas ya mostradas en foco, reutilizando la misma selección. Se conserva acceso al resto de Main Quests. Se elimina el proyecto duplicado cuando no hay fecha y se contienen nombres, descripciones y títulos largos.
+- **Navegación:** selector de vista directamente en la cabecera de escritorio; reutiliza preferencias y vistas admitidas existentes.
+
+Las pruebas añadidas verifican columnas prioritarias y título fijo, persistencia del selector, desplazamiento de Board sin abrir tareas, encabezados con muchas tarjetas, títulos de 200 caracteres sin espacios, seis tareas en un día, Mes/Semana, cambio diciembre/enero, periodo vacío, agenda sin fechas y clasificación de fechas al cruzar medianoche en America/Mexico_City.
+
+Durante la integración se corrigieron la altura ilimitada del Board y el recorte excesivo del nombre del responsable. Los fixtures de Calendario/fechas actualizan misiones del servidor mock aislado; no utilizan credenciales ni datos reales. Las capturas y los snapshots de diseño permanecen excluidos de Git.
+
+Verificación **local** final:
+
+- **45/45 E2E aprobados** en Chrome sobre compilación de producción, **50.1 s**. Comando desde `apps/dashboard`: `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`.
+- **31/31 pruebas focalizadas** de Vitest: calendario, presentación de fechas, selección de foco, detalle y capacidades de Control. Comando desde `apps/dashboard`: `node node_modules/vitest/vitest.mjs run components/tloz/mission-calendar.test.ts components/tloz/mission-due-date-state.test.ts app/tloz/dashboard-client.test.ts components/tloz/mission-detail-ui.test.ts components/tloz/tloz-control-capabilities.test.ts`.
+- Build de producción Next.js con comprobación de tipos y `git diff --check`: aprobados.
+- Capturas revisadas: Dashboard, Lista, Tabla y Board a 1024 px; Agenda a 1440 px; Mes y Semana a 1024 px. Los siete días caben en el workspace de escritorio de 1024 px. Se conservaron las regresiones móviles y de paneles de tareas.
+
+Rama dedicada `fix/desktop-project-views`, basada en `e6a1c0d` de las correcciones anteriores. PR y pipeline siguen a cargo del usuario; no se declara CI aprobado ni validación con autenticación o datos reales. No se añadieron dependencias ni se modificaron contratos HTTP o migraciones.

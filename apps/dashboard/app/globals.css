@@ -1543,7 +1543,8 @@ button {
 .tloz-board-track {
   display: flex;
   min-inline-size: max-content;
-  min-block-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
   align-items: stretch;
   gap: 16px;
   padding-block-end: 10px;
@@ -1552,7 +1553,8 @@ button {
 .tloz-board-column {
   display: flex;
   flex: 0 0 296px;
-  min-block-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
   border-radius: 14px;
   transition: background-color 160ms ease, box-shadow 160ms ease;
 }
@@ -1982,4 +1984,20 @@ button {
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* List density follows the available workspace, including a collapsed sidebar. */
+.mission-list-layout { container-type: inline-size; }
+.mission-list-record { grid-template-columns: minmax(0, 1fr) 155px; }
+.mission-list-title { grid-column: 1; grid-row: 1; }
+.mission-list-meta { grid-column: 1; grid-row: 2; }
+.mission-list-date { grid-column: 2; grid-row: 1 / span 2; }
+@container (min-width: 980px) {
+  .mission-list-record { grid-template-columns: minmax(0, 1fr) 230px 155px; }
+  .mission-list-meta { grid-column: 2; grid-row: 1; padding-left: 0; }
+  .mission-list-date { grid-column: 3; grid-row: 1; }
+}
+@container (max-width: 500px) {
+  .mission-list-record { grid-template-columns: minmax(0, 1fr); }
+  .mission-list-date { grid-column: 1; grid-row: 3; padding-left: 2rem; text-align: left; }
 }

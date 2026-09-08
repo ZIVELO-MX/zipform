@@ -1,5 +1,7 @@
 "use client";
 
+import { MissionDueDate } from "./mission-due-date";
+
 import { useEffect, useState, useTransition } from "react";
 import { DatePicker, EntityPicker, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, toast, useOverlayToasterId, UserAvatarLabel, UserPicker } from "@tloz/ui";
 import type { TlozMissionUpdateInput } from "@tloz/data";
@@ -112,7 +114,7 @@ export function MissionPropertyFields({ values, options, onChange, ariaBusy = fa
     {visibleProperties.has("responsible") && options?.users.length && (!options.hideEmptyFields || values.ownerId) ? <DetailPropertyRow label="Responsable" display={<UserAvatarLabel name={values.owner?.name ?? selectedOwner?.name ?? "Sin responsable"} label={values.owner?.username ?? selectedOwner?.username ?? "Sin responsable"} labelOnly imageUrl={values.owner?.avatarUrl ?? selectedOwner?.avatarUrl} size="sm" />} readOnly={responsibleReadOnly}><UserPicker users={options.users} value={values.ownerId} label="Responsable" onValueChange={(value) => onChange("ownerId", value)} /></DetailPropertyRow> : null}
     {visibleProperties.has("project") && (!options?.hideEmptyFields || values.projectId) ? <DetailPropertyRow label="Proyecto" display={<ProjectValue project={values.project ?? selectedProject} />} readOnly={readOnly}><EntityPicker label="Proyecto" options={projects.map((project) => ({ ...project, iconComponent: resolveMissionIcon(project.icon), color: project.color }))} value={values.projectId} onValueChange={(value) => onChange("projectId", value)} /></DetailPropertyRow> : null}
     {visibleProperties.has("start") && (!options?.hideEmptyFields || values.startDate) ? <DetailPropertyRow label="Inicio" display={<span className="font-mono text-[12.5px] font-semibold">{formatDate(values.startDate)}</span>} readOnly={readOnly}><DatePicker value={values.startDate} label="Fecha de inicio" onValueChange={(value) => onChange("startDate", value ?? "")} /></DetailPropertyRow> : null}
-    {visibleProperties.has("due") && (!options?.hideEmptyFields || values.dueDate) ? <DetailPropertyRow label="Vence" display={<span className="font-mono text-[12.5px] font-semibold text-[#B91C22]">{formatDate(values.dueDate)}</span>} readOnly={readOnly}><DatePicker value={values.dueDate} label="Fecha límite" onValueChange={(value) => onChange("dueDate", value ?? "")} /></DetailPropertyRow> : null}
+    {visibleProperties.has("due") && (!options?.hideEmptyFields || values.dueDate) ? <DetailPropertyRow label="Vence" display={<MissionDueDate date={values.dueDate} completed={resolveStatusPresentation(status, statusOptions, options?.document?.kind).role === "done"} />} readOnly={readOnly}><DatePicker value={values.dueDate} label="Fecha límite" onValueChange={(value) => onChange("dueDate", value ?? "")} /></DetailPropertyRow> : null}
   </div>;
 }
 

@@ -1,9 +1,13 @@
 "use client";
 
+import { HorizontalScrollArea } from "./horizontal-scroll-area";
+
 export type EntityColumn<T> = {
   id: string;
   label: string;
   align?: "left" | "right";
+  width?: number;
+  sticky?: boolean;
   render: (item: T) => React.ReactNode;
 };
 
@@ -13,14 +17,13 @@ export function EntityTable<T extends { id: string }>({ items, columns, onSelect
   onSelect?: (item: T) => void;
   minWidth?: number;
 }) {
-  return <div className="overflow-x-auto" style={{ background: "#fff", border: "1px solid rgba(29,29,27,0.10)", borderRadius: "14px" }}>
-    <div style={{ minWidth }}>
-    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
-      <thead><tr style={{ textAlign: "left" }}>{columns.map((column) => <th key={column.id} className="tloz-th" style={{ padding: "11px 14px", fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "#9a9a98", borderBottom: "1px solid rgba(29,29,27,0.10)", textAlign: column.align ?? "left" }}>{column.label}</th>)}</tr></thead>
-      <tbody>{items.map((item) => <tr key={item.id} className="tloz-trow focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zivelo" style={{ cursor: onSelect ? "pointer" : undefined, borderBottom: "1px solid rgba(29,29,27,0.06)" }} tabIndex={onSelect ? 0 : undefined} onClick={() => onSelect?.(item)} onKeyDown={(event) => { if (onSelect && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onSelect(item); } }}>{columns.map((column) => <td key={column.id} style={{ padding: "11px 14px", textAlign: column.align ?? "left" }}>{column.render(item)}</td>)}</tr>)}</tbody>
+  return <HorizontalScrollArea label="Tabla de elementos" viewportClassName="border border-carbon/10 bg-white">
+    <table className="w-full table-fixed border-collapse text-[13px]" style={{ minWidth }}>
+      <colgroup>{columns.map((column) => <col key={column.id} style={{ width: column.width }} />)}</colgroup>
+      <thead><tr>{columns.map((column) => <th key={column.id} scope="col" className={`border-b border-carbon/10 bg-[#F7F7F6] px-3 py-2.5 text-[11px] font-bold text-carbon/65 ${column.sticky ? "sticky left-0 z-10" : ""}`} style={{ textAlign: column.align ?? "left" }}>{column.label}</th>)}</tr></thead>
+      <tbody>{items.map((item) => <tr key={item.id} className="tloz-trow group focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-zivelo" style={{ cursor: onSelect ? "pointer" : undefined }} tabIndex={onSelect ? 0 : undefined} onClick={() => onSelect?.(item)} onKeyDown={(event) => { if (onSelect && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); onSelect(item); } }}>{columns.map((column) => <td key={column.id} className={`overflow-hidden border-b border-carbon/5 px-3 py-2.5 ${column.sticky ? "sticky left-0 z-10 bg-white group-hover:bg-[#F7F7F6] group-focus:bg-[#F7F7F6]" : ""}`} style={{ textAlign: column.align ?? "left" }}>{column.render(item)}</td>)}</tr>)}</tbody>
     </table>
-    </div>
-  </div>;
+  </HorizontalScrollArea>;
 }
 
 export function EntityList<T extends { id: string }>({ title, tone = "#9a9a98", items, render, onSelect }: {

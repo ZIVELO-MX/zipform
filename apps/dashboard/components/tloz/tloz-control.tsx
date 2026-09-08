@@ -31,6 +31,17 @@ const viewConfig: Record<TlozView, { label: string; icon: React.ElementType }> =
   detail: { label: "Detalle", icon: FileText },
 };
 
+export function TlozViewSwitcher() {
+  const { state, setState, supportedViews, queryPending } = useTlozViewState();
+  if (supportedViews.length < 2) return null;
+  return <div className="hidden md:block">
+    <Select value={state.view} onValueChange={(view) => setState({ view: view as TlozView })} disabled={queryPending}>
+      <SelectTrigger aria-label="Vista actual" className="h-8 w-32 text-xs font-semibold"><SelectValue /></SelectTrigger>
+      <SelectContent>{supportedViews.map((view) => <SelectItem key={view} value={view}>{viewConfig[view].label}</SelectItem>)}</SelectContent>
+    </Select>
+  </div>;
+}
+
 export function TlozControl({ createControl }: { createControl?: React.ReactNode | false }) {
   const {
     state,
