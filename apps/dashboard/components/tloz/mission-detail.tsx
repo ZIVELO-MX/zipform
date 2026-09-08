@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Check, FileStack, Images, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
@@ -277,7 +277,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   }
 
   function addResource(input: TlozResourceInput) {
-    mutate("Adjuntando recurso…", async () => {
+    return mutate("Adjuntando recurso…", async () => {
       if (onAddResource) {
         const resources = await onAddResource(input);
         return { ...current, resources };
@@ -692,12 +692,76 @@ function OpenReferenceButton({ label, href, onOpen, className }: { label: string
   return <Tooltip><TooltipTrigger asChild>{control}</TooltipTrigger><TooltipContent>Abrir detalle</TooltipContent></Tooltip>;
 }
 
-export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => void }) {
-  const [adding, setAdding] = useState(false); const [title, setTitle] = useState(""); const [location, setLocation] = useState(""); const [type, setType] = useState<TlozResourceType>("link"); const [icon, setIcon] = useState("");
+export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => void | boolean | Promise<void | boolean> }) {
+  const [adding, setAdding] = useState(false);
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
+  const [type, setType] = useState<TlozResourceType>("link");
+  const [icon, setIcon] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const inFlight = useRef(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const errorId = useId();
+  const errorMessage = useRef<HTMLParagraphElement>(null);
+  const submitButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!error || saving) return;
+    errorMessage.current?.scrollIntoView({ block: "nearest" });
+    submitButton.current?.focus({ preventScroll: true });
+  }, [error, saving]);
   const usesFileId = resourceUsesFileId(type);
-  if (!adding) return <button type="button" className="col-span-full flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setAdding(true)}><Plus className="size-3.5" aria-hidden="true" />Agregar nuevo</button>;
+
+  function close() {
+    setAdding(false);
+    setError("");
+    requestAnimationFrame(() => trigger.current?.focus());
+  }
+
+  async function save() {
+    if (inFlight.current || !title.trim()) return;
+    inFlight.current = true;
+    setSaving(true);
+    setError("");
+    try {
+      const saved = await onAdd({ type, title: title.trim(), ...(icon ? { icon } : {}), ...(location.trim() ? usesFileId ? { fileId: location.trim() } : { url: location.trim() } : {}) });
+      if (saved === false) { setError("No se pudo adjuntar el recurso. Intenta de nuevo."); return; }
+      setTitle("");
+      setLocation("");
+      setIcon("");
+      close();
+    } catch {
+      setError("No se pudo adjuntar el recurso. Intenta de nuevo.");
+    } finally {
+      inFlight.current = false;
+      setSaving(false);
+    }
+  }
+
+  if (!adding) return <button ref={trigger} type="button" className="col-span-full flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setAdding(true)}><Plus className="size-3.5" aria-hidden="true" />Agregar nuevo</button>;
   const inferredIcon = inferResourceIconId({ type, url: usesFileId ? undefined : location, icon: icon || undefined });
-  return <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-carbon/10 bg-white p-2.5"><div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2 sm:grid-cols-[40px_130px_minmax(0,1fr)]"><IconPicker icons={RESOURCE_ICON_OPTIONS} value={inferredIcon} label="Icono del recurso" onValueChange={setIcon} allowClear iconOnly className="size-10 justify-center" /><Select value={type} onValueChange={(value) => setType(value as TlozResourceType)}><SelectTrigger aria-label="Tipo de recurso"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{Object.entries(resourceTypeLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select><Input className="col-span-2 min-w-0 sm:col-span-1" aria-label="Título del recurso" placeholder="Título" value={title} onChange={(event) => setTitle(event.target.value)} /></div><div className="flex min-w-0 flex-col gap-2 sm:flex-row"><Input className="min-w-0 flex-1" aria-label={usesFileId ? "Identificador del archivo" : "URL del recurso"} placeholder={usesFileId ? "ID del archivo" : "https://…"} value={location} onChange={(event) => setLocation(event.target.value)} /><div className="flex shrink-0 justify-end gap-1"><Button type="button" size="icon" variant="outline" disabled={!title.trim()} aria-label="Adjuntar recurso" onClick={() => { onAdd({ type, title: title.trim(), ...(icon ? { icon } : {}), ...(location.trim() ? usesFileId ? { fileId: location.trim() } : { url: location.trim() } : {}) }); setTitle(""); setLocation(""); setIcon(""); setAdding(false); }}><Plus aria-hidden="true" /></Button><Button type="button" size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancelar</Button></div></div></div>;
+  return <div role="group" aria-label="Adjuntar recurso" aria-busy={saving} aria-describedby={error ? errorId : undefined} className="flex min-w-0 flex-col gap-2 rounded-xl border border-carbon/10 bg-white p-2.5" onKeyDown={(event) => {
+    if (event.defaultPrevented || !(event.target instanceof HTMLInputElement) || !event.currentTarget.contains(event.target)) return;
+    if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); void save(); }
+    if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (!inFlight.current) close(); }
+  }}>
+    <fieldset disabled={saving} className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
+      <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2 sm:grid-cols-[40px_130px_minmax(0,1fr)]">
+        <IconPicker icons={RESOURCE_ICON_OPTIONS} value={inferredIcon} label="Icono del recurso" onValueChange={setIcon} allowClear iconOnly className="size-10 justify-center" />
+        <Select value={type} disabled={saving} onValueChange={(value) => setType(value as TlozResourceType)}><SelectTrigger aria-label="Tipo de recurso"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{Object.entries(resourceTypeLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select>
+        <Input autoFocus required className="col-span-2 min-w-0 sm:col-span-1" aria-label="Título del recurso" placeholder="Título" value={title} onChange={(event) => setTitle(event.target.value)} />
+      </div>
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+        <Input className="min-w-0 flex-1" aria-label={usesFileId ? "Identificador del archivo" : "URL del recurso"} placeholder={usesFileId ? "ID del archivo" : "https://…"} value={location} onChange={(event) => setLocation(event.target.value)} />
+        <div className="flex shrink-0 justify-end gap-1">
+          <Button ref={submitButton} type="button" size="icon" variant="outline" disabled={!title.trim()} aria-label="Adjuntar recurso" onClick={() => void save()}><Plus aria-hidden="true" /></Button>
+          <Button type="button" size="sm" variant="ghost" onClick={close}>Cancelar</Button>
+        </div>
+      </div>
+    </fieldset>
+    {saving ? <p role="status" className="m-0 text-xs font-semibold text-carbon/65">Adjuntando recurso…</p> : null}
+    {error ? <p ref={errorMessage} id={errorId} role="alert" className="m-0 text-xs font-semibold text-zivelo">{error}</p> : null}
+  </div>;
 }
 
 function IconButton({ label, onClick, className }: { label: string; onClick: () => void; className?: string }) { return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className={`size-6 rounded-md [&_svg]:size-3 ${className ?? ""}`} aria-label={label} onClick={onClick}><X aria-hidden="true" /></Button></TooltipTrigger><TooltipContent>Eliminar</TooltipContent></Tooltip>; }

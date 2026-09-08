@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Edit3 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@tloz/ui";
 
@@ -12,6 +12,7 @@ export function DetailPropertyRow({ label, display, children, readOnly = false, 
   wrapValue?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const content = useRef<HTMLDivElement>(null);
   const valueClassName = `min-w-0 text-[12.5px] font-semibold text-[#1D1D1B] ${wrapValue ? "whitespace-normal [overflow-wrap:anywhere]" : "truncate"}`;
   if (readOnly) return <div className="grid min-h-10 w-full grid-cols-[88px_minmax(0,1fr)] items-center gap-2.5 px-2"><span className="text-xs font-medium text-carbon/65">{label}</span><span className={valueClassName}>{display}</span></div>;
   return (
@@ -26,6 +27,11 @@ export function DetailPropertyRow({ label, display, children, readOnly = false, 
         </button>
       </PopoverTrigger>
       <PopoverContent
+        ref={content}
+        onEscapeKeyDown={(event) => {
+          // Let the field cancel its draft before Escape dismisses the popover.
+          if (event.target instanceof HTMLInputElement && content.current?.contains(event.target)) event.preventDefault();
+        }}
         className="w-72 p-4"
         align="start"
         onPointerDownOutside={(event) => {

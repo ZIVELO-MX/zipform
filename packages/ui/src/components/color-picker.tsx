@@ -25,6 +25,7 @@ export function ColorPicker({ value, onValueChange, label = "Color", className }
   const errorId = `${inputId}-error`;
   const normalizedValue = normalizeHexColor(value);
   const [draft, setDraft] = React.useState(normalizedValue);
+  const skipCommit = React.useRef(false);
   const valid = isHexColor(draft);
   const preview = valid ? normalizeHexColor(draft) : normalizedValue;
 
@@ -56,10 +57,22 @@ export function ColorPicker({ value, onValueChange, label = "Color", className }
           maxLength={7}
           spellCheck={false}
           onChange={(event) => setDraft(event.target.value.toUpperCase())}
-          onBlur={commit}
+          onBlur={() => {
+            if (skipCommit.current) {
+              skipCommit.current = false;
+              return;
+            }
+            commit();
+          }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") event.currentTarget.blur();
+            if (event.key === "Enter") {
+              event.preventDefault();
+              event.currentTarget.blur();
+            }
             if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              skipCommit.current = true;
               setDraft(normalizedValue);
               event.currentTarget.blur();
             }

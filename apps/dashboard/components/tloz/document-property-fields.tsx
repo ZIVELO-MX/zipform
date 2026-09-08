@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   Button,
   ColorPicker,
@@ -47,6 +47,7 @@ export function DocumentPropertyFields({
 }) {
   const [current, setCurrent] = useState(document);
   const [pending, startTransition] = useTransition();
+  const persistInFlight = useRef(false);
   const toasterId = useOverlayToasterId();
 
   useEffect(() => setCurrent(document), [document]);
@@ -70,10 +71,11 @@ export function DocumentPropertyFields({
   });
   if (!visibleCustomFields.length && !visiblePresentationFields.length) return null;
 
-  function persist(field: TlozFieldDefinition, value: TlozDocumentScalar) {
-    if (!current) return;
+  function persist(field: TlozFieldDefinition, value: TlozDocumentScalar): Promise<boolean> {
+    if (!current || persistInFlight.current) return Promise.resolve(false);
+    persistInFlight.current = true;
     const toastId = toast.loading(`Guardando ${field.label}…`, { toasterId });
-    startTransition(async () => {
+    return new Promise((resolve) => startTransition(async () => {
       try {
         const updated = await updateDocumentProperties(
           current.id,
@@ -83,14 +85,18 @@ export function DocumentPropertyFields({
         setCurrent(updated);
         onDocumentChange?.(updated);
         toast.success(`${field.label} actualizado`, { id: toastId, toasterId });
+        resolve(true);
       } catch (error) {
         toast.error(documentMutationError(error, `No se pudo guardar ${field.label}`), { id: toastId, toasterId });
+        resolve(false);
+      } finally {
+        persistInFlight.current = false;
       }
-    });
+    }));
   }
 
   return (
-    <div className="flex flex-col border-t border-carbon/[0.07] pt-1" aria-busy={pending}>
+    <fieldset disabled={pending} className="flex min-w-0 flex-col border-t border-carbon/[0.07] pt-1" aria-busy={pending}>
       {visibleCustomFields.map(({ field, value }) => (
         <DetailPropertyRow
           key={field.id}
@@ -98,12 +104,15 @@ export function DocumentPropertyFields({
           display={<PropertyValue field={field} value={value} users={users} />}
           readOnly={readOnly}
         >
-          <PropertyEditor
-            field={field}
-            value={value}
-            users={users}
-            onChange={(next) => persist(field, next)}
-          />
+          <fieldset disabled={pending} className="m-0 min-w-0 border-0 p-0">
+            <PropertyEditor
+              field={field}
+              value={value}
+              users={users}
+              disabled={pending}
+              onChange={(next) => persist(field, next)}
+            />
+          </fieldset>
         </DetailPropertyRow>
       ))}
       {visiblePresentationFields.map(({ field, value, editable }) => {
@@ -118,17 +127,20 @@ export function DocumentPropertyFields({
           readOnly={fieldReadOnly}
         >
           {fieldReadOnly ? null : (
-            <PropertyEditor
-              field={definition}
-              value={value}
-              users={users}
-              onChange={(next) => persist(definition, next)}
-            />
+            <fieldset disabled={pending} className="m-0 min-w-0 border-0 p-0">
+              <PropertyEditor
+                field={definition}
+                value={value}
+                users={users}
+                disabled={pending}
+                onChange={(next) => persist(definition, next)}
+              />
+            </fieldset>
           )}
         </DetailPropertyRow>
         );
       })}
-    </div>
+    </fieldset>
   );
 }
 
@@ -291,11 +303,13 @@ function PropertyEditor({
   value,
   users,
   onChange,
+  disabled = false,
 }: {
   field: TlozFieldDefinition;
   value: TlozDocumentScalar;
   users: Array<{ id: string; name: string }>;
   onChange: (value: TlozDocumentScalar) => void;
+  disabled?: boolean;
 }) {
   if (field.key === "color") {
     return (
@@ -313,6 +327,7 @@ function PropertyEditor({
         : field.options;
     return (
       <Select
+        disabled={disabled}
         value={value === null ? undefined : String(value)}
         onValueChange={(next) => onChange(field.type === "boolean" ? next === "true" : next)}
       >
@@ -353,6 +368,7 @@ function PropertyEditor({
       label={field.label}
       value={value === null || Array.isArray(value) ? "" : String(value)}
       onSave={(next) => onChange(field.type === "number" ? (next ? Number(next) : null) : next || null)}
+      disabled={disabled}
     />
   );
 }
@@ -453,23 +469,37 @@ function BlurInput({
   label,
   value,
   onSave,
+  disabled = false,
 }: {
   type: "text" | "number" | "date";
   label: string;
   value: string;
   onSave: (value: string) => void;
+  disabled?: boolean;
 }) {
   const [draft, setDraft] = useState(value);
+  const cancelled = useRef(false);
   useEffect(() => setDraft(value), [value]);
   return (
     <Input
       type={type}
+      disabled={disabled}
       aria-label={label}
       value={draft}
       onChange={(event) => setDraft(event.target.value)}
-      onBlur={() => draft !== value && onSave(draft)}
+      onBlur={() => {
+        if (cancelled.current) { cancelled.current = false; return; }
+        if (draft !== value) onSave(draft);
+      }}
       onKeyDown={(event) => {
-        if (event.key === "Enter") event.currentTarget.blur();
+        if (event.key === "Enter") { event.preventDefault(); event.currentTarget.blur(); }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          cancelled.current = true;
+          setDraft(value);
+          event.currentTarget.blur();
+        }
       }}
     />
   );

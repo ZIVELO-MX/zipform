@@ -647,6 +647,126 @@ async function selectDesktopView(page: Page, view: string) {
   await expect(page.getByRole("heading", { name: view, exact: true })).toBeVisible();
 }
 
+test("resource form retains failed drafts and retries without duplicate attachments", async ({ page }) => {
+  await authenticate(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  const resources = panel.getByRole("heading", { name: "Recursos", exact: true }).locator("..");
+  await resources.getByRole("button", { name: "Agregar nuevo", exact: true }).click();
+  const form = panel.getByRole("group", { name: "Adjuntar recurso", exact: true });
+  await form.getByLabel("Título del recurso").fill("Recurso con reintento");
+  await form.getByLabel("URL del recurso").fill("https://example.com/reference");
+  let attempts = 0;
+  let fail = true;
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST") {
+      attempts += 1;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (fail) { await route.abort("failed"); return; }
+    }
+    await route.continue();
+  });
+  await form.getByLabel("URL del recurso").press("Enter");
+  await expect(form).toHaveAttribute("aria-busy", "true");
+  await expect(form.getByRole("button", { name: "Adjuntar recurso", exact: true })).toBeDisabled();
+  await expect(form.getByRole("button", { name: "Cancelar", exact: true })).toBeDisabled();
+  await expect(form.getByRole("alert")).toContainText("No se pudo adjuntar");
+  await expect(form.getByLabel("Título del recurso")).toHaveValue("Recurso con reintento");
+  await expect(form.getByLabel("URL del recurso")).toHaveValue("https://example.com/reference");
+  expect(attempts).toBe(1);
+  await expect(form.getByRole("alert")).toBeInViewport();
+  await expect(form.getByRole("button", { name: "Adjuntar recurso", exact: true })).toBeFocused();
+  await page.screenshot({ path: "test-results/resource-error-1024.png", animations: "disabled" });
+  fail = false;
+  await form.getByRole("button", { name: "Adjuntar recurso", exact: true }).click();
+  await expect(form).toHaveCount(0);
+  await expect(resources.getByRole("link", { name: "Abrir Recurso con reintento", exact: true })).toHaveCount(1);
+  expect(attempts).toBe(2);
+  await expect(resources.getByRole("button", { name: "Agregar nuevo", exact: true })).toBeFocused();
+  await expectNoOverflow(page);
+});
+
+test("Enter attaches a resource to the creation draft without submitting the mission", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/core");
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  await page.getByRole("button", { name: "Crear nuevo Mission", exact: true }).click();
+  const panel = page.locator("dialog[open]");
+  await panel.getByLabel(/^Título/).fill("Misión sin enviar");
+  await panel.getByLabel(/^Descripción/).fill("Borrador local");
+  const resources = panel.getByRole("heading", { name: "Attachments / Resources", exact: true }).locator("..");
+  await resources.getByRole("button", { name: "Agregar nuevo", exact: true }).click();
+  let submissions = 0;
+  await page.route("**/core", async (route) => {
+    if (route.request().method() === "POST") { submissions += 1; await route.abort("failed"); }
+    else await route.continue();
+  });
+  await panel.getByLabel("Título del recurso", { exact: true }).fill("Referencia local");
+  await panel.getByLabel("URL del recurso", { exact: true }).fill("https://example.com/local");
+  await panel.getByLabel("URL del recurso", { exact: true }).press("Enter");
+  await expect(resources.getByText("Referencia local", { exact: true })).toBeVisible();
+  await expect(panel.getByLabel(/^Título/)).toHaveValue("Misión sin enviar");
+  await expect(panel).toBeVisible();
+  expect(submissions).toBe(0);
+});
+
+test("custom properties cancel with Escape and block repeat saves while pending", async ({ page, request }) => {
+  const headers = { Authorization: "Bearer zipform-local-e2e-api-only" };
+  const containerResponse = await request.get("/api/v2/containers/workshop", { headers });
+  const container = (await containerResponse.json()).data;
+  const updated = await request.patch("/api/v2/containers/workshop", { headers: { ...headers, "If-Match": `"${container.revision}"` }, data: {
+    definition: { ...container.definition, fields: [...container.definition.fields, { id: "e2e-reference", key: "reference", label: "Referencia E2E", type: "text", format: "text", visible: true, required: false, position: 20, options: [] }] },
+  } });
+  expect(updated.ok(), await updated.text()).toBe(true);
+  const created = await request.post("/api/v2/contents", { headers, data: {
+    publicId: "e2e-property-cancel", containerId: "workshop", presentation: "workshop", title: "Propiedades cancelables", data: { ownerId: "owner", status: "later", category: "side_quest", reference: "Valor original", color: "#D72228" },
+  } });
+  expect(created.ok(), await created.text()).toBe(true);
+  await authenticate(page);
+  await page.goto("/workshop");
+  await page.getByText("Propiedades cancelables", { exact: true }).click();
+  const panel = page.locator("dialog[open]");
+  let attempts = 0;
+  let fail = true;
+  await page.route("**/workshop", async (route) => {
+    if (route.request().method() === "POST") {
+      attempts += 1;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (fail) { await route.abort("failed"); return; }
+    }
+    await route.continue();
+  });
+  await panel.getByRole("button", { name: /^Referencia E2E/ }).click();
+  const input = page.getByRole("textbox", { name: "Referencia E2E", exact: true });
+  await input.fill("Texto cancelado");
+  await input.press("Escape");
+  await expect(input).toHaveValue("Valor original");
+  await expect(panel).toBeVisible();
+  expect(attempts).toBe(0);
+  await input.fill("Texto que conserva el error");
+  await input.press("Enter");
+  await expect(input).toBeDisabled();
+  await expect(input).toBeEnabled();
+  await expect(input).toHaveValue("Texto que conserva el error");
+  expect(attempts).toBe(1);
+  fail = false;
+  await input.focus();
+  await input.press("Enter");
+  await expect(page.getByText("Referencia E2E actualizado", { exact: true })).toBeVisible();
+  expect(attempts).toBe(2);
+  await page.keyboard.press("Escape");
+  await panel.getByRole("button", { name: /^Color / }).click();
+  const color = page.getByRole("textbox", { name: "Color", exact: true });
+  const originalColor = await color.inputValue();
+  await color.fill("#123456");
+  await color.press("Escape");
+  await expect(color).toHaveValue(originalColor);
+  await expect(panel).toBeVisible();
+  expect(attempts).toBe(2);
+});
+
 test("failed board moves restore the task without closing a panel opened during saving", async ({ page }) => {
   await authenticate(page);
   await page.goto("/");

@@ -188,3 +188,24 @@ Verificación **local**:
 - Capturas finales revisadas: panel de edición y Board después de recuperarse del error. La suite conserva las comprobaciones de paneles a 1024/1440/1920 px, vistas del proyecto, pantallas móviles y movimiento reducido.
 
 Las pruebas usan sesión sintética y servidor mock local. CI, PR y autenticación real siguen pendientes a cargo del usuario, según lo acordado. No se incorporaron dependencias, secretos, cambios de API ni migraciones. Las capturas y el borrador de descripción del PR siguen excluidos de Git.
+
+
+## Octava revisión: formularios compartidos de frontend
+
+Fecha: 2026-09-08. Rama `fix/frontend-resource-forms`, basada en `f3d23a2`. Se aplicaron Ponytail, baseline-ui y las pautas de accesibilidad conservando la densidad de TLOZ. Un subagente revisó e implementó propiedades y ColorPicker; la integración y las regresiones E2E se realizaron en el hilo principal.
+
+- **Recursos:** el formulario espera el resultado asíncrono antes de limpiar título, URL/identificador e icono. Un fallo conserva el borrador y muestra un error asociado al grupo; el mensaje entra en el área visible y el foco vuelve a Adjuntar para reintentar. Durante la petición los controles quedan bloqueados y se muestra el estado de guardado. Al guardar se devuelve el foco al botón de apertura.
+- **Creación de misiones:** Enter dentro del formulario de recursos adjunta al borrador local y evita enviar la misión completa. El mismo componente conserva sus consumidores síncronos y los asíncronos del detalle.
+- **Propiedades personalizadas:** Escape restaura el valor anterior de texto, número o fecha y evita el guardado por blur. El bloqueo durante una actualización incluye los controles dentro de popovers, evitando cambios con la misma revisión mientras la primera petición sigue pendiente.
+- **Colores y popovers:** Escape restaura el color sin guardar; Enter evita un submit del formulario padre. Los popovers permiten cancelar el campo antes de procesar su cierre, corrigiendo la pérdida del borrador por la captura anticipada de Escape.
+
+Verificación **local**:
+
+- **50/50 E2E aprobados** en Chrome sobre el build final, duración reportada **1.0 min**. Desde `apps/dashboard`: `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`.
+
+- **20/20 pruebas focalizadas aprobadas**. Desde la raíz: `node apps/dashboard/node_modules/vitest/vitest.mjs run apps/dashboard/components/tloz/document-property-fields.test.ts apps/dashboard/components/tloz/mission-detail-ui.test.ts packages/ui/src/components/color-picker.test.ts`.
+- Build Next.js de producción y comprobación de tipos: aprobados. Desde `apps/dashboard`: `TLOZ_DATA_DRIVER=mock AUTH_SECRET=zipform-local-e2e-only node node_modules/next/dist/bin/next build`.
+- Regresiones E2E nuevas: recurso con error y reintento sin duplicados, foco de reintento y error visible a 1024 px; Enter adjunta al borrador sin enviar la misión; cancelación de campo y color sin peticiones, bloqueo durante guardado y reintento del texto conservado.
+- `git diff --check`: aprobado. Capturas locales excluidas de Git.
+
+Las pruebas utilizan un servidor mock aislado y una sesión sintética. CI, PR y autenticación real siguen pendientes a cargo del usuario, según lo acordado. No se añadieron dependencias, cambios de API ni migraciones.
