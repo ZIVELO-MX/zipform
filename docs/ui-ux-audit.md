@@ -168,3 +168,23 @@ Verificación **local** final:
 - Capturas revisadas: Dashboard, Lista, Tabla y Board a 1024 px; Agenda a 1440 px; Mes y Semana a 1024 px. Los siete días caben en el workspace de escritorio de 1024 px. Se conservaron las regresiones móviles y de paneles de tareas.
 
 Rama dedicada `fix/desktop-project-views`, basada en `e6a1c0d` de las correcciones anteriores. PR y pipeline siguen a cargo del usuario; no se declara CI aprobado ni validación con autenticación o datos reales. No se añadieron dependencias ni se modificaron contratos HTTP o migraciones.
+
+
+## Séptima revisión: recuperación de errores en desktop
+
+Fecha: 2026-09-08. Rama `fix/desktop-edit-recovery`, basada en `445f908`. Se mantuvo la interfaz compacta de TLOZ y el alcance acotado de Ponytail; un subagente implementó el arreglo de Board y otro revisó las regresiones de edición. Integración y verificación en el hilo principal.
+
+- **Edición de tareas:** título y descripción permanecen editables con el borrador intacto si falla el guardado. El foco vuelve al campo para reintentar. Los cambios recibidos de la misión conservan borradores modificados; cambiar de misión limpia el historial local y el modo de edición.
+- **Checklist:** renombrar o añadir una subtarea también conserva el texto en caso de error. Escape cancela título, descripción y subtarea sin propagarse al cierre del panel ni guardar accidentalmente. Los campos se bloquean durante su guardado; las acciones de renombrar/eliminar respetan el permiso de edición del documento.
+- **Board:** impide movimientos repetidos mientras guarda, con handles deshabilitados y un aviso visible. Un fallo restaura únicamente el estado de la misión afectada sobre la lista actual y mantiene un panel abierto durante la petición. El mensaje de error y el área de columnas comparten una altura acotada.
+- **Propiedades:** la fecha vencida admite dos líneas para mostrar el año completo en el panel lateral; el resto de propiedades mantiene su presentación compacta.
+
+Verificación **local**:
+
+- **47/47 E2E aprobados**, Chrome sobre build de producción, **56.2 s**. `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test` desde `apps/dashboard`.
+- **25/25 pruebas focalizadas aprobadas**. `node node_modules/vitest/vitest.mjs run components/tloz/mission-detail-ui.test.ts components/tloz/slide-over-contract.test.ts components/tloz/mission-inline-editor.test.ts components/tloz/document-view-interaction.test.ts` desde `apps/dashboard`.
+- Build Next.js de producción, comprobación de tipos y `git diff --check`: aprobados.
+- Regresiones nuevas: fallo de movimiento mediante teclado con apertura de panel durante la petición; rollback a la columna original y controles habilitados al terminar; fallo de título, reintento exitoso, descripción, creación y renombrado de subtareas; Escape conserva el panel y cancela únicamente la edición; fecha sin truncamiento.
+- Capturas finales revisadas: panel de edición y Board después de recuperarse del error. La suite conserva las comprobaciones de paneles a 1024/1440/1920 px, vistas del proyecto, pantallas móviles y movimiento reducido.
+
+Las pruebas usan sesión sintética y servidor mock local. CI, PR y autenticación real siguen pendientes a cargo del usuario, según lo acordado. No se incorporaron dependencias, secretos, cambios de API ni migraciones. Las capturas y el borrador de descripción del PR siguen excluidos de Git.

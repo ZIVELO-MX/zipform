@@ -81,6 +81,13 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const redoStack = useRef<EditableSnapshot[]>([]);
   const skipTitleSave = useRef(false);
   const skipDescriptionSave = useRef(false);
+  const skipChecklistSave = useRef(false);
+  const inlineSaveInFlight = useRef(false);
+  const [savingInline, setSavingInline] = useState(false);
+  const titleInput = useRef<HTMLInputElement>(null);
+  const descriptionInput = useRef<HTMLTextAreaElement>(null);
+  const checklistInput = useRef<HTMLInputElement>(null);
+  const previousMission = useRef(mission);
   const [isPending, startTransition] = useTransition();
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
@@ -122,7 +129,21 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const isCompleted = current.status === completionStatus;
   const checklistProgress = current.checklist.length ? Math.round((current.checklist.filter((item) => item.completed).length / current.checklist.length) * 100) : 0;
 
-  useEffect(() => { setCurrent(mission); setDetailMarkdown(mission.descriptionDetail); setDescriptionDraft(mission.description); setTitleDraft(mission.title); }, [mission]);
+  useEffect(() => {
+    const previous = previousMission.current;
+    previousMission.current = mission;
+    setCurrent(mission);
+    setDetailMarkdown(mission.descriptionDetail);
+    setDescriptionDraft((draft) => previous.id !== mission.id || draft === previous.description ? mission.description : draft);
+    setTitleDraft((draft) => previous.id !== mission.id || draft === previous.title ? mission.title : draft);
+    if (previous.id !== mission.id) {
+      setEditingTitle(false);
+      setEditingDescription(false);
+      setRenamingChecklist(null);
+      undoStack.current = [];
+      redoStack.current = [];
+    }
+  }, [mission]);
 
   useEffect(() => {
     function handleHistoryShortcut(event: KeyboardEvent) {
@@ -201,23 +222,21 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
     });
   }
 
-  function saveTitle() {
-    if (skipTitleSave.current) { skipTitleSave.current = false; setTitleDraft(current.title); return; }
+  async function saveTitle() {
+    if (skipTitleSave.current) { skipTitleSave.current = false; return; }
+    if (inlineSaveInFlight.current) return;
     const title = titleDraft.trim();
-    setEditingTitle(false);
-    if (!title || title === current.title) { setTitleDraft(current.title); return; }
+    if (!title || title === current.title) { setTitleDraft(current.title); setEditingTitle(false); return; }
+    inlineSaveInFlight.current = true;
+    setSavingInline(true);
     remember();
-    const toastId = toast.loading("Actualizando título…", { toasterId });
-    startTransition(async () => {
-      try {
-        const updated = documentMutation
-          ? await documentMutation({ title })
-          : { ...current, ...(await updateMission(current.id, { title })) };
-        accept(updated);
-        toast.success("Título actualizado", { id: toastId, toasterId });
-      }
-      catch { setTitleDraft(current.title); toast.error("No se pudo actualizar el título", { id: toastId, toasterId }); }
-    });
+    const saved = await mutate("Actualizando título…", async () => documentMutation
+      ? documentMutation({ title })
+      : { ...current, ...(await updateMission(current.id, { title })) });
+    inlineSaveInFlight.current = false;
+    setSavingInline(false);
+    if (saved) { setTitleDraft(title); setEditingTitle(false); }
+    else titleInput.current?.focus();
   }
 
   function saveDocument(nextMarkdown = detailMarkdown) {
@@ -228,12 +247,21 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
       : saveMissionDocument(current.id, nextMarkdown));
   }
 
-  function saveDescription() {
-    if (descriptionDraft.trim() === current.description) return;
+  async function saveDescription() {
+    if (skipDescriptionSave.current) { skipDescriptionSave.current = false; return; }
+    if (inlineSaveInFlight.current) return;
+    const description = descriptionDraft.trim();
+    if (description === current.description) { setEditingDescription(false); return; }
+    inlineSaveInFlight.current = true;
+    setSavingInline(true);
     remember();
-    mutate("Guardando descripción…", async () => documentMutation
-      ? documentMutation({ summary: descriptionDraft.trim() })
-      : { ...current, ...(await updateMission(current.id, { description: descriptionDraft.trim() })) });
+    const saved = await mutate("Guardando descripción…", async () => documentMutation
+      ? documentMutation({ summary: description })
+      : { ...current, ...(await updateMission(current.id, { description })) });
+    inlineSaveInFlight.current = false;
+    setSavingInline(false);
+    if (saved) { setDescriptionDraft(description); setEditingDescription(false); }
+    else descriptionInput.current?.focus();
   }
 
   function toggleChecklistItem(position: number, checked: boolean) {
@@ -268,11 +296,18 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
     });
   }
 
-  function renameChecklistItem(position: number) {
+  async function renameChecklistItem(position: number) {
+    if (skipChecklistSave.current) { skipChecklistSave.current = false; return; }
+    if (inlineSaveInFlight.current) return;
     const title = checklistTitleDraft.trim();
-    setRenamingChecklist(null);
-    if (!title || title === current.checklist[position]?.title) return;
-    saveDocument(updateTaskLine(detailMarkdown, position, { title }));
+    if (!title || title === current.checklist[position]?.title) { setRenamingChecklist(null); return; }
+    inlineSaveInFlight.current = true;
+    setSavingInline(true);
+    const saved = await saveDocument(updateTaskLine(detailMarkdown, position, { title }));
+    inlineSaveInFlight.current = false;
+    setSavingInline(false);
+    if (saved !== false) setRenamingChecklist(null);
+    else checklistInput.current?.focus();
   }
 
   function deleteChecklistItem(position: number) {
@@ -317,9 +352,10 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
         </div>
         <div className="flex items-start gap-2.5">
           {canUpdateDocument ? <span className="mt-0.5 shrink-0 rounded-lg" style={{ backgroundColor: `${detailColor}18` }}><IconPicker icons={missionIcons} value={current.icon} color={detailColor} recentStorageKey="tloz-recent-icons" onValueChange={saveIcon} iconOnly className="size-8 justify-center rounded-lg border-0 bg-transparent p-0 shadow-none hover:bg-transparent [&_svg]:size-[15px]" /></span> : (() => { const CurrentIcon = resolveMissionIcon(current.icon); return <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-[15px]" style={{ backgroundColor: `${detailColor}18`, color: detailColor }}><CurrentIcon aria-hidden="true" /></span>; })()}
-          {editingTitle ? <Input autoFocus className="mission-detail-title h-auto min-w-0 flex-1 border border-[#1D1D1B]/15 bg-white px-2 py-0 text-2xl font-bold leading-tight shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : canUpdateDocument ? <button type="button" className="min-w-0 flex-1 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1></button> : <h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1>}
+          {editingTitle ? <Input ref={titleInput} readOnly={savingInline} aria-busy={savingInline} autoFocus className="mission-detail-title h-auto min-w-0 flex-1 border border-[#1D1D1B]/15 bg-white px-2 py-0 text-2xl font-bold leading-tight shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (savingInline) return; skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : canUpdateDocument ? <button type="button" className="min-w-0 flex-1 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" disabled={savingInline} onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1></button> : <h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1>}
         </div>
       </header>
+      {savingInline ? <p role="status" className="mb-2 text-xs font-semibold text-carbon/60">Guardando cambios…</p> : null}
       <div className="mission-detail-layout grid min-w-0 gap-6">
         <div className="min-w-0">
 
@@ -329,18 +365,21 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
               <AccordionContent className="pt-1">
             {editingDescription ? (
               <textarea
+                ref={descriptionInput}
+                readOnly={savingInline}
+                aria-busy={savingInline}
                 autoFocus
                 className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[14px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
                 aria-label="Descripción de la misión"
                 value={descriptionDraft}
                 maxLength={280}
                 onChange={(event) => setDescriptionDraft(event.target.value)}
-                onBlur={() => { if (skipDescriptionSave.current) { skipDescriptionSave.current = false; setDescriptionDraft(current.description); } else saveDescription(); setEditingDescription(false); }}
-                onKeyDown={(event) => { if (event.key === "Escape") { skipDescriptionSave.current = true; setDescriptionDraft(current.description); setEditingDescription(false); } }}
+                onBlur={saveDescription}
+                onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (savingInline) return; skipDescriptionSave.current = true; setDescriptionDraft(current.description); setEditingDescription(false); } }}
                 placeholder="Resumen breve del resultado esperado."
               />
             ) : (
-              canUpdateDocument ? <button type="button" className="block max-w-[62ch] rounded-md text-left text-[14px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button> : <p className="m-0 block max-w-[62ch] text-[14px] leading-[1.6] text-[#454543]">{current.description || "Sin descripción"}</p>
+              canUpdateDocument ? <button type="button" className="block max-w-[62ch] rounded-md text-left text-[14px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" disabled={savingInline} onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button> : <p className="m-0 block max-w-[62ch] text-[14px] leading-[1.6] text-[#454543]">{current.description || "Sin descripción"}</p>
             )}
               </AccordionContent>
             </AccordionItem>
@@ -373,11 +412,11 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
                     <span className="sr-only">{item.title}</span>
                   </label>
                   {renamingChecklist === position ? (
-                    <Input autoFocus className="h-8 min-w-0 flex-1 text-[13.5px]" value={checklistTitleDraft} aria-label="Nombre del checkbox" onChange={(event) => setChecklistTitleDraft(event.target.value)} onBlur={() => renameChecklistItem(position)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") setRenamingChecklist(null); }} />
+                    <Input ref={checklistInput} readOnly={savingInline} aria-busy={savingInline} autoFocus className="h-8 min-w-0 flex-1 text-[13.5px]" value={checklistTitleDraft} aria-label="Nombre del checkbox" onChange={(event) => setChecklistTitleDraft(event.target.value)} onBlur={() => renameChecklistItem(position)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (savingInline) return; skipChecklistSave.current = true; setRenamingChecklist(null); } }} />
                   ) : <span className={`min-w-0 flex-1 text-[13.5px] ${item.completed ? "text-[#9A9A98] line-through" : "text-[#1D1D1B]"}`}>{item.title}</span>}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-7 shrink-0 rounded-md text-carbon/45 opacity-0 transition-opacity hover:text-carbon group-focus-within:opacity-100 group-hover:opacity-100" aria-label={`Acciones para ${item.title}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36"><DropdownMenuItem onSelect={() => { setChecklistTitleDraft(item.title); setRenamingChecklist(position); }}><Pencil className="size-3.5" />Editar</DropdownMenuItem><DropdownMenuItem className="text-zivelo focus:text-zivelo" onSelect={() => setDeletingChecklist(position)}><Trash2 className="size-3.5" />Eliminar</DropdownMenuItem></DropdownMenuContent>
+                    <DropdownMenuContent align="end" className="w-36"><DropdownMenuItem disabled={savingInline || !canUpdateDocument} onSelect={() => { skipChecklistSave.current = false; setChecklistTitleDraft(item.title); setRenamingChecklist(position); }}><Pencil className="size-3.5" />Editar</DropdownMenuItem><DropdownMenuItem disabled={savingInline || !canUpdateDocument} className="text-zivelo focus:text-zivelo" onSelect={() => setDeletingChecklist(position)}><Trash2 className="size-3.5" />Eliminar</DropdownMenuItem></DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               ))}
@@ -472,19 +511,43 @@ function resolveFullDetailHref(
   return mission.project ? missionHref(mission.project, mission.displayId) : "/";
 }
 
-function AddChecklistTask({ onAdd }: { onAdd: (title: string) => void }) {
+function AddChecklistTask({ onAdd }: { onAdd: (title: string) => void | boolean | Promise<void | boolean> }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
+  const [saving, setSaving] = useState(false);
   const cancelled = useRef(false);
-  function finish() {
-    if (cancelled.current) { cancelled.current = false; setTitle(""); setAdding(false); return; }
+  const inFlight = useRef(false);
+  const input = useRef<HTMLInputElement>(null);
+  async function finish() {
+    if (cancelled.current) { cancelled.current = false; return; }
+    if (inFlight.current) return;
     const value = title.trim();
-    if (value) onAdd(value);
-    setTitle("");
-    setAdding(false);
+    if (!value) { setTitle(""); setAdding(false); return; }
+    inFlight.current = true;
+    setSaving(true);
+    try {
+      if (await onAdd(value) !== false) { setTitle(""); setAdding(false); }
+      else input.current?.focus();
+    } catch {
+      toast.error("No se pudo añadir la subtarea");
+      input.current?.focus();
+    } finally {
+      inFlight.current = false;
+      setSaving(false);
+    }
   }
-  if (adding) return <Input autoFocus aria-label="Nueva subtarea" placeholder="Nombre de la subtarea" className="my-1 h-9 border-[#1D1D1B]/15 bg-[#FAFAF9] text-[13px]" value={title} onChange={(event) => setTitle(event.target.value)} onBlur={finish} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { cancelled.current = true; setTitle(""); setAdding(false); } }} />;
-  return <button type="button" className="flex w-full items-center gap-[11px] rounded-[10px] px-3 py-2.5 text-left text-[#9A9A98] transition-colors hover:bg-[#D72228]/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => { cancelled.current = false; setAdding(true); }}><Plus className="size-4" aria-hidden="true" /><span className="text-[13px]">Añadir subtarea</span></button>;
+  if (adding) return <Input ref={input} readOnly={saving} aria-busy={saving} autoFocus aria-label="Nueva subtarea" placeholder="Nombre de la subtarea" className="my-1 h-9 border-[#1D1D1B]/15 bg-[#FAFAF9] text-[13px]" value={title} onChange={(event) => setTitle(event.target.value)} onBlur={finish} onKeyDown={(event) => {
+    if (event.key === "Enter") event.currentTarget.blur();
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      if (saving) return;
+      cancelled.current = true;
+      setTitle("");
+      setAdding(false);
+    }
+  }} />;
+  return <button type="button" className="flex w-full items-center gap-[11px] rounded-[10px] px-3 py-2.5 text-left text-[#9A9A98] transition-colors hover:bg-[#D72228]/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" onClick={() => { cancelled.current = false; setAdding(true); }}><Plus className="size-4" aria-hidden="true" /><span className="text-[13px]">Añadir subtarea</span></button>;
 }
 
 export function AddDependency({ missions, questItems, onAddMission, onAddQuestItem }: { missions: EntityPickerOption[]; questItems: EntityPickerOption[]; onAddMission: (id: string) => void; onAddQuestItem: (id: string) => void }) {

@@ -594,7 +594,7 @@ export function MissionList({ missions, grouping = "status", statusOptions = [],
 
 // ─── BOARD ─────────────────────────────────────────────────────────
 
-export function MissionBoard({ missions, statusOptions = [], onSelect, onStatusChange }: { missions: TlozMissionRecord[]; statusOptions?: TlozFieldOption[]; onSelect?: (m: TlozMissionRecord) => void; onStatusChange?: (id: string, status: TlozMissionStatus) => void }) {
+export function MissionBoard({ missions, statusOptions = [], pending = false, onSelect, onStatusChange }: { missions: TlozMissionRecord[]; statusOptions?: TlozFieldOption[]; pending?: boolean; onSelect?: (m: TlozMissionRecord) => void; onStatusChange?: (id: string, status: TlozMissionStatus) => void }) {
   const [activeMissionId, setActiveMissionId] = useState<string | null>(null);
   const configuredGroups = statusOptions.length
     ? statusOptions.map((option) => ({
@@ -631,7 +631,7 @@ export function MissionBoard({ missions, statusOptions = [], onSelect, onStatusC
     setActiveMissionId(null);
     const status = String(event.over?.id ?? "").replace("status:", "") as TlozMissionStatus;
     const mission = missions.find((item) => item.id === event.active.id);
-    if (!mission || !groups.some((group) => group.id === status) || mission.status === status) return;
+    if (pending || !mission || !groups.some((group) => group.id === status) || mission.status === status) return;
     onStatusChange?.(mission.id, status);
   }
 
@@ -654,6 +654,8 @@ export function MissionBoard({ missions, statusOptions = [], onSelect, onStatusC
         },
       }}
     >
+      <div className="relative h-full">
+      {pending ? <p role="status" className="pointer-events-none absolute bottom-3 left-1/2 z-20 m-0 -translate-x-1/2 whitespace-nowrap rounded-lg border border-carbon/10 bg-white px-3 py-2 text-xs font-semibold text-carbon/75 shadow-sm">Guardando estado…</p> : null}
       <HorizontalScrollArea label="Board de misiones" className="h-full" viewportClassName="tloz-board-scroll tloz-scrl flex-1">
         <div className="tloz-board-track">
           {groups.map((group) => {
@@ -661,13 +663,14 @@ export function MissionBoard({ missions, statusOptions = [], onSelect, onStatusC
             return (
               <BoardDropColumn key={group.id} id={group.id} label={group.label} count={groupMissions.length} tone={group.tone} active={group.role === "active"}>
                 {groupMissions.length > 0 ? groupMissions.map((mission) => (
-                  <BoardCard key={mission.id} mission={mission} isCompleted={group.role === "done"} onSelect={onSelect} />
+                  <BoardCard key={mission.id} mission={mission} isCompleted={group.role === "done"} pending={pending} onSelect={onSelect} />
                 )) : <EmptyState title="Suelta una misión aquí" />}
               </BoardDropColumn>
             );
           })}
         </div>
       </HorizontalScrollArea>
+      </div>
       <DragOverlay dropAnimation={{ duration: 180, easing: "ease-out" }}>
         {activeMissionId ? <BoardDragPreview mission={missions.find((item) => item.id === activeMissionId)} /> : null}
       </DragOverlay>
@@ -700,12 +703,13 @@ function BoardDropColumn({ id, label, count, tone, active, children }: { id: str
   );
 }
 
-function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRecord; isCompleted: boolean; onSelect?: (m: TlozMissionRecord) => void }) {
+function BoardCard({ mission, isCompleted, pending, onSelect }: { mission: TlozMissionRecord; isCompleted: boolean; pending?: boolean; onSelect?: (m: TlozMissionRecord) => void }) {
   const tone = missionTypeTone[mission.type];
   const blocked = pendingDependencyCount(mission) > 0;
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: mission.id,
     data: { title: mission.title, status: mission.status },
+    disabled: pending,
   });
   const dragStyle: CSSProperties = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
@@ -740,9 +744,10 @@ function BoardCard({ mission, isCompleted, onSelect }: { mission: TlozMissionRec
     >
       <button
         type="button"
-        className="absolute bottom-3 left-1 top-3 w-3 touch-none cursor-grab rounded-full border-0 bg-carbon/[0.06] p-0 transition-colors hover:bg-carbon/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-zivelo active:cursor-grabbing"
+        className="absolute bottom-3 left-1 top-3 w-3 touch-none cursor-grab rounded-full border-0 bg-carbon/[0.06] p-0 transition-colors hover:bg-carbon/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-zivelo active:cursor-grabbing disabled:cursor-wait disabled:opacity-40"
         aria-label={`Mantén presionado para mover ${mission.title}`}
         onClick={(event) => event.stopPropagation()}
+        disabled={pending}
         {...attributes}
         {...listeners}
       />

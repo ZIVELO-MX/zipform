@@ -647,6 +647,147 @@ async function selectDesktopView(page: Page, view: string) {
   await expect(page.getByRole("heading", { name: view, exact: true })).toBeVisible();
 }
 
+test("failed board moves restore the task without closing a panel opened during saving", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await selectDesktopView(page, "Board");
+  const handle = page.locator('button[aria-label^="Mantén presionado para mover"]').first();
+  const label = (await handle.getAttribute("aria-label"))!;
+  const title = label.replace("Mantén presionado para mover ", "");
+  const card = page.locator(".tloz-kcard").filter({ has: page.getByRole("button", { name: label, exact: true }) });
+  const source = await card.locator("..").getAttribute("data-group");
+  let release!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  let intercepted = false;
+  await page.route("**/", async (route) => {
+    if (!intercepted && route.request().method() === "POST" && route.request().headers()["next-action"]) {
+      intercepted = true;
+      await blocked;
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  try {
+    await handle.focus();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Space");
+    await expect(page.getByRole("status").filter({ hasText: "Guardando estado…" })).toBeVisible();
+    await expect(page.getByRole("button", { name: label, exact: true })).toBeDisabled();
+    await expect(card.locator("..")).not.toHaveAttribute("data-group", source!);
+    await card.click();
+    const panel = page.locator("dialog[open]");
+    await expect(panel).toBeVisible();
+    await expect(panel.getByRole("heading", { level: 2, name: title, exact: true })).toBeVisible();
+    release();
+    await expect(page.locator('[role="status"]').filter({ hasText: "Guardando estado…" })).toHaveCount(0);
+    await expect(panel.getByRole("heading", { level: 1, name: title, exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(card.locator("..")).toHaveAttribute("data-group", source!);
+    await expect(page.getByRole("button", { name: label, exact: true })).toBeEnabled();
+    await expectNoOverflow(page);
+    await page.screenshot({ path: "test-results/desktop-board-recovery.png", animations: "disabled" });
+  } finally { release(); }
+});
+
+test("inline mission edits preserve failed drafts and Escape only cancels the field", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  const due = panel.getByRole("button", { name: /^Vence/ }).locator("time");
+  await expect(due).toBeVisible();
+  expect(await due.evaluate((node) => {
+    const value = node.parentElement!;
+    return value.scrollWidth <= value.clientWidth + 1 && getComputedStyle(value).whiteSpace === "normal";
+  })).toBe(true);
+  const originalTitle = "Publicar dashboard operativo de TLOZ";
+  await panel.getByRole("button", { name: originalTitle, exact: true }).click();
+  const title = panel.getByRole("textbox", { name: "Título de la misión", exact: true });
+  await title.fill("Título que se cancela");
+  await title.press("Escape");
+  await expect(panel).toBeVisible();
+  await expect(title).toHaveCount(0);
+  await expect(panel.getByRole("heading", { level: 1, name: originalTitle, exact: true })).toBeVisible();
+
+  let submissions = 0;
+  let fail = true;
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST" && fail) {
+      submissions += 1;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      await route.abort("failed");
+    } else await route.continue();
+  });
+  await panel.getByRole("button", { name: originalTitle, exact: true }).click();
+  await title.fill("Borrador conservado al fallar");
+  await title.press("Enter");
+  await expect(title).toHaveAttribute("aria-busy", "true");
+  await expect(title).toBeFocused();
+  await expect(title).toHaveAttribute("aria-busy", "false");
+  await expect(title).toHaveValue("Borrador conservado al fallar");
+  expect(submissions).toBe(1);
+  fail = false;
+  await title.press("Enter");
+  await expect(panel.getByRole("heading", { level: 1, name: "Borrador conservado al fallar", exact: true })).toBeVisible();
+  await panel.getByRole("button", { name: "Borrador conservado al fallar", exact: true }).click();
+  await title.fill(originalTitle);
+  await title.press("Enter");
+  await expect(panel.getByRole("heading", { level: 1, name: originalTitle, exact: true })).toBeVisible();
+
+  const descriptionSection = panel.locator('[data-state="open"]').filter({ has: page.getByRole("button", { name: "Descripción", exact: true }) }).first();
+  const descriptionButton = descriptionSection.locator('button.block').first();
+  await descriptionButton.click();
+  const description = panel.getByRole("textbox", { name: "Descripción de la misión", exact: true });
+  const originalDescription = await description.inputValue();
+  await description.fill("Resumen que se cancela");
+  await description.press("Escape");
+  await expect(panel).toBeVisible();
+  await expect(description).toHaveCount(0);
+  await descriptionButton.click();
+  await expect(description).toHaveValue(originalDescription);
+  await description.fill("Resumen pendiente de reintento");
+  fail = true;
+  await description.press("Tab");
+  await expect(description).toBeFocused();
+  await expect(description).toHaveAttribute("aria-busy", "false");
+  await expect(description).toHaveValue("Resumen pendiente de reintento");
+  await description.press("Escape");
+  await expect(panel).toBeVisible();
+
+  await panel.getByRole("button", { name: "Añadir subtarea", exact: true }).click();
+  const task = panel.getByRole("textbox", { name: "Nueva subtarea", exact: true });
+  await task.fill("Subtarea pendiente de reintento");
+  await task.press("Enter");
+  await expect(task).toBeFocused();
+  await expect(task).toHaveAttribute("aria-busy", "false");
+  await expect(task).toHaveValue("Subtarea pendiente de reintento");
+  const attempts = submissions;
+  await task.press("Escape");
+  await expect(panel).toBeVisible();
+  await expect(task).toHaveCount(0);
+  expect(submissions).toBe(attempts);
+  fail = false;
+  await panel.getByRole("button", { name: "Añadir subtarea", exact: true }).click();
+  await task.fill("Subtarea para editar");
+  await task.press("Enter");
+  await expect(task).toHaveCount(0);
+  await expect(panel.getByRole("checkbox", { name: "Subtarea para editar", exact: true })).toBeVisible();
+  await panel.getByRole("button", { name: "Acciones para Subtarea para editar", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Editar", exact: true }).click();
+  const rename = panel.getByRole("textbox", { name: "Nombre del checkbox", exact: true });
+  await rename.fill("Nombre pendiente de reintento");
+  fail = true;
+  await rename.press("Enter");
+  await expect(rename).toBeFocused();
+  await expect(rename).toHaveAttribute("aria-busy", "false");
+  await expect(rename).toHaveValue("Nombre pendiente de reintento");
+  await rename.press("Escape");
+  await expect(panel).toBeVisible();
+  await expect(rename).toHaveCount(0);
+  await expect(panel.getByRole("checkbox", { name: "Subtarea para editar", exact: true })).toBeVisible();
+  await page.screenshot({ path: "test-results/desktop-edit-recovery.png", animations: "disabled" });
+});
+
 test("desktop list and table prioritize titles and preserve them while scrolling", async ({ page }) => {
   await authenticate(page);
   await page.setViewportSize({ width: 1024, height: 768 });
