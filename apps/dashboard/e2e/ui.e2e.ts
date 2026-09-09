@@ -878,7 +878,10 @@ test("failed board moves restore the task without closing a panel opened during 
   try {
     await handle.focus();
     await page.keyboard.press("Space");
+    const dragStatus = page.getByRole("status").filter({ hasText: `Misión ${title} sobre ` });
+    await expect(dragStatus).toContainText(`sobre ${source}.`);
     await page.keyboard.press("ArrowRight");
+    await expect(dragStatus).not.toContainText(`sobre ${source}.`);
     await page.keyboard.press("Space");
     await expect(page.getByRole("status").filter({ hasText: "Guardando estado…" })).toBeVisible();
     await expect(page.getByRole("button", { name: label, exact: true })).toBeDisabled();
@@ -995,6 +998,131 @@ test("inline mission edits preserve failed drafts and Escape only cancels the fi
   await expect(rename).toHaveCount(0);
   await expect(panel.getByRole("checkbox", { name: "Subtarea para editar", exact: true })).toBeVisible();
   await page.screenshot({ path: "test-results/desktop-edit-recovery.png", animations: "disabled" });
+});
+
+test("checklist saves serialize changes and deletion stays open after a failure", async ({ page, request }) => {
+  const secondTitle = "Segunda de prueba " + "Subtarea".repeat(30);
+  const seeded = await request.put("/api/v1/missions/mission-dashboard/document", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: { markdown: `- [ ] Primera de prueba\n- [ ] ${secondTitle}` } });
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+  await authenticate(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  const first = panel.getByRole("checkbox", { name: "Primera de prueba", exact: true });
+  const second = panel.getByRole("checkbox", { name: secondTitle, exact: true });
+  let attempts = 0;
+  let fail = false;
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST") {
+      attempts += 1;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (fail) { await route.abort("failed"); return; }
+    }
+    await route.continue();
+  });
+  await first.click();
+  await expect(second).toBeDisabled();
+  await expect(panel.getByRole("checkbox", { name: "Task 2", exact: true })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Añadir subtarea", exact: true })).toBeDisabled();
+  await expect(first).toBeChecked();
+  await expect(second).toBeEnabled();
+  await second.click();
+  await expect(second).toBeChecked();
+  await expect(first).toBeChecked();
+  expect(attempts).toBe(2);
+  await panel.getByRole("button", { name: "Acciones para Primera de prueba", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Eliminar", exact: true }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Eliminar subtarea", exact: true });
+  fail = true;
+  await confirmation.getByRole("button", { name: "Eliminar", exact: true }).click();
+  await expect(confirmation.getByRole("button", { name: "Eliminando…", exact: true })).toBeDisabled();
+  await expect(confirmation.getByRole("button", { name: "Cancelar", exact: true })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation.getByRole("alert")).toContainText("No se pudo eliminar");
+  await expect(confirmation).toContainText("Primera de prueba");
+  expect(attempts).toBe(3);
+  await page.screenshot({ path: "test-results/checklist-delete-error-1024.png", animations: "disabled" });
+  fail = false;
+  await confirmation.getByRole("button", { name: "Eliminar", exact: true }).click();
+  await expect(confirmation).toHaveCount(0);
+  await expect(first).toHaveCount(0);
+  await expect(second).toBeChecked();
+  expect(attempts).toBe(4);
+  expect(await panel.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+  fail = true;
+  await panel.getByRole("button", { name: "Añadir subtarea", exact: true }).click();
+  const draft = panel.getByRole("textbox", { name: "Nueva subtarea", exact: true });
+  await draft.fill("Borrador conservado al filtrar");
+  await draft.press("Enter");
+  await panel.getByRole("group", { name: "Filtrar checklist" }).getByRole("button", { name: "Pendientes", exact: true }).click();
+  await expect(draft).toHaveValue("Borrador conservado al filtrar");
+  await expect(draft).toBeFocused();
+  await expect(draft).toHaveAttribute("aria-busy", "false");
+  expect(attempts).toBe(5);
+  await draft.press("Escape");
+});
+
+test("undo keeps failed history entries and ignores shortcuts in confirmation dialogs", async ({ page, request }) => {
+  const seeded = await request.put("/api/v1/missions/mission-dashboard/document", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: { markdown: "- [ ] Historial protegido" } });
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  const original = "Publicar dashboard operativo de TLOZ";
+  const changed = "Título con historial";
+  await panel.getByRole("button", { name: original, exact: true }).click();
+  const title = panel.getByRole("textbox", { name: "Título de la misión", exact: true });
+  await title.fill(changed);
+  await title.press("Enter");
+  await expect(panel.getByRole("heading", { name: changed, level: 1, exact: true })).toBeVisible();
+  let attempts = 0;
+  let fail = true;
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST") {
+      attempts += 1;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (fail) { await route.abort("failed"); return; }
+    }
+    await route.continue();
+  });
+  await panel.getByRole("button", { name: changed, exact: true }).click();
+  await title.fill("Edición fallida sin historial");
+  await title.press("Enter");
+  await expect(title).toBeFocused();
+  await expect(title).toHaveAttribute("aria-busy", "false");
+  await title.press("Escape");
+  expect(attempts).toBe(1);
+  await panel.getByRole("button", { name: "Acciones para Historial protegido", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Eliminar", exact: true }).click();
+  const confirmation = page.getByRole("alertdialog", { name: "Eliminar subtarea", exact: true });
+  await confirmation.getByRole("button", { name: "Cancelar", exact: true }).focus();
+  await page.keyboard.press("ControlOrMeta+z");
+  await confirmation.getByRole("button", { name: "Cancelar", exact: true }).click();
+  expect(attempts).toBe(1);
+  const anchor = panel.getByRole("button", { name: "Marcar como completada", exact: true });
+  await anchor.focus();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(panel.locator("article.mission-detail-workspace")).toHaveAttribute("aria-busy", "true");
+  await expect(panel.getByRole("checkbox", { name: "Historial protegido", exact: true })).toBeDisabled();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(page.getByText("No se pudo restaurar el cambio", { exact: true })).toBeVisible();
+  await expect(panel.locator("article.mission-detail-workspace")).toHaveAttribute("aria-busy", "false");
+  expect(attempts).toBe(2);
+  fail = false;
+  await anchor.focus();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(panel.getByRole("heading", { name: original, level: 1, exact: true })).toBeVisible();
+  await expect(panel.locator("article.mission-detail-workspace")).toHaveAttribute("aria-busy", "false");
+  await anchor.focus();
+  await page.keyboard.press("ControlOrMeta+Shift+z");
+  await expect(panel.getByRole("heading", { name: changed, level: 1, exact: true })).toBeVisible();
+  await expect(panel.locator("article.mission-detail-workspace")).toHaveAttribute("aria-busy", "false");
+  await anchor.focus();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(panel.getByRole("heading", { name: original, level: 1, exact: true })).toBeVisible();
 });
 
 test("desktop list and table prioritize titles and preserve them while scrolling", async ({ page }) => {

@@ -15,9 +15,10 @@ type MarkdownEditorProps = {
   placeholder?: string;
   showHeader?: boolean;
   readOnly?: boolean;
+  disabled?: boolean;
 };
 
-export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true, readOnly = false }: MarkdownEditorProps) {
+export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añadir detalle con Markdown…", showHeader = true, readOnly = false, disabled = false }: MarkdownEditorProps) {
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -41,7 +42,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   }
 
   async function save() {
-    if (saving) return;
+    if (saving || disabled) return;
     if (draft === value) { setEditing(false); return; }
     setSaving(true);
     try {
@@ -79,7 +80,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
               Copiar
             </DropdownMenuItem>
             {!editing && !readOnly ? (
-              <DropdownMenuItem onSelect={() => setEditing(true)}>
+              <DropdownMenuItem disabled={disabled} onSelect={() => setEditing(true)}>
                 <Edit3 className="size-3.5" />
                 Editar
               </DropdownMenuItem>
@@ -92,7 +93,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
         <div className="flex flex-col gap-2">
             <label className="sr-only" htmlFor={editorId}>Detalle en Markdown</label>
             <textarea
-              disabled={saving}
+              disabled={saving || disabled}
               id={editorId}
               ref={textareaRef}
               autoFocus
@@ -102,13 +103,13 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
               onChange={(event) => setDraft(event.target.value)}
             />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={cancel} disabled={saving}>Cancelar</Button>
-            <Button type="button" onClick={() => void save()} disabled={saving}>{saving ? "Guardando…" : "Guardar"}</Button>
+            <Button type="button" variant="outline" onClick={cancel} disabled={saving || disabled}>Cancelar</Button>
+            <Button type="button" onClick={() => void save()} disabled={saving || disabled}>{saving ? "Guardando…" : "Guardar"}</Button>
           </div>
         </div>
       ) : (
         value ? <div className="w-full rounded-lg bg-[var(--surface-subtle)] px-3 py-2 text-[14px] [overflow-wrap:anywhere] leading-relaxed text-carbon/80 transition-colors hover:border-carbon/15 hover:bg-paper"><MarkdownContent onToggleTask={onToggleTask}>{value}</MarkdownContent></div>
-          : !readOnly ? <button type="button" className="min-h-8 rounded-md px-1 py-1 text-left text-[13px] font-semibold text-carbon/65 hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" aria-label="Añadir detalle" onClick={() => setEditing(true)}>Añadir detalle…</button> : <span className="text-[13.5px] text-carbon/45">{placeholder}</span>
+          : !readOnly ? <button type="button" disabled={disabled} className="min-h-8 rounded-md px-1 py-1 text-left text-[13px] font-semibold text-carbon/65 hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" aria-label="Añadir detalle" onClick={() => setEditing(true)}>Añadir detalle…</button> : <span className="text-[13.5px] text-carbon/45">{placeholder}</span>
       )}
     </section>
   );

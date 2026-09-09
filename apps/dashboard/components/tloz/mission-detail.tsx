@@ -74,6 +74,11 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const [renamingChecklist, setRenamingChecklist] = useState<number | null>(null);
   const [checklistTitleDraft, setChecklistTitleDraft] = useState("");
   const [deletingChecklist, setDeletingChecklist] = useState<number | null>(null);
+  const [checklistDeleteError, setChecklistDeleteError] = useState("");
+  const [documentPending, setDocumentPending] = useState(false);
+  const documentSaveInFlight = useRef(false);
+  const historyInFlight = useRef(false);
+  const workspace = useRef<HTMLElement>(null);
   const [checklistFilter, setChecklistFilter] = useState<"all" | "pending">("all");
   const [activity, setActivity] = useState<Array<{ id: string; action: string; occurredAt: string }>>([]);
   const [activityState, setActivityState] = useState<"loading" | "ready" | "error">("loading");
@@ -89,6 +94,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const checklistInput = useRef<HTMLInputElement>(null);
   const previousMission = useRef(mission);
   const [isPending, startTransition] = useTransition();
+  const bodyPending = documentPending || isPending;
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
@@ -147,19 +153,24 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
   useEffect(() => {
     function handleHistoryShortcut(event: KeyboardEvent) {
-      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (event.defaultPrevented || !canUpdateDocument || isPending || documentSaveInFlight.current || historyInFlight.current || !(event.ctrlKey || event.metaKey) || event.altKey) return;
       const target = event.target;
+      if (!(target instanceof HTMLElement) || !workspace.current?.contains(target) || target.closest('[role="alertdialog"]')) return;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || (target instanceof HTMLElement && target.isContentEditable)) return;
       const redo = (event.key.toLowerCase() === "z" && event.shiftKey) || event.key.toLowerCase() === "y";
       const undo = event.key.toLowerCase() === "z" && !event.shiftKey;
       if (!undo && !redo) return;
       const source = redo ? redoStack : undoStack;
       const destination = redo ? undoStack : redoStack;
-      const snapshot = source.current.pop();
+      const snapshot = source.current[source.current.length - 1];
       if (!snapshot) return;
       event.preventDefault();
-      destination.current.push(snapshotOf(current));
-      restoreSnapshot(snapshot, redo ? "Cambio rehecho" : "Cambio deshecho");
+      const inverse = snapshotOf(current);
+      historyInFlight.current = true;
+      void restoreSnapshot(snapshot, redo ? "Cambio rehecho" : "Cambio deshecho").then((saved) => {
+        if (saved) { source.current.pop(); destination.current.push(inverse); }
+        historyInFlight.current = false;
+      });
     }
     window.addEventListener("keydown", handleHistoryShortcut);
     return () => window.removeEventListener("keydown", handleHistoryShortcut);
@@ -179,14 +190,14 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
     }));
   }
 
-  function remember() {
-    undoStack.current.push(snapshotOf(current));
+  function remember(snapshot: EditableSnapshot) {
+    undoStack.current.push(snapshot);
     if (undoStack.current.length > 30) undoStack.current.shift();
     redoStack.current = [];
   }
 
   function restoreSnapshot(snapshot: EditableSnapshot, message: string) {
-    startTransition(async () => {
+    return new Promise<boolean>((resolve) => startTransition(async () => {
       try {
         const restored = documentMutation
           ? await documentMutation({
@@ -201,14 +212,16 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
             })();
         accept(restored);
         setTitleDraft(snapshot.title);
+        setDescriptionDraft(snapshot.description);
         toast.success(message, { toasterId });
-      } catch { toast.error("No se pudo restaurar el cambio", { toasterId }); }
-    });
+        resolve(true);
+      } catch { toast.error("No se pudo restaurar el cambio", { toasterId }); resolve(false); }
+    }));
   }
 
   function saveIcon(value: string) {
-    if (value === current.icon) return;
-    remember();
+    if (value === current.icon || historyInFlight.current) return;
+    const snapshot = snapshotOf(current);
     const toastId = toast.loading("Actualizando icono…", { toasterId });
     startTransition(async () => {
       try {
@@ -216,6 +229,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
           ? await documentMutation({ properties: { icon: value } })
           : { ...current, ...(await updateMission(current.id, { icon: value })) };
         accept(updated);
+        remember(snapshot);
         toast.success("Icono actualizado", { id: toastId, toasterId });
       }
       catch { toast.error("No se pudo actualizar el icono", { id: toastId, toasterId }); }
@@ -224,43 +238,53 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
   async function saveTitle() {
     if (skipTitleSave.current) { skipTitleSave.current = false; return; }
-    if (inlineSaveInFlight.current) return;
+    if (inlineSaveInFlight.current || historyInFlight.current) return;
     const title = titleDraft.trim();
     if (!title || title === current.title) { setTitleDraft(current.title); setEditingTitle(false); return; }
     inlineSaveInFlight.current = true;
     setSavingInline(true);
-    remember();
+    const snapshot = snapshotOf(current);
     const saved = await mutate("Actualizando título…", async () => documentMutation
       ? documentMutation({ title })
       : { ...current, ...(await updateMission(current.id, { title })) });
     inlineSaveInFlight.current = false;
     setSavingInline(false);
-    if (saved) { setTitleDraft(title); setEditingTitle(false); }
+    if (saved) { remember(snapshot); setTitleDraft(title); setEditingTitle(false); }
     else titleInput.current?.focus();
   }
 
-  function saveDocument(nextMarkdown = detailMarkdown) {
-    if (nextMarkdown === current.descriptionDetail) return;
-    remember();
-    return mutate("Guardando documento…", () => documentMutation
-      ? documentMutation({ body: nextMarkdown })
-      : saveMissionDocument(current.id, nextMarkdown));
+  async function saveDocument(nextMarkdown = detailMarkdown): Promise<boolean> {
+    if (documentSaveInFlight.current || historyInFlight.current) return false;
+    if (nextMarkdown === current.descriptionDetail) return true;
+    documentSaveInFlight.current = true;
+    setDocumentPending(true);
+    const snapshot = snapshotOf(current);
+    try {
+      const saved = await mutate("Guardando documento…", () => documentMutation
+        ? documentMutation({ body: nextMarkdown })
+        : saveMissionDocument(current.id, nextMarkdown));
+      if (saved) remember(snapshot);
+      return saved;
+    } finally {
+      documentSaveInFlight.current = false;
+      setDocumentPending(false);
+    }
   }
 
   async function saveDescription() {
     if (skipDescriptionSave.current) { skipDescriptionSave.current = false; return; }
-    if (inlineSaveInFlight.current) return;
+    if (inlineSaveInFlight.current || historyInFlight.current) return;
     const description = descriptionDraft.trim();
     if (description === current.description) { setEditingDescription(false); return; }
     inlineSaveInFlight.current = true;
     setSavingInline(true);
-    remember();
+    const snapshot = snapshotOf(current);
     const saved = await mutate("Guardando descripción…", async () => documentMutation
       ? documentMutation({ summary: description })
       : { ...current, ...(await updateMission(current.id, { description })) });
     inlineSaveInFlight.current = false;
     setSavingInline(false);
-    if (saved) { setDescriptionDraft(description); setEditingDescription(false); }
+    if (saved) { remember(snapshot); setDescriptionDraft(description); setEditingDescription(false); }
     else descriptionInput.current?.focus();
   }
 
@@ -298,7 +322,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
   async function renameChecklistItem(position: number) {
     if (skipChecklistSave.current) { skipChecklistSave.current = false; return; }
-    if (inlineSaveInFlight.current) return;
+    if (inlineSaveInFlight.current || historyInFlight.current) return;
     const title = checklistTitleDraft.trim();
     if (!title || title === current.checklist[position]?.title) { setRenamingChecklist(null); return; }
     inlineSaveInFlight.current = true;
@@ -310,9 +334,12 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
     else checklistInput.current?.focus();
   }
 
-  function deleteChecklistItem(position: number) {
-    saveDocument(updateTaskLine(detailMarkdown, position, { remove: true }));
-    setDeletingChecklist(null);
+  async function deleteChecklistItem(position: number) {
+    if (documentSaveInFlight.current) return;
+    setChecklistDeleteError("");
+    const saved = await saveDocument(updateTaskLine(detailMarkdown, position, { remove: true }));
+    if (saved) setDeletingChecklist(null);
+    else setChecklistDeleteError("No se pudo eliminar la subtarea. Intenta de nuevo.");
   }
 
   const categoryOption = detailFieldOptions(options, "category", [])
@@ -331,7 +358,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const statusColor = statusPresentation.textColor;
 
   return (
-    <article data-variant={variant} className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-6" aria-busy={isPending}>
+    <article ref={workspace} data-variant={variant} className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-6" aria-busy={isPending}>
       {variant === "full" && current.project ? (
         <Breadcrumb className="mb-5">
           <BreadcrumbList className="flex-nowrap text-carbon/60">
@@ -387,7 +414,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
             <AccordionItem value="detail" className="border-0">
               <AccordionTrigger iconPosition="start" className="py-2 text-[13px] uppercase tracking-[0.04em] text-carbon/75">Detalle</AccordionTrigger>
               <AccordionContent className="pt-1">
-                <MarkdownEditor value={detailMarkdown} onSave={saveDocument} onToggleTask={isMissionDocument && canUpdateDocument ? toggleChecklistItem : undefined} showHeader={false} readOnly={!canUpdateDocument} />
+                <MarkdownEditor disabled={bodyPending} value={detailMarkdown} onSave={saveDocument} onToggleTask={isMissionDocument && canUpdateDocument && !bodyPending ? toggleChecklistItem : undefined} showHeader={false} readOnly={!canUpdateDocument} />
               </AccordionContent>
             </AccordionItem>
 
@@ -399,30 +426,33 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
                 </span>
               </AccordionTrigger>
               <AccordionContent className="pt-1">
-                <div className="mb-[13px] flex justify-end">
+                <div className="mb-[13px] flex items-center justify-end gap-2">
+                  {documentPending ? <span role="status" className="mr-auto text-xs font-semibold text-carbon/60">Guardando…</span> : null}
                   <SegmentedControl aria-label="Filtrar checklist" value={checklistFilter} onValueChange={(value) => setChecklistFilter(value as "all" | "pending")} options={[{ label: "Todos", value: "all" }, { label: "Pendientes", value: "pending" }]} />
                 </div>
                 <MetricProgress className="mb-[15px]" value={checklistProgress} tone={tone} />
-                <div key={checklistFilter} className="mission-checklist-filter rounded-[14px] border border-[#1D1D1B]/10 bg-white p-1.5">
+                <div className="rounded-[14px] border border-[#1D1D1B]/10 bg-white p-1.5">
+              <div key={checklistFilter} className="mission-checklist-filter">
               {current.checklist.map((item, position) => ({ item, position })).filter(({ item }) => checklistFilter === "all" || !item.completed).map(({ item, position }) => (
                 <div key={item.id} className="group flex items-center gap-[11px] rounded-[10px] px-3 py-2 transition-colors hover:bg-[#D72228]/[0.04]">
                   <label className="relative grid size-[19px] shrink-0 cursor-pointer place-items-center">
-                    <input type="checkbox" disabled={!canUpdateDocument} className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] disabled:cursor-default disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} />
+                    <input type="checkbox" disabled={!canUpdateDocument || bodyPending} className="peer size-[19px] cursor-pointer appearance-none rounded-[7px] border-2 border-[#1D1D1B]/25 bg-white transition-colors checked:border-[#D72228] checked:bg-[#D72228] disabled:cursor-default disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1D1D1B]/30" checked={item.completed} onChange={(event) => toggleChecklistItem(position, event.target.checked)} />
                     <Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" />
                     <span className="sr-only">{item.title}</span>
                   </label>
                   {renamingChecklist === position ? (
                     <Input ref={checklistInput} readOnly={savingInline} aria-busy={savingInline} autoFocus className="h-8 min-w-0 flex-1 text-[13.5px]" value={checklistTitleDraft} aria-label="Nombre del checkbox" onChange={(event) => setChecklistTitleDraft(event.target.value)} onBlur={() => renameChecklistItem(position)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (savingInline) return; skipChecklistSave.current = true; setRenamingChecklist(null); } }} />
-                  ) : <span className={`min-w-0 flex-1 text-[13.5px] ${item.completed ? "text-[#9A9A98] line-through" : "text-[#1D1D1B]"}`}>{item.title}</span>}
+                  ) : <span className={`min-w-0 flex-1 text-[13.5px] [overflow-wrap:anywhere] ${item.completed ? "text-[#9A9A98] line-through" : "text-[#1D1D1B]"}`}>{item.title}</span>}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-7 shrink-0 rounded-md text-carbon/45 opacity-0 transition-opacity hover:text-carbon group-focus-within:opacity-100 group-hover:opacity-100" aria-label={`Acciones para ${item.title}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-36"><DropdownMenuItem disabled={savingInline || !canUpdateDocument} onSelect={() => { skipChecklistSave.current = false; setChecklistTitleDraft(item.title); setRenamingChecklist(position); }}><Pencil className="size-3.5" />Editar</DropdownMenuItem><DropdownMenuItem disabled={savingInline || !canUpdateDocument} className="text-zivelo focus:text-zivelo" onSelect={() => setDeletingChecklist(position)}><Trash2 className="size-3.5" />Eliminar</DropdownMenuItem></DropdownMenuContent>
+                    <DropdownMenuContent align="end" className="w-36"><DropdownMenuItem disabled={savingInline || bodyPending || !canUpdateDocument} onSelect={() => { skipChecklistSave.current = false; setChecklistTitleDraft(item.title); setRenamingChecklist(position); }}><Pencil className="size-3.5" />Editar</DropdownMenuItem><DropdownMenuItem disabled={savingInline || bodyPending || !canUpdateDocument} className="text-zivelo focus:text-zivelo" onSelect={() => { setChecklistDeleteError(""); setDeletingChecklist(position); }}><Trash2 className="size-3.5" />Eliminar</DropdownMenuItem></DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               ))}
-              {canUpdateDocument ? <AddChecklistTask onAdd={(title) => saveDocument(appendTaskLine(detailMarkdown, title))} /> : null}
+              </div>
+              {canUpdateDocument ? <AddChecklistTask disabled={bodyPending} onAdd={(title) => saveDocument(appendTaskLine(detailMarkdown, title))} /> : null}
                 </div>
-                <AlertDialog open={deletingChecklist !== null} onOpenChange={(open) => !open && setDeletingChecklist(null)}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Eliminar checkbox</AlertDialogTitle><AlertDialogDescription>Esta acción quitará “{deletingChecklist === null ? "" : current.checklist[deletingChecklist]?.title}” del documento de la misión.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletingChecklist !== null && deleteChecklistItem(deletingChecklist)}>Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                <AlertDialog open={deletingChecklist !== null} onOpenChange={(open) => { if (!open && !documentPending) setDeletingChecklist(null); }}><AlertDialogContent onEscapeKeyDown={(event) => { if (documentPending) event.preventDefault(); }} aria-busy={documentPending}><AlertDialogHeader><AlertDialogTitle>Eliminar subtarea</AlertDialogTitle><AlertDialogDescription className="[overflow-wrap:anywhere]">Esta acción quitará “{deletingChecklist === null ? "" : current.checklist[deletingChecklist]?.title}” del documento de la misión.</AlertDialogDescription></AlertDialogHeader>{checklistDeleteError ? <p role="alert" className="m-0 text-xs font-semibold text-zivelo">{checklistDeleteError}</p> : null}<AlertDialogFooter><AlertDialogCancel disabled={documentPending}>Cancelar</AlertDialogCancel><AlertDialogAction disabled={documentPending} onClick={(event) => { event.preventDefault(); if (deletingChecklist !== null) void deleteChecklistItem(deletingChecklist); }}>{documentPending ? "Eliminando…" : "Eliminar"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
               </AccordionContent>
             </AccordionItem>
           </Accordion>
@@ -511,7 +541,7 @@ function resolveFullDetailHref(
   return mission.project ? missionHref(mission.project, mission.displayId) : "/";
 }
 
-function AddChecklistTask({ onAdd }: { onAdd: (title: string) => void | boolean | Promise<void | boolean> }) {
+function AddChecklistTask({ onAdd, disabled = false }: { onAdd: (title: string) => void | boolean | Promise<void | boolean>; disabled?: boolean }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
@@ -536,7 +566,7 @@ function AddChecklistTask({ onAdd }: { onAdd: (title: string) => void | boolean 
       setSaving(false);
     }
   }
-  if (adding) return <Input ref={input} readOnly={saving} aria-busy={saving} autoFocus aria-label="Nueva subtarea" placeholder="Nombre de la subtarea" className="my-1 h-9 border-[#1D1D1B]/15 bg-[#FAFAF9] text-[13px]" value={title} onChange={(event) => setTitle(event.target.value)} onBlur={finish} onKeyDown={(event) => {
+  if (adding) return <Input ref={input} readOnly={saving || disabled} aria-busy={saving} autoFocus aria-label="Nueva subtarea" placeholder="Nombre de la subtarea" className="my-1 h-9 border-[#1D1D1B]/15 bg-[#FAFAF9] text-[13px]" value={title} onChange={(event) => setTitle(event.target.value)} onBlur={finish} onKeyDown={(event) => {
     if (event.key === "Enter") event.currentTarget.blur();
     if (event.key === "Escape") {
       event.preventDefault();
@@ -547,7 +577,7 @@ function AddChecklistTask({ onAdd }: { onAdd: (title: string) => void | boolean 
       setAdding(false);
     }
   }} />;
-  return <button type="button" className="flex w-full items-center gap-[11px] rounded-[10px] px-3 py-2.5 text-left text-[#9A9A98] transition-colors hover:bg-[#D72228]/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" onClick={() => { cancelled.current = false; setAdding(true); }}><Plus className="size-4" aria-hidden="true" /><span className="text-[13px]">Añadir subtarea</span></button>;
+  return <button type="button" disabled={disabled} className="flex w-full items-center gap-[11px] rounded-[10px] px-3 py-2.5 text-left text-[#9A9A98] transition-colors hover:bg-[#D72228]/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" onClick={() => { cancelled.current = false; setAdding(true); }}><Plus className="size-4" aria-hidden="true" /><span className="text-[13px]">Añadir subtarea</span></button>;
 }
 
 export function AddDependency({ missions, questItems, relationType, onAddMission, onAddQuestItem }: {

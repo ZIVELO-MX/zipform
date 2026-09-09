@@ -232,3 +232,24 @@ Verificación **local**:
 - `git diff --check`: aprobado.
 
 Servidor mock local y sesiones sintéticas. CI, PR y autenticación real pendientes a cargo del usuario según lo acordado. No se modificaron APIs públicas, secretos, dependencias ni migraciones. Capturas y borrador de PR excluidos de Git.
+
+
+## Décima revisión: guardado del checklist e historial
+
+Fecha: 2026-09-09. Rama `fix/desktop-checklist-saves`, basada en `4e65a26`. Correcciones acotadas a los componentes existentes con Ponytail, densidad TLOZ y revisión independiente de un subagente.
+
+- **Eliminar subtarea:** la confirmación espera al servidor antes de cerrarse. Si falla, conserva la subtarea, muestra el error dentro del diálogo y permite reintentar. Eliminar, Cancelar y Escape no descartan la confirmación durante la petición.
+- **Checklist y Markdown:** los guardados del cuerpo se bloquean mientras existe otro en curso; se deshabilitan sus controles y se muestra «Guardando…». También se deshabilitan durante la restauración del historial. Las cadenas largas se ajustan al ancho de la fila y del diálogo.
+- **Borrador al filtrar:** cambiar entre Todos y Pendientes ya no desmonta el formulario de nueva subtarea. Se conserva el texto incluso al cambiar de filtro mientras falla su guardado.
+- **Deshacer y rehacer:** las pilas solo cambian después de una respuesta exitosa. Una edición fallida no crea entradas y una restauración fallida conserva la entrada para reintentar. Los atajos requieren foco dentro del detalle, respetan campos de texto y confirmaciones y no repiten una restauración pendiente.
+- **Prueba de Board:** el arrastre por teclado espera a que el lector de pantalla anuncie la columna antes de soltar la tarjeta, evitando una carrera del guion automatizado.
+
+Verificación **local**:
+
+- Build Next.js de producción y comprobación de tipos aprobados: `TLOZ_DATA_DRIVER=mock AUTH_SECRET=zipform-local-e2e-only node node_modules/next/dist/bin/next build`, desde `apps/dashboard`.
+- **19/19 pruebas focalizadas aprobadas**: `node apps/dashboard/node_modules/vitest/vitest.mjs run apps/dashboard/components/tloz/mission-detail-ui.test.ts apps/dashboard/components/tloz/mission-document.test.ts apps/dashboard/components/tloz/slide-over-contract.test.ts`, desde la raíz.
+- **55/55 E2E aprobados**, Chrome sobre build de producción, **1.2 min**: `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`, desde `apps/dashboard`. La primera ejecución obtuvo 54/55; después de sincronizar el arrastre del Board, su prueba focalizada y la suite completa pasaron.
+- Captura del diálogo con error revisada a 1024 × 768: mensaje y acciones visibles, sin desbordamiento. `git diff --check` aprobado.
+- Regresiones nuevas: bloqueo de cambios del checklist durante guardado, eliminación fallida y reintento, texto largo a 1024 px, borrador al filtrar, historial tras ediciones fallidas, atajos dentro de confirmaciones y bloqueo durante restauración.
+
+Límites: servidor mock y sesiones sintéticas; autenticación real y CI sin verificar. El flujo antiguo de restauración aún escribe metadatos y cuerpo en dos peticiones: un fallo exclusivo de la segunda puede dejar una restauración parcial; la ruta canónica utiliza una sola mutación. No se modifica en esta ronda la coordinación de guardados entre cuerpo y propiedades independientes. PR a cargo del usuario según el acuerdo previo. Sin cambios de API, migraciones ni dependencias; capturas y borrador del PR excluidos de Git.
