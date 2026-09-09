@@ -429,14 +429,14 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
           {isMissionDocument ? <><div className="flex flex-col gap-7">
             <RelationsSection title="Dependencias">
-              <MissionReferences missions={current.dependencies} project={current.project} statusOptions={options.contract?.find((field) => field.key === "status")?.options} onRemove={(id) => mutate("Quitando dependencia…", () => removeMissionDependency(current.id, id))} onNavigate={onNavigateMission} />
-              <div className="flex flex-col gap-[9px]">{current.questItems.map((item) => <QuestReference key={item.id} item={item} required={current.missionQuestItems.find((link) => link.questItemId === item.id)?.required ?? false} onNavigate={onNavigateQuestItem} onRequiredChange={(checked) => mutate("Actualizando requisito…", () => setMissionQuestItem(current.id, item.id, checked))} onRemove={() => mutate("Quitando item…", () => removeMissionQuestItem(current.id, item.id))} />)}</div>
-              <AddDependency
+              <MissionReferences missions={current.dependencies} project={current.project} statusOptions={options.contract?.find((field) => field.key === "status")?.options} onRemove={canUpdate ? (id) => mutate("Quitando dependencia…", () => removeMissionDependency(current.id, id)) : undefined} onNavigate={onNavigateMission} />
+              <div className="flex flex-col gap-[9px]">{current.questItems.map((item) => <QuestReference key={item.id} item={item} required={current.missionQuestItems.find((link) => link.questItemId === item.id)?.required ?? false} onNavigate={onNavigateQuestItem} onRequiredChange={canUpdate ? (checked) => mutate("Actualizando requisito…", () => setMissionQuestItem(current.id, item.id, checked)) : undefined} onRemove={canUpdate ? () => mutate("Quitando item…", () => removeMissionQuestItem(current.id, item.id)) : undefined} />)}</div>
+              {canUpdate ? <AddDependency
                 missions={options.missions.filter((item) => Boolean(current.projectId) && item.projectId === current.projectId && item.id !== current.id && !current.dependencies.some((dependency) => dependency.id === item.id)).map((item) => ({ id: item.id, name: item.title, iconComponent: resolveMissionIcon(item.icon), iconColor: missionTypeTone[item.type], iconBackground: missionTypeBackground[item.type] ?? "#F1F0EE" }))}
                 questItems={options.questItems.filter((item) => !current.questItems.some((linked) => linked.id === item.id)).map((item) => ({ id: item.id, name: item.name, iconComponent: resolveMissionIcon(item.icon), iconColor: "#7A5A12", iconBackground: "#FFF4DE" }))}
                 onAddMission={(id) => mutate("Agregando dependencia…", () => addMissionDependency(current.id, id))}
                 onAddQuestItem={(id) => mutate("Agregando item…", () => setMissionQuestItem(current.id, id, false))}
-              />
+              /> : null}
               {current.requiredBy.length ? <><Separator /><h3 className="m-0 text-xs font-semibold text-carbon/45">Requerida por</h3><MissionReferences missions={current.requiredBy} project={current.project} statusOptions={options.contract?.find((field) => field.key === "status")?.options} onNavigate={onNavigateMission} /></> : null}
             </RelationsSection>
           </div>
@@ -550,13 +550,73 @@ function AddChecklistTask({ onAdd }: { onAdd: (title: string) => void | boolean 
   return <button type="button" className="flex w-full items-center gap-[11px] rounded-[10px] px-3 py-2.5 text-left text-[#9A9A98] transition-colors hover:bg-[#D72228]/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" onClick={() => { cancelled.current = false; setAdding(true); }}><Plus className="size-4" aria-hidden="true" /><span className="text-[13px]">Añadir subtarea</span></button>;
 }
 
-export function AddDependency({ missions, questItems, onAddMission, onAddQuestItem }: { missions: EntityPickerOption[]; questItems: EntityPickerOption[]; onAddMission: (id: string) => void; onAddQuestItem: (id: string) => void }) {
+export function AddDependency({ missions, questItems, relationType, onAddMission, onAddQuestItem }: {
+  missions: EntityPickerOption[];
+  questItems: EntityPickerOption[];
+  relationType?: "mission" | "quest";
+  onAddMission: (id: string) => void | boolean | Promise<void | boolean>;
+  onAddQuestItem: (id: string) => void | boolean | Promise<void | boolean>;
+}) {
   const [adding, setAdding] = useState(false);
-  const [kind, setKind] = useState<"mission" | "quest">("mission");
-  if (!adding) return <button type="button" className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setAdding(true)}><Plus className="size-3.5" aria-hidden="true" />Agregar nuevo</button>;
-  return <div className="rounded-xl border border-[#1D1D1B]/10 bg-white p-3">
-    <SegmentedControl aria-label="Tipo de dependencia" value={kind} onValueChange={(value) => setKind(value as "mission" | "quest")} options={[{ label: "Mission", value: "mission" }, { label: "Inventory", value: "quest" }]} />
-    <div className="mt-2 flex items-center gap-2"><EntityPicker label={kind === "mission" ? "Mission" : "Inventory item"} options={kind === "mission" ? missions : questItems} allowEmpty={false} onValueChange={(id) => { if (kind === "mission") onAddMission(id); else onAddQuestItem(id); setAdding(false); }} /><Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>Cancelar</Button></div>
+  const [selectedKind, setSelectedKind] = useState<"mission" | "quest">(missions.length || !questItems.length ? "mission" : "quest");
+  const [selectedId, setSelectedId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const inFlight = useRef(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const restoreFocus = useRef(false);
+  useEffect(() => {
+    if (adding || !restoreFocus.current) return;
+    trigger.current?.focus();
+    restoreFocus.current = false;
+  }, [adding]);
+  const retry = useRef<HTMLButtonElement>(null);
+  const errorMessage = useRef<HTMLParagraphElement>(null);
+  const errorId = useId();
+  const kind = relationType ?? selectedKind;
+  const options = kind === "mission" ? missions : questItems;
+  useEffect(() => {
+    if (!error || saving) return;
+    errorMessage.current?.scrollIntoView({ block: "nearest" });
+    retry.current?.focus({ preventScroll: true });
+  }, [error, saving]);
+
+  function close() {
+    restoreFocus.current = true;
+    setAdding(false);
+    setSelectedId("");
+    setError("");
+  }
+
+  async function save(id: string) {
+    if (inFlight.current || !options.some((option) => option.id === id)) return;
+    inFlight.current = true;
+    setSelectedId(id);
+    setSaving(true);
+    setError("");
+    try {
+      const saved = await (kind === "mission" ? onAddMission(id) : onAddQuestItem(id));
+      if (saved === false) { setError("No se pudo vincular. Intenta de nuevo."); return; }
+      close();
+    } catch {
+      setError("No se pudo vincular. Intenta de nuevo.");
+    } finally {
+      inFlight.current = false;
+      setSaving(false);
+    }
+  }
+
+  if (!adding) return <button ref={trigger} type="button" className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setAdding(true)}><Plus className="size-3.5" aria-hidden="true" />Agregar nuevo</button>;
+  return <div role="group" aria-label="Vincular dependencia" aria-busy={saving} aria-describedby={error ? errorId : undefined} className="min-w-0 rounded-xl border border-carbon/10 bg-white p-3">
+    <fieldset disabled={saving} className="m-0 min-w-0 border-0 p-0">
+      {!relationType ? <SegmentedControl aria-label="Tipo de dependencia" value={kind} onValueChange={(value) => { setSelectedKind(value as "mission" | "quest"); setSelectedId(""); setError(""); }} options={[{ label: "Mission", value: "mission" }, { label: "Inventory", value: "quest" }]} /> : null}
+      <div className="mt-2 flex min-w-0 items-center gap-2">
+        {options.length ? <EntityPicker className="min-w-0 flex-1" label={kind === "mission" ? "Mission" : "Inventory item"} options={options} value={selectedId} triggerLabel={selectedId ? undefined : "Seleccionar…"} disabled={saving} allowEmpty={false} onValueChange={(id) => void save(id)} /> : <p className="m-0 min-w-0 flex-1 text-xs font-semibold text-carbon/60">{kind === "mission" ? "No hay misiones disponibles." : "No hay elementos disponibles."}</p>}
+        <Button type="button" variant="ghost" size="sm" onClick={close}>Cancelar</Button>
+      </div>
+    </fieldset>
+    {saving ? <p role="status" className="mb-0 mt-2 text-xs font-semibold text-carbon/65">Vinculando…</p> : null}
+    {error ? <div className="mt-2 flex flex-wrap items-center gap-2"><p ref={errorMessage} id={errorId} role="alert" className="m-0 min-w-0 flex-1 text-xs font-semibold text-zivelo">{error}</p><Button ref={retry} type="button" size="sm" variant="outline" disabled={saving} onClick={() => void save(selectedId)}>Reintentar</Button></div> : null}
   </div>;
 }
 
@@ -564,7 +624,7 @@ function RelationsSection({ title, children, className = "" }: { title: string; 
   return <section className={`group relative ${className}`}><h2 className="mb-[13px] mt-0 text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">{title}</h2><div className="flex flex-col gap-2.5">{children}</div></section>;
 }
 
-function QuestReference({ item, required, onNavigate, onRequiredChange, onRemove }: { item: TlozQuestItem; required: boolean; onNavigate?: (id: string) => void; onRequiredChange: (checked: boolean) => void; onRemove: () => void }) {
+function QuestReference({ item, required, onNavigate, onRequiredChange, onRemove }: { item: TlozQuestItem; required: boolean; onNavigate?: (id: string) => void; onRequiredChange?: (checked: boolean) => void; onRemove?: () => void }) {
   const QuestIcon = resolveMissionIcon(item.icon);
   const unlocked = item.status === "unlocked";
   const href = inventoryItemHref(item.id);
@@ -574,9 +634,8 @@ function QuestReference({ item, required, onNavigate, onRequiredChange, onRemove
     <OpenReferenceButton label={`Abrir ${item.name}`} href={href} onOpen={onNavigate ? () => onNavigate(item.id) : undefined} className="opacity-0 group-hover/quest:opacity-100 focus:opacity-100" />
     <DropdownMenu><DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-6 rounded-md opacity-0 group-hover/quest:opacity-100 focus:opacity-100 [&_svg]:size-3" aria-label={`Acciones para ${item.name}`}><MoreHorizontal aria-hidden="true" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuGroup>
       {onNavigate ? <DropdownMenuItem onSelect={() => onNavigate(item.id)}><PanelRightOpen aria-hidden="true" />Abrir item</DropdownMenuItem> : <DropdownMenuItem asChild><Link href={href}><PanelRightOpen aria-hidden="true" />Abrir item</Link></DropdownMenuItem>}
-      <DropdownMenuCheckboxItem checked={required} onCheckedChange={(checked) => onRequiredChange(Boolean(checked))}>Requerido</DropdownMenuCheckboxItem>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={onRemove}><X aria-hidden="true" />Eliminar item</DropdownMenuItem>
+      {onRequiredChange ? <DropdownMenuCheckboxItem checked={required} onCheckedChange={(checked) => onRequiredChange(Boolean(checked))}>Requerido</DropdownMenuCheckboxItem> : null}
+      {onRemove ? <><DropdownMenuSeparator /><DropdownMenuItem className="text-[#B91C22] focus:text-[#B91C22]" onSelect={onRemove}><X aria-hidden="true" />Eliminar item</DropdownMenuItem></> : null}
     </DropdownMenuGroup></DropdownMenuContent></DropdownMenu>
   </div>;
 }
@@ -702,6 +761,12 @@ export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => vo
   const [error, setError] = useState("");
   const inFlight = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const restoreFocus = useRef(false);
+  useEffect(() => {
+    if (adding || !restoreFocus.current) return;
+    trigger.current?.focus();
+    restoreFocus.current = false;
+  }, [adding]);
   const errorId = useId();
   const errorMessage = useRef<HTMLParagraphElement>(null);
   const submitButton = useRef<HTMLButtonElement>(null);
@@ -713,9 +778,9 @@ export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => vo
   const usesFileId = resourceUsesFileId(type);
 
   function close() {
+    restoreFocus.current = true;
     setAdding(false);
     setError("");
-    requestAnimationFrame(() => trigger.current?.focus());
   }
 
   async function save() {

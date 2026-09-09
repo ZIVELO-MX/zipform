@@ -209,3 +209,26 @@ Verificación **local**:
 - `git diff --check`: aprobado. Capturas locales excluidas de Git.
 
 Las pruebas utilizan un servidor mock aislado y una sesión sintética. CI, PR y autenticación real siguen pendientes a cargo del usuario, según lo acordado. No se añadieron dependencias, cambios de API ni migraciones.
+
+
+## Novena revisión: selectores y relaciones
+
+Fecha: 2026-09-08. Rama `fix/frontend-relation-pickers`, basada en `32c3a6b`. Se mantuvo la densidad compacta de TLOZ y Ponytail para limitar el cambio a componentes existentes. Un subagente corrigió EntityPicker; integración y E2E en el hilo principal.
+
+- **Dependencias:** el selector espera el resultado del vínculo, conserva la selección tras un fallo y ofrece Reintentar. El error entra en el área visible y el botón de reintento recibe el foco. Se bloquean los controles durante la petición.
+- **Creación:** Dependencias admite misiones y Quest Items muestra Inventory directamente; se elimina el cambio de tipo que llevaba a una lista vacía en esas secciones. Si no hay candidatos se muestra un estado explícito con Cancelar.
+- **EntityPicker:** Enter no envía el formulario padre con búsqueda vacía ni sin resultados. Se mantienen selección exacta, primera coincidencia, creación y composición IME. Los controles dentro del selector abierto también respetan disabled.
+- **Solo lectura:** se ocultan agregar/quitar dependencias y cambiar requisitos de Inventory cuando no hay permiso de actualización. Se mantiene la navegación a elementos vinculados.
+- **Foco:** los formularios de relaciones y recursos esperan al render del botón de apertura para restaurar el foco después de guardar o cancelar; se elimina una carrera con las actualizaciones de React.
+
+Verificación **local**:
+
+- **53/53 E2E aprobados**, Chrome sobre build final, **2.2 min**. Desde `apps/dashboard`: `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`.
+
+- **18/18 pruebas focalizadas aprobadas**. Desde la raíz: `node apps/dashboard/node_modules/vitest/vitest.mjs run apps/dashboard/components/tloz/mission-detail-ui.test.ts apps/dashboard/components/tloz/tloz-create.test.ts packages/ui/src/components/entity-picker.test.ts`.
+- Build Next.js de producción y comprobación de tipos: aprobados.
+- Regresiones nuevas: vínculo con fallo y reintento sin duplicados, selección y foco conservados; Inventory directo al crear, búsquedas vacías/sin coincidencias con Enter sin enviar la misión; sesión sintética de solo lectura con navegación y sin acciones de edición de relaciones.
+- Captura del formulario de dependencia con error revisada a 1024 px; mensaje, selección y reintento contenidos en el panel.
+- `git diff --check`: aprobado.
+
+Servidor mock local y sesiones sintéticas. CI, PR y autenticación real pendientes a cargo del usuario según lo acordado. No se modificaron APIs públicas, secretos, dependencias ni migraciones. Capturas y borrador de PR excluidos de Git.

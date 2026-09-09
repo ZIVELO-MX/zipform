@@ -647,6 +647,95 @@ async function selectDesktopView(page: Page, view: string) {
   await expect(page.getByRole("heading", { name: view, exact: true })).toBeVisible();
 }
 
+test("dependency selection survives a failed save and retries the same mission", async ({ page }) => {
+  await authenticate(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  const section = panel.getByRole("heading", { name: "Dependencias", exact: true }).locator("..");
+  await section.getByRole("button", { name: "Agregar nuevo", exact: true }).click();
+  const form = section.getByRole("group", { name: "Vincular dependencia", exact: true });
+  await form.getByRole("button", { name: "Seleccionar mission", exact: true }).click();
+  let attempts = 0;
+  let fail = true;
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST") {
+      attempts += 1;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (fail) { await route.abort("failed"); return; }
+    }
+    await route.continue();
+  });
+  const target = "Diseñar driver persistente de Missions";
+  await page.getByRole("button", { name: target, exact: true }).click();
+  await expect(form).toHaveAttribute("aria-busy", "true");
+  await expect(form.getByRole("button", { name: "Seleccionar mission", exact: true })).toBeDisabled();
+  await expect(form.getByRole("alert")).toBeInViewport();
+  await expect(form.getByRole("button", { name: "Seleccionar mission", exact: true })).toContainText(target);
+  await expect(form.getByRole("button", { name: "Reintentar", exact: true })).toBeFocused();
+  expect(attempts).toBe(1);
+  await page.screenshot({ path: "test-results/dependency-error-1024.png", animations: "disabled" });
+  fail = false;
+  await form.getByRole("button", { name: "Reintentar", exact: true }).click();
+  await expect(form).toHaveCount(0);
+  await expect(section.getByRole("button", { name: `Abrir ${target}`, exact: true })).toHaveCount(1);
+  expect(attempts).toBe(2);
+  await expect(section.getByRole("button", { name: "Agregar nuevo", exact: true })).toBeFocused();
+  await expectNoOverflow(page);
+});
+
+test("creation relation pickers use their section type and Enter never submits a search", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/core");
+  await page.getByRole("button", { name: "Control", exact: true }).click();
+  await page.getByRole("button", { name: "Crear nuevo Mission", exact: true }).click();
+  const panel = page.locator("dialog[open]");
+  await panel.getByLabel(/^Título/).fill("Misión con relación local");
+  await panel.getByLabel(/^Descripción/).fill("No enviar desde la búsqueda");
+  let submissions = 0;
+  await page.route("**/core", async (route) => {
+    if (route.request().method() === "POST") { submissions += 1; await route.abort("failed"); }
+    else await route.continue();
+  });
+  const inventory = panel.getByRole("heading", { name: "Quest Items", exact: true }).locator("..");
+  await inventory.getByRole("button", { name: "Agregar nuevo", exact: true }).click();
+  await expect(inventory.getByRole("group", { name: "Tipo de dependencia", exact: true })).toHaveCount(0);
+  await inventory.getByRole("button", { name: "Seleccionar inventory item", exact: true }).click();
+  const search = page.getByRole("textbox", { name: "Buscar inventory item", exact: true });
+  await search.press("Enter");
+  await expect(search).toBeVisible();
+  await search.fill("No existe este elemento e2e");
+  await search.press("Enter");
+  await expect(page.getByText("No hay resultados.", { exact: true })).toBeVisible();
+  expect(submissions).toBe(0);
+  await search.fill("Approved Copy");
+  await search.press("Enter");
+  await expect(inventory.getByText("Approved Copy", { exact: true })).toBeVisible();
+  await expect(inventory.getByRole("group", { name: "Vincular dependencia", exact: true })).toHaveCount(0);
+  await expect(panel.getByLabel(/^Título/)).toHaveValue("Misión con relación local");
+  expect(submissions).toBe(0);
+});
+
+test("read-only task relations keep navigation and hide mutation actions", async ({ page }) => {
+  await authenticate(page);
+  const value = await encode({ secret: "zipform-local-e2e-only", salt: "authjs.session-token", token: {
+    sub: "e2e-reader", name: "Reader", username: "reader", role: "agent:reader", type: "agent",
+  } });
+  await page.context().addCookies([{ name: "authjs.session-token", value, url: "http://127.0.0.1:3100" }]);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  const section = panel.getByRole("heading", { name: "Dependencias", exact: true }).locator("..");
+  await expect(section.getByRole("button", { name: "Agregar nuevo", exact: true })).toHaveCount(0);
+  await section.getByRole("button", { name: "Acciones para Approved Copy", exact: true }).click();
+  await expect(page.getByRole("menuitem", { name: "Abrir item", exact: true })).toBeVisible();
+  await expect(page.getByRole("menuitemcheckbox", { name: "Requerido", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("menuitem", { name: "Eliminar item", exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(section.getByRole("button", { name: "Abrir Approved Copy", exact: true })).toBeEnabled();
+});
+
 test("resource form retains failed drafts and retries without duplicate attachments", async ({ page }) => {
   await authenticate(page);
   await page.setViewportSize({ width: 1024, height: 768 });
