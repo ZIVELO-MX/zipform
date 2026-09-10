@@ -404,6 +404,15 @@ test("desktop project picker selects with Enter without submitting the creation 
   await page.getByLabel("Buscar proyecto", { exact: true }).press("Enter");
   await expect(page.getByLabel("Buscar proyecto", { exact: true })).toHaveCount(0);
   await expect(trigger).toContainText("Core");
+  await page.keyboard.press("Escape");
+  await panel.getByRole("button", { name: /^Responsable / }).click();
+  await page.getByRole("button", { name: "Seleccionar responsable", exact: true }).click();
+  const userSearch = page.getByRole("textbox", { name: "Buscar usuarios", exact: true });
+  await userSearch.press("Enter");
+  await expect(userSearch).toBeVisible();
+  await userSearch.fill("usuario-inexistente-e2e");
+  await userSearch.press("Enter");
+  await expect(userSearch).toBeVisible();
   await expect(panel.getByRole("alert")).toHaveCount(0);
   await expect(panel).toBeVisible();
 });
@@ -837,6 +846,8 @@ test("custom properties cancel with Escape and block repeat saves while pending"
   await input.fill("Texto que conserva el error");
   await input.press("Enter");
   await expect(input).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Seleccionar icono", exact: true })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Añadir detalle", exact: true })).toBeDisabled();
   await expect(input).toBeEnabled();
   await expect(input).toHaveValue("Texto que conserva el error");
   expect(attempts).toBe(1);
@@ -1025,6 +1036,8 @@ test("checklist saves serialize changes and deletion stays open after a failure"
   await expect(second).toBeDisabled();
   await expect(panel.getByRole("checkbox", { name: "Task 2", exact: true })).toBeDisabled();
   await expect(panel.getByRole("button", { name: "Añadir subtarea", exact: true })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: /^Categoría / })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Seleccionar icono", exact: true })).toBeDisabled();
   await expect(first).toBeChecked();
   await expect(second).toBeEnabled();
   await second.click();
@@ -1123,6 +1136,78 @@ test("undo keeps failed history entries and ignores shortcuts in confirmation di
   await anchor.focus();
   await page.keyboard.press("ControlOrMeta+z");
   await expect(panel.getByRole("heading", { name: original, level: 1, exact: true })).toBeVisible();
+  await expect(panel.locator("article.mission-detail-workspace")).toHaveAttribute("aria-busy", "false");
+  expect(attempts).toBe(5);
+  const task = panel.getByRole("checkbox", { name: "Historial protegido", exact: true });
+  await task.click();
+  await expect(task).toBeChecked();
+  await expect(task).toBeEnabled();
+  await anchor.focus();
+  await page.keyboard.press("ControlOrMeta+z");
+  await expect(task).not.toBeChecked();
+  await expect(task).toBeEnabled();
+  expect(attempts).toBe(7);
+  await page.reload();
+  await page.getByRole("button", { name: `Abrir COR-0001: ${original}`, exact: true }).first().click();
+  await expect(panel.getByRole("checkbox", { name: "Historial protegido", exact: true })).not.toBeChecked();
+});
+
+test("desktop property edits disable other controls and recover after a failure", async ({ page, request }) => {
+  const seeded = await request.put("/api/v1/missions/mission-dashboard/document", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: { markdown: "- [ ] Historial protegido" } });
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+  const dated = await request.patch("/api/v1/missions/mission-dashboard", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: { dueDate: "2026-12-31" } });
+  expect(dated.ok(), await dated.text()).toBe(true);
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  let attempts = 0;
+  let fail = true;
+  await page.route("**/", async (route) => {
+    if (route.request().method() === "POST") {
+      attempts += 1;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      if (fail) { await route.abort("failed"); return; }
+    }
+    await route.continue();
+  });
+  await panel.getByRole("button", { name: /^Categoría / }).click();
+  const category = page.getByRole("combobox", { name: "Tipo", exact: true });
+  await category.click();
+  await page.getByRole("option", { name: "Side Quest", exact: true }).click();
+  await expect(category).toBeDisabled();
+  await expect(panel.getByRole("button", { name: /^Estado / })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: /^Responsable / })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Seleccionar icono", exact: true })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Publicar dashboard operativo de TLOZ", exact: true })).toBeDisabled();
+  await expect(panel.getByRole("checkbox", { name: "Historial protegido", exact: true })).toBeDisabled();
+  await expect(category).toBeEnabled();
+  await expect(category).toContainText("Main Quest");
+  expect(attempts).toBe(1);
+  fail = false;
+  await category.click();
+  await page.getByRole("option", { name: "Side Quest", exact: true }).click();
+  await expect(category).toBeEnabled();
+  await expect(category).toContainText("Side Quest");
+  expect(attempts).toBe(2);
+  await category.click();
+  await page.getByRole("option", { name: "Main Quest", exact: true }).click();
+  await expect(category).toBeEnabled();
+  await expect(category).toContainText("Main Quest");
+  expect(attempts).toBe(3);
+  await page.keyboard.press("Escape");
+  await panel.getByRole("button", { name: /^Vence / }).click();
+  const clearDate = page.getByRole("button", { name: "Quitar fecha límite", exact: true });
+  const selectDate = page.getByRole("button", { name: "Seleccionar fecha límite", exact: true });
+  fail = true;
+  await clearDate.click();
+  await expect(clearDate).toBeDisabled();
+  await expect(selectDate).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Seleccionar icono", exact: true })).toBeDisabled();
+  await expect(clearDate).toBeEnabled();
+  await expect(selectDate).toContainText("2026");
+  expect(attempts).toBe(4);
+  await page.screenshot({ path: "test-results/desktop-property-retry.png", animations: "disabled" });
 });
 
 test("desktop list and table prioritize titles and preserve them while scrolling", async ({ page }) => {

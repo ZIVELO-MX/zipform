@@ -34,6 +34,8 @@ export function DocumentPropertyFields({
   presentationFields = [],
   users,
   readOnly = false,
+  disabled = false,
+  onPendingChange,
   moveReadOnly = readOnly,
   onDocumentChange,
 }: {
@@ -42,6 +44,8 @@ export function DocumentPropertyFields({
   presentationFields?: TlozDocumentPresentationField[];
   users: Array<{ id: string; name: string }>;
   readOnly?: boolean;
+  disabled?: boolean;
+  onPendingChange?: (pending: boolean) => void;
   moveReadOnly?: boolean;
   onDocumentChange?: (document: TlozDocument) => void;
 }) {
@@ -72,8 +76,9 @@ export function DocumentPropertyFields({
   if (!visibleCustomFields.length && !visiblePresentationFields.length) return null;
 
   function persist(field: TlozFieldDefinition, value: TlozDocumentScalar): Promise<boolean> {
-    if (!current || persistInFlight.current) return Promise.resolve(false);
+    if (!current || disabled || persistInFlight.current) return Promise.resolve(false);
     persistInFlight.current = true;
+    onPendingChange?.(true);
     const toastId = toast.loading(`Guardando ${field.label}…`, { toasterId });
     return new Promise((resolve) => startTransition(async () => {
       try {
@@ -91,12 +96,13 @@ export function DocumentPropertyFields({
         resolve(false);
       } finally {
         persistInFlight.current = false;
+        onPendingChange?.(false);
       }
     }));
   }
 
   return (
-    <fieldset disabled={pending} className="flex min-w-0 flex-col border-t border-carbon/[0.07] pt-1" aria-busy={pending}>
+    <fieldset disabled={pending || disabled} className="flex min-w-0 flex-col border-t border-carbon/[0.07] pt-1" aria-busy={pending}>
       {visibleCustomFields.map(({ field, value }) => (
         <DetailPropertyRow
           key={field.id}
@@ -104,12 +110,12 @@ export function DocumentPropertyFields({
           display={<PropertyValue field={field} value={value} users={users} />}
           readOnly={readOnly}
         >
-          <fieldset disabled={pending} className="m-0 min-w-0 border-0 p-0">
+          <fieldset disabled={pending || disabled} className="m-0 min-w-0 border-0 p-0">
             <PropertyEditor
               field={field}
               value={value}
               users={users}
-              disabled={pending}
+              disabled={pending || disabled}
               onChange={(next) => persist(field, next)}
             />
           </fieldset>
@@ -127,12 +133,12 @@ export function DocumentPropertyFields({
           readOnly={fieldReadOnly}
         >
           {fieldReadOnly ? null : (
-            <fieldset disabled={pending} className="m-0 min-w-0 border-0 p-0">
+            <fieldset disabled={pending || disabled} className="m-0 min-w-0 border-0 p-0">
               <PropertyEditor
                 field={definition}
                 value={value}
                 users={users}
-                disabled={pending}
+                disabled={pending || disabled}
                 onChange={(next) => persist(definition, next)}
               />
             </fieldset>

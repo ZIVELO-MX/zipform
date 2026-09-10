@@ -67,6 +67,7 @@ import {
   getMissionDetailOptions,
   patchMissionStatus,
   saveMissionDocument,
+  restoreMissionSnapshot,
   updateDocument,
   updateDocumentContent,
   updateMission,
@@ -130,6 +131,49 @@ describe("TLOZ Server Action authorization", () => {
     await expect(updateMission("mission-1", { title: "Updated" })).resolves.toEqual(mission);
     expect(mocks.tloz.createMission).toHaveBeenCalledOnce();
     expect(mocks.tloz.updateMission).toHaveBeenCalledOnce();
+  });
+
+  it("restores legacy metadata and checklist through one authorized mutation", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    const snapshot = { title: "Restored", description: "Summary", descriptionDetail: "- [x] Saved task", icon: "Star" };
+    const detail = { ...mission, ...snapshot, checklist: [{ title: "Saved task", completed: true }] };
+    mocks.tloz.getMissionDetail.mockResolvedValue(detail);
+
+    await expect(restoreMissionSnapshot("mission-1", snapshot)).resolves.toEqual(detail);
+    expect(mocks.tloz.updateMission).toHaveBeenCalledExactlyOnceWith("mission-1", snapshot);
+    expect(mocks.tloz.saveMissionDocument).not.toHaveBeenCalled();
+  });
+
+  it("restores canonical metadata and body in the same revision update", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    const document = { id: "mission-1", kind: "mission", revision: 3, properties: { assignee: developer.id }, source: { type: "mission", id: "mission-1" } };
+    mocks.documents.get.mockResolvedValue(document);
+    mocks.documents.update.mockResolvedValue({ ...document, revision: 4 });
+    const snapshot = { title: "Restored", description: "Summary", descriptionDetail: "- [x] Saved task", icon: "Star" };
+
+    await restoreMissionSnapshot("mission-1", snapshot);
+    expect(mocks.documents.update).toHaveBeenCalledExactlyOnceWith("mission-1", {
+      title: snapshot.title, summary: snapshot.description, body: snapshot.descriptionDetail, properties: { icon: "Star" },
+    }, 3);
+    expect(mocks.tloz.updateMission).not.toHaveBeenCalled();
+    expect(mocks.tloz.saveMissionDocument).not.toHaveBeenCalled();
+  });
+
+  it("does not fall back to a separate body write when restoration fails", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    mocks.tloz.updateMission.mockRejectedValueOnce(new Error("Write failed"));
+    await expect(restoreMissionSnapshot("mission-1", { title: "Restored", descriptionDetail: "- [x] Saved task" })).rejects.toThrow("Write failed");
+    expect(mocks.tloz.updateMission).toHaveBeenCalledOnce();
+    expect(mocks.tloz.saveMissionDocument).not.toHaveBeenCalled();
+  });
+
+  it("denies snapshot restoration of another owner's mission before writing", async () => {
+    mocks.auth.mockResolvedValue({ user: developer });
+    mocks.tloz.getMissionDetail.mockResolvedValue({ ...mission, ownerId: owner.id });
+    await expect(restoreMissionSnapshot("mission-1", { title: "Restored", descriptionDetail: "- [x] Saved task" }))
+      .rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+    expect(mocks.tloz.updateMission).not.toHaveBeenCalled();
+    expect(mocks.tloz.saveMissionDocument).not.toHaveBeenCalled();
   });
 
   it("denies developer mutations of other owners and placement changes without side effects", async () => {

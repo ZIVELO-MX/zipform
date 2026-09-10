@@ -22,12 +22,13 @@ export type IconPickerProps = {
   triggerLabel?: string;
   recentStorageKey?: string;
   onValueChange: (value: string) => void;
+  disabled?: boolean;
   allowClear?: boolean;
   iconOnly?: boolean;
   className?: string;
 };
 
-export function IconPicker({ icons, value, color = "currentColor", label = "Icono", triggerLabel, recentStorageKey = "tloz-recent-icons", onValueChange, allowClear = false, iconOnly = false, className }: IconPickerProps) {
+export function IconPicker({ icons, value, color = "currentColor", label = "Icono", triggerLabel, recentStorageKey = "tloz-recent-icons", onValueChange, disabled = false, allowClear = false, iconOnly = false, className }: IconPickerProps) {
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
   const [recentIds, setRecentIds] = React.useState<string[]>([]);
@@ -46,7 +47,8 @@ export function IconPicker({ icons, value, color = "currentColor", label = "Icon
   const recent = recentIds.map((id) => icons.find((item) => item.id === id)).filter((item): item is IconPickerOption => Boolean(item));
 
   function selectIcon(id: string) {
-    const nextRecent = [id, ...recentIds.filter((item) => item !== id)].slice(0, 4);
+    if (disabled) return;
+    const nextRecent = id ? [id, ...recentIds.filter((item) => item !== id)].slice(0, 4) : recentIds;
     setRecentIds(nextRecent);
     try {
       window.localStorage.setItem(recentStorageKey, JSON.stringify(nextRecent));
@@ -59,7 +61,7 @@ export function IconPicker({ icons, value, color = "currentColor", label = "Icon
   }
 
   const SelectedIcon = selected?.icon;
-  const trigger = <Button type="button" variant="outline" className={cn("w-full justify-start", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
+  const trigger = <Button type="button" disabled={disabled} variant="outline" className={cn("w-full justify-start", className)} aria-label={`Seleccionar ${label.toLowerCase()}`}>
     {SelectedIcon ? <SelectedIcon aria-hidden="true" style={{ color }} /> : <FileText aria-hidden="true" style={{ color }} />}
     {!iconOnly ? <span className="truncate">{triggerLabel ?? selected?.label ?? `Seleccionar ${label.toLowerCase()}`}</span> : null}
   </Button>;
@@ -74,20 +76,20 @@ export function IconPicker({ icons, value, color = "currentColor", label = "Icon
         <label className="relative block text-carbon">
           <span className="sr-only">Buscar iconos</span>
           <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-carbon/40" aria-hidden="true" />
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar iconos…" className="pl-9" autoComplete="off" />
+          <Input disabled={disabled} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar iconos…" className="pl-9" autoComplete="off" />
         </label>
         {recent.length > 0 && !query ? (
-          <PickerSection title="Usados recientemente" icons={recent} value={value} onSelect={selectIcon} />
+          <PickerSection title="Usados recientemente" icons={recent} value={value} disabled={disabled} onSelect={selectIcon} />
         ) : null}
-        <PickerSection title={query ? "Resultados" : "Todos los iconos"} icons={filtered} value={value} onSelect={selectIcon} />
+        <PickerSection title={query ? "Resultados" : "Todos los iconos"} icons={filtered} value={value} disabled={disabled} onSelect={selectIcon} />
         {filtered.length === 0 ? <p className="m-0 py-6 text-center text-sm text-carbon/50">No hay iconos que coincidan.</p> : null}
-        {allowClear && value ? <Button type="button" variant="ghost" className="mt-2 w-full justify-start text-carbon/55" onClick={() => { onValueChange(""); setOpen(false); setQuery(""); }}><X data-icon="inline-start" aria-hidden="true" />Eliminar icono</Button> : null}
+        {allowClear && value ? <Button type="button" disabled={disabled} variant="ghost" className="mt-2 w-full justify-start text-carbon/55" onClick={() => selectIcon("")}><X data-icon="inline-start" aria-hidden="true" />Eliminar icono</Button> : null}
       </PopoverContent>
     </Popover>
   );
 }
 
-function PickerSection({ title, icons, value, onSelect }: { title: string; icons: IconPickerOption[]; value?: string; onSelect: (id: string) => void }) {
+function PickerSection({ title, icons, value, disabled, onSelect }: { title: string; icons: IconPickerOption[]; value?: string; disabled: boolean; onSelect: (id: string) => void }) {
   if (icons.length === 0) return null;
   return (
     <section className="mt-2" aria-label={title}>
@@ -98,6 +100,7 @@ function PickerSection({ title, icons, value, onSelect }: { title: string; icons
           return (
             <Tooltip key={item.id}><TooltipTrigger asChild><button
               type="button"
+              disabled={disabled}
               className="grid aspect-square place-items-center rounded-md border border-transparent transition-colors hover:border-carbon/15 hover:bg-carbon/[0.035] focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20"
               aria-label={item.label}
               aria-pressed={value === item.id}

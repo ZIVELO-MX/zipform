@@ -225,6 +225,21 @@ export async function updateMission(missionId: string, input: TlozMissionUpdateI
   return mission;
 }
 
+export async function restoreMissionSnapshot(
+  missionId: string,
+  snapshot: Pick<TlozMissionUpdateInput, "title" | "description" | "descriptionDetail" | "icon">,
+) {
+  await updateMission(missionId, {
+    title: snapshot.title,
+    description: snapshot.description,
+    descriptionDetail: snapshot.descriptionDetail,
+    icon: snapshot.icon,
+  });
+  const mission = await dataClient.tloz.getMissionDetail(missionId);
+  if (!mission) throw new Error("Misión no encontrada.");
+  return mission;
+}
+
 export async function getMissionDetail(missionId: string) {
   const actor = await authenticatedActor();
   const mission = await dataClient.tloz.getMissionDetail(missionId);

@@ -16,6 +16,7 @@ import {
   removeMissionQuestItem,
   removeMissionResource,
   saveMissionDocument,
+  restoreMissionSnapshot,
   setMissionQuestItem,
   patchMissionStatus,
   updateMission,
@@ -94,7 +95,10 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const checklistInput = useRef<HTMLInputElement>(null);
   const previousMission = useRef(mission);
   const [isPending, startTransition] = useTransition();
-  const bodyPending = documentPending || isPending;
+  const [inlinePropertiesPending, setInlinePropertiesPending] = useState(false);
+  const [customPropertiesPending, setCustomPropertiesPending] = useState(false);
+  const propertiesPending = inlinePropertiesPending || customPropertiesPending;
+  const bodyPending = documentPending || isPending || propertiesPending;
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
@@ -153,7 +157,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
   useEffect(() => {
     function handleHistoryShortcut(event: KeyboardEvent) {
-      if (event.defaultPrevented || !canUpdateDocument || isPending || documentSaveInFlight.current || historyInFlight.current || !(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (event.defaultPrevented || !canUpdateDocument || isPending || propertiesPending || documentSaveInFlight.current || historyInFlight.current || !(event.ctrlKey || event.metaKey) || event.altKey) return;
       const target = event.target;
       if (!(target instanceof HTMLElement) || !workspace.current?.contains(target) || target.closest('[role="alertdialog"]')) return;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || (target instanceof HTMLElement && target.isContentEditable)) return;
@@ -206,10 +210,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
               body: snapshot.descriptionDetail,
               properties: { icon: snapshot.icon },
             })
-          : await (async () => {
-              await updateMission(current.id, { title: snapshot.title, description: snapshot.description, icon: snapshot.icon });
-              return saveMissionDocument(current.id, snapshot.descriptionDetail);
-            })();
+          : await restoreMissionSnapshot(current.id, snapshot);
         accept(restored);
         setTitleDraft(snapshot.title);
         setDescriptionDraft(snapshot.description);
@@ -220,7 +221,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   }
 
   function saveIcon(value: string) {
-    if (value === current.icon || historyInFlight.current) return;
+    if (value === current.icon || bodyPending || historyInFlight.current) return;
     const snapshot = snapshotOf(current);
     const toastId = toast.loading("Actualizando icono…", { toasterId });
     startTransition(async () => {
@@ -238,7 +239,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
   async function saveTitle() {
     if (skipTitleSave.current) { skipTitleSave.current = false; return; }
-    if (inlineSaveInFlight.current || historyInFlight.current) return;
+    if (inlineSaveInFlight.current || bodyPending || historyInFlight.current) return;
     const title = titleDraft.trim();
     if (!title || title === current.title) { setTitleDraft(current.title); setEditingTitle(false); return; }
     inlineSaveInFlight.current = true;
@@ -254,7 +255,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   }
 
   async function saveDocument(nextMarkdown = detailMarkdown): Promise<boolean> {
-    if (documentSaveInFlight.current || historyInFlight.current) return false;
+    if (documentSaveInFlight.current || isPending || propertiesPending || historyInFlight.current) return false;
     if (nextMarkdown === current.descriptionDetail) return true;
     documentSaveInFlight.current = true;
     setDocumentPending(true);
@@ -273,7 +274,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
   async function saveDescription() {
     if (skipDescriptionSave.current) { skipDescriptionSave.current = false; return; }
-    if (inlineSaveInFlight.current || historyInFlight.current) return;
+    if (inlineSaveInFlight.current || bodyPending || historyInFlight.current) return;
     const description = descriptionDraft.trim();
     if (description === current.description) { setEditingDescription(false); return; }
     inlineSaveInFlight.current = true;
@@ -322,7 +323,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
 
   async function renameChecklistItem(position: number) {
     if (skipChecklistSave.current) { skipChecklistSave.current = false; return; }
-    if (inlineSaveInFlight.current || historyInFlight.current) return;
+    if (inlineSaveInFlight.current || bodyPending || historyInFlight.current) return;
     const title = checklistTitleDraft.trim();
     if (!title || title === current.checklist[position]?.title) { setRenamingChecklist(null); return; }
     inlineSaveInFlight.current = true;
@@ -358,7 +359,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const statusColor = statusPresentation.textColor;
 
   return (
-    <article ref={workspace} data-variant={variant} className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-6" aria-busy={isPending}>
+    <article ref={workspace} data-variant={variant} className="mission-detail-workspace mx-auto w-full max-w-[1052px] px-4 py-5 md:px-6" aria-busy={bodyPending}>
       {variant === "full" && current.project ? (
         <Breadcrumb className="mb-5">
           <BreadcrumbList className="flex-nowrap text-carbon/60">
@@ -378,8 +379,8 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
           {variant === "panel" ? <Link href={fullDetailHref} aria-label="Abrir en página completa" className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-semibold text-carbon/65 hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30"><PanelRightOpen className="size-3.5" aria-hidden="true" />Página completa</Link> : null}
         </div>
         <div className="flex items-start gap-2.5">
-          {canUpdateDocument ? <span className="mt-0.5 shrink-0 rounded-lg" style={{ backgroundColor: `${detailColor}18` }}><IconPicker icons={missionIcons} value={current.icon} color={detailColor} recentStorageKey="tloz-recent-icons" onValueChange={saveIcon} iconOnly className="size-8 justify-center rounded-lg border-0 bg-transparent p-0 shadow-none hover:bg-transparent [&_svg]:size-[15px]" /></span> : (() => { const CurrentIcon = resolveMissionIcon(current.icon); return <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-[15px]" style={{ backgroundColor: `${detailColor}18`, color: detailColor }}><CurrentIcon aria-hidden="true" /></span>; })()}
-          {editingTitle ? <Input ref={titleInput} readOnly={savingInline} aria-busy={savingInline} autoFocus className="mission-detail-title h-auto min-w-0 flex-1 border border-[#1D1D1B]/15 bg-white px-2 py-0 text-2xl font-bold leading-tight shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (savingInline) return; skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : canUpdateDocument ? <button type="button" className="min-w-0 flex-1 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" disabled={savingInline} onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1></button> : <h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1>}
+          {canUpdateDocument ? <span className="mt-0.5 shrink-0 rounded-lg" style={{ backgroundColor: `${detailColor}18` }}><IconPicker disabled={bodyPending} icons={missionIcons} value={current.icon} color={detailColor} recentStorageKey="tloz-recent-icons" onValueChange={saveIcon} iconOnly className="size-8 justify-center rounded-lg border-0 bg-transparent p-0 shadow-none hover:bg-transparent [&_svg]:size-[15px]" /></span> : (() => { const CurrentIcon = resolveMissionIcon(current.icon); return <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg [&_svg]:size-[15px]" style={{ backgroundColor: `${detailColor}18`, color: detailColor }}><CurrentIcon aria-hidden="true" /></span>; })()}
+          {editingTitle ? <Input ref={titleInput} readOnly={savingInline || bodyPending} aria-busy={savingInline} autoFocus className="mission-detail-title h-auto min-w-0 flex-1 border border-[#1D1D1B]/15 bg-white px-2 py-0 text-2xl font-bold leading-tight shadow-none focus-visible:ring-2 focus-visible:ring-[#1D1D1B]/10" value={titleDraft} aria-label="Título de la misión" onChange={(event) => setTitleDraft(event.target.value)} onBlur={saveTitle} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (savingInline) return; skipTitleSave.current = true; setTitleDraft(current.title); setEditingTitle(false); } }} /> : canUpdateDocument ? <button type="button" className="min-w-0 flex-1 rounded-md text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" disabled={savingInline || bodyPending} onClick={() => { skipTitleSave.current = false; setEditingTitle(true); }}><h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1></button> : <h1 className="mission-detail-title m-0 min-w-0 text-2xl font-bold leading-tight text-carbon [overflow-wrap:anywhere]">{current.title}</h1>}
         </div>
       </header>
       {savingInline ? <p role="status" className="mb-2 text-xs font-semibold text-carbon/60">Guardando cambios…</p> : null}
@@ -393,7 +394,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
             {editingDescription ? (
               <textarea
                 ref={descriptionInput}
-                readOnly={savingInline}
+                readOnly={savingInline || bodyPending}
                 aria-busy={savingInline}
                 autoFocus
                 className="min-h-28 w-full resize-y rounded-xl border border-[#1D1D1B]/15 bg-white px-3 py-2 text-[14px] leading-[1.6] text-[#454543] outline-none focus:border-[#1D1D1B]/25 focus:ring-2 focus:ring-[#1D1D1B]/10"
@@ -406,7 +407,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
                 placeholder="Resumen breve del resultado esperado."
               />
             ) : (
-              canUpdateDocument ? <button type="button" className="block max-w-[62ch] rounded-md text-left text-[14px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" disabled={savingInline} onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button> : <p className="m-0 block max-w-[62ch] text-[14px] leading-[1.6] text-[#454543]">{current.description || "Sin descripción"}</p>
+              canUpdateDocument ? <button type="button" className="block max-w-[62ch] rounded-md text-left text-[14px] leading-[1.6] text-[#454543] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" disabled={savingInline || bodyPending} onClick={() => { skipDescriptionSave.current = false; setDescriptionDraft(current.description); setEditingDescription(true); }}>{current.description || "Añadir descripción"}</button> : <p className="m-0 block max-w-[62ch] text-[14px] leading-[1.6] text-[#454543]">{current.description || "Sin descripción"}</p>
             )}
               </AccordionContent>
             </AccordionItem>
@@ -441,7 +442,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
                     <span className="sr-only">{item.title}</span>
                   </label>
                   {renamingChecklist === position ? (
-                    <Input ref={checklistInput} readOnly={savingInline} aria-busy={savingInline} autoFocus className="h-8 min-w-0 flex-1 text-[13.5px]" value={checklistTitleDraft} aria-label="Nombre del checkbox" onChange={(event) => setChecklistTitleDraft(event.target.value)} onBlur={() => renameChecklistItem(position)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (savingInline) return; skipChecklistSave.current = true; setRenamingChecklist(null); } }} />
+                    <Input ref={checklistInput} readOnly={savingInline || bodyPending} aria-busy={savingInline} autoFocus className="h-8 min-w-0 flex-1 text-[13.5px]" value={checklistTitleDraft} aria-label="Nombre del checkbox" onChange={(event) => setChecklistTitleDraft(event.target.value)} onBlur={() => renameChecklistItem(position)} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (savingInline) return; skipChecklistSave.current = true; setRenamingChecklist(null); } }} />
                   ) : <span className={`min-w-0 flex-1 text-[13.5px] [overflow-wrap:anywhere] ${item.completed ? "text-[#9A9A98] line-through" : "text-[#1D1D1B]"}`}>{item.title}</span>}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className="size-7 shrink-0 rounded-md text-carbon/45 opacity-0 transition-opacity hover:text-carbon group-focus-within:opacity-100 group-hover:opacity-100" aria-label={`Acciones para ${item.title}`}><MoreHorizontal className="size-4" /></Button></DropdownMenuTrigger>
@@ -497,9 +498,9 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
               <FileStack aria-hidden="true" />
             </DetailNavigationLink>
           ) : null}
-          <section className="overflow-hidden rounded-xl border border-carbon/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/65">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} onUpdate={documentMutation ? async (_missionId, input) => documentMutation(missionInputToDocumentUpdate(input, options.document?.kind ?? "mission")) : undefined} onStatusUpdate={documentMutation ? async (_missionId, status) => documentMutation({ properties: { status } }) : undefined} readOnly={!canUpdateDocument} responsibleReadOnly={!canMove} inheritedColor={isMissionDocument ? detailColor : undefined} /><DocumentPropertyFields document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdateDocument} moveReadOnly={!canMove} onDocumentChange={onBackingDocumentChange} /></div></section>
+          <section className="overflow-hidden rounded-xl border border-carbon/10 bg-white" aria-labelledby="mission-properties-title"><h2 id="mission-properties-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/65">Propiedades</h2><div className="px-2 py-1.5"><MissionInlineEditor disabled={documentPending || isPending || customPropertiesPending} onPendingChange={setInlinePropertiesPending} mission={current} options={options} onMissionChange={(updated) => accept({ ...current, ...updated })} onUpdate={documentMutation ? async (_missionId, input) => documentMutation(missionInputToDocumentUpdate(input, options.document?.kind ?? "mission")) : undefined} onStatusUpdate={documentMutation ? async (_missionId, status) => documentMutation({ properties: { status } }) : undefined} readOnly={!canUpdateDocument} responsibleReadOnly={!canMove} inheritedColor={isMissionDocument ? detailColor : undefined} /><DocumentPropertyFields disabled={documentPending || isPending || inlinePropertiesPending} onPendingChange={setCustomPropertiesPending} document={options.document} fields={options.contract ?? []} presentationFields={options.detailProperties?.fields} users={options.users} readOnly={!canUpdateDocument} moveReadOnly={!canMove} onDocumentChange={onBackingDocumentChange} /></div></section>
           {resolvedActivityUrl ? <section className="overflow-hidden rounded-xl border border-carbon/10 bg-white" aria-labelledby="mission-activity-title"><h2 id="mission-activity-title" className="m-0 border-b border-[#1D1D1B]/[0.07] px-4 py-[13px] text-[11px] font-bold uppercase tracking-[0.05em] text-carbon/65">Actividad</h2><div className="flex flex-col gap-3 p-4 text-xs text-[#6B6B6B]" aria-live="polite">{activityState === "loading" ? <EmptyText>Cargando actividad…</EmptyText> : activityState === "error" ? <EmptyText>No se pudo cargar la actividad.</EmptyText> : activity.length ? groupActivityByDay(activity).map((group) => <div key={group.day} className="flex flex-col gap-2.5"><time className="text-[10px] font-bold uppercase tracking-[0.05em] text-carbon/35" dateTime={group.day}>{formatActivityDay(group.day)}</time>{group.events.map((event) => <ActivityItem key={event.id} label={activityLabel(event.action)} date={event.occurredAt} tone={detailColor} />)}</div>) : <EmptyText>Sin actividad registrada.</EmptyText>}</div></section> : null}
-          {isMissionDocument && canUpdate ? <Button className="min-h-9 rounded-lg text-xs" disabled={isCompleted || isPending} onClick={() => mutate("Actualizando estado…", async () => ({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button> : null}
+          {isMissionDocument && canUpdate ? <Button className="min-h-9 rounded-lg text-xs" disabled={isCompleted || bodyPending} onClick={() => mutate("Actualizando estado…", async () => ({ ...current, ...(await patchMissionStatus(current.id, completionStatus as TlozMissionRecord["status"])) }))}><Check data-icon="inline-start" aria-hidden="true" />{isCompleted ? "Misión completada" : "Marcar como completada"}</Button> : null}
         </aside>
       </div>
     </article>
@@ -842,7 +843,7 @@ export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => vo
   }}>
     <fieldset disabled={saving} className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
       <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2 sm:grid-cols-[40px_130px_minmax(0,1fr)]">
-        <IconPicker icons={RESOURCE_ICON_OPTIONS} value={inferredIcon} label="Icono del recurso" onValueChange={setIcon} allowClear iconOnly className="size-10 justify-center" />
+        <IconPicker disabled={saving} icons={RESOURCE_ICON_OPTIONS} value={inferredIcon} label="Icono del recurso" onValueChange={setIcon} allowClear iconOnly className="size-10 justify-center" />
         <Select value={type} disabled={saving} onValueChange={(value) => setType(value as TlozResourceType)}><SelectTrigger aria-label="Tipo de recurso"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{Object.entries(resourceTypeLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select>
         <Input autoFocus required className="col-span-2 min-w-0 sm:col-span-1" aria-label="Título del recurso" placeholder="Título" value={title} onChange={(event) => setTitle(event.target.value)} />
       </div>

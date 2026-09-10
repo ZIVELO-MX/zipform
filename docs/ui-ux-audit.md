@@ -253,3 +253,24 @@ Verificación **local**:
 - Regresiones nuevas: bloqueo de cambios del checklist durante guardado, eliminación fallida y reintento, texto largo a 1024 px, borrador al filtrar, historial tras ediciones fallidas, atajos dentro de confirmaciones y bloqueo durante restauración.
 
 Límites: servidor mock y sesiones sintéticas; autenticación real y CI sin verificar. El flujo antiguo de restauración aún escribe metadatos y cuerpo en dos peticiones: un fallo exclusivo de la segunda puede dejar una restauración parcial; la ruta canónica utiliza una sola mutación. No se modifica en esta ronda la coordinación de guardados entre cuerpo y propiedades independientes. PR a cargo del usuario según el acuerdo previo. Sin cambios de API, migraciones ni dependencias; capturas y borrador del PR excluidos de Git.
+
+
+## Undécima revisión: coordinación de edición y restauración atómica
+
+Fecha: 2026-09-10. Rama `fix/desktop-atomic-history`, basada en `274ecb6`. Ponytail y baseline-ui aplicadas sobre componentes existentes; un subagente revisó persistencia e integración y otro implementó bloqueos de propiedades y selectores.
+
+- **Deshacer sin restauraciones parciales:** la ruta antigua usa ahora una Server Action que envía título, resumen, icono y cuerpo juntos a `updateMission`, y devuelve el detalle actualizado. El driver Prisma ya reemplaza cuerpo, checklist y progreso en la misma transacción; no se modifican drivers ni migraciones. Se elimina el segundo guardado independiente del cuerpo. Las pruebas cubren permisos, una sola mutación, error sin fallback y restauración del checklist persistida tras recargar.
+- **Guardados coordinados:** cabecera, Markdown, checklist, propiedades principales y personalizadas se bloquean entre sí mientras guardan. Se impiden cambios simultáneos sobre la misma revisión; el bloqueo se libera también tras un error. Los borradores y selectores abiertos permanecen montados.
+- **Selectores:** fecha, usuario e icono respetan disabled dentro de sus popovers; también sus acciones de limpiar y, en el calendario, navegación y días. Se propaga el bloqueo al formulario de creación y al icono de recursos. Los popovers pueden cerrarse sin esperar al guardado.
+- **Búsqueda de responsable:** Enter con búsqueda vacía o sin coincidencias no envía el formulario padre. Se conserva la selección de coincidencias y la composición IME.
+- **Pruebas existentes:** el contrato estático de SelectTrigger permite atributos adicionales manteniendo la comprobación del ancla SelectValue de Radix.
+
+Verificación **local**:
+
+- Build de producción y tipos aprobados: `TLOZ_DATA_DRIVER=mock AUTH_SECRET=zipform-local-e2e-only node node_modules/next/dist/bin/next build`, desde `apps/dashboard`.
+- **37/37 pruebas focalizadas aprobadas**: `node apps/dashboard/node_modules/vitest/vitest.mjs run apps/dashboard/app/tloz/actions.test.ts apps/dashboard/components/tloz/mission-inline-editor.test.ts apps/dashboard/components/tloz/document-property-fields.test.ts apps/dashboard/components/tloz/mission-document.test.ts apps/dashboard/components/tloz/tloz-create.test.ts`, desde la raíz.
+- **56/56 E2E aprobados**, Chrome, **1.4 min**: `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`, desde `apps/dashboard`. Antes pasaron los cinco escenarios focalizados de esta ronda.
+- Captura a 1440 × 900 revisada tras un fallo al quitar la fecha: selector contenido en el panel, valor conservado y controles disponibles para reintentar.
+- `git diff --check`: aprobado.
+
+Se resuelven los dos pendientes de la décima revisión sobre restauración parcial y coordinación entre cuerpo y propiedades. El bloqueo coordina ediciones dentro del mismo panel; la concurrencia entre sesiones sigue dependiendo de los contratos existentes del servidor. Sesiones sintéticas y servidor mock local; autenticación real y CI sin verificar. PR a cargo del usuario según el acuerdo previo. Capturas y borrador de PR excluidos de Git; sin dependencias ni migraciones nuevas.
