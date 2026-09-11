@@ -273,20 +273,60 @@ test("desktop create blocks duplicate saves and dismissal while pending", async 
   await expect(panel).toBeVisible();
   await panel.getByLabel(/^Título/).fill("E2E desktop mission");
   await panel.getByLabel(/^Descripción/).fill("Save once using the mock driver.");
+  await panel.getByLabel(/^Detalle/).fill("- [ ] Borrador de creación");
   let submissions = 0;
+  let fail = true;
   await page.route("**/core", async (route) => {
     if (route.request().method() === "POST") {
       submissions += 1;
       await new Promise((resolve) => setTimeout(resolve, 700));
+      if (fail) { await route.abort("failed"); return; }
     }
     await route.continue();
   });
   await panel.getByRole("button", { name: "Guardar", exact: true }).click();
   await expect(panel.getByRole("button", { name: "Guardando…", exact: true })).toBeDisabled();
+  await expect(panel.getByLabel(/^Título/)).toBeDisabled();
+  await expect(panel.getByLabel(/^Descripción/)).toBeDisabled();
+  await expect(panel.getByLabel(/^Detalle/)).toBeDisabled();
   await page.keyboard.press("Escape");
   await expect(panel).toBeVisible();
-  await expect(panel).toHaveCount(0);
+  await expect(panel.getByRole("alert")).toBeVisible();
+  await expect(panel.getByLabel(/^Título/)).toBeEnabled();
+  await expect(panel.getByLabel(/^Título/)).toHaveValue("E2E desktop mission");
+  await expect(panel.getByLabel(/^Descripción/)).toHaveValue("Save once using the mock driver.");
+  await expect(panel.getByLabel(/^Detalle/)).toHaveValue("- [ ] Borrador de creación");
   expect(submissions).toBe(1);
+  fail = false;
+  await panel.getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect(panel).toHaveCount(0);
+  expect(submissions).toBe(2);
+});
+
+test("project creation locks text and color while saving and keeps failed drafts", async ({ page }) => {
+  await authenticate(page);
+  await page.goto("/projects");
+  await page.getByRole("button", { name: "Crear nuevo Project", exact: true }).click();
+  const panel = page.locator("dialog[open]");
+  await panel.getByLabel(/^Nombre/).fill("Proyecto con borrador protegido");
+  await panel.getByLabel(/^Descripción/).fill("Descripción conservada tras un fallo.");
+  const color = panel.getByRole("textbox", { name: "Color", exact: true });
+  await color.fill("#123456");
+  await color.press("Enter");
+  await page.route("**/projects", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    await route.abort("failed");
+  });
+  await panel.getByRole("button", { name: "Guardar", exact: true }).click();
+  await expect(panel.getByLabel(/^Nombre/)).toBeDisabled();
+  await expect(panel.getByLabel(/^Descripción/)).toBeDisabled();
+  await expect(color).toBeDisabled();
+  await expect(panel.getByRole("alert")).toBeVisible();
+  await expect(color).toBeEnabled();
+  await expect(color).toHaveValue("#123456");
+  await expect(panel.getByLabel(/^Nombre/)).toHaveValue("Proyecto con borrador protegido");
+  await expect(panel.getByLabel(/^Descripción/)).toHaveValue("Descripción conservada tras un fallo.");
 });
 
 test("settings and avatar actions fit a short mobile viewport", async ({ page }) => {
@@ -552,11 +592,47 @@ test("markdown keeps the draft after a failed save and retries unchanged text", 
   await expect(page.getByText("No se pudieron guardar los cambios", { exact: true })).toBeVisible();
   await expect(draft).toBeEnabled();
   await expect(draft).toHaveValue("Desktop draft survives a failed save.");
+  await expect(draft).toBeFocused();
+  await expect(draft).toHaveAttribute("aria-invalid", "true");
+  await expect(panel.getByRole("alert")).toContainText("Tu texto sigue aquí");
   await page.screenshot({ animations: "disabled", path: "test-results/markdown-retry-desktop.png" });
   await page.unroute("**/");
   await panel.getByRole("button", { name: "Guardar", exact: true }).click();
   await expect(draft).toHaveCount(0);
   await expect(panel.getByText("Desktop draft survives a failed save.", { exact: true })).toBeVisible();
+  await expect(panel.getByRole("button", { name: "Opciones de descripción", exact: true })).toBeFocused();
+});
+
+test("markdown editing keeps focus, copies the current draft and cancels without closing the panel", async ({ page, context, request }) => {
+  const seeded = await request.put("/api/v1/missions/mission-dashboard/document", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: { markdown: "Detalle original para cancelar" } });
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await authenticate(page);
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  const options = panel.getByRole("button", { name: "Opciones de descripción", exact: true });
+  await options.click();
+  await page.getByRole("menuitem", { name: "Editar", exact: true }).click();
+  const draft = panel.getByRole("textbox", { name: "Detalle en Markdown", exact: true });
+  await expect(draft).toBeFocused();
+  await draft.fill("Borrador actual para copiar");
+  await options.click();
+  await page.getByRole("menuitem", { name: "Copiar", exact: true }).click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("Borrador actual para copiar");
+  await expect(draft).toBeFocused();
+  await draft.press("Escape");
+  await expect(panel).toBeVisible();
+  await expect(draft).toHaveCount(0);
+  await expect(options).toBeFocused();
+  await expect(panel.getByText("Detalle original para cancelar", { exact: true })).toBeVisible();
+  await options.click();
+  await page.getByRole("menuitem", { name: "Editar", exact: true }).click();
+  await draft.fill("Otro borrador cancelado");
+  await panel.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await expect(options).toBeFocused();
+  await expect(panel).toBeVisible();
 });
 
 test("an invalid collection cursor offers a working first page without losing filters", async ({ page }) => {

@@ -22,6 +22,9 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
   const [draft, setDraft] = useState(value);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const restoreFocus = useRef<"editor" | "trigger" | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorId = useId();
   const persistedValue = useRef(value);
@@ -36,19 +39,39 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
     }
   }, [value, draft, editing]);
 
+  useEffect(() => {
+    if (saving || disabled || !restoreFocus.current) return;
+    const target = restoreFocus.current === "editor" ? textareaRef.current : triggerRef.current;
+    if (!target) return;
+    target.focus();
+    restoreFocus.current = null;
+  }, [saving, disabled, editing]);
+
   function cancel() {
+    if (saving || disabled) return;
     setDraft(value);
+    setSaveError("");
+    restoreFocus.current = "trigger";
     setEditing(false);
   }
 
   async function save() {
     if (saving || disabled) return;
-    if (draft === value) { setEditing(false); return; }
+    if (draft === value) { cancel(); return; }
+    setSaveError("");
     setSaving(true);
     try {
       const saved = await onSave(draft);
-      if (saved !== false) setEditing(false);
+      if (saved !== false) {
+        restoreFocus.current = "trigger";
+        setEditing(false);
+      } else {
+        setSaveError("No se pudo guardar. Tu texto sigue aquí; intenta de nuevo.");
+        restoreFocus.current = "editor";
+      }
     } catch {
+      setSaveError("No se pudo guardar. Tu texto sigue aquí; intenta de nuevo.");
+      restoreFocus.current = "editor";
       toast.error("No se pudo guardar el detalle");
     } finally {
       setSaving(false);
@@ -57,7 +80,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(value);
+      await navigator.clipboard.writeText(editing ? draft : value);
       toast.success("Copiado al portapapeles");
     } catch {
       toast.error("No se pudo copiar el detalle");
@@ -70,11 +93,11 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
         {showHeader ? <h2 className="text-[13px] font-bold uppercase tracking-[0.04em] text-carbon/75">Detalle</h2> : null}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon-xs" className="size-7 rounded-md text-carbon/45 hover:text-carbon" aria-label="Opciones de descripción">
+            <Button ref={triggerRef} type="button" variant="ghost" size="icon-xs" className="size-7 rounded-md text-carbon/45 hover:text-carbon" aria-label="Opciones de descripción">
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuContent align="end" className="w-40" onCloseAutoFocus={(event) => { if (textareaRef.current) { event.preventDefault(); textareaRef.current.focus(); } }}>
             <DropdownMenuItem onSelect={handleCopy}>
               <ClipboardCopy className="size-3.5" />
               Copiar
@@ -95,13 +118,24 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
             <textarea
               disabled={saving || disabled}
               id={editorId}
+              aria-invalid={Boolean(saveError)}
+              aria-describedby={saveError ? `${editorId}-error` : undefined}
               ref={textareaRef}
+              style={{ outlineOffset: -3 }}
               autoFocus
               className="min-h-[45dvh] w-full resize-y rounded-xl border border-carbon/15 bg-paper px-3 py-2 font-mono text-[0.8125rem] leading-relaxed text-carbon/80 outline-none focus-visible:border-carbon/30 focus-visible:ring-2 focus-visible:ring-carbon/10 md:min-h-80"
               value={draft}
               placeholder={placeholder}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => { setDraft(event.target.value); setSaveError(""); }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  cancel();
+                }
+              }}
             />
+          {saveError ? <p id={`${editorId}-error`} role="alert" className="m-0 text-xs font-semibold text-zivelo">{saveError}</p> : null}
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={cancel} disabled={saving || disabled}>Cancelar</Button>
             <Button type="button" onClick={() => void save()} disabled={saving || disabled}>{saving ? "Guardando…" : "Guardar"}</Button>
@@ -109,7 +143,7 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
         </div>
       ) : (
         value ? <div className="w-full rounded-lg bg-[var(--surface-subtle)] px-3 py-2 text-[14px] [overflow-wrap:anywhere] leading-relaxed text-carbon/80 transition-colors hover:border-carbon/15 hover:bg-paper"><MarkdownContent onToggleTask={onToggleTask}>{value}</MarkdownContent></div>
-          : !readOnly ? <button type="button" disabled={disabled} className="min-h-8 rounded-md px-1 py-1 text-left text-[13px] font-semibold text-carbon/65 hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" aria-label="Añadir detalle" onClick={() => setEditing(true)}>Añadir detalle…</button> : <span className="text-[13.5px] text-carbon/45">{placeholder}</span>
+          : !readOnly ? <button ref={triggerRef} type="button" disabled={disabled} className="min-h-8 rounded-md px-1 py-1 text-left text-[13px] font-semibold text-carbon/65 hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/30" aria-label="Añadir detalle" onClick={() => setEditing(true)}>Añadir detalle…</button> : <span className="text-[13.5px] text-carbon/45">{placeholder}</span>
       )}
     </section>
   );

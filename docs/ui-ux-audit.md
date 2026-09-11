@@ -274,3 +274,24 @@ Verificación **local**:
 - `git diff --check`: aprobado.
 
 Se resuelven los dos pendientes de la décima revisión sobre restauración parcial y coordinación entre cuerpo y propiedades. El bloqueo coordina ediciones dentro del mismo panel; la concurrencia entre sesiones sigue dependiendo de los contratos existentes del servidor. Sesiones sintéticas y servidor mock local; autenticación real y CI sin verificar. PR a cargo del usuario según el acuerdo previo. Capturas y borrador de PR excluidos de Git; sin dependencias ni migraciones nuevas.
+
+
+## Duodécima revisión: borradores y foco de edición
+
+Fecha: 2026-09-10. Rama `fix/desktop-draft-focus`, basada en `2980787`. Ponytail, baseline-ui y pautas de accesibilidad; un subagente corrigió el formulario de creación y revisó la gestión de foco de Markdown.
+
+- **Escape en Markdown:** cancela únicamente la edición del textarea, restaura el texto guardado y conserva el panel abierto. Respeta composición IME y bloqueos de guardado.
+- **Foco y errores:** abrir Editar desde el menú coloca el foco en el textarea. Un fallo conserva el borrador, muestra un error asociado al campo y devuelve el foco después de que se habilita. Guardar o cancelar devuelve el foco al control de apertura disponible.
+- **Copiar:** durante la edición copia el borrador visible; fuera de edición copia el texto guardado.
+- **Creación:** un fieldset nativo bloquea los campos de texto, color y botones mientras se envía el formulario. Se conservan los bloqueos explícitos de selectores y se ignoran callbacks tardíos para evitar modificar datos ya enviados. El fallo mantiene nombre, descripción, detalle y color; permite reintentar. No cambia el diseño compacto del formulario.
+
+Verificación **local**:
+
+- Build de producción y tipos aprobados: `TLOZ_DATA_DRIVER=mock AUTH_SECRET=zipform-local-e2e-only node node_modules/next/dist/bin/next build`, desde `apps/dashboard`.
+- **19/19 pruebas focalizadas aprobadas**: `node apps/dashboard/node_modules/vitest/vitest.mjs run apps/dashboard/components/tloz/mission-detail-ui.test.ts apps/dashboard/components/tloz/tloz-create.test.ts apps/dashboard/components/tloz/slide-over-contract.test.ts`, desde la raíz.
+- **58/58 E2E aprobados**, Chrome, **1.5 min**: `CI=1 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`, desde `apps/dashboard`.
+- Tras ajustar únicamente el borde de foco, build y tipos aprobados de nuevo; **2/2 E2E de Markdown aprobados**, **4.5 s**, mediante `--grep 'markdown keeps|markdown editing'`. Captura final a 1440 × 900 revisada: borde completo dentro del campo, mensaje y botones visibles.
+- `git diff --check`: aprobado.
+- Casos focalizados aprobados: creación de Mission con fallo y reintento, bloqueo de nombre/descripción/color en Project, error y foco de Markdown, copia del borrador y cancelación con Escape o botón sin cerrar el panel. El selector de creación de Project se acotó al botón de la vista tras detectar dos controles con el mismo nombre al abrir Control.
+
+Sesiones sintéticas y datos mock locales; portapapeles probado únicamente con texto del fixture en Chrome automatizado. Autenticación real y CI sin verificar; PR a cargo del usuario según el acuerdo previo. Sin cambios de API, dependencias ni migraciones. Capturas y borrador del PR excluidos de Git.
