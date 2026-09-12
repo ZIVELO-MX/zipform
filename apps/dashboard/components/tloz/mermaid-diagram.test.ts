@@ -18,7 +18,7 @@ describe("Mermaid Markdown diagrams", () => {
     expect(source).toContain("Diagrama Mermaid inválido");
     expect(source).toContain("<code>{source}</code>");
     expect(markdownSource).toContain("if (isMermaidCodeBlock(className))");
-    expect(markdownSource).toContain('<code className={className} {...props} />');
+    expect(markdownSource).toContain('<code className={`${className ?? ""} break-words`} {...props} />');
   });
 
   it("opens the rendered diagram as a lightbox image", () => {
