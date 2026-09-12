@@ -8,7 +8,7 @@ import type {
   UserProfile,
 } from "@tloz/types";
 import { parseMarkdownChecklist } from "@tloz/data";
-import { SlideOver, toast } from "@tloz/ui";
+import { Button, EmptyState, SlideOver, toast } from "@tloz/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -64,7 +64,7 @@ export function DocumentViewRenderer({
   fallback,
   missionRecords,
 }: DocumentViewRendererProps) {
-  const { state } = useTlozViewState();
+  const { state, serverQuery, queryPending } = useTlozViewState();
   const router = useRouter();
   const isMobile = useIsMobile();
   const [selected, setSelected] = useState<TlozDocument | null>(null);
@@ -75,13 +75,13 @@ export function DocumentViewRenderer({
   );
   const statusOptions = definition.fields.find((field) => field.key === "status")?.options ?? [];
   const visibleRecords = useMemo(
-    () => filterAndSortTlozRecords(
+    () => serverQuery ? displayRecords : filterAndSortTlozRecords(
       displayRecords,
       state,
       statusOptions,
       { defaultSort: definition.kind === "mission" ? "dependencies" : "source" },
     ),
-    [definition.kind, displayRecords, state, statusOptions],
+    [definition.kind, displayRecords, serverQuery, state, statusOptions],
   );
 
   function openDocument(document: TlozDocument) {
@@ -118,13 +118,13 @@ export function DocumentViewRenderer({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div aria-busy={queryPending} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <TlozViewHeader
           title={collectionViewConfig[collectionView].title}
-          description={collectionViewConfig[collectionView].description}
+          description={definition.kind === "mission" ? collectionViewConfig[collectionView].description : `${definition.kind === "project" ? "Projects" : "Inventory"} · ${visibleRecords.length} ${visibleRecords.length === 1 ? "elemento" : "elementos"}`}
         />
         <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
-          {state.view === "list" ? (
+          {visibleRecords.length === 0 ? <EmptyState title="Sin coincidencias" description="Ajusta los filtros o crea un elemento desde Control." /> : state.view === "list" ? (
             <MissionList missions={visibleRecords} grouping={state.grouping} statusOptions={statusOptions} documentKind={definition.kind} onSelect={openRecord} />
           ) : (
             <MissionTable missions={visibleRecords} statusOptions={statusOptions} documentKind={definition.kind} onSelect={openRecord} />
@@ -216,6 +216,7 @@ function MissionDocumentDetail({ document, panel = false }: { document: TlozDocu
     canMove: boolean;
   } | null>(null);
   const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -248,9 +249,9 @@ function MissionDocumentDetail({ document, panel = false }: { document: TlozDocu
     return () => {
       active = false;
     };
-  }, [document.publicId, document.source?.id]);
+  }, [document.publicId, document.source?.id, attempt]);
 
-  if (error) return <div className="p-6 text-sm font-semibold text-[#B91C22]" role="alert">No se pudo cargar la Mission.</div>;
+  if (error) return <DocumentDetailError onRetry={() => setAttempt((value) => value + 1)} />;
   if (!result) return <DocumentDetailLoading label="Cargando Mission…" />;
   return <MissionDetail mission={result.mission} options={result.options} canUpdate={result.canUpdate} canMove={result.canMove} variant={panel ? "panel" : "full"} />;
 }
@@ -270,10 +271,13 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
     resources: [],
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setError(false);
     setDetail((current) => ({ ...current, document: props.document }));
     const entityId = props.document.source?.id ?? props.document.id;
     void Promise.all([
@@ -293,6 +297,7 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
     }).catch(() => {
       if (active) {
         setLoading(false);
+        setError(true);
         setDetail((current) => ({
           ...current,
           canUpdate: false,
@@ -303,8 +308,9 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
     return () => {
       active = false;
     };
-  }, [props.document.id]);
+  }, [props.document.id, attempt]);
 
+  if (error) return <DocumentDetailError onRetry={() => setAttempt((value) => value + 1)} />;
   if (loading) return <DocumentDetailLoading label="Cargando documento…" />;
 
   const mission = documentToDetailMission(detail.document, props.users, detail.resources);
@@ -379,6 +385,10 @@ function DocumentRecordDetail(props: Extract<DocumentDetailProps, { document: Tl
       onNavigateQuestItem={undefined}
     />
   );
+}
+
+function DocumentDetailError({ onRetry }: { onRetry: () => void }) {
+  return <div className="flex flex-col items-start gap-3 p-6" role="alert"><p className="m-0 text-sm font-semibold text-zivelo">No se pudo cargar el documento.</p><Button type="button" variant="outline" size="sm" onClick={onRetry}>Reintentar</Button></div>;
 }
 
 function DocumentDetailLoading({ label }: { label: string }) {

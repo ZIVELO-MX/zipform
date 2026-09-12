@@ -7,6 +7,7 @@ import type {
 import {
   ContainerContentError,
   canonicalContainerContentJson,
+  type ContainerFilters,
   type ContainerContentSnapshot,
   type ContainerContentStore,
   type ContainerCreateInput,
@@ -14,6 +15,7 @@ import {
   type ContentFilters,
   type ContentUpdate,
   type MigrationReport,
+  type StoreSort,
   getContentReferenceIds,
   validateContainerRecord,
   validateContentRecord,
@@ -23,10 +25,7 @@ import { PaginationCursorError } from "../pagination";
 
 type DbClient = PrismaClient | Prisma.TransactionClient;
 
-const toJson = (value: unknown) => value as Prisma.InputJsonValue;
-const toIso = (value: Date) => value.toISOString();
-
-function mapContainer(row: {
+type ContainerDbRow = {
   id: string;
   publicId: string;
   slug: string | null;
@@ -39,7 +38,14 @@ function mapContainer(row: {
   revision: number;
   createdAt: Date;
   updatedAt: Date;
-}): ContainerRecord {
+};
+
+type ContentDbRow = Omit<ContainerDbRow, "slug" | "definition"> & { containerId: string };
+
+const toJson = (value: unknown) => value as Prisma.InputJsonValue;
+const toIso = (value: Date) => value.toISOString();
+
+function mapContainer(row: ContainerDbRow): ContainerRecord {
   return {
     ...row,
     slug: row.slug ?? undefined,
@@ -50,19 +56,7 @@ function mapContainer(row: {
   };
 }
 
-function mapContent(row: {
-  id: string;
-  publicId: string;
-  containerId: string;
-  presentation: string;
-  title: string;
-  summary: string;
-  body: string;
-  data: Prisma.JsonValue;
-  revision: number;
-  createdAt: Date;
-  updatedAt: Date;
-}): ContentRecord {
+function mapContent(row: ContentDbRow): ContentRecord {
   return {
     ...row,
     data: row.data as ContentRecord["data"],
@@ -86,6 +80,7 @@ function commonData(record: ContainerRecord | ContentRecord) {
 }
 
 function translatePrismaError(error: unknown, cursor?: string): never {
+  if (error instanceof PaginationCursorError) throw error;
   if (error instanceof ContainerContentError) throw error;
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === "P2025") {
@@ -115,6 +110,111 @@ function translatePrismaError(error: unknown, cursor?: string): never {
     {},
     { cause: error },
   );
+}
+
+const containerColumns = () => Prisma.sql`
+  "id", "publicId", "slug", "presentation", "title", "summary", "body",
+  "definition", "data", "revision", "createdAt", "updatedAt"
+`;
+const contentColumns = () => Prisma.sql`
+  "id", "publicId", "containerId", "presentation", "title", "summary", "body",
+  "data", "revision", "createdAt", "updatedAt"
+`;
+const ownerExpression = () => Prisma.sql`COALESCE(
+  CASE WHEN jsonb_typeof("data" -> 'owner') = 'string' THEN "data" ->> 'owner' END,
+  CASE WHEN jsonb_typeof("data" -> 'assignee') = 'string' THEN "data" ->> 'assignee' END,
+  CASE WHEN jsonb_typeof("data" -> 'ownerId') = 'string' THEN "data" ->> 'ownerId' END
+)`;
+const statusExpression = () => Prisma.sql`
+  CASE WHEN jsonb_typeof("data" -> 'status') = 'string' THEN "data" ->> 'status' END
+`;
+
+function queryWhere(filters: ContainerFilters | ContentFilters): Prisma.Sql {
+  const conditions: Prisma.Sql[] = [];
+  if (filters.presentation) conditions.push(Prisma.sql`"presentation" = ${filters.presentation}`);
+  if ("containerId" in filters && filters.containerId) {
+    conditions.push(Prisma.sql`"containerId" = ${filters.containerId}`);
+  }
+  if (filters.ownerId) {
+    conditions.push(Prisma.sql`${ownerExpression()} = ${filters.ownerId}`);
+  }
+  if (filters.excludedStatuses?.length) {
+    conditions.push(Prisma.sql`
+      (${statusExpression()} IS NULL OR ${statusExpression()} NOT IN (${Prisma.join(filters.excludedStatuses)}))
+    `);
+  }
+  if ("data" in filters && filters.data) {
+    for (const [key, value] of Object.entries(filters.data)) {
+      conditions.push(Prisma.sql`("data" -> ${key}::text) = ${JSON.stringify(value)}::jsonb`);
+    }
+  }
+  return conditions.length ? Prisma.join(conditions, " AND ") : Prisma.sql`TRUE`;
+}
+
+function dateExpression(sort: StoreSort): Prisma.Sql {
+  return sort === "due-date"
+    ? Prisma.sql`NULLIF(COALESCE(
+        CASE WHEN jsonb_typeof("data" -> 'due') = 'string' THEN "data" ->> 'due' END,
+        CASE WHEN jsonb_typeof("data" -> 'dueDate') = 'string' THEN "data" ->> 'dueDate' END
+      ), '')`
+    : Prisma.sql`NULLIF(COALESCE(
+        CASE WHEN jsonb_typeof("data" -> 'acquired') = 'string' THEN "data" ->> 'acquired' END,
+        CASE WHEN jsonb_typeof("data" -> 'acquiredAt') = 'string' THEN "data" ->> 'acquiredAt' END
+      ), '')`;
+}
+
+function queryOrder(sort?: StoreSort): Prisma.Sql {
+  if (sort === "title") return Prisma.sql`"title" ASC, "id" ASC`;
+  if (sort) return Prisma.sql`${dateExpression(sort)} ASC NULLS LAST, "id" ASC`;
+  return Prisma.sql`"updatedAt" DESC, "id" ASC`;
+}
+
+function jsonString(data: Prisma.JsonValue, keys: string[]): string | undefined {
+  if (!data || Array.isArray(data) || typeof data !== "object") return undefined;
+  const value = keys.map((key) => data[key]).find((candidate) => typeof candidate === "string");
+  return typeof value === "string" && value ? value : undefined;
+}
+
+function queryAfter(sort: StoreSort | undefined, cursor: ContainerDbRow | ContentDbRow): Prisma.Sql {
+  if (sort === "title") {
+    return Prisma.sql`AND ("title" > ${cursor.title} OR ("title" = ${cursor.title} AND "id" > ${cursor.id}))`;
+  }
+  if (sort) {
+    const expression = dateExpression(sort);
+    const value = jsonString(cursor.data, sort === "due-date" ? ["due", "dueDate"] : ["acquired", "acquiredAt"]);
+    return value
+      ? Prisma.sql`AND (${expression} > ${value} OR ${expression} IS NULL OR (${expression} = ${value} AND "id" > ${cursor.id}))`
+      : Prisma.sql`AND (${expression} IS NULL AND "id" > ${cursor.id})`;
+  }
+  return Prisma.sql`AND ("updatedAt" < ${cursor.updatedAt} OR ("updatedAt" = ${cursor.updatedAt} AND "id" > ${cursor.id}))`;
+}
+
+async function queryPage<Row extends ContainerDbRow | ContentDbRow>(
+  prisma: PrismaClient,
+  kind: "container" | "content",
+  filters: ContainerFilters | ContentFilters,
+  pagination: { limit?: number; cursor?: string },
+): Promise<Row[]> {
+  const table = kind === "container" ? Prisma.sql`"containers"` : Prisma.sql`"contents"`;
+  const columns = kind === "container" ? containerColumns() : contentColumns();
+  const where = queryWhere(filters);
+  let after = Prisma.empty;
+  if (pagination.cursor) {
+    const cursorRows = await prisma.$queryRaw<Row[]>(Prisma.sql`
+      SELECT ${columns} FROM ${table}
+      WHERE ${where} AND "id" = ${pagination.cursor}
+      LIMIT 1
+    `);
+    if (!cursorRows[0]) throw new PaginationCursorError(pagination.cursor);
+    after = queryAfter(filters.sort, cursorRows[0]);
+  }
+  const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
+  return prisma.$queryRaw<Row[]>(Prisma.sql`
+    SELECT ${columns} FROM ${table}
+    WHERE ${where} ${after}
+    ORDER BY ${queryOrder(filters.sort)}
+    LIMIT ${limit + 1}
+  `);
 }
 
 export function createPrismaContainerContentStore(prisma: PrismaClient): ContainerContentStore {
@@ -275,7 +375,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
       } catch (error) { return translatePrismaError(error); }
     },
 
-    async listContents(filters: ContentFilters = {}) {
+    async listContents(filters: Pick<ContentFilters, "containerId" | "presentation" | "data"> = {}) {
       try {
         const rows = await prisma.content.findMany({
           where: {
@@ -298,12 +398,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
     async findContainers(filters = {}, pagination = {}) {
       try {
         const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
-        const rows = await prisma.container.findMany({
-          where: { presentation: filters.presentation },
-          orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
-          take: limit + 1,
-          ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
-        });
+        const rows = await queryPage<ContainerDbRow>(prisma, "container", filters, pagination);
         const data = rows.slice(0, limit).map(mapContainer);
         return { data, nextCursor: rows.length > limit ? data.at(-1)?.id ?? null : null };
       } catch (error) {
@@ -314,20 +409,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
     async findContents(filters: ContentFilters = {}, pagination = {}) {
       try {
         const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
-        const rows = await prisma.content.findMany({
-          where: {
-            containerId: filters.containerId,
-            presentation: filters.presentation,
-            ...(filters.data ? {
-              AND: Object.entries(filters.data).map(([key, value]) => ({
-                data: { path: [key], equals: toJson(value) },
-              })),
-            } : {}),
-          },
-          orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
-          take: limit + 1,
-          ...(pagination.cursor ? { cursor: { id: pagination.cursor }, skip: 1 } : {}),
-        });
+        const rows = await queryPage<ContentDbRow>(prisma, "content", filters, pagination);
         const data = rows.slice(0, limit).map(mapContent);
         return { data, nextCursor: rows.length > limit ? data.at(-1)?.id ?? null : null };
       } catch (error) {

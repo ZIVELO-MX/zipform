@@ -48,6 +48,7 @@ function DashboardLayoutClient({ children, user, capabilities, tlozProjects, pro
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(284);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [sidebarLoaded, setSidebarLoaded] = useState(false);
 
   const tlozSections = useMemo(
     () => buildTlozSections(tlozProjects ?? [], projectActiveCounts ?? new Map(), projectActivity ?? new Map()),
@@ -55,33 +56,40 @@ function DashboardLayoutClient({ children, user, capabilities, tlozProjects, pro
   );
 
   useEffect(() => {
-    setCollapsed(window.localStorage.getItem(SIDEBAR_STATE_KEY) === "collapsed");
+    try {
+      setCollapsed(window.localStorage.getItem(SIDEBAR_STATE_KEY) === "collapsed");
 
-    const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
-    if (storedWidth) {
-      const parsed = parseInt(storedWidth, 10);
-      if (!isNaN(parsed)) {
-        const clamped = Math.max(220, Math.min(500, parsed));
-        setSidebarWidth(clamped);
-        document.documentElement.style.setProperty("--sidebar-expanded", `${clamped}px`);
+      const storedWidth = window.localStorage.getItem(SIDEBAR_WIDTH_KEY);
+      if (storedWidth) {
+        const parsed = parseInt(storedWidth, 10);
+        if (!isNaN(parsed)) {
+          const clamped = Math.max(220, Math.min(500, parsed));
+          setSidebarWidth(clamped);
+          document.documentElement.style.setProperty("--sidebar-expanded", `${clamped}px`);
+        }
       }
-    }
+    } catch { /* Preferences are optional when browser storage is blocked. */ }
+    setSidebarLoaded(true);
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(SIDEBAR_STATE_KEY, collapsed ? "collapsed" : "expanded");
-  }, [collapsed]);
+    if (!sidebarLoaded) return;
+    try {
+      window.localStorage.setItem(SIDEBAR_STATE_KEY, collapsed ? "collapsed" : "expanded");
+    } catch { /* Keep using the in-memory sidebar state. */ }
+  }, [collapsed, sidebarLoaded]);
 
   const handleResize = useCallback((width: number) => {
     const clamped = Math.max(220, Math.min(500, width));
     setSidebarWidth(clamped);
-    window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(clamped));
+    document.documentElement.style.setProperty("--sidebar-expanded", `${clamped}px`);
+    try { window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(clamped)); } catch { /* Resizing remains available. */ }
   }, []);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const isModB = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b";
-      if (!isModB) return;
+      if (!isModB || event.defaultPrevented || (event.target instanceof HTMLElement && event.target.closest("input, textarea, select, [contenteditable=true]"))) return;
 
       event.preventDefault();
       setCollapsed((current) => !current);
@@ -102,18 +110,14 @@ function DashboardLayoutClient({ children, user, capabilities, tlozProjects, pro
   }, []);
 
   useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [mobileMenuOpen]);
+    const media = window.matchMedia("(min-width: 768px)");
+    const closeOnDesktop = () => { if (media.matches) setMobileMenuOpen(false); };
+    media.addEventListener("change", closeOnDesktop);
+    return () => media.removeEventListener("change", closeOnDesktop);
+  }, []);
 
   return (
-    <TlozCapabilitiesProvider capabilities={capabilities}><div
+    <TlozCapabilitiesProvider capabilities={capabilities} currentUserId={user.id}><div
       className="shell shell-tloz min-h-dvh bg-ivory text-carbon"
       data-sidebar={collapsed ? "collapsed" : "expanded"}
     >
@@ -144,7 +148,7 @@ function DashboardLayoutClient({ children, user, capabilities, tlozProjects, pro
         onOpenSettings={() => setSettingsOpen(true)}
       />
 
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} user={user} />
+      <SettingsDialog key={String(settingsOpen)} open={settingsOpen} onOpenChange={setSettingsOpen} user={user} />
     </div></TlozCapabilitiesProvider>
   );
 }

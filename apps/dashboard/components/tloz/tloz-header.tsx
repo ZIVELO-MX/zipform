@@ -14,7 +14,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@tloz/ui";
-import { TlozControl } from "./tloz-control";
+import { TlozControl, TlozViewSwitcher } from "./tloz-control";
 import { GlobalSearch } from "./global-search";
 
 type TlozHeaderProps = {
@@ -74,7 +74,7 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
             <Search size={17} aria-hidden="true" />
           </button> : null}
           {segments.length ? (
-            <Breadcrumb>
+            <Breadcrumb className="min-w-0">
               <BreadcrumbList className="flex-nowrap text-carbon/60">
                 {segments.map((segment, index) => {
                   const label = typeof segment === "string" ? segment : segment.label;
@@ -90,10 +90,11 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           ) : null}
         </div>
 
-        {showSearch ? <div className="hidden md:flex flex-1 justify-center">
+        {showSearch ? <div className="hidden min-w-0 flex-1 justify-center md:flex">
           <button
             type="button"
             className="tloz-command-trigger"
+            aria-label="Buscar documentos"
             onClick={() => setCommandOpen(true)}
           >
             <Search size={14} aria-hidden="true" />
@@ -102,7 +103,7 @@ export function TlozHeader({ title, projectLabel, detailLabel, breadcrumb, showS
           </button>
         </div> : null}
 
-        {showControls ? <div className="tloz-header-trailing"><TlozControl createControl={controlCreate} /></div> : null}
+        {showControls ? <div className="tloz-header-trailing gap-2"><TlozViewSwitcher /><TlozControl createControl={controlCreate} /></div> : null}
       </header>
 
       <GlobalSearch open={commandOpen} onOpenChange={setCommandOpen} />

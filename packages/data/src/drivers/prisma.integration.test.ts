@@ -240,6 +240,92 @@ describe("prisma integration", () => {
       await expect(client.containerContent.getContainer(createdContainer.id)).resolves.toBeNull();
     });
 
+    itIf(hasDb)("queries filtered and sorted pages with bound JSON values", async () => {
+      const ownerId = "agent-'quoted";
+      const quotedData = "O'Brien";
+      const containerIds = [
+        "query-integration-container-a",
+        "query-integration-container-b",
+        "query-integration-container-excluded",
+        "query-integration-container-precedence",
+      ];
+      const contentIds = [
+        "query-integration-content-a",
+        "query-integration-content-b",
+        "query-integration-content-c",
+        "query-integration-content-d",
+        "query-integration-content-excluded",
+        "query-integration-content-precedence",
+        "query-integration-content-other-data",
+      ];
+      const definition = {
+        fields: [],
+        views: [{ id: "default", fields: [] }],
+        defaultView: "default",
+      };
+
+      try {
+        await Promise.all([
+          client.containerContent.createContainer({ id: containerIds[0], publicId: containerIds[0], presentation: "query-test", title: "Alpha", summary: "", body: "", definition, data: { owner: ownerId, status: "active" } }),
+          client.containerContent.createContainer({ id: containerIds[1], publicId: containerIds[1], presentation: "query-test", title: "Alpha", summary: "", body: "", definition, data: { assignee: ownerId, status: "active" } }),
+          client.containerContent.createContainer({ id: containerIds[2], publicId: containerIds[2], presentation: "query-test", title: "000 excluded", summary: "", body: "", definition, data: { ownerId, status: "archived" } }),
+          client.containerContent.createContainer({ id: containerIds[3], publicId: containerIds[3], presentation: "query-test", title: "000 precedence", summary: "", body: "", definition, data: { owner: "other", assignee: ownerId, status: "active" } }),
+        ]);
+
+        const containerFilters = { presentation: "query-test", ownerId, excludedStatuses: ["archived"], sort: "title" as const };
+        const firstContainerPage = await client.containerContent.findContainers(containerFilters, { limit: 1 });
+        expect(firstContainerPage).toMatchObject({ data: [{ id: containerIds[0] }], nextCursor: containerIds[0] });
+        await expect(client.containerContent.findContainers(containerFilters, { cursor: containerIds[0] }))
+          .resolves.toMatchObject({ data: [{ id: containerIds[1] }], nextCursor: null });
+        await expect(client.containerContent.findContainers(containerFilters, { cursor: containerIds[2] }))
+          .rejects.toMatchObject({ name: "PaginationCursorError", cursor: containerIds[2] });
+
+        const content = (id: string, title: string, data: Record<string, string | null>) => ({
+          id,
+          publicId: id,
+          containerId: containerIds[0],
+          presentation: "query-item",
+          title,
+          summary: "",
+          body: "",
+          data,
+        });
+        await Promise.all([
+          client.containerContent.createContent(content(contentIds[0], "Alpha", { assignee: ownerId, status: "active", marker: quotedData, dueDate: "2026-01-15", acquired: "2026-02-15" })),
+          client.containerContent.createContent(content(contentIds[1], "Alpha", { ownerId, status: "active", marker: quotedData, due: "2026-01-15", acquiredAt: "2026-02-01" })),
+          client.containerContent.createContent(content(contentIds[2], "Beta", { owner: ownerId, status: "active", marker: quotedData, due: null, acquired: null })),
+          client.containerContent.createContent(content(contentIds[3], "Gamma", { ownerId, status: "active", marker: quotedData, due: "", acquired: "" })),
+          client.containerContent.createContent(content(contentIds[4], "000 excluded", { ownerId, status: "archived", marker: quotedData, due: "2025-01-01", acquired: "2025-01-01" })),
+          client.containerContent.createContent(content(contentIds[5], "000 precedence", { owner: "other", assignee: ownerId, status: "active", marker: quotedData, due: "2025-01-01", acquired: "2025-01-01" })),
+          client.containerContent.createContent(content(contentIds[6], "000 other data", { ownerId, status: "active", marker: "other", due: "2025-01-01", acquired: "2025-01-01" })),
+        ]);
+
+        const filters = {
+          containerId: containerIds[0],
+          presentation: "query-item",
+          ownerId,
+          excludedStatuses: ["archived"],
+          data: { marker: quotedData },
+        };
+        await expect(client.containerContent.findContents({ ...filters, sort: "title" }))
+          .resolves.toMatchObject({ data: contentIds.slice(0, 4).map((id) => ({ id })) });
+
+        const firstDuePage = await client.containerContent.findContents({ ...filters, sort: "due-date" }, { limit: 1 });
+        expect(firstDuePage).toMatchObject({ data: [{ id: contentIds[0] }], nextCursor: contentIds[0] });
+        await expect(client.containerContent.findContents({ ...filters, sort: "due-date" }, { limit: 1, cursor: contentIds[0] }))
+          .resolves.toMatchObject({ data: [{ id: contentIds[1] }], nextCursor: contentIds[1] });
+        await expect(client.containerContent.findContents({ ...filters, sort: "due-date" }, { cursor: contentIds[2] }))
+          .resolves.toMatchObject({ data: [{ id: contentIds[3] }], nextCursor: null });
+        await expect(client.containerContent.findContents({ ...filters, sort: "acquired-date" }))
+          .resolves.toMatchObject({ data: [contentIds[1], contentIds[0], contentIds[2], contentIds[3]].map((id) => ({ id })) });
+        await expect(client.containerContent.findContents({ ...filters, sort: "due-date" }, { cursor: contentIds[4] }))
+          .rejects.toMatchObject({ name: "PaginationCursorError", cursor: contentIds[4] });
+      } finally {
+        await prisma.content.deleteMany({ where: { id: { in: contentIds } } });
+        await prisma.container.deleteMany({ where: { id: { in: containerIds } } });
+      }
+    });
+
     itIf(hasDb)("backfills in dry-run/apply modes and reconciles legacy data", async () => {
       const dryRun = await backfillContainerContent(prisma, false);
       expect(dryRun).toMatchObject({ mode: "dry-run", containers: 6, contents: 1 });

@@ -52,7 +52,13 @@ export default function LoginPage() {
   async function handleZoho() {
     setErrors({});
     setLoading("zoho");
-    await signIn("zoho", { callbackUrl });
+    try {
+      await signIn("zoho", { callbackUrl });
+    } catch {
+      setErrors({ form: "No se pudo conectar con Zoho. Intenta nuevamente." });
+    } finally {
+      setLoading(null);
+    }
   }
 
   return (

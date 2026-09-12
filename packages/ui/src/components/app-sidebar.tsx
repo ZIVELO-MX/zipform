@@ -43,6 +43,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
+import { Dialog, DialogContent } from "./dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { cn } from "../lib/utils";
 
@@ -153,6 +154,8 @@ export function DesktopSidebar({
           size="icon"
           type="button"
           className={cn("shrink-0 transition-all duration-200", collapsed && "pointer-events-none scale-0 opacity-0")}
+          tabIndex={collapsed ? -1 : undefined}
+          aria-hidden={collapsed || undefined}
           aria-label="Contraer barra"
           title="Cmd+B"
           onClick={onToggleCollapsed}
@@ -211,6 +214,19 @@ export function DesktopSidebar({
           className="absolute inset-y-0 right-0 z-20 w-4 translate-x-1/2 cursor-col-resize after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] after:bg-transparent hover:after:bg-carbon/10 active:after:bg-carbon/20"
           onMouseDown={handleResizeStart}
           role="separator"
+          tabIndex={0}
+          aria-orientation="vertical"
+          aria-valuemin={SIDEBAR_MIN_WIDTH}
+          aria-valuemax={SIDEBAR_MAX_WIDTH}
+          aria-valuenow={sidebarWidth}
+          onKeyDown={(event) => {
+            const widths: Record<string, number> = { ArrowLeft: sidebarWidth - 20, ArrowRight: sidebarWidth + 20, Home: SIDEBAR_MIN_WIDTH, End: SIDEBAR_MAX_WIDTH };
+            if (!(event.key in widths)) return;
+            event.preventDefault();
+            const width = Math.max(SIDEBAR_MIN_WIDTH, Math.min(SIDEBAR_MAX_WIDTH, widths[event.key]));
+            document.documentElement.style.setProperty("--sidebar-expanded", `${width}px`);
+            onResize(width);
+          }}
           aria-label="Redimensionar barra lateral"
         />
       ) : null}
@@ -233,6 +249,7 @@ export function SidebarLink({
   const link = (
     <Link
       href={item.href}
+      aria-label={item.label}
       className={cn(
         "flex min-h-10 items-center gap-3 rounded-[10px] px-3 text-sm font-medium text-carbon/70 transition-colors hover:bg-carbon/5 hover:text-carbon focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zivelo",
         subtle && "text-carbon/55",
@@ -247,7 +264,7 @@ export function SidebarLink({
           <span className="flex-1 truncate">{item.label}</span>
           {item.badge != null ? (
             typeof item.badge === "number" ? (
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-carbon/10 text-[0.65rem] font-semibold text-carbon/60">
+              <span className={cn("flex size-5 shrink-0 items-center justify-center rounded-full text-[0.65rem] font-semibold", active ? "bg-white/15 text-white" : "bg-carbon/10 text-carbon/60")}>
                 {item.badge}
               </span>
             ) : (
@@ -349,15 +366,8 @@ export function MobileMenuPanel({
   onOpenSettings?: () => void;
 }) {
   return (
-    <div
-      className={cn(
-        "fixed inset-0 z-40 bg-paper transition-all duration-300 ease-in-out md:hidden",
-        open ? "translate-x-0 opacity-100" : "translate-x-full opacity-0 pointer-events-none"
-      )}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Menú de navegación"
-    >
+    <Dialog open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent title="Menú de navegación" className="inset-0 flex h-dvh max-h-none w-full max-w-none translate-x-0 translate-y-0 flex-col gap-0 rounded-none border-0 bg-paper shadow-none">
       <div className="flex h-full flex-col">
         <header className="flex h-16 items-center justify-between border-b border-carbon/10 px-4">
           <div className="flex items-center gap-3">
@@ -388,10 +398,11 @@ export function MobileMenuPanel({
         </nav>
 
         <div className="border-t border-carbon/10 px-4 py-4">
-          <ProfileDropdown collapsed={false} user={user} mobile onSignOut={onSignOut} onOpenSettings={onOpenSettings} />
+          <ProfileDropdown collapsed={false} user={user} mobile onSignOut={onSignOut} onOpenSettings={() => { onClose(); onOpenSettings?.(); }} />
         </div>
       </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -439,6 +450,7 @@ export function ProfileDropdown({ collapsed, user, mobile = false, onSignOut, on
         <DropdownMenuTrigger asChild>
           <button
             type="button"
+            aria-label={`Abrir perfil de ${user.name}`}
             className={cn(
               "flex min-h-12 w-full items-center gap-3 rounded-[12px] border border-transparent p-2 text-left transition-colors hover:border-carbon/10 hover:bg-carbon/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zivelo",
               collapsed && "justify-center border-0 p-0 hover:bg-transparent"

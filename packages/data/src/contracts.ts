@@ -183,6 +183,9 @@ export type DocumentFilters = {
   parentId?: string;
   query?: string;
   includeSystem?: boolean;
+  ownerId?: string;
+  excludedStatuses?: string[];
+  sort?: "title" | "due-date" | "acquired-date";
 };
 
 export type DocumentGetOptions = {

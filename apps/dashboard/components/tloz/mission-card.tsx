@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MissionDueDate } from "./mission-due-date";
 import { missionHref } from "../../lib/tloz-routes";
 import {
   CircleDot,
@@ -11,7 +12,7 @@ import {
 import { Avatar, AvatarFallback, Badge, Button, Card, CardContent, CardHeader, CardTitle, displayUsername, ToneBadge, Tooltip, TooltipContent, TooltipTrigger, UserAvatarLabel } from "@tloz/ui";
 import type { TlozMissionRecord } from "../../lib/tloz-data";
 import type { UserProfile } from "@tloz/types";
-import { dependencyLabel, formatDate, missionPreviewDescription, missionStatusLabel, missionTypeIcon, missionTypeLabel, missionTypeTone, pendingDependencyCount, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
+import { dependencyLabel, resolveStatusPresentation, missionPreviewDescription, missionStatusLabel, missionTypeIcon, missionTypeLabel, missionTypeTone, pendingDependencyCount, resolveIconLabel, resolveMissionIcon } from "./tloz-utils";
 
 const MAX_VISIBLE_QUEST_ITEMS = 3;
 
@@ -71,7 +72,7 @@ export function MissionCard({ mission, compact = false, onSelect }: { mission: T
         {!compact && mission.description ? <p className="tloz-card-description">{missionPreviewDescription(mission.description)}</p> : null}
         <div className="tloz-meta-row">
           <span>{mission.project?.name ?? "Sin proyecto"}</span>
-          <span>{formatDate(mission.dueDate)}</span>
+          <MissionDueDate date={mission.dueDate} completed={resolveStatusPresentation(mission.status).role === "done"} />
         </div>
         {mission.dependencies.length > 0 ? (
           <div className="tloz-dependency-row">
