@@ -1429,3 +1429,21 @@ test.describe("local due dates", () => {
     await expect(date("done")).toHaveAttribute("data-due-state", "completed");
   });
 });
+
+
+test.describe("local creation dates", () => {
+  test.use({ timezoneId: "America/Mexico_City" });
+  for (const [instant, day, year] of [
+    ["2026-09-10T19:30:00-06:00", "10", "2026"],
+    ["2026-12-31T19:30:00-06:00", "31", "2026"],
+  ]) {
+    test(`new project starts on the local day at ${instant}`, async ({ page }) => {
+      await authenticate(page);
+      await page.clock.setFixedTime(new Date(instant!));
+      await page.goto("/projects");
+      await page.getByRole("button", { name: "Crear nuevo Project", exact: true }).click();
+      const start = page.locator("dialog[open]").getByRole("button", { name: "Seleccionar fecha de inicio", exact: true });
+      await expect(start).toContainText(new RegExp(`^${day} .*${year}$`));
+    });
+  }
+});

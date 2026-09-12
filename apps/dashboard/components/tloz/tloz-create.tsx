@@ -13,6 +13,7 @@ import { resolveMissionIcon } from "./tloz-utils";
 import { TLOZ_ICON_OPTIONS } from "./tloz-icon-catalog";
 import { buildCreateInput, documentPropertyDefaults, splitCreateIds } from "./tloz-create-input";
 import { initialDraft } from "./tloz-create-defaults";
+import { calendarDateKey } from "./mission-calendar-utils";
 import { AddDependency, AddResource } from "./mission-detail";
 import { MissionPropertyFields, type MissionPropertyValues } from "./mission-inline-editor";
 import { CreateDocumentPropertyInputs } from "./document-property-fields";
@@ -63,7 +64,8 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
   const toasterId = useOverlayToasterId();
   const [pending, startTransition] = useTransition();
   const submitting = useRef(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const today = calendarDateKey({ year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() });
   const defaultOwnerId = users.find((user) => user.username === "zibot")?.id ?? users[0]?.id ?? "";
   const defaultProjectId = fixedProjectId ?? projects.find((project) => project.slug === "zivelo")?.id ?? projects[0]?.id ?? "";
   function freshDraft() {
