@@ -27,7 +27,7 @@ test.beforeAll(async ({ request }) => {
 });
 
 async function authenticate(page: Page) {
-  await page.route("http://127.0.0.1:3100/api/v*/**", (route) => route.continue({
+  await page.route(`${test.info().project.use.baseURL}/api/v*/**`, (route) => route.continue({
     headers: { ...route.request().headers(), authorization: "Bearer zipform-local-e2e-api-only" },
   }));
   const value = await encode({
@@ -35,7 +35,7 @@ async function authenticate(page: Page) {
     salt: "authjs.session-token",
     token: { sub: "owner", name: "Owner", username: "owner", role: "Platform Owner", type: "human" },
   });
-  await page.context().addCookies([{ name: "authjs.session-token", value, url: "http://127.0.0.1:3100" }]);
+  await page.context().addCookies([{ name: "authjs.session-token", value, url: test.info().project.use.baseURL! }]);
 }
 
 async function settings(page: Page) {
@@ -213,7 +213,7 @@ test("mobile creation preserves project context, validates and saves", async ({ 
   await page.getByLabel("Título", { exact: false }).fill("E2E mobile mission");
   await page.getByLabel(/^Descripción/).fill("Created using the isolated mock driver.");
   await save.click();
-  await expect(page).toHaveURL("http://127.0.0.1:3100/");
+  await expect(page).toHaveURL(new URL("/", test.info().project.use.baseURL).href);
 });
 
 test("restricted browser storage does not crash the app shell", async ({ page }) => {
@@ -484,7 +484,7 @@ test("search distinguishes documents with identical titles and context", async (
   await expect(hits.last()).toHaveAttribute("aria-selected", "true");
   await expect(hits.first()).toHaveAttribute("aria-selected", "false");
   await page.keyboard.press("Enter");
-  await expect(page).toHaveURL("http://127.0.0.1:3100/inventory");
+  await expect(page).toHaveURL(new URL("/inventory", test.info().project.use.baseURL).href);
 });
 
 test("mission completion recovers from a failed save without duplicate submissions", async ({ page }) => {
@@ -633,6 +633,43 @@ test("markdown editing keeps focus, copies the current draft and cancels without
   await panel.getByRole("button", { name: "Cancelar", exact: true }).click();
   await expect(options).toBeFocused();
   await expect(panel).toBeVisible();
+});
+
+test("task panel blocks dismissal while saving and preserves the draft after failure", async ({ page, request }) => {
+  const seeded = await request.put("/api/v1/missions/mission-dashboard/document", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: { markdown: "" } });
+  expect(seeded.ok(), await seeded.text()).toBe(true);
+  await authenticate(page);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+  const panel = page.locator("dialog[open]");
+  await panel.getByRole("button", { name: "Añadir detalle", exact: true }).click();
+  const draft = panel.getByRole("textbox", { name: "Detalle en Markdown", exact: true });
+  await draft.fill("Borrador protegido durante guardado");
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    await gate;
+    await route.abort("failed");
+  });
+  try {
+    await panel.getByRole("button", { name: "Guardar", exact: true }).click();
+    await expect(draft).toBeDisabled();
+    await expect(panel.getByRole("button", { name: "Cerrar", exact: true })).toBeDisabled();
+    await expect(panel.getByRole("button", { name: "Cerrar panel", exact: true })).toBeDisabled();
+    await page.keyboard.press("Escape");
+    await expect(panel).toBeVisible();
+    release();
+    await expect(draft).toBeEnabled();
+    await expect(draft).toHaveValue("Borrador protegido durante guardado");
+    await expect(panel.getByRole("button", { name: "Cerrar", exact: true })).toBeEnabled();
+    await page.unroute("**/");
+    await panel.getByRole("button", { name: "Guardar", exact: true }).click();
+    await expect(draft).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: "Cerrar", exact: true })).toBeEnabled();
+    await panel.getByRole("button", { name: "Cerrar", exact: true }).click();
+    await expect(panel).toHaveCount(0);
+  } finally { release(); }
 });
 
 test("an invalid collection cursor offers a working first page without losing filters", async ({ page }) => {
@@ -807,7 +844,7 @@ test("read-only task relations keep navigation and hide mutation actions", async
   const value = await encode({ secret: "zipform-local-e2e-only", salt: "authjs.session-token", token: {
     sub: "e2e-reader", name: "Reader", username: "reader", role: "agent:reader", type: "agent",
   } });
-  await page.context().addCookies([{ name: "authjs.session-token", value, url: "http://127.0.0.1:3100" }]);
+  await page.context().addCookies([{ name: "authjs.session-token", value, url: test.info().project.use.baseURL! }]);
   await page.goto("/");
   await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
   const panel = page.locator("dialog[open]");
@@ -846,7 +883,9 @@ test("resource form retains failed drafts and retries without duplicate attachme
   await expect(form).toHaveAttribute("aria-busy", "true");
   await expect(form.getByRole("button", { name: "Adjuntar recurso", exact: true })).toBeDisabled();
   await expect(form.getByRole("button", { name: "Cancelar", exact: true })).toBeDisabled();
+  await expect(panel.getByRole("button", { name: "Cerrar", exact: true })).toBeDisabled();
   await expect(form.getByRole("alert")).toContainText("No se pudo adjuntar");
+  await expect(panel.getByRole("button", { name: "Cerrar", exact: true })).toBeEnabled();
   await expect(form.getByLabel("Título del recurso")).toHaveValue("Recurso con reintento");
   await expect(form.getByLabel("URL del recurso")).toHaveValue("https://example.com/reference");
   expect(attempts).toBe(1);
@@ -1149,6 +1188,7 @@ test("checklist saves serialize changes and deletion stays open after a failure"
   await expect(draft).toHaveValue("Borrador conservado al filtrar");
   await expect(draft).toBeFocused();
   await expect(draft).toHaveAttribute("aria-busy", "false");
+  await expect(panel.getByRole("button", { name: "Cerrar", exact: true })).toBeEnabled();
   expect(attempts).toBe(5);
   await draft.press("Escape");
 });

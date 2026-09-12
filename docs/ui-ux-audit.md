@@ -295,3 +295,23 @@ Verificación **local**:
 - Casos focalizados aprobados: creación de Mission con fallo y reintento, bloqueo de nombre/descripción/color en Project, error y foco de Markdown, copia del borrador y cancelación con Escape o botón sin cerrar el panel. El selector de creación de Project se acotó al botón de la vista tras detectar dos controles con el mismo nombre al abrir Control.
 
 Sesiones sintéticas y datos mock locales; portapapeles probado únicamente con texto del fixture en Chrome automatizado. Autenticación real y CI sin verificar; PR a cargo del usuario según el acuerdo previo. Sin cambios de API, dependencias ni migraciones. Capturas y borrador del PR excluidos de Git.
+
+
+## Decimotercera revisión: fecha local y cierre durante guardados
+
+Fecha: 2026-09-11. Rama `fix/desktop-date-and-dismissal`, basada en `192d026`. Auditoría con dos fallos reproducidos y corrección acotada; revisión independiente del bloqueo por subagente.
+
+- **Fecha inicial:** crear un Project a las 19:30 en Ciudad de México mostraba el día siguiente por usar `toISOString()`. Ahora se reutiliza el formateador del calendario con año, mes y día locales. Se comprueban una tarde normal y la noche del 31 de diciembre.
+- **Cierre del detalle:** el botón Cerrar permitía descartar un borrador durante su guardado; si fallaba, al reabrir se perdía el texto. SlideOver ahora registra los guardados pendientes de sus descendientes y bloquea Cerrar, fondo, Escape y Volver hasta que todos terminan. Cada registro se libera al resolver, fallar o desmontar el componente, sin afectar otros paneles.
+- **Cobertura:** el detalle registra sus guardados de cuerpo, historial y propiedades; los formularios de subtareas, relaciones y recursos registran también sus operaciones locales. Los errores conservan el borrador y el cierre vuelve a estar disponible.
+- **Entorno de pruebas:** Playwright acepta `PLAYWRIGHT_PORT` y obtiene URLs de autenticación y navegación de la configuración. Se utilizó 3131 porque 3100 estaba ocupado por otro proyecto, sin detenerlo. El guion de diagnóstico temporal quedó fuera de la suite y excluido de Git.
+
+Verificación **local**:
+
+- Build de producción y tipos aprobados: `TLOZ_DATA_DRIVER=mock AUTH_SECRET=zipform-local-e2e-only node node_modules/next/dist/bin/next build`, desde `apps/dashboard`.
+- **23/23 pruebas focalizadas aprobadas**: `node apps/dashboard/node_modules/vitest/vitest.mjs run apps/dashboard/components/tloz/slide-over-contract.test.ts apps/dashboard/components/tloz/tloz-create.test.ts apps/dashboard/components/tloz/mission-calendar.test.ts apps/dashboard/components/tloz/mission-detail-ui.test.ts`, desde la raíz.
+- **5/5 E2E focalizados aprobados**, 12.0 s: cierre durante guardado, recursos, checklist y fechas locales.
+- **61/61 E2E aprobados**, Chrome, **1.4 min**: `CI=1 PLAYWRIGHT_PORT=3131 PLAYWRIGHT_CHANNEL=chrome node node_modules/@playwright/test/cli.js test`, desde `apps/dashboard`.
+- `git diff --check`: aprobado.
+
+El bloqueo cubre los controles de cierre del panel; no es una persistencia de borradores frente a recargar o abandonar la página. Sesiones sintéticas y datos mock; autenticación real y CI sin verificar. PR a cargo del usuario según el acuerdo previo. Sin APIs HTTP, migraciones ni dependencias nuevas; capturas y descripción del PR excluidas de Git.

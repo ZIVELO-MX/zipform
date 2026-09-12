@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Check, FileStack, Images, MoreHorizontal, PanelRightOpen, Pencil, Plus, Trash2, X } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@tloz/ui";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EntityPicker, IconPicker, Input, MetricProgress, ResourcePreview, SegmentedControl, Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue, Separator, toast, Tooltip, TooltipContent, TooltipTrigger, useOverlayToasterId, useSlideOverPending, type EntityPickerOption, type IconPickerOption, type ResourcePreviewSlide } from "@tloz/ui";
 import type { TlozMissionDetail, TlozMissionRecord } from "../../lib/tloz-data";
 import type { TlozAttachmentGroup, TlozDocument, TlozDocumentUpdate, TlozFieldOption, TlozProject, TlozQuestItem, TlozResource, TlozResourceType } from "@tloz/types";
 import {
@@ -99,6 +99,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   const [customPropertiesPending, setCustomPropertiesPending] = useState(false);
   const propertiesPending = inlinePropertiesPending || customPropertiesPending;
   const bodyPending = documentPending || isPending || propertiesPending;
+  useSlideOverPending(bodyPending);
   const toasterId = useOverlayToasterId();
   const tone = missionTypeTone[current.type];
   const isMissionDocument = (options.document?.kind ?? "mission") === "mission";
@@ -546,6 +547,7 @@ function AddChecklistTask({ onAdd, disabled = false }: { onAdd: (title: string) 
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [saving, setSaving] = useState(false);
+  useSlideOverPending(saving);
   const cancelled = useRef(false);
   const inFlight = useRef(false);
   const input = useRef<HTMLInputElement>(null);
@@ -592,6 +594,7 @@ export function AddDependency({ missions, questItems, relationType, onAddMission
   const [selectedKind, setSelectedKind] = useState<"mission" | "quest">(missions.length || !questItems.length ? "mission" : "quest");
   const [selectedId, setSelectedId] = useState("");
   const [saving, setSaving] = useState(false);
+  useSlideOverPending(saving);
   const [error, setError] = useState("");
   const inFlight = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -789,6 +792,7 @@ export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => vo
   const [type, setType] = useState<TlozResourceType>("link");
   const [icon, setIcon] = useState("");
   const [saving, setSaving] = useState(false);
+  useSlideOverPending(saving);
   const [error, setError] = useState("");
   const inFlight = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
