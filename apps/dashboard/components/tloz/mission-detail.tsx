@@ -313,7 +313,7 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
   }
 
   function removeResource(resource: TlozResource) {
-    mutate("Quitando recurso…", async () => {
+    return mutate("Quitando recurso…", async () => {
       if (onRemoveResource) {
         const resources = await onRemoveResource(resource.id);
         return { ...current, resources };
@@ -476,19 +476,19 @@ export function MissionDetail({ mission, options, canUpdate = true, canMove = ca
           <RelationsSection className="mt-7" title="Recursos">
             <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
               {MISSION_ATTACHMENT_UPLOAD_UI_ENABLED ? <MissionAttachmentUploader missionId={current.id} resources={current.resources.filter((resource) => Boolean(resource.groupKey && resource.externalKey))} canUpdate={canUpdate} onGroupCompleted={acceptAttachmentGroup} /> : null}
-              <MissionResourceReferences resources={current.resources} onRemove={canUpdate ? (resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id)) : undefined} />
+              <MissionResourceReferences resources={current.resources} disabled={bodyPending} onRemove={canUpdate ? (resource) => mutate("Quitando recurso…", () => removeMissionResource(current.id, resource.id)) : undefined} />
               {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
             </div>
-            {canUpdate ? <AddResource onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} /> : null}
+            {canUpdate ? <AddResource disabled={bodyPending} onAdd={(input) => mutate("Adjuntando recurso…", () => addMissionResource(current.id, input))} /> : null}
           </RelationsSection></> : null}
 
           {!isMissionDocument ? (
             <RelationsSection className="mt-7" title="Recursos">
               <div className="mission-resource-grid grid grid-cols-2 gap-2.5">
-                <MissionResourceReferences resources={current.resources} onRemove={canUpdateDocument ? removeResource : undefined} />
+                <MissionResourceReferences resources={current.resources} disabled={bodyPending} onRemove={canUpdateDocument ? removeResource : undefined} />
                 {!current.resources.length ? <EmptyText>Sin recursos adjuntos.</EmptyText> : null}
               </div>
-              {canUpdateDocument ? <AddResource onAdd={addResource} /> : null}
+              {canUpdateDocument ? <AddResource disabled={bodyPending} onAdd={addResource} /> : null}
             </RelationsSection>
           ) : null}
         </div>
@@ -685,13 +685,86 @@ function MissionReferences({ missions, project, statusOptions = [], onRemove, on
   })}</div>;
 }
 
-function MissionResourceReferences({ resources, onRemove }: { resources: TlozResource[]; onRemove?: (resource: TlozResource) => void }) {
+function MissionResourceReferences({ resources, disabled = false, onRemove }: { resources: TlozResource[]; disabled?: boolean; onRemove?: (resource: TlozResource) => Promise<boolean> }) {
+  const [pendingResource, setPendingResource] = useState<TlozResource | null>(null);
+  const [removalPending, setRemovalPending] = useState(false);
+  const [removalError, setRemovalError] = useState("");
+  const removalTrigger = useRef<HTMLElement | null>(null);
+  const focusAfterClose = useRef<"trigger" | "section" | null>(null);
+  const sectionRef = useRef<HTMLDivElement>(null);
   const { groups, standalone } = groupMissionResources(resources);
   const previewSlides: ResourcePreviewSlide[] = standalone.flatMap((resource) => {
     const src = resolveResourceImageUrl(resource);
     return src ? [{ id: resource.id, src, alt: resource.title, title: resource.title }] : [];
   });
-  return <>{groups.map((group) => <MissionAttachmentGroupReference key={group.groupKey} group={group} />)}{standalone.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} onRemove={onRemove ? () => onRemove(resource) : undefined} />)}</>;
+  useEffect(() => {
+    if (pendingResource !== null || focusAfterClose.current !== "section") return;
+    const focusTarget = sectionRef.current?.closest("section")?.querySelector<HTMLButtonElement>("[data-resource-add-trigger]");
+    if (!focusTarget) { focusAfterClose.current = null; return; }
+    if (focusTarget.disabled) return;
+    focusAfterClose.current = null;
+    focusTarget.focus({ preventScroll: true });
+  }, [disabled, pendingResource]);
+
+  function restoreFocus(event: Event) {
+    if (!focusAfterClose.current) return;
+    if (focusAfterClose.current === "section") {
+      event.preventDefault();
+      return;
+    }
+    const focusTarget = removalTrigger.current;
+    event.preventDefault();
+    focusAfterClose.current = null;
+    focusTarget?.focus({ preventScroll: true });
+  }
+
+  function requestRemoval(resource: TlozResource) {
+    if (disabled || removalPending || !onRemove) return;
+    removalTrigger.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setRemovalError("");
+    setPendingResource(resource);
+  }
+
+  function cancelRemoval() {
+    if (removalPending) return;
+    focusAfterClose.current = "trigger";
+    setPendingResource(null);
+    setRemovalError("");
+  }
+
+  async function confirmRemoval() {
+    if (removalPending || !pendingResource || !onRemove) return;
+    setRemovalPending(true);
+    setRemovalError("");
+    try {
+      if (!await onRemove(pendingResource)) {
+        setRemovalError("No se pudo eliminar el recurso. Intenta de nuevo.");
+        return;
+      }
+      focusAfterClose.current = "section";
+      setPendingResource(null);
+    } catch {
+      setRemovalError("No se pudo eliminar el recurso. Intenta de nuevo.");
+    } finally {
+      setRemovalPending(false);
+    }
+  }
+
+  return <div ref={sectionRef} tabIndex={-1} className="contents">{groups.map((group) => <MissionAttachmentGroupReference key={group.groupKey} group={group} />)}{standalone.map((resource) => <ResourceReference key={resource.id} resource={resource} previewSlides={previewSlides} disabled={disabled} onRemove={onRemove ? () => requestRemoval(resource) : undefined} />)}
+    <AlertDialog open={pendingResource !== null} onOpenChange={(open) => { if (!open) cancelRemoval(); }}>
+      <AlertDialogContent onCloseAutoFocus={restoreFocus} onEscapeKeyDown={(event) => { if (removalPending) event.preventDefault(); }} aria-busy={removalPending}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Eliminar recurso</AlertDialogTitle>
+          <AlertDialogDescription className="[overflow-wrap:anywhere]">Esta acción quitará “{pendingResource?.title ?? ""}” de este elemento.</AlertDialogDescription>
+        </AlertDialogHeader>
+        {removalError ? <p role="alert" className="m-0 text-xs font-semibold text-zivelo">{removalError}</p> : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={removalPending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction disabled={removalPending} onClick={(event) => { event.preventDefault(); void confirmRemoval(); }}>{removalPending ? "Eliminando…" : "Eliminar"}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </div>;
 }
 
 function MissionAttachmentGroupReference({ group }: { group: MissionResourceGroup }) {
@@ -747,7 +820,7 @@ function MissionAttachmentGroupReference({ group }: { group: MissionResourceGrou
   </article>;
 }
 
-function ResourceReference({ resource, previewSlides, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; onRemove?: () => void }) {
+function ResourceReference({ resource, previewSlides, disabled = false, onRemove }: { resource: TlozResource; previewSlides: ResourcePreviewSlide[]; disabled?: boolean; onRemove?: () => void }) {
   const [open, setOpen] = useState(false);
   const [resolvedPreviewUrl, setResolvedPreviewUrl] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -777,7 +850,7 @@ function ResourceReference({ resource, previewSlides, onRemove }: { resource: Tl
     }
   }
   const primary = isPreviewable ? <button ref={triggerRef} type="button" disabled={loadingPreview} className="flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" onClick={() => void openPreview()} aria-label={`Previsualizar ${resource.title}`}>{content}</button> : resource.url ? <a className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-carbon/20" href={resource.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${resource.title}`}>{content}</a> : <div className="flex min-w-0 flex-1 items-center gap-3">{content}</div>;
-  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{primary}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}{onRemove ? <IconButton className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} /> : null}{isPreviewable ? <ResourcePreview slides={slides} open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} /> : null}</div>;
+  return <div className="group/resource flex items-center gap-2 rounded-xl border border-carbon/10 bg-white px-3 py-3 transition-colors hover:border-[#D72228]/25">{primary}{isGithub ? <span className="text-xs font-semibold text-carbon/55">GitHub</span> : null}{onRemove ? <IconButton disabled={disabled} className="opacity-0 group-hover/resource:opacity-100 focus:opacity-100" label={`Eliminar ${resource.title}`} onClick={onRemove} /> : null}{isPreviewable ? <ResourcePreview slides={slides} open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} /> : null}</div>;
 }
 
 function OpenReferenceButton({ label, href, onOpen, className }: { label: string; href: string; onOpen?: () => void; className?: string }) {
@@ -785,7 +858,7 @@ function OpenReferenceButton({ label, href, onOpen, className }: { label: string
   return <Tooltip><TooltipTrigger asChild>{control}</TooltipTrigger><TooltipContent>Abrir detalle</TooltipContent></Tooltip>;
 }
 
-export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => void | boolean | Promise<void | boolean> }) {
+export function AddResource({ disabled = false, onAdd }: { disabled?: boolean; onAdd: (input: TlozResourceInput) => void | boolean | Promise<void | boolean> }) {
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [location, setLocation] = useState("");
@@ -819,7 +892,7 @@ export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => vo
   }
 
   async function save() {
-    if (inFlight.current || !title.trim()) return;
+    if (disabled || inFlight.current || !title.trim()) return;
     inFlight.current = true;
     setSaving(true);
     setError("");
@@ -838,23 +911,23 @@ export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => vo
     }
   }
 
-  if (!adding) return <button ref={trigger} type="button" className="col-span-full flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20" onClick={() => setAdding(true)}><Plus className="size-3.5" aria-hidden="true" />Agregar nuevo</button>;
+  if (!adding) return <button ref={trigger} data-resource-add-trigger type="button" disabled={disabled} className="col-span-full flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#1D1D1B]/15 bg-white text-[13px] font-semibold text-[#6B6B6B] transition-colors hover:border-[#D72228]/30 hover:text-[#D72228] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#1D1D1B]/20 disabled:cursor-wait disabled:opacity-60" onClick={() => setAdding(true)}><Plus className="size-3.5" aria-hidden="true" />Agregar nuevo</button>;
   const inferredIcon = inferResourceIconId({ type, url: usesFileId ? undefined : location, icon: icon || undefined });
   return <div role="group" aria-label="Adjuntar recurso" aria-busy={saving} aria-describedby={error ? errorId : undefined} className="flex min-w-0 flex-col gap-2 rounded-xl border border-carbon/10 bg-white p-2.5" onKeyDown={(event) => {
     if (event.defaultPrevented || !(event.target instanceof HTMLInputElement) || !event.currentTarget.contains(event.target)) return;
     if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); void save(); }
     if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); if (!inFlight.current) close(); }
   }}>
-    <fieldset disabled={saving} className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
+    <fieldset disabled={saving || disabled} className="m-0 flex min-w-0 flex-col gap-2 border-0 p-0">
       <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2 sm:grid-cols-[40px_130px_minmax(0,1fr)]">
-        <IconPicker disabled={saving} icons={RESOURCE_ICON_OPTIONS} value={inferredIcon} label="Icono del recurso" onValueChange={setIcon} allowClear iconOnly className="size-10 justify-center" />
-        <Select value={type} disabled={saving} onValueChange={(value) => setType(value as TlozResourceType)}><SelectTrigger aria-label="Tipo de recurso"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{Object.entries(resourceTypeLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select>
+        <IconPicker disabled={saving || disabled} icons={RESOURCE_ICON_OPTIONS} value={inferredIcon} label="Icono del recurso" onValueChange={setIcon} allowClear iconOnly className="size-10 justify-center" />
+        <Select value={type} disabled={saving || disabled} onValueChange={(value) => setType(value as TlozResourceType)}><SelectTrigger aria-label="Tipo de recurso"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{Object.entries(resourceTypeLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select>
         <Input autoFocus required className="col-span-2 min-w-0 sm:col-span-1" aria-label="Título del recurso" placeholder="Título" value={title} onChange={(event) => setTitle(event.target.value)} />
       </div>
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
         <Input className="min-w-0 flex-1" aria-label={usesFileId ? "Identificador del archivo" : "URL del recurso"} placeholder={usesFileId ? "ID del archivo" : "https://…"} value={location} onChange={(event) => setLocation(event.target.value)} />
         <div className="flex shrink-0 justify-end gap-1">
-          <Button ref={submitButton} type="button" size="icon" variant="outline" disabled={!title.trim()} aria-label="Adjuntar recurso" onClick={() => void save()}><Plus aria-hidden="true" /></Button>
+          <Button ref={submitButton} type="button" size="icon" variant="outline" disabled={disabled || !title.trim()} aria-label="Adjuntar recurso" onClick={() => void save()}><Plus aria-hidden="true" /></Button>
           <Button type="button" size="sm" variant="ghost" onClick={close}>Cancelar</Button>
         </div>
       </div>
@@ -864,7 +937,7 @@ export function AddResource({ onAdd }: { onAdd: (input: TlozResourceInput) => vo
   </div>;
 }
 
-function IconButton({ label, onClick, className }: { label: string; onClick: () => void; className?: string }) { return <Tooltip><TooltipTrigger asChild><Button type="button" variant="ghost" size="icon-xs" className={`size-6 rounded-md [&_svg]:size-3 ${className ?? ""}`} aria-label={label} onClick={onClick}><X aria-hidden="true" /></Button></TooltipTrigger><TooltipContent>Eliminar</TooltipContent></Tooltip>; }
+function IconButton({ label, onClick, disabled = false, className }: { label: string; onClick: () => void; disabled?: boolean; className?: string }) { return <Tooltip><TooltipTrigger asChild><Button type="button" disabled={disabled} variant="ghost" size="icon-xs" className={`size-6 rounded-md [&_svg]:size-3 ${className ?? ""}`} aria-label={label} onClick={onClick}><X aria-hidden="true" /></Button></TooltipTrigger><TooltipContent>Eliminar</TooltipContent></Tooltip>; }
 function EmptyText({ children }: { children: React.ReactNode }) { return <p className="m-0 text-sm text-carbon/45">{children}</p>; }
 function ActivityItem({ label, date, tone = "#9a9a98" }: { label: string; date: string; tone?: string }) { return <div className="flex gap-2.5"><span className="mt-1 size-2 shrink-0 rounded-full" style={{ backgroundColor: tone }} aria-hidden="true" /><span><strong className="block font-semibold text-carbon/75">{label}</strong><time className="font-mono text-[10.5px] text-carbon/40" dateTime={date}>{new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" }).format(new Date(date))}</time></span></div>; }
 

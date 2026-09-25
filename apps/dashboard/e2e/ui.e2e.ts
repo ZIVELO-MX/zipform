@@ -1487,3 +1487,79 @@ test.describe("local creation dates", () => {
     });
   }
 });
+
+for (const collection of ["mission", "workshop"] as const) {
+  test(`${collection} resource removal confirms${collection === "mission" ? ", preserves failures and retries once" : " before deleting"}`, async ({ page, request }) => {
+    const title = `Recurso protegido ${collection}`;
+    if (collection === "workshop") {
+      const created = await request.post("/api/v2/contents", { headers: { Authorization: "Bearer zipform-local-e2e-api-only" }, data: {
+        publicId: "e2e-resource-removal", containerId: "workshop", presentation: "workshop",
+        title: "Recursos protegidos", data: { status: "later", ownerId: "owner" },
+      } });
+      expect(created.ok(), await created.text()).toBe(true);
+    }
+    await authenticate(page);
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.goto(collection === "mission" ? "/" : "/workshop");
+    if (collection === "mission") await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+    else await page.getByText("Recursos protegidos", { exact: true }).click();
+    const panel = page.locator("dialog[open]");
+    const resources = panel.getByRole("heading", { name: "Recursos", exact: true }).locator("..");
+    await resources.getByRole("button", { name: "Agregar nuevo", exact: true }).click();
+    await panel.getByLabel("Título del recurso", { exact: true }).fill(title);
+    await panel.getByLabel("URL del recurso", { exact: true }).fill("https://example.com/removal");
+    await panel.getByRole("button", { name: "Adjuntar recurso", exact: true }).click();
+    const link = resources.getByRole("link", { name: `Abrir ${title}`, exact: true });
+    const remove = resources.getByRole("button", { name: `Eliminar ${title}`, exact: true });
+    await expect(link).toBeVisible();
+    let attempts = 0;
+    let fail = collection === "mission";
+    let release: (() => void) | undefined;
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    await page.route("**/*", async (route) => {
+      const request = route.request();
+      const isRemoval = collection === "mission"
+        ? request.method() === "POST" && Boolean(request.headers()["next-action"])
+        : request.method() === "PATCH" && request.url().includes("/api/v2/contents/");
+      if (isRemoval) {
+        attempts += 1;
+        if (fail) { await blocked; await route.abort("failed"); return; }
+      }
+      await route.fallback();
+    });
+    try {
+      await remove.focus();
+      await remove.press("Enter");
+      const confirmation = page.getByRole("alertdialog");
+      await expect(confirmation).toContainText(title);
+      await confirmation.getByRole("button", { name: "Cancelar", exact: true }).click();
+      await expect(remove).toBeFocused();
+      expect(attempts).toBe(0);
+      await remove.press("Enter");
+      await confirmation.getByRole("button", { name: "Eliminar", exact: true }).click();
+      if (collection === "mission") {
+        await expect(confirmation).toHaveAttribute("aria-busy", "true");
+        await expect(confirmation.getByRole("button", { name: "Cancelar", exact: true })).toBeDisabled();
+        await page.keyboard.press("Escape");
+        await expect(confirmation).toBeVisible();
+        await expect.poll(() => attempts).toBe(1);
+        release?.();
+        await expect(confirmation.getByRole("alert")).toBeVisible();
+        await expect(confirmation.getByRole("button", { name: "Eliminar", exact: true })).toBeEnabled();
+        await confirmation.getByRole("button", { name: "Cancelar", exact: true }).click();
+        await expect(link).toHaveCount(1);
+        await expect(remove).toBeFocused();
+        await page.screenshot({ path: `test-results/resource-removal-error-${collection}.png`, animations: "disabled" });
+        fail = false;
+        await remove.press("Enter");
+        await confirmation.getByRole("button", { name: "Eliminar", exact: true }).click();
+      }
+      await expect(confirmation).toHaveCount(0);
+      await expect(link).toHaveCount(0);
+      expect(attempts).toBe(collection === "mission" ? 2 : 1);
+      await expect(panel.getByRole("button", { name: "Cerrar", exact: true })).toBeEnabled();
+      await expect(resources.getByRole("button", { name: "Agregar nuevo", exact: true })).toBeFocused();
+      await expectNoOverflow(page);
+    } finally { release?.(); }
+  });
+}
