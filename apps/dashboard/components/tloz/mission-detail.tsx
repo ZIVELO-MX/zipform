@@ -871,18 +871,19 @@ export function AddResource({ disabled = false, onAdd }: { disabled?: boolean; o
   const trigger = useRef<HTMLButtonElement>(null);
   const restoreFocus = useRef(false);
   useEffect(() => {
-    if (adding || !restoreFocus.current) return;
+    if (adding || disabled || !restoreFocus.current) return;
+    if (trigger.current?.disabled) return;
     trigger.current?.focus();
     restoreFocus.current = false;
-  }, [adding]);
+  }, [adding, disabled]);
   const errorId = useId();
   const errorMessage = useRef<HTMLParagraphElement>(null);
   const submitButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (!error || saving) return;
+    if (!error || saving || disabled) return;
     errorMessage.current?.scrollIntoView({ block: "nearest" });
     submitButton.current?.focus({ preventScroll: true });
-  }, [error, saving]);
+  }, [error, saving, disabled]);
   const usesFileId = resourceUsesFileId(type);
 
   function close() {

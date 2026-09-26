@@ -1501,7 +1501,7 @@ for (const collection of ["mission", "workshop"] as const) {
     await authenticate(page);
     await page.setViewportSize({ width: 1024, height: 768 });
     await page.goto(collection === "mission" ? "/" : "/workshop");
-    if (collection === "mission") await page.getByRole("button", { name: "Abrir COR-0001: Publicar dashboard operativo de TLOZ", exact: true }).first().click();
+    if (collection === "mission") await page.getByRole("button", { name: /^Abrir COR-0001:/ }).first().click();
     else await page.getByText("Recursos protegidos", { exact: true }).click();
     const panel = page.locator("dialog[open]");
     const resources = panel.getByRole("heading", { name: "Recursos", exact: true }).locator("..");
