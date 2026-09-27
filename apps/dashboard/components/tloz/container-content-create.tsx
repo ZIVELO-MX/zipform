@@ -78,6 +78,7 @@ export function ContainerContentCreateProvider({
     <ContainerContentCreateContext.Provider value={context}>
       {children}
       <SlideOver
+        dismissible={!pending}
         open={open}
         title={`Crear ${container.title}`}
         onOpenChange={(next) => {

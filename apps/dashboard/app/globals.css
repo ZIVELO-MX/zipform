@@ -744,7 +744,9 @@ button {
 
 .tloz-command-trigger {
   display: flex;
-  inline-size: min(430px, 48%);
+  inline-size: min(430px, 100%);
+  min-inline-size: 0;
+  font-size: 13px;
   min-block-size: 40px;
   align-items: center;
   gap: 10px;
@@ -1541,7 +1543,8 @@ button {
 .tloz-board-track {
   display: flex;
   min-inline-size: max-content;
-  min-block-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
   align-items: stretch;
   gap: 16px;
   padding-block-end: 10px;
@@ -1550,7 +1553,8 @@ button {
 .tloz-board-column {
   display: flex;
   flex: 0 0 296px;
-  min-block-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
   border-radius: 14px;
   transition: background-color 160ms ease, box-shadow 160ms ease;
 }
@@ -1561,7 +1565,7 @@ button {
 }
 
 .mission-detail-layout {
-  grid-template-columns: minmax(0, 1fr) 308px;
+  grid-template-columns: minmax(0, 1fr) 260px;
 }
 
 .mission-detail-properties {
@@ -1570,10 +1574,15 @@ button {
 }
 
 .mission-slide-over .mission-detail-properties {
-  inset-block-start: 1rem;
+  position: static;
 }
 
-@container (max-width: 760px) {
+.mission-detail-workspace [data-radix-accordion-content],
+.mission-detail-workspace .mission-resource-grid {
+  overflow-wrap: anywhere;
+}
+
+@container (max-width: 680px) {
   .mission-detail-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1772,7 +1781,7 @@ button {
   border-color: rgba(215, 34, 40, 0.30);
 }
 
-@media (max-width: 920px) {
+@media (max-width: 767px) {
   .shell,
   .shell[data-sidebar="collapsed"] {
     display: block;
@@ -1824,7 +1833,7 @@ button {
 
   .tloz-main-surface {
     block-size: 100dvh;
-    padding: 0 0 calc(72px + env(safe-area-inset-bottom));
+    padding: 0 0 env(safe-area-inset-bottom);
   }
 
   .tloz-detail-side {
@@ -1834,6 +1843,7 @@ button {
   }
 
   .tloz-main-header {
+    gap: 8px;
     min-block-size: 56px;
     padding: 8px 12px;
   }
@@ -1955,4 +1965,39 @@ button {
   .empty-module {
     border-radius: 18px;
   }
+}
+
+/* Dashboard columns follow the available workspace, including resized sidebars. */
+.tloz-dashboard { container-type: inline-size; }
+.tloz-dashboard-focus-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.tloz-dashboard section { min-inline-size: 0; }
+.tloz-dashboard section > div:first-child { flex-wrap: wrap; gap: 10px; }
+.tloz-dashboard [role="button"]:focus-visible,
+.tloz-main-header button:focus-visible,
+[role="separator"][tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+@container (max-width: 680px) {
+  .tloz-dashboard-focus-grid,
+  .tloz-dashboard .grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+/* List density follows the available workspace, including a collapsed sidebar. */
+.mission-list-layout { container-type: inline-size; }
+.mission-list-record { grid-template-columns: minmax(0, 1fr) 155px; }
+.mission-list-title { grid-column: 1; grid-row: 1; }
+.mission-list-meta { grid-column: 1; grid-row: 2; }
+.mission-list-date { grid-column: 2; grid-row: 1 / span 2; }
+@container (min-width: 980px) {
+  .mission-list-record { grid-template-columns: minmax(0, 1fr) 230px 155px; }
+  .mission-list-meta { grid-column: 2; grid-row: 1; padding-left: 0; }
+  .mission-list-date { grid-column: 3; grid-row: 1; }
+}
+@container (max-width: 500px) {
+  .mission-list-record { grid-template-columns: minmax(0, 1fr); }
+  .mission-list-date { grid-column: 1; grid-row: 3; padding-left: 2rem; text-align: left; }
 }

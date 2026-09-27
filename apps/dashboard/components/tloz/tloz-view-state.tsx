@@ -1,7 +1,9 @@
 "use client";
 
 import type { TlozProject, UserProfile } from "@tloz/types";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { collectionQueryHref, type CollectionQuery } from "./collection-query";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { resolveResponsiveTlozViews, resolveTlozView, type TlozView } from "../../lib/tloz-routes";
 import {
@@ -30,6 +32,8 @@ type TlozViewStateContextValue = {
   projects: TlozProject[];
   users: UserProfile[];
   capabilities: TlozControlCapabilities;
+  serverQuery: boolean;
+  queryPending: boolean;
 };
 
 const TlozViewStateContext = createContext<TlozViewStateContextValue | null>(null);
@@ -43,6 +47,7 @@ export function TlozViewStateProvider({
   controlKind = "mission",
   fixedProject = false,
   storageScope = "tloz-controls",
+  collectionQuery,
 }: {
   children: React.ReactNode;
   supportedViews: TlozView[];
@@ -52,8 +57,14 @@ export function TlozViewStateProvider({
   controlKind?: TlozControlKind;
   fixedProject?: boolean;
   storageScope?: string;
+  collectionQuery?: CollectionQuery;
 }) {
   const isMobile = useIsMobile();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [queryPending, startQueryTransition] = useTransition();
+  const [optimisticQuery, setOptimisticQuery] = useOptimistic(collectionQuery);
   const responsiveViews = useMemo(
     () => resolveResponsiveTlozViews(isMobile, supportedViews, defaultView),
     [defaultView, isMobile, supportedViews],
@@ -102,25 +113,35 @@ export function TlozViewStateProvider({
       && projects.some((project) => project.id === preferredState.projectId)
       ? preferredState.projectId
       : "all",
-    ownerId: users.some((user) => user.id === preferredState.ownerId)
-      ? preferredState.ownerId
-      : "all",
-    sort: capabilities.sortOptions.some((option) => option.id === preferredState.sort)
+    ownerId: optimisticQuery?.ownerId ?? (users.some((user) => user.id === preferredState.ownerId) ? preferredState.ownerId : "all"),
+    showCompleted: optimisticQuery?.showCompleted ?? preferredState.showCompleted,
+    sort: optimisticQuery?.sort ?? (capabilities.sortOptions.some((option) => option.id === preferredState.sort)
       ? preferredState.sort
-      : "default",
+      : "default"),
     grouping: capabilities.groupingOptions.some((option) => option.id === preferredState.grouping)
       ? preferredState.grouping
       : "none",
-  }), [capabilities, effectiveDefault, preferredState, effectiveViews, projects, users]);
+  }), [capabilities, optimisticQuery, effectiveDefault, preferredState, effectiveViews, projects, users]);
 
   const value = useMemo<TlozViewStateContextValue>(() => ({
     state,
-    setState: (update) => replaceState((current) => ({ ...current, ...update })),
+    setState: (update) => {
+      replaceState((current) => ({ ...current, ...update }));
+      if (!collectionQuery || !("ownerId" in update || "showCompleted" in update || "sort" in update)) return;
+      const next = { ...collectionQuery, ...update };
+      const query: CollectionQuery = { ownerId: next.ownerId, showCompleted: next.showCompleted, sort: next.sort === "dependencies" ? "default" : next.sort };
+      startQueryTransition(() => {
+        setOptimisticQuery(query);
+        router.replace(collectionQueryHref(pathname, searchParams.toString(), query), { scroll: false });
+      });
+    },
     supportedViews: effectiveViews,
     projects,
     users,
     capabilities,
-  }), [capabilities, projects, state, effectiveViews, users]);
+    serverQuery: Boolean(collectionQuery),
+    queryPending,
+  }), [capabilities, collectionQuery, projects, state, effectiveViews, users, pathname, queryPending, router, searchParams, setOptimisticQuery]);
 
   return <TlozViewStateContext.Provider value={value}>{children}</TlozViewStateContext.Provider>;
 }

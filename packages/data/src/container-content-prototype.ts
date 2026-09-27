@@ -83,9 +83,17 @@ export type ContainerContentSnapshot = {
   contents: ContentRecord[];
 };
 
-export type ContentFilters = {
-  containerId?: string;
+export type StoreSort = "title" | "due-date" | "acquired-date";
+
+export type ContainerFilters = {
   presentation?: string;
+  ownerId?: string;
+  excludedStatuses?: string[];
+  sort?: StoreSort;
+};
+
+export type ContentFilters = ContainerFilters & {
+  containerId?: string;
   data?: Record<string, ContainerContentScalar>;
 };
 
@@ -108,9 +116,9 @@ export interface ContainerContentStore {
   createContent(input: Omit<ContentRecord, "id" | "revision" | "createdAt" | "updatedAt"> & { id?: string }): Promise<ContentRecord>;
   getContainer(id: string): Promise<ContainerRecord | null>;
   getContent(id: string): Promise<ContentRecord | null>;
-  listContainers(filters?: { presentation?: string }): Promise<ContainerRecord[]>;
-  listContents(filters?: ContentFilters): Promise<ContentRecord[]>;
-  findContainers(filters?: { presentation?: string }, pagination?: { limit?: number; cursor?: string }): Promise<{ data: ContainerRecord[]; nextCursor: string | null }>;
+  listContainers(filters?: Pick<ContainerFilters, "presentation">): Promise<ContainerRecord[]>;
+  listContents(filters?: Pick<ContentFilters, "containerId" | "presentation" | "data">): Promise<ContentRecord[]>;
+  findContainers(filters?: ContainerFilters, pagination?: { limit?: number; cursor?: string }): Promise<{ data: ContainerRecord[]; nextCursor: string | null }>;
   findContents(filters?: ContentFilters, pagination?: { limit?: number; cursor?: string }): Promise<{ data: ContentRecord[]; nextCursor: string | null }>;
   updateContainer(id: string, update: Partial<Pick<ContainerRecord, "slug" | "presentation" | "title" | "summary" | "body" | "definition" | "data">>, expectedRevision: number): Promise<ContainerRecord>;
   updateContent(id: string, update: ContentUpdate, expectedRevision: number): Promise<ContentRecord>;
@@ -248,7 +256,7 @@ implements ContainerContentStore {
     return row ? clone(this.shape.decodeContainer(row)) : null;
   }
 
-  async listContainers(filters: { presentation?: string } = {}): Promise<ContainerRecord[]> {
+  async listContainers(filters: Pick<ContainerFilters, "presentation"> = {}): Promise<ContainerRecord[]> {
     this.assertAvailable();
     return [...this.containers.values()]
       .map((row) => this.shape.decodeContainer(row))
@@ -257,8 +265,13 @@ implements ContainerContentStore {
       .map(clone);
   }
 
-  async findContainers(filters: { presentation?: string } = {}, pagination: { limit?: number; cursor?: string } = {}) {
-    const records = await this.listContainers(filters);
+  async findContainers(filters: ContainerFilters = {}, pagination: { limit?: number; cursor?: string } = {}) {
+    this.assertAvailable();
+    const records = [...this.containers.values()]
+      .map((row) => this.shape.decodeContainer(row))
+      .filter((container) => matchesQuery(container, filters))
+      .sort(queryComparator(filters.sort))
+      .map(clone);
     return page(records, pagination);
   }
 
@@ -269,7 +282,7 @@ implements ContainerContentStore {
     return row ? clone(this.shape.decodeContent(row)) : null;
   }
 
-  async listContents(filters: ContentFilters = {}): Promise<ContentRecord[]> {
+  async listContents(filters: Pick<ContentFilters, "containerId" | "presentation" | "data"> = {}): Promise<ContentRecord[]> {
     this.assertAvailable();
     return [...this.contents.values()]
       .map((row) => this.shape.decodeContent(row))
@@ -286,7 +299,16 @@ implements ContainerContentStore {
   }
 
   async findContents(filters: ContentFilters = {}, pagination: { limit?: number; cursor?: string } = {}) {
-    const records = await this.listContents(filters);
+    this.assertAvailable();
+    const records = [...this.contents.values()]
+      .map((row) => this.shape.decodeContent(row))
+      .filter((content) => {
+        if (!matchesQuery(content, filters)) return false;
+        if (filters.containerId && content.containerId !== filters.containerId) return false;
+        return Object.entries(filters.data ?? {}).every(([key, value]) => content.data[key] === value);
+      })
+      .sort(queryComparator(filters.sort))
+      .map(clone);
     return page(records, pagination);
   }
 
@@ -412,6 +434,53 @@ implements ContainerContentStore {
       );
     }
   }
+}
+
+function matchesQuery(
+  record: ContainerRecord | ContentRecord,
+  filters: ContainerFilters,
+): boolean {
+  if (filters.presentation && record.presentation !== filters.presentation) return false;
+  if (filters.ownerId && ownerId(record) !== filters.ownerId) return false;
+  return !filters.excludedStatuses?.includes(stringData(record, "status") ?? "");
+}
+
+function ownerId(record: ContainerRecord | ContentRecord): string | undefined {
+  return stringData(record, "owner")
+    ?? stringData(record, "assignee")
+    ?? stringData(record, "ownerId");
+}
+
+function queryComparator(
+  sort: StoreSort | undefined,
+): (left: ContainerRecord | ContentRecord, right: ContainerRecord | ContentRecord) => number {
+  if (sort === "title") {
+    return (left, right) => left.title.localeCompare(right.title) || left.id.localeCompare(right.id);
+  }
+  if (sort === "due-date" || sort === "acquired-date") {
+    const keys = sort === "due-date" ? ["due", "dueDate"] : ["acquired", "acquiredAt"];
+    return (left, right) => (
+      compareOptionalDate(dateData(left, keys), dateData(right, keys))
+      || left.id.localeCompare(right.id)
+    );
+  }
+  return (left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id);
+}
+
+function stringData(record: ContainerRecord | ContentRecord, key: string): string | undefined {
+  const value = record.data[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function dateData(record: ContainerRecord | ContentRecord, keys: string[]): string | undefined {
+  const value = keys.map((key) => stringData(record, key)).find((candidate) => candidate !== undefined);
+  return value || undefined;
+}
+
+function compareOptionalDate(left: string | undefined, right: string | undefined): number {
+  if (left === undefined) return right === undefined ? 0 : 1;
+  if (right === undefined) return -1;
+  return left.localeCompare(right);
 }
 
 const jsonbShape: PhysicalShape<JsonbContainerRow, JsonbContentRow> = {

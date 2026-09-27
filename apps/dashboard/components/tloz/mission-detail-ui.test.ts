@@ -116,4 +116,15 @@ describe("mission detail interaction contracts", () => {
     expect(detail).toContain("statusPresentation.textColor");
     expect(detail).toContain("statusPresentation.label");
   });
+
+  it("restores editor focus only when the textarea is still focusable", () => {
+    expect(editor).toContain("if (!textarea || textarea.disabled) return;");
+    expect(editor).not.toContain("if (textareaRef.current) { event.preventDefault(); textareaRef.current.focus(); }");
+  });
+
+  it("keeps the resource error alert aligned with the submit gate", () => {
+    expect(detail).toContain("if (submitButton.current && !submitButton.current.disabled)");
+    expect(detail).not.toContain("submitButton.current?.focus({ preventScroll: true });");
+    expect(detail).toContain("setTitle(event.target.value); if (error) setError(\"\")");
+  });
 });

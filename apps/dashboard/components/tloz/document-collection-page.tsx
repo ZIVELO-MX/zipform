@@ -1,3 +1,4 @@
+import { collectionQueryFilters, collectionQueryHref, resolveCollectionQuery, type CollectionSearchParams } from "./collection-query";
 import type { TlozDocumentKind } from "@tloz/types";
 import { notFound } from "next/navigation";
 import {
@@ -18,6 +19,7 @@ export async function DocumentCollectionPage({
   createKind,
   cursor,
   basePath,
+  searchParams = {},
 }: {
   definitionKey: string;
   kind: TlozDocumentKind;
@@ -25,13 +27,15 @@ export async function DocumentCollectionPage({
   createKind: TlozCreateKind;
   cursor?: string;
   basePath: string;
+  searchParams?: CollectionSearchParams;
 }) {
-  const [documents, definition, users] = await Promise.all([
-    getTlozDocumentPage(kind, undefined, cursor),
+  const [definition, users] = await Promise.all([
     getTlozDocumentDefinition(definitionKey),
     getTlozUsers(),
   ]);
   if (!definition || definition.kind !== kind) notFound();
+  const query = resolveCollectionQuery(searchParams, users);
+  const documents = await getTlozDocumentPage(kind, undefined, cursor, collectionQueryFilters(query, definition.fields.find((field) => field.key === "status")?.options ?? []));
   const configuredViews = new Set(definition.views.map((view) => view.id));
   const collectionViews: TlozView[] = (["list", "table"] satisfies TlozView[])
     .filter((view) => configuredViews.has(view));
@@ -50,6 +54,7 @@ export async function DocumentCollectionPage({
       createKind={createKind}
       stateScope={definition.key}
       documentNavigation={{ documents: documents.data, users }}
+      collectionQuery={query}
     >
       <div className="flex min-h-0 flex-1 flex-col">
         <DocumentViewRenderer
@@ -57,7 +62,7 @@ export async function DocumentCollectionPage({
           definition={definition}
           users={users}
         />
-        <CollectionPagination basePath={basePath} currentCursor={cursor} nextCursor={documents.nextCursor} />
+        <CollectionPagination basePath={collectionQueryHref(basePath, "", query)} currentCursor={cursor} nextCursor={documents.nextCursor} />
         <div className="px-[26px] pb-[26px]">
           <CreateNewEntityButton />
         </div>

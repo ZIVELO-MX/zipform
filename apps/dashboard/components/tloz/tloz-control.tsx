@@ -31,6 +31,17 @@ const viewConfig: Record<TlozView, { label: string; icon: React.ElementType }> =
   detail: { label: "Detalle", icon: FileText },
 };
 
+export function TlozViewSwitcher() {
+  const { state, setState, supportedViews, queryPending } = useTlozViewState();
+  if (supportedViews.length < 2) return null;
+  return <div className="hidden md:block">
+    <Select value={state.view} onValueChange={(view) => setState({ view: view as TlozView })} disabled={queryPending}>
+      <SelectTrigger aria-label="Vista actual" className="h-8 w-32 text-xs font-semibold"><SelectValue /></SelectTrigger>
+      <SelectContent>{supportedViews.map((view) => <SelectItem key={view} value={view}>{viewConfig[view].label}</SelectItem>)}</SelectContent>
+    </Select>
+  </div>;
+}
+
 export function TlozControl({ createControl }: { createControl?: React.ReactNode | false }) {
   const {
     state,
@@ -39,6 +50,7 @@ export function TlozControl({ createControl }: { createControl?: React.ReactNode
     projects,
     users,
     capabilities,
+    queryPending,
   } = useTlozViewState();
   const uiCapabilities = useTlozCapabilities();
 
@@ -50,104 +62,108 @@ export function TlozControl({ createControl }: { createControl?: React.ReactNode
           Control
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[min(22rem,calc(100vw-2rem))] p-4">
-        <PopoverHeader>
-          <PopoverTitle>Control</PopoverTitle>
-        </PopoverHeader>
+      <PopoverContent aria-busy={queryPending} align="end" className="w-[min(22rem,calc(100vw-2rem))] p-4">
+        <fieldset disabled={queryPending} className="min-w-0 border-0 p-0">
+          <PopoverHeader>
+            <PopoverTitle>Control</PopoverTitle>
+          </PopoverHeader>
 
-        <ControlSection label="Vista">
-          <div className="grid grid-cols-2 gap-1.5">
-            {supportedViews.map((view) => {
-              const cfg = viewConfig[view];
-              const Icon = cfg.icon;
-              const isActive = state.view === view;
-              return (
-                <button
-                  key={view}
-                  type="button"
-                  className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
-                    isActive ? "bg-carbon/10 text-carbon" : "text-carbon/60 hover:bg-carbon/5 hover:text-carbon"
-                  }`}
-                  onClick={() => setState({ view: view as TlozView })}
-                >
-                  <Icon size={14} aria-hidden="true" />
-                  {cfg.label}
-                </button>
-              );
-            })}
-          </div>
-        </ControlSection>
-
-        {capabilities.ownerFilter || capabilities.projectFilter ? (
-          <>
-            <Separator className="my-4" />
-            <ControlSection label="Filtros">
-              {capabilities.projectFilter && projects.length > 1 ? (
-                <ControlSelect
-                  label="Proyecto"
-                  value={state.projectId}
-                  onValueChange={(projectId) => setState({ projectId })}
-                  options={[{ id: "all", name: "Todos los proyectos" }, ...projects]}
-                />
-              ) : null}
-              {capabilities.ownerFilter ? (
-                <UserPicker
-                  users={users}
-                  value={state.ownerId === "all" ? undefined : state.ownerId}
-                  onValueChange={(ownerId) => setState({ ownerId: ownerId || "all" })}
-                  allowEmpty
-                  emptyLabel="Todos los responsables"
-                  label="Responsable"
-                  className="h-9 rounded-lg text-xs"
-                />
-              ) : null}
-            </ControlSection>
-
-            <Separator className="my-4" />
-            <div className={state.view === "list" && capabilities.groupingOptions.length ? "grid grid-cols-2 gap-3" : "grid gap-3"}>
-              <ControlSection label="Orden">
-                <ControlSelect
-                  label="Orden"
-                  value={state.sort}
-                  onValueChange={(sort) => setState({ sort: sort as typeof state.sort })}
-                  options={capabilities.sortOptions}
-                />
-              </ControlSection>
-              {state.view === "list" && capabilities.groupingOptions.length ? <ControlSection label="Agrupar">
-                <ControlSelect
-                  label="Agrupación"
-                  value={state.grouping}
-                  onValueChange={(grouping) => setState({ grouping: grouping as typeof state.grouping })}
-                  options={capabilities.groupingOptions}
-                />
-              </ControlSection> : null}
+          <ControlSection label="Vista">
+            <div className="grid grid-cols-2 gap-1.5">
+              {supportedViews.map((view) => {
+                const cfg = viewConfig[view];
+                const Icon = cfg.icon;
+                const isActive = state.view === view;
+                return (
+                  <button
+                    key={view}
+                    type="button"
+                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium transition-colors ${
+                      isActive ? "bg-carbon/10 text-carbon" : "text-carbon/60 hover:bg-carbon/5 hover:text-carbon"
+                    }`}
+                    aria-pressed={isActive}
+                    onClick={() => setState({ view: view as TlozView })}
+                  >
+                    <Icon size={14} aria-hidden="true" />
+                    {cfg.label}
+                  </button>
+                );
+              })}
             </div>
+          </ControlSection>
 
-            {capabilities.completedFilter ? (
-              <>
-                <Separator className="my-4" />
-                <label className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-carbon/5">
-                  Mostrar completadas
-                  <span className="relative grid size-5 shrink-0 place-items-center">
-                    <input
-                      type="checkbox"
-                      className="peer size-5 cursor-pointer appearance-none rounded-md border-2 border-carbon/25 bg-white transition-colors checked:border-zivelo checked:bg-zivelo"
-                      checked={state.showCompleted}
-                      onChange={(e) => setState({ showCompleted: e.target.checked })}
-                    />
-                    <Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" />
-                  </span>
-                </label>
-              </>
-            ) : null}
-          </>
-        ) : null}
-        {createControl === false || !uiCapabilities.canCreate ? null : (
-          <>
-            <Separator className="my-4" />
-            {createControl ?? <CreateNewEntityButton variant="control" />}
-          </>
-        )}
+          {capabilities.ownerFilter || capabilities.projectFilter ? (
+            <>
+              <Separator className="my-4" />
+              <ControlSection label="Filtros">
+                {capabilities.projectFilter && projects.length > 1 ? (
+                  <ControlSelect
+                    label="Proyecto"
+                    value={state.projectId}
+                    onValueChange={(projectId) => setState({ projectId })}
+                    options={[{ id: "all", name: "Todos los proyectos" }, ...projects]}
+                  />
+                ) : null}
+                {capabilities.ownerFilter ? (
+                  <UserPicker
+                    users={users}
+                    value={state.ownerId === "all" ? undefined : state.ownerId}
+                    onValueChange={(ownerId) => setState({ ownerId: ownerId || "all" })}
+                    allowEmpty
+                    emptyLabel="Todos los responsables"
+                    label="Responsable"
+                    className="h-9 rounded-lg text-xs"
+                  />
+                ) : null}
+              </ControlSection>
+
+              <Separator className="my-4" />
+              <div className={state.view === "list" && capabilities.groupingOptions.length ? "grid grid-cols-2 gap-3" : "grid gap-3"}>
+                <ControlSection label="Orden">
+                  <ControlSelect
+                    label="Orden"
+                    value={state.sort}
+                    onValueChange={(sort) => setState({ sort: sort as typeof state.sort })}
+                    options={capabilities.sortOptions}
+                  />
+                </ControlSection>
+                {state.view === "list" && capabilities.groupingOptions.length ? <ControlSection label="Agrupar">
+                  <ControlSelect
+                    label="Agrupación"
+                    value={state.grouping}
+                    onValueChange={(grouping) => setState({ grouping: grouping as typeof state.grouping })}
+                    options={capabilities.groupingOptions}
+                  />
+                </ControlSection> : null}
+              </div>
+
+              {capabilities.completedFilter ? (
+                <>
+                  <Separator className="my-4" />
+                  <label className="flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-2 text-left text-sm hover:bg-carbon/5">
+                    Mostrar completadas
+                    <span className="relative grid size-5 shrink-0 place-items-center">
+                      <input
+                        type="checkbox"
+                        className="peer size-5 cursor-pointer appearance-none rounded-md border-2 border-carbon/25 bg-white transition-colors checked:border-zivelo checked:bg-zivelo"
+                        checked={state.showCompleted}
+                        onChange={(e) => setState({ showCompleted: e.target.checked })}
+                      />
+                      <Check className="pointer-events-none absolute size-3 text-white opacity-0 peer-checked:opacity-100" strokeWidth={3} aria-hidden="true" />
+                    </span>
+                  </label>
+                </>
+              ) : null}
+            </>
+          ) : null}
+          {createControl === false || !uiCapabilities.canCreate ? null : (
+            <>
+              <Separator className="my-4" />
+              {createControl ?? <CreateNewEntityButton variant="control" />}
+            </>
+          )}
+        </fieldset>
+        <span className="sr-only" role="status">{queryPending ? "Actualizando colección…" : ""}</span>
       </PopoverContent>
     </Popover>
   );

@@ -92,7 +92,7 @@ export function TlozViewRenderer(props: ViewRendererProps) {
         ) : view === "table" ? (
           <TableClient missions={visibleMissions} statusOptions={statusOptions} />
         ) : view === "calendar" ? (
-          <CalendarClient missions={visibleMissions} />
+          <CalendarClient missions={visibleMissions} statusOptions={statusOptions} />
         ) : (
           <ListClient missions={visibleMissions} grouping={state.grouping} statusOptions={statusOptions} />
         )}

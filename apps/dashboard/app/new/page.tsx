@@ -2,7 +2,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { CreateFormWrapper } from "../tloz/new/create-form-wrapper";
 import { type TlozCreateKind } from "../../components/tloz/tloz-create";
-import { getCanonicalContainer, getTlozProjectDocuments, getTlozProjects, getTlozUsers } from "../../lib/tloz-data";
+import { getCanonicalContainer, getTlozProjectDocuments, getTlozProjects, getTlozUsers, getTlozMissions, getTlozQuestItems } from "../../lib/tloz-data";
 
 const validKinds: TlozCreateKind[] = ["mission", "project", "inventory", "workshop", "library"];
 const kindLabel = { mission: "Mission", project: "Project", inventory: "Inventory item", workshop: "Workshop", library: "Library" } as const;
@@ -10,17 +10,19 @@ const kindLabel = { mission: "Mission", project: "Project", inventory: "Inventor
 export default async function NewEntityPage({
   searchParams,
 }: {
-  searchParams: Promise<{ kind?: string }>;
+  searchParams: Promise<{ kind?: string; projectId?: string }>;
 }) {
-  const { kind } = await searchParams;
+  const { kind, projectId } = await searchParams;
   const resolvedKind: TlozCreateKind = validKinds.includes(kind as TlozCreateKind)
     ? kind as TlozCreateKind
     : "mission";
-  const [projects, users, documents, canonicalContainer] = await Promise.all([
+  const [projects, users, documents, canonicalContainer, missions, questItems] = await Promise.all([
     getTlozProjects(),
     getTlozUsers(),
     getTlozProjectDocuments(),
     resolvedKind === "workshop" || resolvedKind === "library" ? getCanonicalContainer(resolvedKind) : Promise.resolve(undefined),
+    getTlozMissions(),
+    getTlozQuestItems(),
   ]);
   const projectContracts = Object.fromEntries(
     documents.data
@@ -29,7 +31,7 @@ export default async function NewEntityPage({
   );
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col">
+    <div className="mx-auto flex h-dvh w-full max-w-2xl flex-col overflow-y-auto">
       <header className="flex items-center gap-3 border-b border-carbon/10 px-4 py-3">
         <Link
           href="/"
@@ -40,7 +42,7 @@ export default async function NewEntityPage({
         </Link>
         <h1 className="m-0 text-sm font-bold text-carbon/75">Nuevo {kindLabel[resolvedKind]}</h1>
       </header>
-      <CreateFormWrapper kind={resolvedKind} projects={projects} users={users} projectContracts={projectContracts} canonicalContainer={canonicalContainer} />
+      <CreateFormWrapper fixedProjectId={projects.some((project) => project.id === projectId) ? projectId : undefined} missions={missions} questItems={questItems} kind={resolvedKind} projects={projects} users={users} projectContracts={projectContracts} canonicalContainer={canonicalContainer} />
     </div>
   );
 }

@@ -31,7 +31,7 @@ export function ContainerContentCollection({
 }) {
   const router = useRouter();
   const isMobile = useIsMobile();
-  const { state } = useTlozViewState();
+  const { state, serverQuery, queryPending } = useTlozViewState();
   const [contents, setContents] = useState(initialContents);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   useEffect(() => setContents(initialContents), [initialContents]);
@@ -42,8 +42,8 @@ export function ContainerContentCollection({
     [container, contents, users],
   );
   const visible = useMemo(
-    () => filterAndSortTlozRecords(records, state, statusOptions, { defaultSort: "source" }),
-    [records, state, statusOptions],
+    () => serverQuery ? records : filterAndSortTlozRecords(records, state, statusOptions, { defaultSort: "source" }),
+    [records, serverQuery, state, statusOptions],
   );
   const selected = selectedId ? contents.find((content) => content.id === selectedId) ?? null : null;
 
@@ -59,14 +59,14 @@ export function ContainerContentCollection({
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div aria-busy={queryPending} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <TlozViewHeader
           title={state.view === "table" ? "Tabla" : "Lista"}
-          description={`${container.title} · ${visible.length} elementos`}
+          description={`${container.title} · ${visible.length} ${visible.length === 1 ? "elemento" : "elementos"}`}
         />
         <div className="tloz-scrl flex-1 overflow-auto px-0 pb-[26px] md:px-[26px]">
           {visible.length === 0 ? (
-            <EmptyState title={`Sin elementos en ${container.title}`} description="Crea el primer elemento desde Control." />
+            <EmptyState title={state.ownerId !== "all" || !state.showCompleted ? "Sin coincidencias" : `Sin elementos en ${container.title}`} description={state.ownerId !== "all" || !state.showCompleted ? "Ajusta los filtros desde Control." : "Crea el primer elemento desde Control."} />
           ) : state.view === "table" ? (
             <MissionTable missions={visible} statusOptions={statusOptions} onSelect={open} />
           ) : (
@@ -78,7 +78,7 @@ export function ContainerContentCollection({
       <SlideOver open={Boolean(selected)} title={selected?.title ?? "Detalle"} onOpenChange={(open) => !open && setSelectedId(null)}>
         {selected ? (
           <ContainerContentDetail
-            key={`${selected.id}:${selected.revision}`}
+            key={selected.id}
             container={container}
             content={selected}
             users={users}

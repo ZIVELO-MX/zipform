@@ -29,14 +29,18 @@ export type ContainerContentSnapshot = {
   contents: ContentRecord[];
 };
 
-export type ContentFilters = {
-  containerId?: string;
-  presentation?: string;
-  data?: Record<string, string | number | boolean | null>;
-};
+export type StoreSort = "title" | "due-date" | "acquired-date";
 
 export type ContainerFilters = {
   presentation?: string;
+  ownerId?: string;
+  excludedStatuses?: string[];
+  sort?: StoreSort;
+};
+
+export type ContentFilters = ContainerFilters & {
+  containerId?: string;
+  data?: Record<string, string | number | boolean | null>;
 };
 
 export type StorePagination = { limit?: number; cursor?: string };
@@ -69,8 +73,8 @@ export interface ContainerContentStore {
   createContent(input: ContentCreateInput): Promise<ContentRecord>;
   getContainer(id: string): Promise<ContainerRecord | null>;
   getContent(id: string): Promise<ContentRecord | null>;
-  listContainers(filters?: ContainerFilters): Promise<ContainerRecord[]>;
-  listContents(filters?: ContentFilters): Promise<ContentRecord[]>;
+  listContainers(filters?: Pick<ContainerFilters, "presentation">): Promise<ContainerRecord[]>;
+  listContents(filters?: Pick<ContentFilters, "containerId" | "presentation" | "data">): Promise<ContentRecord[]>;
   findContainers(filters?: ContainerFilters, pagination?: StorePagination): Promise<StorePage<ContainerRecord>>;
   findContents(filters?: ContentFilters, pagination?: StorePagination): Promise<StorePage<ContentRecord>>;
   updateContainer(id: string, update: Partial<Pick<ContainerRecord, "slug" | "presentation" | "title" | "summary" | "body" | "definition" | "data">>, expectedRevision: number): Promise<ContainerRecord>;

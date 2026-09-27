@@ -163,6 +163,44 @@ describe.each(factories)("%s Container/Content prototype", (_, createStore) => {
       .rejects.toMatchObject({ name: "PaginationCursorError", cursor: "missing" });
   });
 
+  it("filters and sorts the complete query before slicing pages", async () => {
+    const extended = structuredClone(snapshot);
+    extended.containers.push(
+      { ...extended.containers[0], id: "container-alpha", publicId: "alpha", slug: "alpha", title: "Alpha", data: { owner: "agent-1" } },
+      { ...extended.containers[0], id: "container-beta", publicId: "beta", slug: "beta", title: "Beta", data: { assignee: "agent-1" } },
+    );
+    extended.contents.push(
+      { ...extended.contents[1], id: "content-a", publicId: "Q-1", title: "Zulu", data: { owner: "agent-1", status: "active", due: "", acquired: "" } },
+      { ...extended.contents[1], id: "content-b", publicId: "Q-2", title: "Alpha", data: { assignee: "agent-1", status: "active", dueDate: "2026-02-01", acquiredAt: "2026-03-01" } },
+      { ...extended.contents[1], id: "content-c", publicId: "Q-3", title: "Ignored", data: { owner: "other", assignee: "agent-1", status: "active", due: "2026-01-01" } },
+      { ...extended.contents[1], id: "content-d", publicId: "Q-4", title: "Archived", data: { ownerId: "agent-1", status: "archived", due: "2026-01-01" } },
+      { ...extended.contents[1], id: "content-e", publicId: "Q-5", title: "Beta", data: { ownerId: "agent-1", status: "active", due: "2026-01-15", acquired: "2026-02-01" } },
+      { ...extended.contents[1], id: "content-f", publicId: "Q-6", title: "Beta", data: { ownerId: "agent-1", status: "active", due: "2026-01-15", acquired: "2026-02-01" } },
+    );
+    const store = createStore();
+    await store.migrate(extended);
+
+    await expect(store.findContainers({ ownerId: "agent-1", sort: "title" }))
+      .resolves.toMatchObject({ data: [{ id: "container-alpha" }, { id: "container-beta" }] });
+
+    const filters = {
+      containerId: "container-project-tloz",
+      ownerId: "agent-1",
+      excludedStatuses: ["archived"],
+      sort: "due-date" as const,
+    };
+    const first = await store.findContents(filters, { limit: 1 });
+    expect(first).toMatchObject({ data: [{ id: "content-e" }], nextCursor: "content-e" });
+    await expect(store.findContents(filters, { limit: 3, cursor: first.nextCursor! }))
+      .resolves.toMatchObject({ data: [{ id: "content-f" }, { id: "content-b" }, { id: "content-a" }], nextCursor: null });
+    await expect(store.findContents({ ...filters, sort: "acquired-date" }))
+      .resolves.toMatchObject({ data: [{ id: "content-e" }, { id: "content-f" }, { id: "content-b" }, { id: "content-a" }] });
+    await expect(store.findContents({ ...filters, sort: "title" }))
+      .resolves.toMatchObject({ data: [{ id: "content-b" }, { id: "content-e" }, { id: "content-f" }, { id: "content-a" }] });
+    await expect(store.findContents(filters, { cursor: "content-d" }))
+      .rejects.toMatchObject({ name: "PaginationCursorError", cursor: "content-d" });
+  });
+
   it("updates with revisions while preserving hidden, null, and custom fields", async () => {
     const store = await migrated(createStore());
     const updated = await store.updateContent(

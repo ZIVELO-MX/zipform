@@ -1,6 +1,17 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { initialDraft } from "./tloz-create-defaults";
 import { buildCreateInput, documentPropertyDefaults } from "./tloz-create-input";
+
+describe("TLOZ create form hydration contract", () => {
+  const source = readFileSync(new URL("./tloz-create.tsx", import.meta.url), "utf8");
+
+  it("keeps the local date out of the server render so SSR can hydrate", () => {
+    expect(source).not.toMatch(/const now = new Date\(\);\n\s*const today = calendarDateKey/);
+    expect(source).toContain('const [today, setToday] = useState("")');
+    expect(source).toContain("setDraft((current) => (kind === \"project\" && !current.startDate");
+  });
+});
 
 describe("TLOZ mission creation defaults", () => {
   it("starts missions as later with the resolved owner and project", () => {

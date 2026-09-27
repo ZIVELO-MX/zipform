@@ -134,6 +134,30 @@ function containerDocument(container: ContainerRecord): TlozDocument {
   };
 }
 
+function documentComparator(
+  sort: "title" | "due-date" | "acquired-date",
+): (left: TlozDocument, right: TlozDocument) => number {
+  if (sort === "title") {
+    return (left, right) => left.title.localeCompare(right.title) || left.id.localeCompare(right.id);
+  }
+  const keys = sort === "due-date" ? ["due", "dueDate"] : ["acquired", "acquiredAt"];
+  return (left, right) => (
+    compareOptionalDate(documentDate(left, keys), documentDate(right, keys))
+    || left.id.localeCompare(right.id)
+  );
+}
+
+function documentDate(document: TlozDocument, keys: string[]): string | undefined {
+  const value = keys.map((key) => document.properties[key]).find((candidate) => typeof candidate === "string");
+  return typeof value === "string" && value ? value : undefined;
+}
+
+function compareOptionalDate(left: string | undefined, right: string | undefined): number {
+  if (left === undefined) return right === undefined ? 0 : 1;
+  if (right === undefined) return -1;
+  return left.localeCompare(right);
+}
+
 export function createContainerContentDocumentRepository(store: ContainerContentStore): TlozDocumentRepository {
   async function resolve(reference: string) {
     const container = await store.getContainer(reference);
@@ -147,13 +171,21 @@ export function createContainerContentDocumentRepository(store: ContainerContent
       const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
       const containers = filters.kind === "project" || !filters.kind
         ? (await store.findContainers(
-            { presentation: filters.kind === "project" ? "project" : undefined },
+            {
+              presentation: filters.kind === "project" ? "project" : undefined,
+              ownerId: filters.ownerId,
+              excludedStatuses: filters.excludedStatuses,
+              sort: filters.sort,
+            },
             { limit: limit + 1, cursor: pagination.cursor },
           )).data
         : [];
       const contents = filters.kind === "project" ? [] : (await store.findContents({
         containerId: filters.parentId,
         presentation: filters.kind ? PRESENTATIONS[filters.kind] : undefined,
+        ownerId: filters.ownerId,
+        excludedStatuses: filters.excludedStatuses,
+        sort: filters.sort,
       }, { limit: limit + 1, cursor: pagination.cursor })).data;
       const containersById = new Map<string, ContainerRecord>();
       await Promise.all([...new Set(contents.map((content) => content.containerId))].map(async (containerId) => {
@@ -166,7 +198,11 @@ export function createContainerContentDocumentRepository(store: ContainerContent
         const query = filters.query.toLowerCase();
         data = data.filter((item) => `${item.title} ${item.summary} ${item.publicId}`.toLowerCase().includes(query));
       }
-      data.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id));
+      if (!filters.sort) {
+        data.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id));
+      } else if (!filters.kind) {
+        data.sort(documentComparator(filters.sort));
+      }
       const page = data.slice(0, limit);
       return { data: page, nextCursor: data.length > limit ? page.at(-1)?.id ?? null : null };
     },

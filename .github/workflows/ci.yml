@@ -56,6 +56,20 @@ jobs:
       - name: Check workspace
         run: pnpm check
 
+      - name: Install Chromium for UI regression tests
+        run: pnpm --filter @tloz/dashboard exec playwright install --with-deps chromium
+
+      - name: Test UI flows with isolated mock data
+        run: pnpm --filter @tloz/dashboard test:e2e
+
+      - name: Upload UI test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: apps/dashboard/test-results
+          if-no-files-found: ignore
+
       - name: Test PostgreSQL integration
         run: pnpm --filter @tloz/data test:integration
 

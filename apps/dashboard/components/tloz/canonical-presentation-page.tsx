@@ -1,16 +1,16 @@
+import { collectionQueryFilters, collectionQueryHref, resolveCollectionQuery, type CollectionSearchParams } from "./collection-query";
 import { notFound } from "next/navigation";
 import { getCanonicalContainer, getCanonicalContents, getTlozUsers } from "../../lib/tloz-data";
 import { TlozPageShell } from "./tloz-shell";
 import { ContainerContentCollection } from "./container-content-collection";
 import { canonicalCollectionViews, canonicalControlKind } from "./container-content-view-model";
 
-export async function CanonicalPresentationPage({ presentation, title, cursor }: { presentation: "workshop" | "library"; title: string; cursor?: string }) {
+export async function CanonicalPresentationPage({ presentation, title, cursor, searchParams = {} }: { presentation: "workshop" | "library"; title: string; cursor?: string; searchParams?: CollectionSearchParams }) {
   const container = await getCanonicalContainer(presentation);
   if (!container) notFound();
-  const [contents, users] = await Promise.all([
-    getCanonicalContents(container.id, cursor),
-    getTlozUsers(),
-  ]);
+  const users = await getTlozUsers();
+  const query = resolveCollectionQuery(searchParams, users);
+  const contents = await getCanonicalContents(container.id, cursor, collectionQueryFilters(query, container.definition.fields.find((field) => field.key === "status")?.options ?? []));
   const supportedViews = canonicalCollectionViews(container.definition);
   const defaultView = supportedViews.includes(container.definition.defaultView as typeof supportedViews[number])
     ? container.definition.defaultView as typeof supportedViews[number]
@@ -26,6 +26,7 @@ export async function CanonicalPresentationPage({ presentation, title, cursor }:
       createKind={presentation}
       canonicalContainer={container}
       documentNavigation={{ documents: [], users }}
+      collectionQuery={query}
     >
       <ContainerContentCollection
         container={container}
@@ -33,7 +34,7 @@ export async function CanonicalPresentationPage({ presentation, title, cursor }:
         users={users}
         currentCursor={cursor}
         nextCursor={contents.nextCursor}
-        basePath={`/${presentation}`}
+        basePath={collectionQueryHref(`/${presentation}`, "", query)}
       />
     </TlozPageShell>
   );

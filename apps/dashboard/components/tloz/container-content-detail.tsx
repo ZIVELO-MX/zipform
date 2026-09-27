@@ -2,7 +2,7 @@
 
 import type { TlozResource, TlozDocumentScalar, TlozDocumentUpdate, TlozFieldDefinition, TlozDocumentPresentationField, ContainerRecord, ContentRecord, UserProfile } from "@tloz/types";
 import type { TlozResourceInput } from "@tloz/data";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MissionDetail, type MissionDetailOptions } from "./mission-detail";
 import { documentToDetailMission } from "./document-view-renderer";
 import { resolveDocumentDetailPropertyProjection } from "./document-view-model";
@@ -23,6 +23,7 @@ export function ContainerContentDetail({
   variant?: "panel" | "full";
 }) {
   const [content, setContent] = useState(initialContent);
+  useEffect(() => setContent(initialContent), [initialContent]);
   const document = useMemo(() => canonicalContentDocument(content, container), [content, container]);
   const definition = useMemo(() => toDefinition(container), [container]);
   const mission = useMemo(() => documentToDetailMission(document, users, resourcesFrom(content)), [document, users, content]);
@@ -72,6 +73,7 @@ export function ContainerContentDetail({
       canMove={false}
       canUpdateDocument
       documentMutation={mutate}
+      activityUrl={`/api/v2/contents/${encodeURIComponent(content.id)}/activity?limit=8`}
       onAddResource={async (input: TlozResourceInput) => updateResources((resources) => [...resources, createResource(input, content)])}
       onRemoveResource={async (resourceId: string) => updateResources((resources) => resources.filter((resource) => resource.id !== resourceId))}
       fullDetailHref={canonicalContentHref(content.presentation, content.publicId)}
