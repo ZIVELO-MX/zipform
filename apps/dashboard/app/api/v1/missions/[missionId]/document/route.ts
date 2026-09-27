@@ -3,6 +3,7 @@ import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
 import { recordMissionActivity } from "../../../../../../lib/mission-activity";
+import { readJsonObject } from "../../../../../../lib/api-response";
 
 export async function PUT(request: Request, { params }: { params: Promise<{ missionId: string }> }) {
   const auth = await authenticateRequest(request as Parameters<typeof authenticateRequest>[0]);
@@ -16,13 +17,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ miss
     );
   }
 
-  let body: { markdown?: string };
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject<{ markdown?: string }>(request);
+  if (!body) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
+      { status: 400  }
     );
   }
 

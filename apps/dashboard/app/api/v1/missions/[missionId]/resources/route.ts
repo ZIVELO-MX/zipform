@@ -4,6 +4,7 @@ import type { TlozResourceType } from "@tloz/types";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
 import { recordMissionActivity } from "../../../../../../lib/mission-activity";
+import { readJsonObject } from "../../../../../../lib/api-response";
 
 const VALID_TYPES: TlozResourceType[] = ["link", "document", "image", "file", "note"];
 
@@ -19,13 +20,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ mis
     );
   }
 
-  let body: { type?: string; title?: string; url?: string; fileId?: string; icon?: string };
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject<{ type?: string; title?: string; url?: string; fileId?: string; icon?: string }>(request);
+  if (!body) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
+      { status: 400  }
     );
   }
 

@@ -3,18 +3,17 @@ import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation, isReadOnlyAgent, toPublicUserProfile } from "../../../../../lib/authorization";
 import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
+import { readJsonObject } from "../../../../../lib/api-response";
 
 export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
-  let body: { email?: string; username?: string; limit?: number; cursor?: string };
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject<{ email?: string; username?: string; limit?: number; cursor?: string }>(request);
+  if (!body) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
+      { status: 400  }
     );
   }
 

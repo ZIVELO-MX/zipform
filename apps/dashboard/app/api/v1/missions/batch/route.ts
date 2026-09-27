@@ -3,6 +3,7 @@ import { dataClient } from "@tloz/data";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
 import { observedJson } from "../../../../../lib/read-telemetry";
+import { readJsonObject } from "../../../../../lib/api-response";
 
 type BatchBody = { ids?: unknown };
 
@@ -18,10 +19,8 @@ export async function POST(request: Request) {
   const auth = await authenticateRequest(request as Parameters<typeof authenticateRequest>[0]);
   if (auth instanceof Response) return auth;
 
-  let body: BatchBody;
-  try {
-    body = await request.json() as BatchBody;
-  } catch {
+  const body = await readJsonObject<BatchBody>(request);
+  if (!body) {
     return invalid("Cuerpo de solicitud inválido.");
   }
 
