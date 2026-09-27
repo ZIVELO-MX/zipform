@@ -33,3 +33,24 @@ export function errorResponse(
     },
   }, { status });
 }
+
+export function invalidBodyResponse() {
+  return errorResponse("INVALID_REQUEST", "Cuerpo de solicitud inválido.", 400);
+}
+
+export function parseJsonObject(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+export async function readJsonObject<T = Record<string, unknown>>(request: Request): Promise<T | null> {
+  try {
+    return parseJsonObject(await request.json()) as T | null;
+  } catch {
+    return null;
+  }
+}
+
+export function validationErrorResponse(fields: Record<string, string>) {
+  return errorResponse("INVALID_REQUEST", "Corrige los campos indicados.", 400, fields);
+}

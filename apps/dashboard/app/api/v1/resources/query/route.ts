@@ -3,6 +3,7 @@ import { dataClient } from "@tloz/data";
 import type { TlozResourceType } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
+import { readJsonObject } from "../../../../../lib/api-response";
 
 const VALID_TYPES: TlozResourceType[] = ["link", "document", "image", "file", "note"];
 
@@ -10,13 +11,11 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
-  let body: { missionId?: string; projectId?: string; questItemId?: string; type?: string; query?: string; limit?: number; cursor?: string };
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject<{ missionId?: string; projectId?: string; questItemId?: string; type?: string; query?: string; limit?: number; cursor?: string }>(request);
+  if (!body) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
+      { status: 400  }
     );
   }
 

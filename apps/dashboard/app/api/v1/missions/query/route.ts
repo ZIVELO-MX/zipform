@@ -4,6 +4,7 @@ import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
 import { paginationErrorResponse, parsePaginationLimit } from "../../../../../lib/api-pagination";
+import { readJsonObject } from "../../../../../lib/api-response";
 
 const VALID_STATUSES: TlozMissionStatus[] = ["now", "next", "later", "completed", "blocked"];
 
@@ -11,17 +12,15 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
-  let body: {
+  const body = await readJsonObject<{
     projectId?: string; ownerId?: string; status?: string;
     seasonId?: string; episodeId?: string; title?: string;
     limit?: number; cursor?: string;
-  };
-  try {
-    body = await request.json();
-  } catch {
+  }>(request);
+  if (!body) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
+      { status: 400  }
     );
   }
 

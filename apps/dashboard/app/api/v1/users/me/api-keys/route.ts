@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient } from "@tloz/data";
 import { authenticateSessionRequest } from "../../../../../../lib/api-auth";
 import { authorizeTlozOperation } from "../../../../../../lib/authorization";
+import { readJsonObject } from "../../../../../../lib/api-response";
 
 async function authenticateKeyManager(request: NextRequest) {
   const auth = await authenticateSessionRequest(request);
@@ -30,10 +31,8 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateKeyManager(request);
   if (auth instanceof Response) return auth;
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject<unknown>(request);
+  if (!body) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
       { status: 400 },

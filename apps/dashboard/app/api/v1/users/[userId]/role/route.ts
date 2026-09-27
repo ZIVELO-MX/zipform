@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dataClient, type UserRole } from "@tloz/data";
+import { dataClient, TlozLastOwnerError, type UserRole } from "@tloz/data";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../../../lib/authorization";
 
@@ -52,7 +52,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     const updated = await dataClient.tloz.updateUserRole(userId, role as UserRole);
     return NextResponse.json({ data: updated });
-  } catch {
+  } catch (error) {
+    if (error instanceof TlozLastOwnerError) {
+      return errorResponse(409, "LAST_OWNER", "No se puede eliminar al último Platform Owner.");
+    }
     return errorResponse(500, "INTERNAL_ERROR", "Error interno del servidor.");
   }
 }

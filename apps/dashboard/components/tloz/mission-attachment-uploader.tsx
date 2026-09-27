@@ -44,7 +44,12 @@ export function MissionAttachmentUploader({ missionId, resources, canUpdate, onG
   const inputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const retryInFlight = useRef(false);
   const announcement = state.status === "completed" ? "Capturas publicadas." : state.status === "error" ? state.error ?? "La carga tiene errores." : state.status === "uploading" ? "Subiendo capturas." : "";
+  const canRetry = state.status === "error"
+    && state.items.length > 0
+    && (state.items.some((item) => item.status === "error")
+      || (Boolean(state.uploadBatchId) && state.items.every((item) => item.status === "uploaded")));
 
   const groups = useMemo(() => {
     const map = new Map<string, (TlozResource & { groupKey: string; externalKey: string; url: string })[]>();
@@ -121,9 +126,35 @@ export function MissionAttachmentUploader({ missionId, resources, canUpdate, onG
   }
 
   function retryFailed() {
+    if (retryInFlight.current) return;
     const failed = state.items.filter((item) => item.status === "error");
-    if (!failed.length) return;
-    void executeUpload(state.items, state.groupKey, state.sourceRevision, new Set(state.items.filter((item) => item.status === "uploaded").map((item) => item.key)), state.groupName);
+    if (!failed.length) {
+      // Every file reached storage but the batch was never published: the
+      // failure lives in `finalize`, so retry that call instead of uploading.
+      const uploaded = state.items.filter((item) => item.status === "uploaded");
+      if (state.uploadBatchId && uploaded.length === state.items.length) void retryFinalize(state.uploadBatchId);
+      return;
+    }
+    retryInFlight.current = true;
+    void executeUpload(state.items, state.groupKey, state.sourceRevision, new Set(state.items.filter((item) => item.status === "uploaded").map((item) => item.key)), state.groupName)
+      .finally(() => { retryInFlight.current = false; });
+  }
+
+  async function retryFinalize(uploadBatchId: string) {
+    retryInFlight.current = true;
+    const controller = new AbortController();
+    abortRef.current?.abort();
+    abortRef.current = controller;
+    try {
+      dispatch({ type: "finalizing" });
+      const group = await finalizeAttachmentBatch(missionId, uploadBatchId, controller.signal);
+      dispatch({ type: "completed", group });
+      onGroupCompleted(group);
+    } catch (error) {
+      if (!controller.signal.aborted) dispatch({ type: "error", message: errorMessage(error) });
+    } finally {
+      retryInFlight.current = false;
+    }
   }
 
   function triggerReplacement(resource: TlozResource & { groupKey: string; externalKey: string; url: string }) {
@@ -169,7 +200,8 @@ export function MissionAttachmentUploader({ missionId, resources, canUpdate, onG
     <p id="mission-attachment-help" className="m-0 text-xs text-carbon/50">PNG, JPEG o WebP · máximo 6 MB por captura · hasta 20 archivos.</p>
     <div className="sr-only" aria-live="polite">{announcement}</div>
     {selectionError ? <p className="m-0 rounded-lg border border-[#B91C22]/20 bg-[#FDECEC] px-3 py-2 text-xs font-semibold text-[#B91C22]" role="alert">{selectionError}</p> : null}
-    {state.items.length ? <div className="rounded-xl border border-carbon/10 bg-white p-2.5"><ul className="m-0 flex list-none flex-col gap-1.5 p-0" aria-label="Capturas seleccionadas">{state.items.map((item) => <li key={item.key} className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-carbon/5 px-2.5 py-2"><FileImage className="size-4 shrink-0 text-[#3A47B5]" aria-hidden="true" /><span className="min-w-0 flex-1 truncate text-xs font-semibold">{item.fileName}</span><span className="shrink-0 text-[11px] text-carbon/50">{formatAttachmentSize(item.sizeBytes)}</span><span className="shrink-0 text-[11px] font-semibold text-carbon/60">{item.status === "uploading" ? "Subiendo" : item.status === "uploaded" ? "Completada" : item.status === "error" ? "Error" : "Pendiente"}</span>{item.error ? <span id={`attachment-error-${item.key}`} className="basis-full text-xs font-semibold text-[#B91C22]" role="alert">{item.error}</span> : null}</li>)}</ul><div className="mt-2 flex flex-wrap justify-end gap-1.5">{state.status === "error" && state.items.some((item) => item.status === "error") ? <Button type="button" size="sm" variant="outline" className="min-h-12" onClick={retryFailed}><RefreshCw className="size-3.5" aria-hidden="true" />Reintentar fallos</Button> : null}<Button type="button" size="sm" variant="ghost" className="min-h-12" onClick={() => { abortRef.current?.abort(); dispatch({ type: "reset" }); }}>Cancelar</Button></div></div> : null}
+    {state.status === "error" && state.error ? <p className="m-0 rounded-lg border border-[#B91C22]/20 bg-[#FDECEC] px-3 py-2 text-xs font-semibold text-[#B91C22]" role="alert">{state.error} Las capturas no se publicaron.</p> : null}
+    {state.items.length ? <div className="rounded-xl border border-carbon/10 bg-white p-2.5"><ul className="m-0 flex list-none flex-col gap-1.5 p-0" aria-label="Capturas seleccionadas">{state.items.map((item) => <li key={item.key} className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg border border-carbon/5 px-2.5 py-2"><FileImage className="size-4 shrink-0 text-[#3A47B5]" aria-hidden="true" /><span className="min-w-0 flex-1 truncate text-xs font-semibold">{item.fileName}</span><span className="shrink-0 text-[11px] text-carbon/50">{formatAttachmentSize(item.sizeBytes)}</span><span className="shrink-0 text-[11px] font-semibold text-carbon/60">{item.status === "uploading" ? "Subiendo" : item.status === "uploaded" ? "Completada" : item.status === "error" ? "Error" : "Pendiente"}</span>{item.error ? <span id={`attachment-error-${item.key}`} className="basis-full text-xs font-semibold text-[#B91C22]" role="alert">{item.error}</span> : null}</li>)}</ul><div className="mt-2 flex flex-wrap justify-end gap-1.5">{canRetry ? <Button type="button" size="sm" variant="outline" className="min-h-12" onClick={retryFailed}><RefreshCw className="size-3.5" aria-hidden="true" />Reintentar fallos</Button> : null}<Button type="button" size="sm" variant="ghost" className="min-h-12" onClick={() => { abortRef.current?.abort(); dispatch({ type: "reset" }); }}>Cancelar</Button></div></div> : null}
     {groups.map(({ groupKey, items }) => <AttachmentGroupRow key={groupKey} groupKey={groupKey} resources={items} canUpdate={canUpdate} onReplace={triggerReplacement} />)}
   </section>;
 }

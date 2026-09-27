@@ -2,7 +2,7 @@ import { dataClient, ContainerContentError } from "@tloz/data";
 import { NextRequest } from "next/server";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../../lib/authorization";
-import { errorResponse, handleContainerContentError, parseExpectedRevision, readData, resolveContainer, responseFor } from "../../../../../lib/container-content-api";
+import { errorResponse, handleContainerContentError, parseExpectedRevision, readData, readDefinition, resolveContainer, responseFor } from "../../../../../lib/container-content-api";
 
 type Context = { params: Promise<{ containerId: string }> };
 
@@ -31,6 +31,7 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     const allowed = new Set(["slug", "presentation", "title", "summary", "body", "definition", "data"]);
     if (Object.keys(raw).some((key) => !allowed.has(key))) throw new ContainerContentError("STORE_INVALID", "El cuerpo contiene campos no soportados.");
     if (raw.data !== undefined) readData(raw.data);
+    if (raw.definition !== undefined) readDefinition(raw.definition);
     const updated = await dataClient.containerContent.updateContainer(record.id, raw as never, revision);
     return responseFor(request, updated);
   } catch (error) { return handleContainerContentError(error); }

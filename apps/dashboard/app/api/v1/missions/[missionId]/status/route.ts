@@ -4,6 +4,7 @@ import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import { authorizeMissionOperation } from "../../../../../../lib/tloz-api-authorization";
 import { recordMissionActivity } from "../../../../../../lib/mission-activity";
+import { readJsonObject } from "../../../../../../lib/api-response";
 
 const VALID_STATUSES: TlozMissionStatus[] = ["now", "next", "later", "completed", "blocked"];
 
@@ -19,13 +20,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mi
     );
   }
 
-  let body: { status?: string };
-  try {
-    body = await request.json();
-  } catch {
+  const body = await readJsonObject<{ status?: string }>(request);
+  if (!body) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
+      { status: 400  }
     );
   }
 

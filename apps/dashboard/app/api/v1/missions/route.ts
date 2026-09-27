@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { dataClient, TlozValidationError } from "@tloz/data";
 import type { TlozMissionStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
+import { invalidBodyResponse, parseJsonObject, validationErrorResponse } from "../../../../lib/api-response";
 import { authorizeApiOperation, isFullStackDeveloper, isReadOnlyAgent, toPublicMissionOwner } from "../../../../lib/authorization";
 import { observedJson } from "../../../../lib/read-telemetry";
 import { paginationErrorResponse, parsePaginationLimit } from "../../../../lib/api-pagination";
@@ -62,15 +63,13 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
-  let body: Record<string, unknown>;
+  let body: Record<string, unknown> | null;
   try {
-    body = await request.json();
+    body = parseJsonObject(await request.json());
   } catch {
-    return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
-    );
+    body = null;
   }
+  if (!body) return invalidBodyResponse();
 
   const allowedFields = Object.fromEntries(
     Object.entries(body).filter(([key]) => VALID_CREATE_FIELDS.has(key))
@@ -96,19 +95,7 @@ export async function POST(request: NextRequest) {
     const detail = await dataClient.tloz.getMissionDetail(created.id);
     return NextResponse.json({ data: detail }, { status: 201 });
   } catch (e) {
-    if (e instanceof TlozValidationError) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "INVALID_REQUEST",
-            message: "Corrige los campos indicados.",
-            fields: e.fields,
-            requestId: crypto.randomUUID(),
-          },
-        },
-        { status: 400 },
-      );
-    }
+    if (e instanceof TlozValidationError) return validationErrorResponse(e.fields);
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }

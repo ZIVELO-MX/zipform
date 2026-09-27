@@ -5,6 +5,7 @@ import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation, isReadOnlyAgent, toPublicMissionOwner } from "../../../../../lib/authorization";
 import { observedJson } from "../../../../../lib/read-telemetry";
 import { recordMissionActivity } from "../../../../../lib/mission-activity";
+import { invalidBodyResponse, parseJsonObject } from "../../../../../lib/api-response";
 
 const VALID_MISSION_FIELDS = new Set([
   "title", "description", "descriptionDetail", "icon", "type", "status",
@@ -63,15 +64,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ mi
     );
   }
 
-  let body: Record<string, unknown>;
+  let body: Record<string, unknown> | null;
   try {
-    body = await request.json();
+    body = parseJsonObject(await request.json());
   } catch {
-    return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
-    );
+    body = null;
   }
+  if (!body) return invalidBodyResponse();
 
   const allowedFields = Object.fromEntries(
     Object.entries(body).filter(([key]) => VALID_MISSION_FIELDS.has(key))

@@ -1,6 +1,7 @@
 import type { ApiKey, TlozAttachmentGroup, TlozMission, TlozProject, TlozQuestItem, TlozResource, UserProfile } from "@tloz/types";
 import type { TlozAttachmentBatch, TlozAttachmentFileInput, TlozMissionRecord } from "../contracts";
 import { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "../tloz-attachment-errors";
+import { TlozLastOwnerError } from "../user-role-errors";
 import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, UserRole, TlozDataClient } from "../contracts";
 import type { AgentCreateInput, ApiKeyCreateResult } from "../contracts";
 import {
@@ -234,6 +235,10 @@ export function createMockDataClient(): TlozDataClient {
       async updateUserRole(userId: string, role: UserRole) {
         const user = tlozData.users.find((candidate) => candidate.id === userId);
         if (!user) throw new Error("User not found");
+        if (user.role === "Platform Owner" && role !== "Platform Owner") {
+          const owners = tlozData.users.filter((candidate) => candidate.role === "Platform Owner").length;
+          if (owners <= 1) throw new TlozLastOwnerError();
+        }
         user.role = role;
         return user;
       },

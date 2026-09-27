@@ -6,6 +6,7 @@ import type {
   TlozFieldType,
   TlozStatusRole,
 } from "@tloz/types";
+import { isTlozProjectStatus } from "@tloz/types";
 import { TlozDocumentError } from "./document-errors";
 
 export const DEFAULT_MISSION_STATUS_OPTIONS: TlozFieldOption[] = [
@@ -169,6 +170,14 @@ function validateSystemProperty(
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 100) {
       throw invalid();
     }
+    return;
+  }
+  if (kind === "project" && key === "status") {
+    if (!isTlozProjectStatus(value)) throw invalid();
+    return;
+  }
+  if (kind === "project" && key === "category") {
+    if (value !== "normal" && value !== "system") throw invalid();
     return;
   }
   if (key === "color") {

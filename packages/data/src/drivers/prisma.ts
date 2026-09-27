@@ -17,6 +17,7 @@ import type {
 } from "@tloz/types";
 import type { TlozAttachmentBatch, TlozAttachmentFileInput, TlozAttachmentFinalizeResult, TlozMissionRecord, ApiKeyCreateResult, AgentCreateInput } from "../contracts";
 import { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "../tloz-attachment-errors";
+import { TlozLastOwnerError } from "../user-role-errors";
 import type { PaginatedResult, PaginationInput, ProjectFilters, QuestItemFilters, ResourceFilters, TlozMissionFilters, UserFilters, UserRole, TlozDataClient } from "../contracts";
 import { hashApiKey, verifyApiKey, generateApiKey } from "../lib/crypto";
 import {
@@ -840,8 +841,30 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
         return row ? mapUser(row) : null;
       },
       async updateUserRole(userId: string, role: UserRole) {
-        const row = await prisma.user.update({ where: { id: userId }, data: { role, updatedAt: new Date() } });
-        return mapUser(row);
+        // The "never leave the platform without an owner" rule has to be
+        // enforced inside the transaction: two concurrent demotions would both
+        // read the same owner count and both pass an application-side check.
+        const run = () => prisma.$transaction(async (tx) => {
+          const target = await tx.user.findUnique({ where: { id: userId } });
+          if (!target) throw new Error("User not found");
+          if (target.role === "Platform Owner" && role !== "Platform Owner") {
+            const owners = await tx.user.count({ where: { role: "Platform Owner" } });
+            if (owners <= 1) throw new TlozLastOwnerError();
+          }
+          const row = await tx.user.update({ where: { id: userId }, data: { role, updatedAt: new Date() } });
+          return mapUser(row);
+        }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+
+        for (let attempt = 0; ; attempt++) {
+          try {
+            return await run();
+          } catch (error) {
+            // A serialization abort means a concurrent demotion raced us; the
+            // next attempt re-reads the owner count and reports LAST_OWNER.
+            const conflicted = error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+            if (!conflicted || attempt >= 2) throw error;
+          }
+        }
       },
       async createProject(input) {
         const valid = validateProjectCreate(input);

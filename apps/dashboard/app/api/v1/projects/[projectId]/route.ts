@@ -3,6 +3,7 @@ import { dataClient } from "@tloz/data";
 import { isTlozProjectStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeProjectOperation } from "../../../../../lib/tloz-api-authorization";
+import { invalidBodyResponse, parseJsonObject } from "../../../../../lib/api-response";
 
 const VALID_PROJECT_FIELDS = new Set([
   "name", "description", "descriptionDetail", "icon", "color",
@@ -51,15 +52,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ pr
     );
   }
 
-  let body: Record<string, unknown>;
+  let body: Record<string, unknown> | null;
   try {
-    body = await request.json();
+    body = parseJsonObject(await request.json());
   } catch {
-    return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
-    );
+    body = null;
   }
+  if (!body) return invalidBodyResponse();
 
   const allowedFields = Object.fromEntries(
     Object.entries(body).filter(([key]) => VALID_PROJECT_FIELDS.has(key))

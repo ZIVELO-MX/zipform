@@ -64,4 +64,30 @@ describe("/api/v2/containers", () => {
     expect(response.status).toBe(201);
     expect(mocks.createContainer).toHaveBeenCalledWith(expect.objectContaining({ presentation: "workshop", publicId: "workshop" }));
   });
+
+  it("defaults an absent definition instead of storing an unusable one", async () => {
+    const response = await POST(new NextRequest("https://tloz.test/api/v2/containers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId: "project-empty", presentation: "project", title: "Empty" }),
+    }));
+    expect(response.status).toBe(201);
+    expect(mocks.createContainer).toHaveBeenCalledWith(expect.objectContaining({
+      definition: { fields: [], views: [{ id: "default", fields: [] }], defaultView: "default" },
+    }));
+  });
+
+  it.each([
+    ["an empty object", {}],
+    ["a non-object", 42],
+    ["a definition without defaultView", { fields: [], views: [{ id: "default", fields: [] }] }],
+    ["a view without fields", { fields: [], views: [{ id: "default" }], defaultView: "default" }],
+  ])("rejects %s as definition with 400", async (_label, definition) => {
+    const response = await POST(new NextRequest("https://tloz.test/api/v2/containers", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicId: "project-bad", presentation: "project", title: "Bad", definition }),
+    }));
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "STORE_INVALID" } });
+    expect(mocks.createContainer).not.toHaveBeenCalled();
+  });
 });

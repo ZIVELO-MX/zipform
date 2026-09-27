@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { dataClient } from "@tloz/data";
+import { dataClient, TlozValidationError } from "@tloz/data";
 import type { TlozInventoryCategory, TlozInventoryStatus } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
+import { invalidBodyResponse, parseJsonObject, validationErrorResponse } from "../../../../lib/api-response";
 import { authorizeApiOperation, isFullStackDeveloper } from "../../../../lib/authorization";
 import { paginationErrorResponse, parsePaginationLimit } from "../../../../lib/api-pagination";
 
@@ -60,15 +61,13 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
-  let body: Record<string, unknown>;
+  let body: Record<string, unknown> | null;
   try {
-    body = await request.json();
+    body = parseJsonObject(await request.json());
   } catch {
-    return NextResponse.json(
-      { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400 }
-    );
+    body = null;
   }
+  if (!body) return invalidBodyResponse();
 
   const allowedFields = Object.fromEntries(
     Object.entries(body).filter(([key]) => VALID_CREATE_FIELDS.has(key))
@@ -83,6 +82,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (allowedFields.status !== undefined && !validStatuses.includes(allowedFields.status as TlozInventoryStatus)) {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "status debe ser: locked o unlocked.", requestId: crypto.randomUUID() } },
+      { status: 400 }
+    );
+  }
+
+  if (allowedFields.category !== undefined && !validCategories.includes(allowedFields.category as TlozInventoryCategory)) {
+    return NextResponse.json(
+      { error: { code: "INVALID_REQUEST", message: "category debe ser: tool, access, asset, document u other.", requestId: crypto.randomUUID() } },
+      { status: 400 }
+    );
+  }
+
   try {
     const forbidden = authorizeApiOperation(auth.user, "create", {
       requestedOwnerId: typeof allowedFields.ownerId === "string" ? allowedFields.ownerId : null,
@@ -90,7 +103,8 @@ export async function POST(request: NextRequest) {
     if (forbidden) return forbidden;
     const created = await dataClient.tloz.createQuestItem(allowedFields as Parameters<typeof dataClient.tloz.createQuestItem>[0]);
     return NextResponse.json({ data: created }, { status: 201 });
-  } catch {
+  } catch (error) {
+    if (error instanceof TlozValidationError) return validationErrorResponse(error.fields);
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "Error interno del servidor.", requestId: crypto.randomUUID() } },
       { status: 500 }
