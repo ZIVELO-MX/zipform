@@ -882,7 +882,7 @@ export function AddResource({ disabled = false, onAdd }: { disabled?: boolean; o
   useEffect(() => {
     if (!error || saving || disabled) return;
     errorMessage.current?.scrollIntoView({ block: "nearest" });
-    submitButton.current?.focus({ preventScroll: true });
+    if (submitButton.current && !submitButton.current.disabled) submitButton.current.focus({ preventScroll: true });
   }, [error, saving, disabled]);
   const usesFileId = resourceUsesFileId(type);
 
@@ -923,7 +923,7 @@ export function AddResource({ disabled = false, onAdd }: { disabled?: boolean; o
       <div className="grid min-w-0 grid-cols-[40px_minmax(0,1fr)] gap-2 sm:grid-cols-[40px_130px_minmax(0,1fr)]">
         <IconPicker disabled={saving || disabled} icons={RESOURCE_ICON_OPTIONS} value={inferredIcon} label="Icono del recurso" onValueChange={setIcon} allowClear iconOnly className="size-10 justify-center" />
         <Select value={type} disabled={saving || disabled} onValueChange={(value) => setType(value as TlozResourceType)}><SelectTrigger aria-label="Tipo de recurso"><SelectValue /></SelectTrigger><SelectContent position="item-aligned"><SelectGroup>{Object.entries(resourceTypeLabel).map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}</SelectGroup></SelectContent></Select>
-        <Input autoFocus required className="col-span-2 min-w-0 sm:col-span-1" aria-label="Título del recurso" placeholder="Título" value={title} onChange={(event) => setTitle(event.target.value)} />
+        <Input autoFocus required className="col-span-2 min-w-0 sm:col-span-1" aria-label="Título del recurso" placeholder="Título" value={title} onChange={(event) => { setTitle(event.target.value); if (error) setError(""); }} />
       </div>
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
         <Input className="min-w-0 flex-1" aria-label={usesFileId ? "Identificador del archivo" : "URL del recurso"} placeholder={usesFileId ? "ID del archivo" : "https://…"} value={location} onChange={(event) => setLocation(event.target.value)} />

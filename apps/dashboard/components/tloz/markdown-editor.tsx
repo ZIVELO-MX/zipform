@@ -97,7 +97,12 @@ export function MarkdownEditor({ value, onSave, onToggleTask, placeholder = "Añ
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40" onCloseAutoFocus={(event) => { if (textareaRef.current) { event.preventDefault(); textareaRef.current.focus(); } }}>
+          <DropdownMenuContent align="end" className="w-40" onCloseAutoFocus={(event) => {
+            const textarea = textareaRef.current;
+            if (!textarea || textarea.disabled) return;
+            event.preventDefault();
+            textarea.focus();
+          }}>
             <DropdownMenuItem onSelect={handleCopy}>
               <ClipboardCopy className="size-3.5" />
               Copiar
