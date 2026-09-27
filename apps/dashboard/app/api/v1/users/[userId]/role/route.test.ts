@@ -1,13 +1,23 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  getUsers: vi.fn(),
-  updateUserRole: vi.fn(),
-  authenticateWithApiKey: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  class LastOwnerError extends Error {
+    readonly code = "LAST_OWNER";
+    constructor() {
+      super("No se puede eliminar al último Platform Owner.");
+      this.name = "TlozLastOwnerError";
+    }
+  }
+  return {
+    LastOwnerError,
+    getUsers: vi.fn(),
+    updateUserRole: vi.fn(),
+    authenticateWithApiKey: vi.fn(),
+  };
+});
 
-vi.mock("@tloz/data", () => ({ dataClient: { tloz: { getUsers: mocks.getUsers, updateUserRole: mocks.updateUserRole }, agent: { authenticateWithApiKey: mocks.authenticateWithApiKey } } }));
+vi.mock("@tloz/data", () => ({ dataClient: { tloz: { getUsers: mocks.getUsers, updateUserRole: mocks.updateUserRole }, agent: { authenticateWithApiKey: mocks.authenticateWithApiKey } }, TlozLastOwnerError: mocks.LastOwnerError }));
 vi.mock("../../../../../../auth", () => ({ auth: vi.fn().mockResolvedValue(null) }));
 
 import { PATCH } from "./route";
@@ -49,5 +59,19 @@ describe("PATCH /users/:userId/role", () => {
       method: "PATCH", headers: { authorization: "Bearer zaf_owner", "content-type": "application/json" }, body: JSON.stringify({ role: "Full Stack Developer" }),
     }), { params: Promise.resolve({ userId: "owner" }) });
     expect(response.status).toBe(409);
+  });
+
+  it("answers 409 when the driver refuses a concurrent demotion of the last owner", async () => {
+    const secondOwner = { ...owner, id: "owner-2", username: "owner2", email: "owner2@example.com" };
+    mocks.getUsers.mockResolvedValue([owner, secondOwner, operative]);
+    mocks.authenticateWithApiKey.mockResolvedValue(owner);
+    mocks.updateUserRole.mockRejectedValue(new mocks.LastOwnerError());
+
+    const response = await PATCH(new NextRequest("http://localhost/api/v1/users/owner-2/role", {
+      method: "PATCH", headers: { authorization: "Bearer zaf_owner", "content-type": "application/json" }, body: JSON.stringify({ role: "Full Stack Developer" }),
+    }), { params: Promise.resolve({ userId: "owner-2" }) });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "LAST_OWNER" } });
   });
 });
