@@ -27,6 +27,7 @@ scripts/
 # Playwright evidence stays local or in CI artifacts.
 test-results/
 playwright-report/
+ui-test-results/
 
 # Local design review snapshots.
 .impeccable/critique/
