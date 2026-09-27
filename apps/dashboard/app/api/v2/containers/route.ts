@@ -2,7 +2,7 @@ import { dataClient, ContainerContentError } from "@tloz/data";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../lib/authorization";
-import { errorResponse, handleContainerContentError, readData, resolveContainer } from "../../../../lib/container-content-api";
+import { errorResponse, handleContainerContentError, readData, readDefinition, resolveContainer } from "../../../../lib/container-content-api";
 import { observedJson } from "../../../../lib/read-telemetry";
 
 export async function GET(request: NextRequest) {
@@ -41,7 +41,9 @@ export async function POST(request: NextRequest) {
       title,
       summary: typeof raw.summary === "string" ? raw.summary : "",
       body: typeof raw.body === "string" ? raw.body : "",
-      definition: raw.definition && typeof raw.definition === "object" && !Array.isArray(raw.definition) ? raw.definition as never : { fields: [], views: [{ id: "default", fields: [] }], defaultView: "default" },
+      definition: raw.definition === undefined
+        ? { fields: [], views: [{ id: "default", fields: [] }], defaultView: "default" }
+        : readDefinition(raw.definition) as never,
       data,
     });
     return new Response(responseBody(record), { status: 201, headers: { "Content-Type": "application/json", ETag: `"${record.revision}"`, Location: `/api/v2/containers/${encodeURIComponent(record.publicId)}` } });
