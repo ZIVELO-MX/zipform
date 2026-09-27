@@ -1,6 +1,6 @@
 "use client";
 
-import { cloneElement, createContext, isValidElement, useContext, useId, useMemo, useRef, useState, useTransition } from "react";
+import { cloneElement, createContext, isValidElement, useContext, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useIsMobile } from "../../hooks/use-is-mobile";
 import { Plus } from "lucide-react";
@@ -64,8 +64,7 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
   const toasterId = useOverlayToasterId();
   const [pending, startTransition] = useTransition();
   const submitting = useRef(false);
-  const now = new Date();
-  const today = calendarDateKey({ year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() });
+  const [today, setToday] = useState("");
   const defaultOwnerId = users.find((user) => user.username === "zibot")?.id ?? users[0]?.id ?? "";
   const defaultProjectId = fixedProjectId ?? projects.find((project) => project.slug === "zivelo")?.id ?? projects[0]?.id ?? "";
   function freshDraft() {
@@ -86,6 +85,12 @@ export function CreateForm({ kind, projects, users, missions = [], questItems = 
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [resources, setResources] = useState<TlozResourceInput[]>([]);
+  useEffect(() => {
+    const now = new Date();
+    const key = calendarDateKey({ year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate() });
+    setToday(key);
+    setDraft((current) => (kind === "project" && !current.startDate ? { ...current, startDate: key } : current));
+  }, [kind]);
   const missionContract = projectContracts[draft.projectId] ?? [];
   const formId = `create-${kind}-form`;
   function field(name: string, value: string) {
