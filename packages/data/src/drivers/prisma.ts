@@ -28,7 +28,7 @@ import {
   type TlozDataSet
 } from "../tloz-hydration";
 import { assertAcyclicDependency, assertProjectScopedDependency } from "../dependency-rules";
-import { RESERVED_TLOZ_SLUGS, slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
+import { RESERVED_TLOZ_SLUGS, sanitizeUserUpdate, slugify, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 import { createPrismaDocumentRepository } from "./prisma-documents";
 import { createPrismaContainerContentStore } from "./prisma-container-content";
 import { createPrismaActivityRepository } from "../activity";
@@ -586,7 +586,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
       async update(userId: string, input: import("../contracts").UserUpdateInput) {
         const row = await prisma.user.update({
           where: { id: userId },
-          data: { ...input, updatedAt: new Date() }
+          data: { ...sanitizeUserUpdate(input), updatedAt: new Date() }
         });
         return mapUser(row);
       }
@@ -983,7 +983,8 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           ? missionDocumentState(input.descriptionDetail)
           : null;
         if (document) nullableData.progress = document.progress;
-        const projectChanged = input.projectId !== undefined;
+        const projectProvided = input.projectId !== undefined;
+        const projectChanged = projectProvided && input.projectId !== "";
 
         await prisma.$transaction(async (tx) => {
           if (projectChanged) {
@@ -1044,7 +1045,7 @@ export function createPrismaDataClient(prisma: PrismaClient = getPrismaClient())
           });
           if (document) await replaceMissionChecklist(tx, missionId, document.checklist);
 
-          if (projectChanged) {
+          if (projectProvided) {
             await tx.tlozMissionDependency.deleteMany({
               where: { OR: [{ missionId }, { dependsOnMissionId: missionId }] },
             });
