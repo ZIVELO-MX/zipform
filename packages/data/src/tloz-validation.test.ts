@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isTlozProjectStatus } from "@tloz/types";
-import { TlozValidationError, nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
+import { TlozValidationError, nextMissionDisplayId, sanitizeUserUpdate, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
 
 describe("TLOZ creation validation", () => {
   it("accepts only the current Project statuses", () => {
@@ -68,5 +68,49 @@ describe("TLOZ creation validation", () => {
   it("enforces separate short description and Markdown detail limits", () => {
     expect(() => validateMissionCreate({ title: "Valid title", type: "side_quest", ownerId: "user-1", projectId: "project-1", description: "x".repeat(281) })).toThrow(TlozValidationError);
     expect(() => validateMissionCreate({ title: "Valid title", type: "side_quest", ownerId: "user-1", projectId: "project-1", descriptionDetail: "x".repeat(20001) })).toThrow(TlozValidationError);
+  });
+});
+
+describe("TLOZ user update sanitization", () => {
+  it("keeps only the profile fields a developer may change", () => {
+    const payload = {
+      name: "Benrod",
+      username: "benrod",
+      avatarUrl: "https://cdn.test/pfp.png",
+      theme: "dark",
+      role: "Platform Owner",
+      type: "human",
+      email: "escalate@example.com",
+      passwordHash: "not-a-hash",
+    } as unknown as Parameters<typeof sanitizeUserUpdate>[0];
+
+    expect(sanitizeUserUpdate(payload)).toEqual({
+      name: "Benrod",
+      username: "benrod",
+      avatarUrl: "https://cdn.test/pfp.png",
+      theme: "dark",
+    });
+  });
+
+  it("drops unsupported themes and non-string profile values", () => {
+    const payload = { name: "Benrod", theme: "neon", avatarUrl: 42 } as unknown as Parameters<typeof sanitizeUserUpdate>[0];
+    expect(sanitizeUserUpdate(payload)).toEqual({ name: "Benrod" });
+    expect(sanitizeUserUpdate({})).toEqual({});
+  });
+});
+
+describe("TLOZ creation validation without a description", () => {
+  it("treats an omitted project description as an empty string", () => {
+    expect(validateProjectCreate({
+      name: "Core", icon: "FolderKanban", color: "#2D6CDF",
+      status: "active", type: "normal", ownerId: "user-1", startDate: "2026-07-01",
+    } as never)).toMatchObject({ description: "" });
+  });
+
+  it("treats an omitted quest item description as an empty string", () => {
+    expect(validateQuestItemCreate({
+      name: "Key", icon: "KeyRound", color: "#2D6CDF",
+      status: "locked", category: "tool",
+    } as never)).toMatchObject({ description: "" });
   });
 });
