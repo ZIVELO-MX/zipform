@@ -83,6 +83,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
+  /users/query:
     post:
       operationId: queryUsers
       summary: Query users by example
@@ -2284,6 +2285,29 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createDocumentResource
+      summary: Attach a resource to any document kind
+      tags: [Documents, Resources]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceInput"
+      responses:
+        "201":
+          description: Resource created.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /documents/{documentId}/resources/{resourceId}:
     servers:
       - url: /api/v2
@@ -2301,29 +2325,6 @@ paths:
       responses:
         "204":
           description: Resource removed.
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalError"
-    post:
-      operationId: createDocumentResource
-      summary: Attach a resource to any document kind
-      tags: [Documents, Resources]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ResourceInput"
-      responses:
-        "201":
-          description: Resource created.
-        "400":
-          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2980,7 +2981,7 @@ components:
     # ── Projects ─────────────────────────────────────────────────────
     ProjectStatus:
       type: string
-      enum: [planned, active, archived]
+      enum: [active, maintenance, paused, completed]
     Project:
       type: object
       additionalProperties: false
