@@ -25,6 +25,14 @@ function validateMissionId(missionId: string) {
   return missionId.length > 0 && missionId.length <= 128;
 }
 
+async function readBody(request: Request): Promise<unknown> {
+  try {
+    return await request.json();
+  } catch {
+    return null;
+  }
+}
+
 async function signedGroup(group: TlozAttachmentGroup) {
   const storage = getTlozAttachmentStorage();
   return {
@@ -46,7 +54,7 @@ export async function POST(request: Request, { params }: RouteContext) {
   try {
     const permission = await authorizeMissionOperation(auth.user, missionId);
     if (!permission.allowed) return permission.response;
-    const manifest = validateAttachmentManifest(await request.json());
+    const manifest = validateAttachmentManifest(await readBody(request));
     const storage = getTlozAttachmentStorage();
     const filesWithPaths = manifest.files.map((file) => {
       const storagePath = attachmentStoragePath(missionId, manifest.groupKey, file.key, file.contentType);
@@ -69,7 +77,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
   try {
     const permission = await authorizeMissionOperation(auth.user, missionId);
     if (!permission.allowed) return permission.response;
-    const body = await request.json() as { uploadBatchId?: unknown };
+    const body = (await readBody(request) ?? {}) as { uploadBatchId?: unknown };
     if (typeof body.uploadBatchId !== "string" || body.uploadBatchId.length < 1 || body.uploadBatchId.length > 128) return errorResponse(400, "INVALID_REQUEST", "uploadBatchId es requerido.");
     const batch = await dataClient.tloz.getAttachmentBatch(body.uploadBatchId);
     if (batch.missionId !== missionId) return errorResponse(404, "ATTACHMENT_BATCH_NOT_FOUND", "El lote de capturas no existe para esta Mission.");

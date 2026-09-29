@@ -90,4 +90,14 @@ describe("/api/v2/containers", () => {
     await expect(response.json()).resolves.toMatchObject({ error: { code: "STORE_INVALID" } });
     expect(mocks.createContainer).not.toHaveBeenCalled();
   });
+
+  it("returns 400 for a malformed JSON body", async () => {
+    const response = await POST(new NextRequest("https://tloz.test/api/v2/containers", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: "{oops",
+    }));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ error: { code: "INVALID_REQUEST" } });
+    expect(mocks.createContainer).not.toHaveBeenCalled();
+  });
 });
