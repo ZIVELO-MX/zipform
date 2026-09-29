@@ -2,7 +2,7 @@
 
 import type { ApiKey, Avatar, UserProfile } from "@tloz/types";
 import { auth } from "../auth";
-import { dataClient, type UserUpdateInput } from "@tloz/data";
+import { dataClient, sanitizeUserUpdate, type UserUpdateInput } from "@tloz/data";
 import { revalidatePath } from "next/cache";
 import { assertTlozOperation, authorizeTlozOperation, isReadOnlyAgent, TlozAuthorizationError } from "./authorization";
 
@@ -37,7 +37,7 @@ async function assertOwnApiKeyAccess() {
 export async function updateProfile(input: UserUpdateInput & { avatarUrl?: string }) {
   const session = await assertSettingsAccess();
 
-  const user = await dataClient.user.update(session.id, input);
+  const user = await dataClient.user.update(session.id, sanitizeUserUpdate(input));
   revalidatePath("/", "layout");
   return user;
 }
