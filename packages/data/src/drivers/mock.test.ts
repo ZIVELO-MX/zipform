@@ -332,4 +332,69 @@ describe("mock data driver", () => {
       ])
     );
   });
+
+  it("keeps untouched nullable fields during partial project and quest-item updates", async () => {
+    const client = createMockDataClient();
+    const project = await client.tloz.createProject({
+      name: "Dated project", description: "", icon: "Box", color: "#3366FF",
+      status: "active", type: "system", ownerId: currentUser.id,
+      startDate: "2026-07-01", dueDate: "2026-12-01",
+    });
+    expect(await client.tloz.updateProject(project.id, { name: "Renamed project" })).toMatchObject({
+      name: "Renamed project",
+      dueDate: "2026-12-01",
+    });
+
+    const item = await client.tloz.createQuestItem({
+      name: "Owned item", description: "", icon: "Key", color: "#2D6CDF",
+      status: "unlocked", category: "tool", acquiredAt: "2026-05-05",
+    });
+    await client.tloz.updateQuestItem(item.id, { ownerId: currentUser.id });
+    expect(await client.tloz.updateQuestItem(item.id, { name: "Renamed item" })).toMatchObject({
+      name: "Renamed item",
+      ownerId: currentUser.id,
+      acquiredAt: "2026-05-05",
+    });
+  });
+
+  it("ignores privileged fields when a profile is updated", async () => {
+    const client = createMockDataClient();
+    const updated = await client.user.update(currentUser.id, {
+      name: "Renamed developer",
+      role: "Platform Owner",
+      email: "escalate@example.com",
+      passwordHash: "not-a-hash",
+    } as never);
+
+    expect(updated).toMatchObject({
+      name: "Renamed developer",
+      role: currentUser.role,
+      email: currentUser.email,
+    });
+  });
+
+  it("creates agents that every user lookup can resolve", async () => {
+    const client = createMockDataClient();
+    const { user, apiKey } = await client.agent.create(
+      { name: "Runner", username: "runner", email: "runner@tloz.dev", role: "agent:operative" },
+      currentUser.id,
+    );
+
+    expect(await client.agent.list()).toEqual(expect.arrayContaining([expect.objectContaining({ id: user.id })]));
+    expect(await client.tloz.getUsers()).toEqual(expect.arrayContaining([expect.objectContaining({ id: user.id })]));
+    expect(await client.tloz.getUserByEmail("runner@tloz.dev")).toMatchObject({ id: user.id });
+    expect(await client.agent.authenticateWithApiKey(apiKey.key)).toMatchObject({ id: user.id });
+
+    expect(await client.tloz.updateUserRole(user.id, "agent:reader")).toMatchObject({ role: "agent:reader" });
+    expect(await client.tloz.getUserByEmail("runner@tloz.dev")).toMatchObject({ role: "agent:reader" });
+  });
+
+  it("lists seasons and episodes created at runtime", async () => {
+    const client = createMockDataClient();
+    const season = await client.tloz.createSeason("Season Runtime");
+    const episode = await client.tloz.createEpisode("Pilot", season.id);
+
+    expect(await client.tloz.getSeasons()).toEqual(expect.arrayContaining([expect.objectContaining({ id: season.id })]));
+    expect(await client.tloz.getEpisodes()).toEqual(expect.arrayContaining([expect.objectContaining({ id: episode.id })]));
+  });
 });

@@ -21,7 +21,7 @@ import {
 } from "../seed-data";
 import { buildTlozDashboardSummary, buildTlozMissionDetail, hydrateMissions, parseMarkdownChecklist } from "../tloz-hydration";
 import { assertAcyclicDependency, assertProjectScopedDependency } from "../dependency-rules";
-import { nextMissionDisplayId, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
+import { nextMissionDisplayId, sanitizeUserUpdate, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "../tloz-validation";
 import { createMockDocumentRepository } from "./mock-documents";
 import { createJsonbPrototypeStore } from "../container-content-prototype";
 import { createContainerContentDocumentRepository } from "../container-content-document";
@@ -65,12 +65,11 @@ export function createMockDataClient(): TlozDataClient {
   };
 
   const agentMethods = (() => {
-    const agentUsers: UserProfile[] = [];
     let apiKeysStore: Array<{ key: string } & ApiKey> = [];
 
     return {
       async list() {
-        return [...users.filter((u) => u.type === "agent"), ...agentUsers];
+        return tlozData.users.filter((u) => u.type === "agent");
       },
       async create(input: AgentCreateInput, createdByUserId: string) {
         const now = new Date().toISOString();
@@ -84,7 +83,7 @@ export function createMockDataClient(): TlozDataClient {
           avatarUrl: "",
           theme: "system"
         };
-        agentUsers.push(user);
+        tlozData.users.push(user);
         const apiKeyResult = await this.createApiKey(user.id, "default", createdByUserId);
         return { user, apiKey: apiKeyResult };
       },
@@ -115,8 +114,7 @@ export function createMockDataClient(): TlozDataClient {
       async authenticateWithApiKey(key: string) {
         const stored = apiKeysStore.find((k) => k.key === key);
         if (!stored) return null;
-        const allUsers = [...users, ...agentUsers];
-        return allUsers.find((u) => u.id === stored.userId) ?? null;
+        return tlozData.users.find((u) => u.id === stored.userId) ?? null;
       }
     };
   })();
@@ -132,7 +130,7 @@ export function createMockDataClient(): TlozDataClient {
       async update(userId: string, input: import("../contracts").UserUpdateInput) {
         const idx = tlozData.users.findIndex((u) => u.id === userId);
         if (idx === -1) throw new Error("User not found");
-        tlozData.users[idx] = { ...tlozData.users[idx], ...input };
+        tlozData.users[idx] = { ...tlozData.users[idx], ...sanitizeUserUpdate(input) };
         return tlozData.users[idx];
       }
     },
@@ -209,10 +207,10 @@ export function createMockDataClient(): TlozDataClient {
         return tlozData.projects.find((project) => project.id === projectId) ?? null;
       },
       async getSeasons() {
-        return seasons;
+        return tlozData.seasons;
       },
       async getEpisodes() {
-        return episodes;
+        return tlozData.episodes;
       },
       async getQuestItems() {
         return tlozData.questItems;
@@ -261,14 +259,17 @@ export function createMockDataClient(): TlozDataClient {
       async updateProject(projectId, input) {
         const index = tlozData.projects.findIndex((item) => item.id === projectId);
         if (index < 0) throw new Error(`TLOZ project ${projectId} was not found`);
-        const normalized = { ...input, dueDate: input.dueDate || undefined };
+        const normalized = { ...input };
+        if (Object.prototype.hasOwnProperty.call(input, "dueDate")) normalized.dueDate = input.dueDate || undefined;
         tlozData.projects[index] = { ...tlozData.projects[index], ...normalized, updatedAt: new Date().toISOString() };
         return tlozData.projects[index];
       },
       async updateQuestItem(questItemId, input) {
         const index = tlozData.questItems.findIndex((item) => item.id === questItemId);
         if (index < 0) throw new Error(`TLOZ inventory item ${questItemId} was not found`);
-        const normalized = { ...input, ownerId: input.ownerId || undefined, acquiredAt: input.acquiredAt || undefined };
+        const normalized = { ...input };
+        if (Object.prototype.hasOwnProperty.call(input, "ownerId")) normalized.ownerId = input.ownerId || undefined;
+        if (Object.prototype.hasOwnProperty.call(input, "acquiredAt")) normalized.acquiredAt = input.acquiredAt || undefined;
         tlozData.questItems[index] = { ...tlozData.questItems[index], ...normalized, updatedAt: new Date().toISOString() };
         return tlozData.questItems[index];
       },
