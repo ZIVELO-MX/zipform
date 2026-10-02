@@ -1,4 +1,5 @@
 import { paginationStartIndex } from "./pagination";
+import { validateContainerDefinitionShape } from "./container-content-store";
 
 export type ContainerContentErrorCode =
   | "STORE_INVALID"
@@ -163,6 +164,7 @@ implements ContainerContentStore {
       createdAt: now,
       updatedAt: now,
     };
+    validateContainerRecord(record);
     validateSnapshot({ containers: [record], contents: [] });
     if ([...this.containers.values()].some((row) => this.shape.decodeContainer(row).publicId === record.publicId)) {
       throw new ContainerContentError("STORE_INVALID", "La identidad pública ya está en uso.", { publicId: "duplicate" });
@@ -496,9 +498,7 @@ function uniqueIds(
 
 function validateContainerRecord(record: ContainerRecord) {
   validateCommonRecord(record, "container");
-  if (!record.definition || Array.isArray(record.definition) || typeof record.definition !== "object") {
-    throw new ContainerContentError("STORE_INVALID", "Container definition debe ser un objeto.", { container: "invalid" });
-  }
+  validateContainerDefinitionShape(record.definition);
 }
 
 function validateContentRecord(record: ContentRecord) {
