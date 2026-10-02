@@ -15,6 +15,7 @@ import {
   type ContentUpdate,
   type MigrationReport,
   getContentReferenceIds,
+  validateContainerDefinitionShape,
   validateContainerRecord,
   validateContentRecord,
 } from "../container-content-store";
@@ -402,6 +403,7 @@ export function createPrismaContainerContentStore(prisma: PrismaClient): Contain
       if (update.title !== undefined && !update.title.trim()) {
         throw new ContainerContentError("STORE_INVALID", "El título no puede estar vacío.", { title: "required" });
       }
+      if (update.definition !== undefined) validateContainerDefinitionShape(update.definition);
       try {
         const current = await prisma.container.findUnique({ where: { id } });
         if (!current) throw new ContainerContentError("STORE_NOT_FOUND", `Container ${id} no existe.`, { id: "not_found" });

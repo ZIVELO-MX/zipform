@@ -98,22 +98,47 @@ function sortValue(value: unknown): unknown {
   );
 }
 
+export function validateContainerDefinitionShape(definition: unknown): void {
+  if (!definition || Array.isArray(definition) || typeof definition !== "object") {
+    throw new ContainerContentError(
+      "STORE_INVALID",
+      "Container definition debe ser un objeto.",
+      { container: "invalid" },
+    );
+  }
+  const shape = definition as { fields?: unknown; views?: unknown };
+  if (
+    !Array.isArray(shape.fields)
+    || shape.fields.some((field) => !field || typeof field !== "object" || Array.isArray(field))
+  ) {
+    throw new ContainerContentError(
+      "STORE_INVALID",
+      "Container definition.fields debe ser una lista de objetos.",
+      { "definition.fields": "invalid" },
+    );
+  }
+  if (
+    !Array.isArray(shape.views)
+    || shape.views.some((view) => !view || typeof view !== "object" || Array.isArray(view))
+  ) {
+    throw new ContainerContentError(
+      "STORE_INVALID",
+      "Container definition.views debe ser una lista de objetos.",
+      { "definition.views": "invalid" },
+    );
+  }
+}
+
 export function validateContainerRecord(record: ContainerRecord): void {
   validateCommon(record, "container");
-  if (
-    !record.definition
-    || Array.isArray(record.definition)
-    || typeof record.definition !== "object"
-    || !record.data
-    || Array.isArray(record.data)
-    || typeof record.data !== "object"
-  ) {
+  if (!record.data || Array.isArray(record.data) || typeof record.data !== "object") {
     throw new ContainerContentError(
       "STORE_INVALID",
       "Container definition y data deben ser objetos.",
       { container: "invalid" },
     );
   }
+  validateContainerDefinitionShape(record.definition);
 }
 
 export function validateContentRecord(record: ContentRecord): void {
