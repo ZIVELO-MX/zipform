@@ -143,4 +143,54 @@ describe("Container/Content document pagination", () => {
     expect(page.data.map((item) => item.id)).toEqual(["content-3", "content-4"]);
     expect(page.nextCursor).toBeNull();
   });
+
+  it("keeps paging a mixed query whose only match sits beyond the first batch", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const first = await repository.find({ query: "TLO-0104" }, { limit: 1 });
+    expect(first.data).toEqual([]);
+    expect(first.nextCursor).toBe('m:{"containers":"container-b","contents":"content-2"}');
+
+    const { ids } = await collectPages((cursor) =>
+      repository.find({ query: "TLO-0104" }, { limit: 1, cursor }));
+
+    expect(ids).toEqual(["content-4"]);
+  });
+
+  it("keeps paging a single-source query whose only match sits beyond the first batch", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const { ids } = await collectPages((cursor) =>
+      repository.find({ kind: "mission", query: "TLO-0104" }, { limit: 1, cursor }));
+
+    expect(ids).toEqual(["content-4"]);
+  });
+
+  it("returns every query match once across single-source pages", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const { ids } = await collectPages((cursor) =>
+      repository.find({ kind: "mission", query: "TLO-0" }, { limit: 1, cursor }));
+
+    expect(ids).toEqual(["content-1", "content-2", "content-3", "content-4"]);
+  });
+
+  it("returns every mixed query match once when only containers match", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const { ids, cursors } = await collectPages((cursor) =>
+      repository.find({ query: "project-" }, { limit: 1, cursor }));
+
+    expect(ids).toEqual(["container-a", "container-b", "container-c"]);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(cursors.every((cursor) => cursor.startsWith("m:"))).toBe(true);
+  });
 });
