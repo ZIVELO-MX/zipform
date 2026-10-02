@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { TlozFieldDefinition } from "@tloz/types";
 import { createJsonbPrototypeStore } from "./container-content-prototype";
 import { createContainerContentDocumentRepository } from "./container-content-document";
 
@@ -192,5 +193,94 @@ describe("Container/Content document pagination", () => {
     expect(ids).toEqual(["container-a", "container-b", "container-c"]);
     expect(new Set(ids).size).toBe(ids.length);
     expect(cursors.every((cursor) => cursor.startsWith("m:"))).toBe(true);
+  });
+});
+
+describe("Container/Content Project contract", () => {
+  const statusField: TlozFieldDefinition = {
+    id: "status",
+    key: "status",
+    label: "Estado",
+    type: "select",
+    required: true,
+    visible: true,
+    position: 0,
+    defaultValue: "later",
+    options: [
+      { value: "later", label: "Later", role: "backlog" },
+      { value: "completed", label: "Completed", role: "done" },
+    ],
+  };
+  const categoryField: TlozFieldDefinition = {
+    id: "category",
+    key: "category",
+    label: "Categoría",
+    type: "select",
+    required: true,
+    visible: true,
+    position: 1,
+    defaultValue: "side_quest",
+    options: [{ value: "side_quest", label: "Side Quest" }],
+  };
+  const priorityField: TlozFieldDefinition = {
+    id: "draft-1",
+    key: "priority",
+    label: "Prioridad",
+    type: "text",
+    required: false,
+    visible: true,
+    position: 2,
+    options: [],
+  };
+
+  async function projectRepository() {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(snapshot);
+    return createContainerContentDocumentRepository(store);
+  }
+
+  it("rejects a Project contract that breaks the field rules", async () => {
+    const repository = await projectRepository();
+
+    await expect(repository.replaceProjectContract("project-1", [
+      { ...statusField, options: [] },
+      categoryField,
+    ], 1)).rejects.toMatchObject({ code: "DOCUMENT_INVALID", fields: { "contract.fields.status": "invalid" } });
+
+    await expect(repository.replaceProjectContract("project-1", [
+      statusField,
+      { ...statusField, id: "duplicate" },
+      categoryField,
+    ], 1)).rejects.toMatchObject({ code: "DOCUMENT_INVALID" });
+  });
+
+  it("rejects a Project contract that drops the required status or category", async () => {
+    const repository = await projectRepository();
+
+    await expect(repository.replaceProjectContract("project-1", [statusField], 1))
+      .rejects.toMatchObject({ code: "DOCUMENT_INVALID" });
+  });
+
+  it("round-trips a valid Project contract read back from storage", async () => {
+    const repository = await projectRepository();
+
+    const saved = await repository.replaceProjectContract(
+      "project-1",
+      [statusField, categoryField, priorityField],
+      1,
+    );
+    expect(saved.revision).toBe(2);
+    expect(saved.contract?.fields.map((field) => field.key)).toEqual(["status", "category", "priority"]);
+
+    const reloaded = await repository.get("project-1");
+    const reparsed = await repository.replaceProjectContract(
+      "project-1",
+      reloaded?.contract?.fields ?? [],
+      reloaded?.revision ?? 0,
+    );
+
+    expect(reparsed.contract?.fields.map((field) => field.key)).toEqual(["status", "category", "priority"]);
+    expect(reparsed.contract?.fields.find((field) => field.key === "status")?.defaultValue).toBe("later");
+    expect(reparsed.contract?.fields.find((field) => field.key === "priority")?.defaultValue).toBeUndefined();
   });
 });

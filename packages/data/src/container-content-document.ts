@@ -16,6 +16,7 @@ import type {
   TlozFieldDefinition,
 } from "@tloz/types";
 import type { TlozDocumentRepository } from "./contracts";
+import { validateProjectFields } from "./document-contract";
 import { TlozDocumentError } from "./document-errors";
 
 const PRESENTATIONS: Record<TlozDocumentKind, string> = {
@@ -51,7 +52,7 @@ function fieldDefinitions(definition: ContainerDefinition): TlozFieldDefinition[
     required: field.required ?? false,
     visible: field.visible ?? true,
     position: index,
-    defaultValue: scalar(field.defaultValue ?? null),
+    defaultValue: field.defaultValue == null ? undefined : scalar(field.defaultValue),
     options: field.options ?? [],
   }));
 }
@@ -266,10 +267,11 @@ export function createContainerContentDocumentRepository(store: ContainerContent
       const resolved = await resolve(projectId);
       if (!resolved || resolved.type !== "container") throw new TlozDocumentError("DOCUMENT_NOT_FOUND", "Project no encontrado.");
       const definition = resolved.container.definition;
+      const validated = validateProjectFields(fields);
       const updated = await store.updateContainer(resolved.container.id, {
         definition: {
           ...definition,
-          fields: fields.map((field) => ({
+          fields: validated.map((field) => ({
             key: field.key,
             label: field.label,
             format: field.type,
