@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { ContainerRecord, ContentRecord } from "@tloz/types";
 import {
@@ -11,8 +13,11 @@ import {
   canonicalControlKind,
   createContentPayload,
   filterAndSortContents,
+  localCalendarDate,
 } from "./container-content-view-model";
 import { documentToMissionView } from "./document-view-model";
+
+const viewModelSource = readFileSync(resolve(import.meta.dirname, "./container-content-view-model.ts"), "utf8");
 
 const definition = {
   fields: [
@@ -101,6 +106,15 @@ describe("canonical Container/Content view model", () => {
     expect(canonicalContentHref("library", "L-1")).toBe("/library/L-1");
     expect(canonicalCompletionDate("library", "unlocked", "2026-08-02")).toBe("2026-08-02");
     expect(canonicalCompletionDate("library", "locked", "2026-08-02")).toBeNull();
+  });
+
+  it("stamps completion with the local calendar day instead of the UTC day", () => {
+    expect(localCalendarDate(new Date(2026, 0, 1, 20, 0, 0))).toBe("2026-01-01");
+    expect(localCalendarDate(new Date(2025, 11, 31, 23, 59, 0))).toBe("2025-12-31");
+    expect(localCalendarDate(new Date(2026, 2, 5, 0, 0, 0))).toBe("2026-03-05");
+    expect(localCalendarDate(new Date(2026, 9, 1))).toBe("2026-10-01");
+    expect(viewModelSource).toContain("today = localCalendarDate()");
+    expect(viewModelSource).not.toMatch(/export function canonicalCompletionDate\([^)]*toISOString/);
   });
 
   it("filters completed and owner values and sorts without mutating the source", () => {

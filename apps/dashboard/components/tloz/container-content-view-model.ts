@@ -71,7 +71,13 @@ export function canonicalContentHref(presentation: string, publicId: string) {
   return `/${presentation}/${encodeURIComponent(publicId)}`;
 }
 
-export function canonicalCompletionDate(presentation: string, status: string, today = new Date().toISOString().slice(0, 10)) {
+export function localCalendarDate(date: Date = new Date()) {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+export function canonicalCompletionDate(presentation: string, status: string, today = localCalendarDate()) {
   if (presentation !== "library") return undefined;
   return status === "unlocked" ? today : null;
 }
