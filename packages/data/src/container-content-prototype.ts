@@ -1,24 +1,8 @@
 import { paginationStartIndex } from "./pagination";
-import { validateContainerDefinitionShape } from "./container-content-store";
+import { ContainerContentError, validateContainerDefinitionShape } from "./container-content-store";
 
-export type ContainerContentErrorCode =
-  | "STORE_INVALID"
-  | "STORE_NOT_FOUND"
-  | "STORE_REVISION_CONFLICT"
-  | "STORE_REFERENCE_INVALID"
-  | "STORE_UNAVAILABLE";
-
-export class ContainerContentError extends Error {
-  constructor(
-    public readonly code: ContainerContentErrorCode,
-    message: string,
-    public readonly fields: Record<string, string> = {},
-    options?: ErrorOptions,
-  ) {
-    super(message, options);
-    this.name = "ContainerContentError";
-  }
-}
+export { ContainerContentError };
+export type { ContainerContentErrorCode } from "./container-content-store";
 
 export type ContainerContentScalar = string | number | boolean | null;
 export type ContainerContentData =
