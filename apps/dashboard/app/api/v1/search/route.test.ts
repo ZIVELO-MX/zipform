@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dataClient } from "@tloz/data";
 import type { UserProfile } from "@tloz/types";
 import { authenticateRequest } from "../../../../lib/api-auth";
+import { decodeSearchCursor, encodeSearchCursor } from "../../../../lib/global-search";
 import { GET } from "./route";
 
 vi.mock("@tloz/data", () => ({
@@ -24,6 +25,7 @@ const actor: UserProfile = { id: "agent-1", name: "Zibot", username: "zibot", em
 
 describe("GET /api/v1/search", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     auth.mockResolvedValue({ user: actor, source: "session" });
     findDocuments.mockResolvedValue({ data: [], nextCursor: null });
     findResources.mockResolvedValue({ data: [], nextCursor: null });
@@ -62,5 +64,47 @@ describe("GET /api/v1/search", () => {
     findDocuments.mockClear();
     expect((await GET(new NextRequest("https://tloz.test/api/v1/search?q=ok&cursor=bad"))).status).toBe(400);
     expect(findDocuments).not.toHaveBeenCalled();
+  });
+
+  it("advances the document cursor past a budget-exhausted page", async () => {
+    findDocuments.mockResolvedValue({
+      data: [
+        { id: "project-1", publicId: "project-core", kind: "project", projectSlug: "core", title: "Proyecto", summary: "", body: "", revision: 1, properties: {}, createdAt: "2026-01-01", updatedAt: "2026-01-01" } as never,
+        { id: "mission-1", publicId: "TLO-0012", kind: "mission", projectSlug: "tloz", title: "Misión", summary: "", body: "", revision: 1, properties: {}, createdAt: "2026-01-02", updatedAt: "2026-01-02" } as never,
+      ],
+      nextCursor: "documents-next",
+    });
+
+    const response = await GET(new NextRequest("https://tloz.test/api/v1/search?q=ok&types=mission&limit=1"));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toMatchObject({ type: "mission" });
+    expect(decodeSearchCursor(body.nextCursor)).toEqual({ documents: "documents-next" });
+    expect(findDocuments).toHaveBeenCalledWith(
+      { query: "ok", includeSystem: false },
+      { limit: 1, cursor: undefined },
+    );
+  });
+
+  it("keeps the incoming document cursor when documents are excluded", async () => {
+    findResources.mockResolvedValue({
+      data: [
+        { id: "resource-1", missionId: "mission-1", type: "link", title: "Brief", createdAt: "2026-01-01", updatedAt: "2026-01-01" } as never,
+        { id: "resource-2", missionId: "mission-1", type: "note", title: "Nota", createdAt: "2026-01-02", updatedAt: "2026-01-02" } as never,
+      ],
+      nextCursor: "resources-next",
+    });
+    getDocument.mockResolvedValue({ id: "mission-1", publicId: "TLO-0012", kind: "mission", projectSlug: "tloz", title: "Misión", summary: "", body: "", revision: 1, properties: {}, createdAt: "2026-01-02", updatedAt: "2026-01-02" } as never);
+
+    const cursor = encodeURIComponent(encodeSearchCursor({ documents: "doc-kept", resources: "res-kept" }));
+    const response = await GET(new NextRequest(`https://tloz.test/api/v1/search?q=ok&types=resource&limit=1&cursor=${cursor}`));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.data).toHaveLength(1);
+    expect(findDocuments).not.toHaveBeenCalled();
+    expect(decodeSearchCursor(body.nextCursor)).toEqual({ documents: "doc-kept", resources: "resource-1" });
   });
 });

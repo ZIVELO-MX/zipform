@@ -8,9 +8,11 @@ import {
 import { authenticateRequest } from "../../../../../../lib/api-auth";
 import {
   authorizeDocumentOperation,
+  documentOperation,
   documentResponse,
   handleDocumentError,
   parseExpectedRevision,
+  readDocumentBody,
 } from "../../../../../../lib/document-api";
 
 type RouteContext = { params: Promise<{ documentId: string }> };
@@ -41,8 +43,6 @@ export async function PUT(request: Request, { params }: RouteContext) {
   try {
     const current = await dataClient.canonicalDocuments.get(documentId);
     if (!current) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
-    const forbidden = authorizeDocumentOperation(auth.user, current);
-    if (forbidden) return forbidden;
     const markdown = request.headers.get("content-type")?.includes("text/markdown")
       ? await request.text()
       : await markdownFromJson(request);
@@ -65,6 +65,8 @@ export async function PUT(request: Request, { params }: RouteContext) {
       current.kind,
     );
     if (parsed.contract) validateProjectFields(parsed.contract.fields);
+    const forbidden = authorizeDocumentOperation(auth.user, current, documentOperation(current, parsed));
+    if (forbidden) return forbidden;
     let nextRevision = revision;
     if (parsed.contract) {
       await dataClient.canonicalDocuments.replaceProjectContract(current.id, parsed.contract.fields, nextRevision);
@@ -82,12 +84,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
 }
 
 async function markdownFromJson(request: Request) {
-  let body: { markdown?: unknown };
-  try {
-    body = await request.json();
-  } catch {
-    throw new TlozDocumentError("DOCUMENT_INVALID", "El cuerpo JSON no es válido.");
-  }
+  const body = await readDocumentBody<{ markdown?: unknown }>(request);
   if (typeof body.markdown !== "string") {
     throw new TlozDocumentError("DOCUMENT_INVALID", "markdown es obligatorio.", {
       markdown: "required",

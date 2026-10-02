@@ -11,11 +11,11 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
 
-  const body = await readJsonObject<{ missionId?: string; projectId?: string; questItemId?: string; type?: string; query?: string; limit?: number; cursor?: string }>(request);
+  const body = await readJsonObject<{ missionId?: string; projectId?: string; questItemId?: string; type?: string; q?: string; query?: string; limit?: number; cursor?: string }>(request);
   if (!body) {
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "Cuerpo de solicitud inválido.", requestId: crypto.randomUUID() } },
-      { status: 400  }
+      { status: 400 }
     );
   }
 
@@ -29,9 +29,10 @@ export async function POST(request: NextRequest) {
   const limit = parsePaginationLimit(body.limit);
   if (limit instanceof Response) return limit;
 
+  const query = (typeof body.q === "string" ? body.q : body.query)?.trim() || undefined;
   try {
     const result = await dataClient.tloz.findResources(
-      { missionId: body.missionId, projectId: body.projectId, questItemId: body.questItemId, type: body.type as TlozResourceType | undefined, query: body.query?.trim() || undefined },
+      { missionId: body.missionId, projectId: body.projectId, questItemId: body.questItemId, type: body.type as TlozResourceType | undefined, query },
       { limit, cursor: body.cursor }
     );
     return NextResponse.json(result);

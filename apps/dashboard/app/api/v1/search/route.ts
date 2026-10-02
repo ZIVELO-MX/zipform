@@ -8,6 +8,7 @@ import {
   documentResult,
   resourceResult,
   encodeSearchCursor,
+  type GlobalSearchResult,
   type GlobalSearchType,
 } from "../../../../lib/global-search";
 
@@ -45,26 +46,53 @@ export async function GET(request: NextRequest) {
     const [documentsPage, resourcesPage] = await Promise.all([
       includeDocuments
         ? dataClient.canonicalDocuments.find({ query, includeSystem: false }, { limit, cursor: cursor.documents })
-        : Promise.resolve({ data: [] as TlozDocument[], nextCursor: null }),
+        : Promise.resolve({ data: [] as TlozDocument[], nextCursor: null as string | null }),
       includeResources
         ? dataClient.tloz.findResources({ query }, { limit, cursor: cursor.resources })
-        : Promise.resolve({ data: [] as TlozResource[], nextCursor: null }),
+        : Promise.resolve({ data: [] as TlozResource[], nextCursor: null as string | null }),
     ]);
-
-    const documents = documentsPage.data.filter((document) => requestedTypes.length === 0 || requestedTypes.includes(document.kind));
-    const resourceResults = await Promise.all(resourcesPage.data.map(async (resource) => {
+    const owners = await Promise.all(resourcesPage.data.map(async (resource) => {
       const ownerReference = resource.missionId ?? resource.projectId ?? resource.questItemId;
-      if (!ownerReference) return null;
-      const owner = await dataClient.canonicalDocuments.get(ownerReference);
-      return owner ? resourceResult(resource, owner) : null;
+      return ownerReference ? dataClient.canonicalDocuments.get(ownerReference) : null;
     }));
-    const results = [
-      ...documents.map(documentResult),
-      ...resourceResults.filter((result): result is NonNullable<typeof result> => Boolean(result)),
-    ].slice(0, limit);
 
-    const nextCursor = documentsPage.nextCursor || resourcesPage.nextCursor
-      ? encodeSearchCursor({ documents: documentsPage.nextCursor, resources: resourcesPage.nextCursor })
+    const results: GlobalSearchResult[] = [];
+    let budget = limit;
+    let documentsCursor: string | null | undefined = cursor.documents;
+    let resourcesCursor: string | null | undefined = cursor.resources;
+
+    let documentIndex = 0;
+    for (; documentIndex < documentsPage.data.length && budget > 0; documentIndex++) {
+      const document = documentsPage.data[documentIndex];
+      documentsCursor = document.id;
+      if (requestedTypes.length === 0 || requestedTypes.includes(document.kind)) {
+        results.push(documentResult(document));
+        budget -= 1;
+      }
+    }
+    const documentsConsumed = !includeDocuments || documentIndex >= documentsPage.data.length;
+    if (documentsConsumed && documentsPage.nextCursor) documentsCursor = documentsPage.nextCursor;
+
+    let resourceIndex = 0;
+    if (includeResources && budget > 0) {
+      for (; resourceIndex < resourcesPage.data.length && budget > 0; resourceIndex++) {
+        const resource = resourcesPage.data[resourceIndex];
+        resourcesCursor = resource.id;
+        const owner = owners[resourceIndex];
+        if (owner) {
+          results.push(resourceResult(resource, owner));
+          budget -= 1;
+        }
+      }
+    }
+    const resourcesConsumed = !includeResources || resourceIndex >= resourcesPage.data.length;
+    if (resourcesConsumed && resourcesPage.nextCursor) resourcesCursor = resourcesPage.nextCursor;
+
+    const documentsMore = includeDocuments && (documentsConsumed ? Boolean(documentsPage.nextCursor) : documentsPage.data.length > 0);
+    const resourcesMore = includeResources && (resourcesConsumed ? Boolean(resourcesPage.nextCursor) : resourcesPage.data.length > 0);
+
+    const nextCursor = documentsMore || resourcesMore
+      ? encodeSearchCursor({ documents: documentsCursor, resources: resourcesCursor })
       : null;
     return NextResponse.json({ data: results, nextCursor });
   } catch (error) {

@@ -7,6 +7,7 @@ import {
   documentResponse,
   handleDocumentError,
   parseExpectedRevision,
+  readDocumentBody,
   revisionEtag,
 } from "../../../../../../lib/document-api";
 
@@ -36,12 +37,7 @@ export async function PUT(request: Request, { params }: RouteContext) {
     const project = await requiredProject(documentId);
     const forbidden = authorizeDocumentOperation(auth.user, project, "structure");
     if (forbidden) return forbidden;
-    let body: { fields?: TlozFieldDefinition[] };
-    try {
-      body = await request.json();
-    } catch {
-      throw new TlozDocumentError("DOCUMENT_INVALID", "El cuerpo JSON no es válido.");
-    }
+    const body = await readDocumentBody<{ fields?: TlozFieldDefinition[] }>(request);
     if (!Array.isArray(body.fields)) {
       throw new TlozDocumentError("DOCUMENT_INVALID", "fields es obligatorio.", {
         fields: "required",

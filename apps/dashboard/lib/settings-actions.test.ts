@@ -7,27 +7,35 @@ const mocks = vi.hoisted(() => ({
   listApiKeys: vi.fn(),
   createApiKey: vi.fn(),
   revokeApiKey: vi.fn(),
-  listAvatars: vi.fn()
+  listAvatars: vi.fn(),
+  updateUser: vi.fn()
 }));
 
 vi.mock("react", () => ({ cache: <T extends (...args: never[]) => unknown>(callback: T) => callback }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("../auth", () => ({ auth: mocks.auth }));
-vi.mock("@tloz/data", () => ({
-  dataClient: {
-    agent: {
-      list: mocks.list,
-      listApiKeys: mocks.listApiKeys,
-      createApiKey: mocks.createApiKey,
-      revokeApiKey: mocks.revokeApiKey
-    },
-    platform: {
-      listAvatars: mocks.listAvatars
+vi.mock("@tloz/data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@tloz/data")>();
+  return {
+    ...actual,
+    dataClient: {
+      agent: {
+        list: mocks.list,
+        listApiKeys: mocks.listApiKeys,
+        createApiKey: mocks.createApiKey,
+        revokeApiKey: mocks.revokeApiKey
+      },
+      platform: {
+        listAvatars: mocks.listAvatars
+      },
+      user: {
+        update: mocks.updateUser
+      }
     }
-  }
-}));
+  };
+});
 
-import { createAgentApiKey, createOwnApiKey, listAgentApiKeys, listAgents, listAvatars, listOwnApiKeys, revokeAgentApiKey, revokeOwnApiKey } from "./settings-actions";
+import { createAgentApiKey, createOwnApiKey, listAgentApiKeys, listAgents, listAvatars, listOwnApiKeys, revokeAgentApiKey, revokeOwnApiKey, updateProfile } from "./settings-actions";
 
 const agentUser: UserProfile = {
   id: "d5ca1936-3240-4247-8c2b-a7152a681311",
@@ -186,6 +194,32 @@ describe("settings actions (agent)", () => {
 
       await expect(listAvatars()).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
       expect(mocks.listAvatars).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("updateProfile", () => {
+    it("forwards only profile fields to the data layer", async () => {
+      mocks.auth.mockResolvedValue(ownerSession);
+      mocks.updateUser.mockResolvedValue({ ...agentUser, name: "Benrod" });
+
+      const payload = { name: "Benrod", role: "Platform Owner", email: "escalate@example.com", passwordHash: "not-a-hash" };
+
+      await expect(updateProfile(payload as unknown as Parameters<typeof updateProfile>[0])).resolves.toMatchObject({ name: "Benrod" });
+      expect(mocks.updateUser).toHaveBeenCalledWith("owner", { name: "Benrod" });
+    });
+
+    it("rejects read-only agents", async () => {
+      mocks.auth.mockResolvedValue({ user: { id: "reader", type: "agent", role: "agent:reader" } });
+
+      await expect(updateProfile({ name: "Benrod" })).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+      expect(mocks.updateUser).not.toHaveBeenCalled();
+    });
+
+    it("throws when not authenticated", async () => {
+      mocks.auth.mockResolvedValue(null);
+
+      await expect(updateProfile({ name: "Benrod" })).rejects.toMatchObject({ code: "UNAUTHORIZED", status: 401 });
+      expect(mocks.updateUser).not.toHaveBeenCalled();
     });
   });
 });

@@ -83,6 +83,7 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "500":
           $ref: "#/components/responses/InternalError"
+  /users/query:
     post:
       operationId: queryUsers
       summary: Query users by example
@@ -1299,6 +1300,34 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /missions/{missionId}/activity:
+    get:
+      operationId: listMissionActivity
+      summary: List mission activity events
+      description: Cursor-paginated timeline of the mutations recorded against a mission.
+      tags: [Missions]
+      parameters:
+        - $ref: "#/components/parameters/MissionId"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Activity events in descending `occurredAt` order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ActivityListResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ── Seasons ────────────────────────────────────────────────────────
   /seasons:
     get:
@@ -2284,6 +2313,29 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
+    post:
+      operationId: createDocumentResource
+      summary: Attach a resource to any document kind
+      tags: [Documents, Resources]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResourceInput"
+      responses:
+        "201":
+          description: Resource created.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
   /documents/{documentId}/resources/{resourceId}:
     servers:
       - url: /api/v2
@@ -2301,29 +2353,6 @@ paths:
       responses:
         "204":
           description: Resource removed.
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-        "500":
-          $ref: "#/components/responses/InternalError"
-    post:
-      operationId: createDocumentResource
-      summary: Attach a resource to any document kind
-      tags: [Documents, Resources]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ResourceInput"
-      responses:
-        "201":
-          description: Resource created.
-        "400":
-          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -2523,6 +2552,34 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: Revision conflict. }
+
+  /contents/{contentId}/activity:
+    servers:
+      - url: /api/v2
+    parameters:
+      - name: contentId
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 128 }
+    get:
+      operationId: listContentActivity
+      summary: List Content activity events
+      description: Cursor-paginated timeline of the mutations recorded against a canonical Content record.
+      tags: [Content]
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "200":
+          description: Activity events in descending `occurredAt` order.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ActivityListResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "500": { $ref: "#/components/responses/InternalError" }
 
 components:
   securitySchemes:
@@ -2980,7 +3037,7 @@ components:
     # ── Projects ─────────────────────────────────────────────────────
     ProjectStatus:
       type: string
-      enum: [planned, active, archived]
+      enum: [active, maintenance, paused, completed]
     Project:
       type: object
       additionalProperties: false
@@ -3634,3 +3691,40 @@ components:
           type: boolean
         position:
           type: integer
+
+    # ── Activity ──────────────────────────────────────────────────────
+    ActivityEvent:
+      type: object
+      additionalProperties: false
+      required: [id, contentId, entityType, entityId, entityPublicId, actorId, action, source, metadata, occurredAt]
+      properties:
+        id:
+          type: string
+        contentId:
+          type: [string, "null"]
+          description: Canonical Content that owns the event, when the mutation targets one.
+        entityType:
+          type: string
+        entityId:
+          type: string
+        entityPublicId:
+          type: string
+        actorId:
+          type: string
+        action:
+          type: string
+        source:
+          type: string
+          enum: [session, api_key, system]
+        metadata:
+          type: object
+          additionalProperties: true
+        occurredAt:
+          type: string
+          format: date-time
+    ActivityListResponse:
+      type: object
+      required: [data, nextCursor]
+      properties:
+        data: { type: array, items: { $ref: "#/components/schemas/ActivityEvent" } }
+        nextCursor: { type: [string, "null"] }

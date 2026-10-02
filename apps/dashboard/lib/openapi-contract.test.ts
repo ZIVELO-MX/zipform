@@ -1,6 +1,7 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
 
 const spec = readFileSync(resolve(import.meta.dirname, "../../../docs/api/openapi.yaml"), "utf8");
 
@@ -98,5 +99,87 @@ describe("OpenAPI document v2 contract", () => {
     expect(schemaBlock("DocumentCreate")).toContain("contract:");
     expect(schemaBlock("FieldDefinition")).toContain("enum: [text, number, boolean, date, select, multiselect, person, relation]");
     expect(schemaBlock("FieldOption")).toContain("enum: [backlog, ready, active, blocked, done]");
+  });
+});
+
+const HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+
+type HttpMethod = (typeof HTTP_METHODS)[number];
+
+const SPEC_METHODS = HTTP_METHODS.map((method) => method.toLowerCase() as Lowercase<HttpMethod>);
+
+type SpecPathItem = { servers?: { url: string }[] } & Partial<Record<Lowercase<HttpMethod>, unknown>>;
+
+type SpecDocument = { servers?: { url: string }[]; paths?: Record<string, SpecPathItem> };
+
+const apiRoot = resolve(import.meta.dirname, "../app/api");
+
+// Routes owned by Next.js itself: they are not part of the TLOZ Data API contract.
+const ROUTES_OUTSIDE_THE_CONTRACT = new Set(["GET /auth/{}", "GET /openapi"]);
+
+function normalisePath(path: string) {
+  return path.replace(/\{[^}]+\}/g, "{}");
+}
+
+function routeFiles(directory: string): string[] {
+  const files: string[] = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...routeFiles(path));
+    else if (entry.name === "route.ts") files.push(path);
+  }
+  return files;
+}
+
+function routeOperations() {
+  const operations = new Set<string>();
+  for (const file of routeFiles(apiRoot)) {
+    const segments = relative(apiRoot, dirname(file)).split(sep).filter(Boolean);
+    const path = `/${segments.map((segment) => (segment.startsWith("[") ? "{}" : segment)).join("/")}`;
+    const source = readFileSync(file, "utf8");
+    for (const method of HTTP_METHODS) {
+      if (new RegExp(`export\\s+(?:async\\s+)?function\\s+${method}\\b`).test(source)) {
+        operations.add(`${method} ${path}`);
+      }
+    }
+  }
+  return operations;
+}
+
+function documentedOperations() {
+  const document = parse(spec) as SpecDocument;
+  const rootServer = document.servers?.[0]?.url;
+  if (!rootServer) throw new Error("The OpenAPI spec declares no server URL");
+
+  const operations = new Set<string>();
+  for (const [path, item] of Object.entries(document.paths ?? {})) {
+    const pathUrl = `${item.servers?.[0]?.url ?? rootServer}${path}`;
+    if (!pathUrl.startsWith("/api/")) {
+      throw new Error(`OpenAPI path ${path} resolves to ${pathUrl}, which is outside /api`);
+    }
+    const routePath = normalisePath(pathUrl.slice("/api".length));
+    for (const method of SPEC_METHODS) {
+      if (item[method]) operations.add(`${method.toUpperCase()} ${routePath}`);
+    }
+  }
+  return operations;
+}
+
+describe("OpenAPI route coverage", () => {
+  const documented = documentedOperations();
+  const routed = routeOperations();
+
+  it("documents every Data API route handler", () => {
+    const undocumented = [...routed]
+      .filter((operation) => !documented.has(operation) && !ROUTES_OUTSIDE_THE_CONTRACT.has(operation))
+      .sort();
+
+    expect(undocumented).toEqual([]);
+  });
+
+  it("documents no operation that has no route handler", () => {
+    const phantom = [...documented].filter((operation) => !routed.has(operation)).sort();
+
+    expect(phantom).toEqual([]);
   });
 });

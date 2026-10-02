@@ -3,10 +3,12 @@ import type { TlozDocumentScalar, TlozDocumentUpdate } from "@tloz/types";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import {
   authorizeDocumentOperation,
+  documentOperation,
   documentResponse,
   errorResponse,
   handleDocumentError,
   parseExpectedRevision,
+  readDocumentBody,
 } from "../../../../../lib/document-api";
 
 type RouteContext = { params: Promise<{ documentId: string }> };
@@ -52,9 +54,9 @@ export async function PATCH(request: Request, { params }: RouteContext) {
   try {
     const current = await dataClient.canonicalDocuments.get(documentId);
     if (!current) throw new TlozDocumentError("DOCUMENT_NOT_FOUND", `El documento ${documentId} no existe.`);
-    const forbidden = authorizeDocumentOperation(auth.user, current);
-    if (forbidden) return forbidden;
     const input = await readUpdate(request);
+    const forbidden = authorizeDocumentOperation(auth.user, current, documentOperation(current, input));
+    if (forbidden) return forbidden;
     return documentResponse(request, await dataClient.canonicalDocuments.update(current.id, input, revision));
   } catch (error) {
     return handleDocumentError(error);
@@ -86,12 +88,7 @@ export async function DELETE(request: Request, { params }: RouteContext) {
 }
 
 async function readUpdate(request: Request): Promise<TlozDocumentUpdate> {
-  let raw: Record<string, unknown>;
-  try {
-    raw = await request.json();
-  } catch {
-    throw new TlozDocumentError("DOCUMENT_INVALID", "El cuerpo JSON no es válido.");
-  }
+  const raw = await readDocumentBody(request);
   const allowed = new Set(["title", "summary", "body", "properties"]);
   if (Object.keys(raw).some((key) => !allowed.has(key))) {
     throw new TlozDocumentError("DOCUMENT_INVALID", "El cuerpo contiene campos no soportados.");

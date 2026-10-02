@@ -41,7 +41,7 @@ export type {
 } from "./contracts";
 export { currentUser, raulUser } from "./seed-data";
 export { assertProjectScopedDependency } from "./dependency-rules";
-export { TlozValidationError, nextMissionDisplayId, slugify, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
+export { TlozValidationError, nextMissionDisplayId, sanitizeUserUpdate, slugify, uniqueSlug, validateMissionCreate, validateProjectCreate, validateQuestItemCreate } from "./tloz-validation";
 export { TlozAttachmentBatchSupersededError, TlozAttachmentError } from "./tloz-attachment-errors";
 export { TlozLastOwnerError, TlozUserRoleError } from "./user-role-errors";
 export { TlozDocumentError } from "./document-errors";

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { TlozFieldDefinition } from "@tloz/types";
 import { createJsonbPrototypeStore } from "./container-content-prototype";
 import { createContainerContentDocumentRepository } from "./container-content-document";
 
@@ -48,5 +49,238 @@ describe("Container/Content document adapter", () => {
     const repository = createContainerContentDocumentRepository(store);
     await expect(repository.get("W-1")).resolves.toMatchObject({ kind: "project", properties: { owner: "user-1", start: "2026-01-01", due: "2026-02-01" } });
     await expect(repository.get("L-1")).resolves.toMatchObject({ kind: "inventory", properties: { assignee: "user-1", acquired: "2026-03-01" } });
+  });
+});
+
+const interleavedSnapshot = {
+  containers: [
+    { ...snapshot.containers[0], id: "container-a", publicId: "project-a", slug: "a", updatedAt: "2026-01-05T00:00:00.000Z" },
+    { ...snapshot.containers[0], id: "container-b", publicId: "project-b", slug: "b", updatedAt: "2026-01-02T00:00:00.000Z" },
+    { ...snapshot.containers[0], id: "container-c", publicId: "project-c", slug: "c", updatedAt: "2025-12-30T00:00:00.000Z" },
+  ],
+  contents: [
+    { ...snapshot.contents[0], id: "content-1", publicId: "TLO-0101", containerId: "container-a", updatedAt: "2026-01-04T00:00:00.000Z" },
+    { ...snapshot.contents[0], id: "content-2", publicId: "TLO-0102", containerId: "container-a", updatedAt: "2026-01-03T00:00:00.000Z" },
+    { ...snapshot.contents[0], id: "content-3", publicId: "TLO-0103", containerId: "container-b", updatedAt: "2026-01-01T00:00:00.000Z" },
+    { ...snapshot.contents[0], id: "content-4", publicId: "TLO-0104", containerId: "container-b", updatedAt: "2025-12-31T00:00:00.000Z" },
+  ],
+};
+
+async function collectPages(
+  read: (cursor?: string) => Promise<{ data: Array<{ id: string }>; nextCursor: string | null }>,
+) {
+  const ids: string[] = [];
+  const cursors: string[] = [];
+  let cursor: string | undefined;
+  for (let guard = 0; guard < 20; guard += 1) {
+    const page = await read(cursor);
+    ids.push(...page.data.map((item) => item.id));
+    if (!page.nextCursor) return { ids, cursors };
+    if (cursors.includes(page.nextCursor)) throw new Error(`cursor ${page.nextCursor} repeated`);
+    cursors.push(page.nextCursor);
+    cursor = page.nextCursor;
+  }
+  throw new Error("pagination did not terminate");
+}
+
+describe("Container/Content document pagination", () => {
+  it("walks a mixed Containers and Contents collection without dropping or repeating documents", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const { ids, cursors } = await collectPages((cursor) => repository.find({}, { limit: 2, cursor }));
+
+    expect(ids).toEqual([
+      "container-a", "content-1", "content-2", "container-b",
+      "content-3", "content-4", "container-c",
+    ]);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(cursors).toHaveLength(3);
+    expect(cursors.every((cursor) => cursor.startsWith("m:"))).toBe(true);
+  });
+
+  it("keeps each source position when a page only shows one source", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const first = await repository.find({}, { limit: 2 });
+    expect(first.data.map((item) => item.id)).toEqual(["container-a", "content-1"]);
+
+    const second = await repository.find({}, { limit: 2, cursor: first.nextCursor! });
+    expect(second.data.map((item) => item.id)).toEqual(["content-2", "container-b"]);
+    expect(second.nextCursor).toBe('m:{"containers":"container-b","contents":"content-2"}');
+
+    const third = await repository.find({}, { limit: 2, cursor: second.nextCursor! });
+    expect(third.data.map((item) => item.id)).toEqual(["content-3", "content-4"]);
+    expect(third.nextCursor).toBe('m:{"containers":"container-b","contents":"content-4"}');
+
+    const fourth = await repository.find({}, { limit: 2, cursor: third.nextCursor! });
+    expect(fourth.data.map((item) => item.id)).toEqual(["container-c"]);
+    expect(fourth.nextCursor).toBeNull();
+  });
+
+  it("still pages a single-source collection with a plain record cursor", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const first = await repository.find({ kind: "mission" }, { limit: 3 });
+    expect(first.data.map((item) => item.id)).toEqual(["content-1", "content-2", "content-3"]);
+    expect(first.nextCursor).toBe("content-3");
+
+    const second = await repository.find({ kind: "mission" }, { limit: 3, cursor: first.nextCursor! });
+    expect(second.data.map((item) => item.id)).toEqual(["content-4"]);
+    expect(second.nextCursor).toBeNull();
+  });
+
+  it("scopes parent queries to the container's own contents", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const page = await repository.find({ parentId: "container-b" }, { limit: 10 });
+    expect(page.data.map((item) => item.id)).toEqual(["content-3", "content-4"]);
+    expect(page.nextCursor).toBeNull();
+  });
+
+  it("keeps paging a mixed query whose only match sits beyond the first batch", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const first = await repository.find({ query: "TLO-0104" }, { limit: 1 });
+    expect(first.data).toEqual([]);
+    expect(first.nextCursor).toBe('m:{"containers":"container-b","contents":"content-2"}');
+
+    const { ids } = await collectPages((cursor) =>
+      repository.find({ query: "TLO-0104" }, { limit: 1, cursor }));
+
+    expect(ids).toEqual(["content-4"]);
+  });
+
+  it("keeps paging a single-source query whose only match sits beyond the first batch", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const { ids } = await collectPages((cursor) =>
+      repository.find({ kind: "mission", query: "TLO-0104" }, { limit: 1, cursor }));
+
+    expect(ids).toEqual(["content-4"]);
+  });
+
+  it("returns every query match once across single-source pages", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const { ids } = await collectPages((cursor) =>
+      repository.find({ kind: "mission", query: "TLO-0" }, { limit: 1, cursor }));
+
+    expect(ids).toEqual(["content-1", "content-2", "content-3", "content-4"]);
+  });
+
+  it("returns every mixed query match once when only containers match", async () => {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(interleavedSnapshot);
+    const repository = createContainerContentDocumentRepository(store);
+
+    const { ids, cursors } = await collectPages((cursor) =>
+      repository.find({ query: "project-" }, { limit: 1, cursor }));
+
+    expect(ids).toEqual(["container-a", "container-b", "container-c"]);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(cursors.every((cursor) => cursor.startsWith("m:"))).toBe(true);
+  });
+});
+
+describe("Container/Content Project contract", () => {
+  const statusField: TlozFieldDefinition = {
+    id: "status",
+    key: "status",
+    label: "Estado",
+    type: "select",
+    required: true,
+    visible: true,
+    position: 0,
+    defaultValue: "later",
+    options: [
+      { value: "later", label: "Later", role: "backlog" },
+      { value: "completed", label: "Completed", role: "done" },
+    ],
+  };
+  const categoryField: TlozFieldDefinition = {
+    id: "category",
+    key: "category",
+    label: "Categoría",
+    type: "select",
+    required: true,
+    visible: true,
+    position: 1,
+    defaultValue: "side_quest",
+    options: [{ value: "side_quest", label: "Side Quest" }],
+  };
+  const priorityField: TlozFieldDefinition = {
+    id: "draft-1",
+    key: "priority",
+    label: "Prioridad",
+    type: "text",
+    required: false,
+    visible: true,
+    position: 2,
+    options: [],
+  };
+
+  async function projectRepository() {
+    const store = createJsonbPrototypeStore();
+    await store.migrate(snapshot);
+    return createContainerContentDocumentRepository(store);
+  }
+
+  it("rejects a Project contract that breaks the field rules", async () => {
+    const repository = await projectRepository();
+
+    await expect(repository.replaceProjectContract("project-1", [
+      { ...statusField, options: [] },
+      categoryField,
+    ], 1)).rejects.toMatchObject({ code: "DOCUMENT_INVALID", fields: { "contract.fields.status": "invalid" } });
+
+    await expect(repository.replaceProjectContract("project-1", [
+      statusField,
+      { ...statusField, id: "duplicate" },
+      categoryField,
+    ], 1)).rejects.toMatchObject({ code: "DOCUMENT_INVALID" });
+  });
+
+  it("rejects a Project contract that drops the required status or category", async () => {
+    const repository = await projectRepository();
+
+    await expect(repository.replaceProjectContract("project-1", [statusField], 1))
+      .rejects.toMatchObject({ code: "DOCUMENT_INVALID" });
+  });
+
+  it("round-trips a valid Project contract read back from storage", async () => {
+    const repository = await projectRepository();
+
+    const saved = await repository.replaceProjectContract(
+      "project-1",
+      [statusField, categoryField, priorityField],
+      1,
+    );
+    expect(saved.revision).toBe(2);
+    expect(saved.contract?.fields.map((field) => field.key)).toEqual(["status", "category", "priority"]);
+
+    const reloaded = await repository.get("project-1");
+    const reparsed = await repository.replaceProjectContract(
+      "project-1",
+      reloaded?.contract?.fields ?? [],
+      reloaded?.revision ?? 0,
+    );
+
+    expect(reparsed.contract?.fields.map((field) => field.key)).toEqual(["status", "category", "priority"]);
+    expect(reparsed.contract?.fields.find((field) => field.key === "status")?.defaultValue).toBe("later");
+    expect(reparsed.contract?.fields.find((field) => field.key === "priority")?.defaultValue).toBeUndefined();
   });
 });

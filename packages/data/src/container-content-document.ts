@@ -16,6 +16,7 @@ import type {
   TlozFieldDefinition,
 } from "@tloz/types";
 import type { TlozDocumentRepository } from "./contracts";
+import { validateProjectFields } from "./document-contract";
 import { TlozDocumentError } from "./document-errors";
 
 const PRESENTATIONS: Record<TlozDocumentKind, string> = {
@@ -37,6 +38,11 @@ function properties(data: Record<string, ContainerContentData>) {
   }));
 }
 
+function matchesQuery(document: TlozDocument, query: string): boolean {
+  if (!query) return true;
+  return `${document.title} ${document.summary} ${document.publicId}`.toLowerCase().includes(query);
+}
+
 function fieldDefinitions(definition: ContainerDefinition): TlozFieldDefinition[] {
   return definition.fields.map((field, index) => ({
     id: field.key,
@@ -46,7 +52,7 @@ function fieldDefinitions(definition: ContainerDefinition): TlozFieldDefinition[
     required: field.required ?? false,
     visible: field.visible ?? true,
     position: index,
-    defaultValue: scalar(field.defaultValue ?? null),
+    defaultValue: field.defaultValue == null ? undefined : scalar(field.defaultValue),
     options: field.options ?? [],
   }));
 }
@@ -134,6 +140,31 @@ function containerDocument(container: ContainerRecord): TlozDocument {
   };
 }
 
+const MIXED_CURSOR_PREFIX = "m:";
+
+type MixedDocumentCursor = { containers?: string; contents?: string };
+
+function writeMixedCursor(value: MixedDocumentCursor): string | null {
+  if (!value.containers && !value.contents) return null;
+  return `${MIXED_CURSOR_PREFIX}${JSON.stringify(value)}`;
+}
+
+function readMixedCursor(cursor: string | undefined): MixedDocumentCursor | null {
+  if (cursor === undefined || !cursor.startsWith(MIXED_CURSOR_PREFIX)) return null;
+  try {
+    const decoded: unknown = JSON.parse(cursor.slice(MIXED_CURSOR_PREFIX.length));
+    if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) return null;
+    const raw = decoded as Record<string, unknown>;
+    if (typeof raw.containers !== "string" && typeof raw.contents !== "string") return null;
+    return {
+      ...(typeof raw.containers === "string" ? { containers: raw.containers } : {}),
+      ...(typeof raw.contents === "string" ? { contents: raw.contents } : {}),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function createContainerContentDocumentRepository(store: ContainerContentStore): TlozDocumentRepository {
   async function resolve(reference: string) {
     const container = await store.getContainer(reference);
@@ -145,30 +176,58 @@ export function createContainerContentDocumentRepository(store: ContainerContent
   return {
     async find(filters = {}, pagination = {}) {
       const limit = Math.min(Math.max(pagination.limit ?? 25, 1), 100);
-      const containers = filters.kind === "project" || !filters.kind
-        ? (await store.findContainers(
-            { presentation: filters.kind === "project" ? "project" : undefined },
-            { limit: limit + 1, cursor: pagination.cursor },
-          )).data
-        : [];
-      const contents = filters.kind === "project" ? [] : (await store.findContents({
-        containerId: filters.parentId,
-        presentation: filters.kind ? PRESENTATIONS[filters.kind] : undefined,
-      }, { limit: limit + 1, cursor: pagination.cursor })).data;
+      const mixed = !filters.kind && !filters.parentId;
+      const mixedCursor = mixed ? readMixedCursor(pagination.cursor) : null;
+      const containerCursor = mixed && mixedCursor ? mixedCursor.containers : pagination.cursor;
+      const contentCursor = mixed && mixedCursor ? mixedCursor.contents : pagination.cursor;
+
+      const includeContainers = filters.kind === "project" || mixed;
+      const includeContents = filters.kind !== "project";
+      const [containersPage, contentsPage] = await Promise.all([
+        includeContainers
+          ? store.findContainers(
+              { presentation: filters.kind === "project" ? "project" : undefined },
+              { limit: limit + 1, cursor: containerCursor },
+            )
+          : Promise.resolve({ data: [] as ContainerRecord[], nextCursor: null as string | null }),
+        includeContents
+          ? store.findContents({
+              containerId: filters.parentId,
+              presentation: filters.kind ? PRESENTATIONS[filters.kind] : undefined,
+            }, { limit: limit + 1, cursor: contentCursor })
+          : Promise.resolve({ data: [] as ContentRecord[], nextCursor: null as string | null }),
+      ]);
+      const containers = containersPage.data;
+      const contents = contentsPage.data;
       const containersById = new Map<string, ContainerRecord>();
       await Promise.all([...new Set(contents.map((content) => content.containerId))].map(async (containerId) => {
         const container = await store.getContainer(containerId);
         if (container) containersById.set(containerId, container);
       }));
-      const contentDocuments = contents.map((content) => contentDocument(content, containersById.get(content.containerId)));
-      let data = [...containers.map(containerDocument), ...contentDocuments];
-      if (filters.query) {
-        const query = filters.query.toLowerCase();
-        data = data.filter((item) => `${item.title} ${item.summary} ${item.publicId}`.toLowerCase().includes(query));
+      const entries: Array<{ document: TlozDocument; source: "container" | "content" }> = [
+        ...containers.map((container) => ({ document: containerDocument(container), source: "container" as const })),
+        ...contents.map((content) => ({ document: contentDocument(content, containersById.get(content.containerId)), source: "content" as const })),
+      ];
+      entries.sort((left, right) => right.document.updatedAt.localeCompare(left.document.updatedAt) || left.document.id.localeCompare(right.document.id));
+      const query = filters.query ? filters.query.toLowerCase() : "";
+      let containerPosition = includeContainers ? (mixed ? mixedCursor?.containers : pagination.cursor) : undefined;
+      let contentPosition = includeContents ? (mixed ? mixedCursor?.contents : pagination.cursor) : undefined;
+      const page: Array<{ document: TlozDocument; source: "container" | "content" }> = [];
+      let index = 0;
+      for (; index < entries.length; index += 1) {
+        const entry = entries[index];
+        if (entry.source === "container") containerPosition = entry.document.id;
+        else contentPosition = entry.document.id;
+        if (page.length < limit && matchesQuery(entry.document, query)) page.push(entry);
+        if (page.length === limit) break;
       }
-      data.sort((left, right) => right.updatedAt.localeCompare(left.updatedAt) || left.id.localeCompare(right.id));
-      const page = data.slice(0, limit);
-      return { data: page, nextCursor: data.length > limit ? page.at(-1)?.id ?? null : null };
+      const more = index < entries.length - 1 || containersPage.nextCursor !== null || contentsPage.nextCursor !== null;
+      const nextCursor = !more
+        ? null
+        : mixed
+          ? writeMixedCursor({ containers: containerPosition, contents: contentPosition })
+          : containerPosition ?? contentPosition ?? null;
+      return { data: page.map(({ document }) => document), nextCursor };
     },
 
     async get(documentId, options = {}) {
@@ -208,10 +267,11 @@ export function createContainerContentDocumentRepository(store: ContainerContent
       const resolved = await resolve(projectId);
       if (!resolved || resolved.type !== "container") throw new TlozDocumentError("DOCUMENT_NOT_FOUND", "Project no encontrado.");
       const definition = resolved.container.definition;
+      const validated = validateProjectFields(fields);
       const updated = await store.updateContainer(resolved.container.id, {
         definition: {
           ...definition,
-          fields: fields.map((field) => ({
+          fields: validated.map((field) => ({
             key: field.key,
             label: field.label,
             format: field.type,

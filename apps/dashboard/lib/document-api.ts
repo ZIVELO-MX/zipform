@@ -39,6 +39,19 @@ export function parseExpectedRevision(request: Request): number | Response {
   return parseRevision(request, "If-Match con la revisión vigente es obligatorio.");
 }
 
+export async function readDocumentBody<T = Record<string, unknown>>(request: Request): Promise<T> {
+  let value: unknown;
+  try {
+    value = await request.json();
+  } catch {
+    throw new TlozDocumentError("DOCUMENT_INVALID", "El cuerpo JSON no es válido.");
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new TlozDocumentError("DOCUMENT_INVALID", "El cuerpo JSON no es válido.");
+  }
+  return value as T;
+}
+
 export function authorizeDocumentOperation(
   actor: Actor,
   document: TlozDocument,
@@ -46,6 +59,11 @@ export function authorizeDocumentOperation(
 ) {
   const ownerId = stringProperty(document, document.kind === "project" ? "owner" : "assignee");
   return authorizeApiOperation(actor, operation, { ownerId });
+}
+
+export function documentOperation(document: TlozDocument, input: { properties?: Record<string, unknown> }): TlozOperation {
+  const key = document.kind === "project" ? "owner" : "assignee";
+  return Object.prototype.hasOwnProperty.call(input.properties ?? {}, key) ? "move" : "update";
 }
 
 export function handleDocumentError(error: unknown) {

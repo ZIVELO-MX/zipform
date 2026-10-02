@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../lib/authorization";
 import { errorResponse, handleContainerContentError, readData, readDefinition, resolveContainer } from "../../../../lib/container-content-api";
+import { invalidBodyResponse, readJsonObject } from "../../../../lib/api-response";
 import { observedJson } from "../../../../lib/read-telemetry";
 
 export async function GET(request: NextRequest) {
@@ -24,7 +25,8 @@ export async function POST(request: NextRequest) {
   const auth = await authenticateRequest(request);
   if (auth instanceof Response) return auth;
   try {
-    const raw = await request.json() as Record<string, unknown>;
+    const raw = await readJsonObject(request);
+    if (!raw) return invalidBodyResponse();
     if (typeof raw.publicId !== "string" || typeof raw.presentation !== "string" || typeof raw.title !== "string") throw new ContainerContentError("STORE_INVALID", "publicId, presentation y title son obligatorios.", { title: "required" });
     const publicId = raw.publicId;
     const presentation = raw.presentation;

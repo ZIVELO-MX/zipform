@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../../lib/authorization";
 import { errorResponse, handleContainerContentError, parseExpectedRevision, resolveContent, responseFor, readUpdate } from "../../../../../lib/container-content-api";
+import { invalidBodyResponse, readJsonObject } from "../../../../../lib/api-response";
 
 type Context = { params: Promise<{ contentId: string }> };
 
@@ -27,7 +28,9 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     const ownerId = typeof record.data.ownerId === "string" ? record.data.ownerId : null;
     const forbidden = authorizeApiOperation(auth.user, "update", { ownerId });
     if (forbidden) return forbidden;
-    const updated = await dataClient.containerContent.updateContent(record.id, readUpdate(await request.json()), revision);
+    const raw = await readJsonObject(request);
+    if (!raw) return invalidBodyResponse();
+    const updated = await dataClient.containerContent.updateContent(record.id, readUpdate(raw), revision);
     await dataClient.activity?.append({ contentId: record.id, entityType: record.presentation, entityId: record.id, entityPublicId: record.publicId, actorId: auth.user.id, action: "content.updated", source: auth.source, metadata: { revision: updated.revision }, idempotencyKey: request.headers.get("idempotency-key") ?? undefined });
     return responseFor(request, updated);
   } catch (error) { return handleContainerContentError(error); }

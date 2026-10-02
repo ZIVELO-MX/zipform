@@ -6,6 +6,7 @@ import { authenticateRequest } from "../../../../../../lib/api-auth";
 import {
   authorizeDocumentOperation,
   handleDocumentError,
+  readDocumentBody,
 } from "../../../../../../lib/document-api";
 
 const RESOURCE_TYPES = new Set<TlozResourceType>(["link", "document", "image", "file", "note"]);
@@ -48,12 +49,7 @@ export async function POST(request: Request, { params }: RouteContext) {
 }
 
 async function readResource(request: Request): Promise<TlozResourceInput> {
-  let body: Record<string, unknown>;
-  try {
-    body = await request.json();
-  } catch {
-    throw new TlozDocumentError("DOCUMENT_INVALID", "El cuerpo JSON no es válido.");
-  }
+  const body = await readDocumentBody(request);
   if (typeof body.type !== "string" || !RESOURCE_TYPES.has(body.type as TlozResourceType)) {
     throw new TlozDocumentError("DOCUMENT_INVALID", "type de recurso no es válido.", {
       type: "invalid",

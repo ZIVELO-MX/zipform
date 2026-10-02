@@ -1,4 +1,4 @@
-import type { TlozMissionCreateInput, TlozProjectCreateInput, TlozQuestItemCreateInput } from "./contracts";
+import type { TlozMissionCreateInput, TlozProjectCreateInput, TlozQuestItemCreateInput, UserUpdateInput } from "./contracts";
 
 export class TlozValidationError extends Error {
   constructor(public readonly fields: Record<string, string>) { super("Los datos de TLOZ no son válidos"); this.name = "TlozValidationError"; }
@@ -14,6 +14,20 @@ function dates(startDate: string | undefined, dueDate: string | undefined, field
   if (startDate && dueDate && dueDate < startDate) fields.dueDate = "La fecha límite debe ser posterior al inicio.";
 }
 function finish(fields: Record<string, string>) { if (Object.keys(fields).length) throw new TlozValidationError(fields); }
+
+const PROFILE_THEMES = ["system", "light", "dark"] as const;
+
+export function sanitizeUserUpdate(input: UserUpdateInput): UserUpdateInput {
+  const source = (input ?? {}) as Record<string, unknown>;
+  const patch: UserUpdateInput = {};
+  if (typeof source.name === "string") patch.name = source.name;
+  if (typeof source.username === "string") patch.username = source.username;
+  if (typeof source.avatarUrl === "string") patch.avatarUrl = source.avatarUrl;
+  if (typeof source.theme === "string" && (PROFILE_THEMES as readonly string[]).includes(source.theme)) {
+    patch.theme = source.theme as UserUpdateInput["theme"];
+  }
+  return patch;
+}
 
 export function validateMissionCreate(input: TlozMissionCreateInput) {
   const fields: Record<string, string> = {};
@@ -42,18 +56,20 @@ export function validateMissionCreate(input: TlozMissionCreateInput) {
 
 export function validateProjectCreate(input: TlozProjectCreateInput) {
   const fields: Record<string, string> = {};
+  const description = input.description ?? "";
   required(input.name, "name", "El nombre", fields, 2); required(input.ownerId, "ownerId", "El responsable", fields); required(input.startDate, "startDate", "La fecha de inicio", fields);
   if (!/^#[0-9A-F]{6}$/i.test(input.color)) fields.color = "El color debe ser un HEX válido.";
-  dates(input.startDate, input.dueDate, fields); finish(fields); return { ...input, name: input.name.trim(), description: input.description.trim(), color: input.color.toUpperCase() };
+  dates(input.startDate, input.dueDate, fields); finish(fields); return { ...input, name: input.name.trim(), description: description.trim(), color: input.color.toUpperCase() };
 }
 
 export function validateQuestItemCreate(input: TlozQuestItemCreateInput) {
   const fields: Record<string, string> = {};
+  const description = input.description ?? "";
   required(input.name, "name", "El nombre", fields, 2); required(input.icon, "icon", "El icono", fields); required(input.color, "color", "El color", fields);
   if (input.color && !/^#[0-9A-F]{6}$/i.test(input.color)) fields.color = "El color debe ser un HEX válido.";
-  if (input.description.length > 5000) fields.description = "La descripción no puede superar 5000 caracteres.";
+  if (description.length > 5000) fields.description = "La descripción no puede superar 5000 caracteres.";
   if (input.status === "unlocked" && !input.acquiredAt) fields.acquiredAt = "Un item desbloqueado necesita fecha de adquisición.";
-  finish(fields); return { ...input, name: input.name.trim(), description: input.description.trim(), color: input.color.toUpperCase() };
+  finish(fields); return { ...input, name: input.name.trim(), description: description.trim(), color: input.color.toUpperCase() };
 }
 
 export const RESERVED_TLOZ_SLUGS = ["api", "inventory", "login", "new", "projects"] as const;

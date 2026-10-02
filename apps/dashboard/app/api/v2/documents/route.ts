@@ -14,7 +14,7 @@ import type {
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateRequest } from "../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../lib/authorization";
-import { documentResponse, errorResponse, handleDocumentError } from "../../../../lib/document-api";
+import { documentResponse, errorResponse, handleDocumentError, readDocumentBody } from "../../../../lib/document-api";
 
 const DOCUMENT_KINDS = new Set<TlozDocumentKind>(["project", "mission", "inventory"]);
 
@@ -190,12 +190,7 @@ async function readCreateInput(request: Request): Promise<CreateDocumentInput> {
     };
   }
 
-  let raw: Record<string, unknown>;
-  try {
-    raw = await request.json();
-  } catch {
-    throw new TlozDocumentError("DOCUMENT_INVALID", "El cuerpo JSON no es válido.");
-  }
+  const raw = await readDocumentBody(request);
   const kind = (raw.kind ?? raw.type) as TlozDocumentKind;
   if (!DOCUMENT_KINDS.has(kind)) {
     throw new TlozDocumentError("DOCUMENT_INVALID", "kind debe ser project, mission o inventory.", {

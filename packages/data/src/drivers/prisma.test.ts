@@ -285,4 +285,15 @@ describe("prisma data driver", () => {
       expect.objectContaining({ title: "Repository", icon: "Github" }),
     ]);
   });
+
+  it("clears a mission project without a UUID lookup when projectId is emptied", async () => {
+    const client = createPrismaDataClient(createPrismaStub());
+    const mission = missions[0];
+    expect(mission.projectId).toBeTruthy();
+
+    const updated = await client.tloz.updateMission(mission.id, { projectId: "" });
+
+    expect(updated.projectId ?? null).toBeNull();
+    expect((await client.tloz.getMissionDetail(mission.id))?.projectId ?? null).toBeNull();
+  });
 });

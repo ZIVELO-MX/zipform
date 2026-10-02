@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { authenticateRequest } from "../../../../../lib/api-auth";
 import { authorizeApiOperation } from "../../../../../lib/authorization";
 import { errorResponse, handleContainerContentError, parseExpectedRevision, readData, readDefinition, resolveContainer, responseFor } from "../../../../../lib/container-content-api";
+import { invalidBodyResponse, readJsonObject } from "../../../../../lib/api-response";
 
 type Context = { params: Promise<{ containerId: string }> };
 
@@ -27,7 +28,8 @@ export async function PATCH(request: NextRequest, { params }: Context) {
     const ownerId = typeof record.data.ownerId === "string" ? record.data.ownerId : null;
     const forbidden = authorizeApiOperation(auth.user, "update", { ownerId });
     if (forbidden) return forbidden;
-    const raw = await request.json() as Record<string, unknown>;
+    const raw = await readJsonObject(request);
+    if (!raw) return invalidBodyResponse();
     const allowed = new Set(["slug", "presentation", "title", "summary", "body", "definition", "data"]);
     if (Object.keys(raw).some((key) => !allowed.has(key))) throw new ContainerContentError("STORE_INVALID", "El cuerpo contiene campos no soportados.");
     if (raw.data !== undefined) readData(raw.data);
